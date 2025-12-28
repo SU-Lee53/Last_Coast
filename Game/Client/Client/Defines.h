@@ -1,0 +1,87 @@
+#pragma once
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////
+// Constants
+constexpr static float PLANET_ROTATION = 20.f;
+
+
+
+//////////////////////////////////////////////////////////////////////////////////
+// Enums
+
+enum SHADER_RESOURCE_TYPE : UINT8 {
+	SHADER_RESOURCE_TYPE_CONSTANT_BUFFER = 0,
+	SHADER_RESOURCE_TYPE_TEXTURE,
+	SHADER_RESOURCE_TYPE_STRUCTURED_BUFFER,
+
+	SHADER_RESOURCE_TYPE_COUNT,
+
+	SHADER_RESOURCE_TYPE_UNDEFINED = 99
+};
+
+enum ROOT_PARAMETER_TYPE : UINT8 {
+	// Root Constant 는 사용하지 않을듯
+	ROOT_PARAMETER_TYPE_ROOT_DESCRIPTOR,
+	ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+
+	ROOT_PARAMETER_TYPE_COUNT,
+
+	ROOT_PARAMETER_TYPE_UNDEFINED = 99
+};
+
+enum COMPONENT_TYPE : UINT8 {
+	//COMPONENT_TYPE_MOVEMENT,			// undefined
+	//COMPONENT_TYPE_MESH_RENDERER,		// 이제 Component 아님
+	//COMPONENT_TYPE_ANIMATION,			// undefined
+	//COMPONENT_TYPE_BEHAVIOR_TREE,		// undefined
+	//COMPONENT_TYPE_PHYSICS,				// undefined
+
+	COMPONENT_TYPE_COUNT,
+
+	COMPONENT_TYPE_BASE
+};
+
+enum MESH_ELEMENT_TYPE : UINT {
+	MESH_ELEMENT_TYPE_POSITION = 0x0001,
+	MESH_ELEMENT_TYPE_COLOR = 0x0002,
+	MESH_ELEMENT_TYPE_NORMAL = 0x0004,
+	MESH_ELEMENT_TYPE_TANGENT = 0x0008,
+
+	MESH_ELEMENT_TYPE_TEXCOORD0 = 0x0010,
+	MESH_ELEMENT_TYPE_TEXCOORD1 = 0x0020,
+	MESH_ELEMENT_TYPE_TEXCOORD2 = 0x0040,
+	MESH_ELEMENT_TYPE_TEXCOORD3 = 0x0080,
+
+	MESH_ELEMENT_TYPE_BLEND_INDICES = 0x0100,
+	MESH_ELEMENT_TYPE_BLEND_WEIGHTS = 0x0200,
+
+	MESH_ELEMENT_TYPE_END = 0x0400,
+};
+
+//////////////////////////////////////////////////////////////////////////////////
+// Structs
+
+struct MaterialColors {
+	XMFLOAT4		xmf4Ambient;
+	XMFLOAT4		xmf4Diffuse;
+	XMFLOAT4		xmf4Specular; //(r,g,b,a=power)
+	XMFLOAT4		xmf4Emissive;
+
+	float			fGlossiness = 0.0f;
+	float			fSmoothness = 0.0f;
+	float			fSpecularHighlight = 0.0f;
+	float			fMetallic = 0.0f;
+	float			fGlossyReflection = 0.0f;
+};
+
+//////////////////////////////////////////////////////////////////////////////////
+// Default Constants
+
+constexpr D3D12_ROOT_SIGNATURE_FLAGS ROOT_SIGNATURE_FLAG_DEFAULT = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
+D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
