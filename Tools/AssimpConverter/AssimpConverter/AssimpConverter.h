@@ -69,6 +69,7 @@ public:
 	AssimpConverter();
 	~AssimpConverter();
 
+	bool IsOpened() { return m_pScene; }
 	void LoadFromFiles(const std::string& strPath, float fScaleFactor = 1.f);
 
 public:
@@ -89,6 +90,8 @@ private:
 	nlohmann::ordered_json StoreNodeToJson(const aiNode* pNode) const;
 	nlohmann::ordered_json StoreMeshToJson(const aiMesh* pMesh) const;
 	nlohmann::ordered_json StoreMaterialToJson(const aiMaterial* pMaterial) const;
+
+	void ExportTexture(const aiTexture* pTexture) const;
 
 
 private:

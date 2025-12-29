@@ -281,6 +281,9 @@
     <ClInclude Include="nlohmann_json\json_fwd.hpp">
       <Filter>nlohmann_json</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Assimp\assimp\vector2.inl">
@@ -316,5 +319,10 @@
     <None Include="..\Assimp\assimp\SmoothingGroups.inl">
       <Filter>Assimp</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="AssimpConverter.rc">
+      <Filter>리소스 파일</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

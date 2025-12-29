@@ -119,7 +119,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -135,7 +135,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -230,6 +230,7 @@
     <ClInclude Include="AssimpConverter.h" />
     <ClInclude Include="nlohmann_json\json.hpp" />
     <ClInclude Include="nlohmann_json\json_fwd.hpp" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
@@ -244,6 +245,9 @@
     <None Include="..\Assimp\assimp\SmoothingGroups.inl" />
     <None Include="..\Assimp\assimp\vector2.inl" />
     <None Include="..\Assimp\assimp\vector3.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="AssimpConverter.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

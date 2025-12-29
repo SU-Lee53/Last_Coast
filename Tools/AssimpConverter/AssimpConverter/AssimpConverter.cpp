@@ -361,21 +361,36 @@ nlohmann::ordered_json AssimpConverter::StoreMaterialToJson(const aiMaterial* pM
 	if (pMaterial->Get(AI_MATKEY_GLOSSINESS_FACTOR, fValue) == AI_SUCCESS) {
 		material["fGlossiness"] = fValue;
 	}
+	else {
+		material["fGlossiness"] = 0.f;
+	}
 
 	if (pMaterial->Get(AI_MATKEY_ROUGHNESS_FACTOR, fValue) == AI_SUCCESS) {
 		material["fSmoothness"] = 1 - fValue;;
+	}
+	else {
+		material["fSmoothness"] = 0.f;
 	}
 
 	if (pMaterial->Get(AI_MATKEY_METALLIC_FACTOR, fValue) == AI_SUCCESS) {
 		material["fMetallic"] = fValue;
 	}
+	else {
+		material["fMetallic"] = 0.f;
+	}
 
 	if (pMaterial->Get(AI_MATKEY_COLOR_SPECULAR, aicValue) == AI_SUCCESS) {
 		material["fGlossyReflection"] = std::max(std::max(aicValue.r, aicValue.g), aicValue.b);
 	}
+	else {
+		material["fGlossyReflection"] = 0.f;
+	}
 
 	if (pMaterial->Get(AI_MATKEY_SHININESS, fValue) == AI_SUCCESS) {
 		material["fSpecularHighlight"] = fValue;
+	}
+	else {
+		material["fSpecularHighlight"] = 0.f;
 	}
 
 	// Textures
@@ -397,17 +412,7 @@ nlohmann::ordered_json AssimpConverter::StoreMaterialToJson(const aiMaterial* pM
 
 				// TODO : make it happen
 				if (pTexture) {
-					// Embedded texture
-					if (pTexture->mHeight == 0) {
-						// Compressed
-
-
-					}
-					else {
-						// Raw RGBA
-
-
-					}
+					ExportTexture(pTexture);
 				}
 				else {
 					// External texture
@@ -418,6 +423,20 @@ nlohmann::ordered_json AssimpConverter::StoreMaterialToJson(const aiMaterial* pM
 	}
 
 	return material;
+}
+
+void AssimpConverter::ExportTexture(const aiTexture* pTexture) const
+{
+	std::string strTextureFormat = pTexture->achFormatHint;
+	if (pTexture->mHeight == 0) {
+		// Compressed
+
+	}
+	else {
+		// Raw RGBA
+	}
+
+
 }
 
 void AssimpConverter::ShowFrameData() const
