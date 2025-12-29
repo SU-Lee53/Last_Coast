@@ -12,8 +12,8 @@ struct Mesh {
 };
 
 struct SkinData {
-	std::vector<XMINT4>		xmi4BlendIndices;
-	std::vector<XMFLOAT4>	xmf4BlendWeights;
+	std::array<UINT, 4>		uiBlendIndices = { 0,0,0,0 };
+	std::array<float, 4>	fBlendWeights = { 0,0,0,0 };
 };
 
 enum MATERIAL_TYPE {
@@ -56,9 +56,9 @@ struct Animation {
 
 };
 
-struct Bone {
+struct Bone {	// == Frame
 	std::string strFrameName;
-	XMFLOAT4X4 xmf4x4Offset;
+	XMFLOAT4X4 Transform;
 
 	int nParentIdx = -1;
 	std::vector<int> nChildrenIdx;
@@ -69,22 +69,27 @@ public:
 	AssimpConverter();
 	~AssimpConverter();
 
-	void LoadFromFiles(const std::string& strPath);
+	void LoadFromFiles(const std::string& strPath, float fScaleFactor = 1.f);
 
+public:
+	void Serialize(const std::string& strPath, const std::string& strName) const;
+
+
+public:
 	void ShowFrameData() const;
-	void ShowMeshData() const;
-	void ShowBoneData() const;
 
 private:
 	void ProcessFrameData(const aiNode* pNode, UINT nTabs = 0) const;
-	void ProcessMeshData(const aiNode* pNode, UINT nTabs = 0) const;
-	void ProcessMaterialData(const aiMesh* pMesh, UINT nTabs = 0) const;
-	void ProcessBoneData(const aiBone* pBone, UINT nTabs = 0) const;
 	void ProcessKeyframeData(const aiNodeAnim* pNode, UINT nTabs = 0) const;
 
 	void CountBones(const aiNode* pNode, int& nNumBones);
 	void StoreBoneData(const aiNode* pNode);
 	void StoreBoneHeirachy(const aiNode* pNode);
+	
+	nlohmann::ordered_json StoreNodeToJson(const aiNode* pNode) const;
+	nlohmann::ordered_json StoreMeshToJson(const aiMesh* pMesh) const;
+	nlohmann::ordered_json StoreMaterialToJson(const aiMaterial* pMaterial) const;
+
 
 private:
 	std::shared_ptr<Assimp::Importer> m_pImporter = nullptr;
@@ -93,9 +98,14 @@ private:
 	UINT m_nNodes = 0;
 
 	std::vector<Bone> m_Bones;
-	std::unordered_map<aiString, UINT> m_BoneIndexMap;
+	std::unordered_map<std::string, UINT> m_BoneIndexMap;
 
-	nlohmann::json m_json{};
+	float m_fScale = 1.f;
+
+	std::string m_strFilePath;
+
+
+
 
 };
 

@@ -6,7 +6,8 @@ int main()
 	AssimpConverter Converter{};
 
 	Converter.LoadFromFiles("../Models/Sporty Granny.fbx");
-	Converter.ShowMeshData();
+	//Converter.ShowMeshData();
+	Converter.Serialize("../Exported", "Granny");
 
 
 }
