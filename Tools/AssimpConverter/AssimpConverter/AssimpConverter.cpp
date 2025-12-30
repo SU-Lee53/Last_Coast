@@ -228,21 +228,35 @@ nlohmann::ordered_json AssimpConverter::StoreMeshToJson(const aiMesh* pMesh) con
 	}
 
 	// Tangents
-	mesh["BiTangents"] = nlohmann::ordered_json::array();
 	mesh["Tangents"] = nlohmann::ordered_json::array();
-	for (int i = 0; i < pMesh->mNumVertices; ++i) {
-		aiVector3D v3Tangents = pMesh->mTangents[i];
-		mesh["Tangents"].push_back(v3Tangents.x);
-		mesh["Tangents"].push_back(v3Tangents.y);
-		mesh["Tangents"].push_back(v3Tangents.z);
+	if (pMesh->mTangents) {
+		for (int i = 0; i < pMesh->mNumVertices; ++i) {
+			aiVector3D v3Tangents = pMesh->mTangents[i];
+			mesh["Tangents"].push_back(v3Tangents.x);
+			mesh["Tangents"].push_back(v3Tangents.y);
+			mesh["Tangents"].push_back(v3Tangents.z);
+		}
+	}
+	else {
+		for (int i = 0; i < pMesh->mNumVertices * 3; ++i) {
+			mesh["Tangents"].push_back(0.f);
+		}
 	}
 
 	// BiTangents
-	for (int i = 0; i < pMesh->mNumVertices; ++i) {
-		aiVector3D v3BiTangents = pMesh->mBitangents[i];
-		mesh["BiTangents"].push_back(v3BiTangents.x);
-		mesh["BiTangents"].push_back(v3BiTangents.y);
-		mesh["BiTangents"].push_back(v3BiTangents.z);
+	mesh["BiTangents"] = nlohmann::ordered_json::array();
+	if (pMesh->mBitangents) {
+		for (int i = 0; i < pMesh->mNumVertices; ++i) {
+			aiVector3D v3BiTangents = pMesh->mBitangents[i];
+			mesh["BiTangents"].push_back(v3BiTangents.x);
+			mesh["BiTangents"].push_back(v3BiTangents.y);
+			mesh["BiTangents"].push_back(v3BiTangents.z);
+		}
+	}
+	else {
+		for (int i = 0; i < pMesh->mNumVertices * 3; ++i) {
+			mesh["BiTangents"].push_back(0.f);
+		}
 	}
 
 	// Texture Coordinates (only [0], mostly main UV Channel)

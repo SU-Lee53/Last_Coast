@@ -72,7 +72,7 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				MessageBox(hDlg, g_str, L"Open", MB_OK);
 			}
 			else {
-				return TRUE;
+				return TRUE; // Cancel
 			}
 
 			wchar_t buffer[64] = {};
