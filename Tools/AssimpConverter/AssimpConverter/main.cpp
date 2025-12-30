@@ -169,10 +169,12 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case IDC_RADIO1:
 		{
 			g_bModelConvertOn = (IsDlgButtonChecked(hDlg, IDC_RADIO1) == BST_CHECKED);
+			g_bAnimationConvertOn = (IsDlgButtonChecked(hDlg, IDC_RADIO2) == BST_CHECKED);
 			return TRUE;
 		}
 		case IDC_RADIO2:
 		{
+			g_bModelConvertOn = (IsDlgButtonChecked(hDlg, IDC_RADIO1) == BST_CHECKED);
 			g_bAnimationConvertOn = (IsDlgButtonChecked(hDlg, IDC_RADIO2) == BST_CHECKED);
 			return TRUE;
 		}

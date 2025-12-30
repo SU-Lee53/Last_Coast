@@ -22,6 +22,9 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <set>
+#include <map>
+#include <unordered_map>
 #include <filesystem>
 
 // Assimp
@@ -87,6 +90,17 @@ inline XMFLOAT3 aiVector3DToXMVector(const aiVector3D& aiVector) {
 	};
 
 	return xmf3Ret;
+}
+
+inline XMFLOAT4 aiQuaternionToXMVector(const aiQuaternion& aiQuat) {
+	XMFLOAT4 xmf4Ret = {
+		aiQuat.x,
+		aiQuat.y,
+		aiQuat.z,
+		aiQuat.w
+	};
+
+	return xmf4Ret;
 }
 
 inline std::wstring StringToWString_UTF8(const std::string& str)

@@ -64,6 +64,12 @@ struct Bone {	// == Frame
 	XMFLOAT4X4 xmf4x4Offset;	// Inverse bind pose
 };
 
+struct KeyFrame {
+	XMFLOAT3 xmf3Position{ 0.f, 0.f, 0.f };
+	XMFLOAT4 xmf4RotationQuat{ 0.f, 0.f, 0.f, 1.f };
+	XMFLOAT3 xmf3Scale{ 1.f, 1.f, 1.f };
+};
+
 class AssimpConverter {
 public:
 	AssimpConverter();
@@ -75,13 +81,7 @@ public:
 	void SerializeModel(const std::string& strPath, const std::string& strName);
 	void SerializeAnimation(const std::string& strPath, const std::string& strName);
 
-public:
-	void ShowFrameData() const;
-
 private:
-	void ProcessFrameData(const aiNode* pNode, UINT nTabs = 0) const;
-	void ProcessKeyframeData(const aiNodeAnim* pNode, UINT nTabs = 0) const;
-
 	void GatherBoneIndex(); 
 	void BuildBoneHierarchy(aiNode* node, int parentBoneIndex);
 	
@@ -94,6 +94,11 @@ private:
 	void ExportEmbeddedTexture(const aiTexture* pTexture, aiTextureType eTextureType) const;
 	void ExportExternalTexture(const aiString& aistrTexturePath, aiTextureType eTextureType) const;
 	void FlipNormalMapY(DirectX::ScratchImage& img) const;
+
+	XMFLOAT3 SamplePosition(const aiNodeAnim* pNodeAnim, double dTime) const;
+	XMFLOAT4 SampleRotation(const aiNodeAnim* pNodeAnim, double dTime) const;
+	XMFLOAT3 SampleScale(const aiNodeAnim* pNodeAnim, double dTime) const;
+
 
 
 private:

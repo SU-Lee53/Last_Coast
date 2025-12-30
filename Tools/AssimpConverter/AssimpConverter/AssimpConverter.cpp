@@ -154,7 +154,7 @@ nlohmann::ordered_json AssimpConverter::StoreNodeToJson(const aiNode* pNode) con
 		m._41, m._42, m._43, m._44,
 	};
 
-	//Mesh & Material
+	// Mesh & Material
 	node["nMeshes"] = pNode->mNumMeshes;
 	node["Meshes"] = nlohmann::ordered_json::array();
 	if (pNode->mNumMeshes != 0) {
@@ -165,6 +165,7 @@ nlohmann::ordered_json AssimpConverter::StoreNodeToJson(const aiNode* pNode) con
 		}
 	}
 
+	// Children
 	node["nChildren"] = pNode->mNumChildren;
 	node["Children"] = nlohmann::ordered_json::array();
 	for (int i = 0; i < pNode->mNumChildren; ++i) {
@@ -731,6 +732,9 @@ void AssimpConverter::SerializeAnimation(const std::string& strPath, const std::
 
 nlohmann::ordered_json AssimpConverter::StoreAnimationToJson(const aiAnimation* pAnimation) const
 {
+	// These two below are NOT keyframe animation data
+	//	pAnimation->mMeshChannels; -> Tweening
+	//	pAnimation->mMorphMeshChannels; -> Morphing
 	nlohmann::ordered_json anim;
 	anim["Name"] = pAnimation->mName.C_Str();
 	anim["Duration"] = pAnimation->mDuration;
@@ -750,28 +754,305 @@ nlohmann::ordered_json AssimpConverter::StoreNodeAnimToJson(const aiNodeAnim* pN
 	nlohmann::ordered_json nodeAnim;
 	nodeAnim["Name"] = pNodeAnim->mNodeName.C_Str();	// name of bone
 
-	nodeAnim["nPositionKeys"] = pNodeAnim->mNumPositionKeys;
-	nodeAnim["PositionKeys"] = nlohmann::ordered_json::array();
+	//	for (int i = 0; i < pNodeAnim->mNumPositionKeys; ++i) {
+	//		aiVectorKey keyFrame = pNodeAnim->mPositionKeys[i];
+	//		keyFrameDatas[keyFrame.mTime].xmf3Position = aiVector3DToXMVector(keyFrame.mValue);
+	//	}
+	//	
+	//	for (int i = 0; i < pNodeAnim->mNumRotationKeys; ++i) {
+	//		aiQuatKey keyFrame = pNodeAnim->mRotationKeys[i];
+	//		auto it = keyFrameDatas.find(keyFrame.mTime);
+	//		if (it != keyFrameDatas.end()) {
+	//			keyFrameDatas[keyFrame.mTime].xmf4RotationQuat = aiQuaternionToXMVector(keyFrame.mValue);
+	//		}
+	//		else {
+	//			// Interpolate
+	//			KeyFrame newKeyFrame;
+	//	
+	//			keyFrameDatas.insert({ keyFrame.mTime, {} });
+	//			auto it = keyFrameDatas.find(keyFrame.mTime);
+	//			if (it == keyFrameDatas.begin()) {
+	//				auto nextKeyFrame = *std::next(it);
+	//				newKeyFrame.xmf3Position = nextKeyFrame.second.xmf3Position;
+	//				newKeyFrame.xmf4RotationQuat = aiQuaternionToXMVector(keyFrame.mValue);
+	//				newKeyFrame.xmf3Scale = nextKeyFrame.second.xmf3Scale;
+	//			}
+	//			else if (std::next(it) == keyFrameDatas.end()) {
+	//				auto prevKeyFrame = *std::prev(it);
+	//				newKeyFrame.xmf3Position = prevKeyFrame.second.xmf3Position;
+	//				newKeyFrame.xmf4RotationQuat = aiQuaternionToXMVector(keyFrame.mValue);
+	//				newKeyFrame.xmf3Scale = prevKeyFrame.second.xmf3Scale;
+	//			}
+	//			else {
+	//				auto prevKeyFrame = *std::prev(it);
+	//				auto nextKeyFrame = *std::next(it);
+	//	
+	//				double t = keyFrame.mTime;
+	//				double t0 = prevKeyFrame.first;
+	//				double t1 = nextKeyFrame.first;
+	//	
+	//				double alpha = (t - t0) / (t1 - t0);
+	//	
+	//				XMStoreFloat3(&newKeyFrame.xmf3Position, XMVectorLerp(XMLoadFloat3(&prevKeyFrame.second.xmf3Position), XMLoadFloat3(&nextKeyFrame.second.xmf3Position), alpha));
+	//				XMStoreFloat3(&newKeyFrame.xmf3Scale, XMVectorLerp(XMLoadFloat3(&prevKeyFrame.second.xmf3Scale), XMLoadFloat3(&nextKeyFrame.second.xmf3Scale), alpha));
+	//				newKeyFrame.xmf4RotationQuat = aiQuaternionToXMVector(keyFrame.mValue);
+	//			}
+	//	
+	//			it->second = newKeyFrame;
+	//		}
+	//	}
+	//	
+	//	for (int i = 0; i < pNodeAnim->mNumScalingKeys; ++i) {
+	//		aiVectorKey keyFrame = pNodeAnim->mScalingKeys[i];
+	//		auto it = keyFrameDatas.find(keyFrame.mTime);
+	//		if (it != keyFrameDatas.end()) {
+	//			keyFrameDatas[keyFrame.mTime].xmf3Scale = aiVector3DToXMVector(keyFrame.mValue);
+	//		}
+	//		else {
+	//			// Interpolate
+	//			KeyFrame newKeyFrame;
+	//	
+	//			keyFrameDatas.insert({ keyFrame.mTime, {} });
+	//			auto it = keyFrameDatas.find(keyFrame.mTime);
+	//			if (it == keyFrameDatas.begin()) {
+	//				auto nextKeyFrame = *std::next(it);
+	//				newKeyFrame.xmf3Position = nextKeyFrame.second.xmf3Position;
+	//				newKeyFrame.xmf4RotationQuat = nextKeyFrame.second.xmf4RotationQuat;
+	//				newKeyFrame.xmf3Scale = aiVector3DToXMVector(keyFrame.mValue);
+	//			}
+	//			else if (std::next(it) == keyFrameDatas.end()) {
+	//				auto prevKeyFrame = *std::prev(it);
+	//				newKeyFrame.xmf3Position = prevKeyFrame.second.xmf3Position;
+	//				newKeyFrame.xmf4RotationQuat = prevKeyFrame.second.xmf4RotationQuat;
+	//				newKeyFrame.xmf3Scale = aiVector3DToXMVector(keyFrame.mValue);
+	//			}
+	//			else {
+	//				auto prevKeyFrame = *std::prev(it);
+	//				auto nextKeyFrame = *std::next(it);
+	//	
+	//				double t = keyFrame.mTime;
+	//				double t0 = prevKeyFrame.first;
+	//				double t1 = nextKeyFrame.first;
+	//	
+	//				double alpha = (t - t0) / (t1 - t0);
+	//	
+	//				XMStoreFloat3(&newKeyFrame.xmf3Position, XMVectorLerp(XMLoadFloat3(&prevKeyFrame.second.xmf3Position), XMLoadFloat3(&nextKeyFrame.second.xmf3Position), alpha));
+	//				XMStoreFloat4(&newKeyFrame.xmf4RotationQuat, XMQuaternionSlerp(XMLoadFloat4(&prevKeyFrame.second.xmf4RotationQuat), XMLoadFloat4(&nextKeyFrame.second.xmf4RotationQuat), alpha));
+	//				newKeyFrame.xmf3Scale = aiVector3DToXMVector(keyFrame.mValue);
+	//			}
+	//	
+	//			it->second = newKeyFrame;
+	//		}
+	//	}
+
+	std::map<double, KeyFrame> keyFrameDatas;
+
+	std::set<double> keys;
 	for (int i = 0; i < pNodeAnim->mNumPositionKeys; ++i) {
 		aiVectorKey keyFrame = pNodeAnim->mPositionKeys[i];
-		nodeAnim["PositionKeys"].push_back({ keyFrame.mTime, { keyFrame.mValue.x, keyFrame.mValue.y, keyFrame.mValue.z } });
+		keys.insert(keyFrame.mTime);
 	}
-
-	nodeAnim["nRotationKeys"] = pNodeAnim->mNumRotationKeys;
-	nodeAnim["RotationKeys"] = nlohmann::ordered_json::array();
+	
 	for (int i = 0; i < pNodeAnim->mNumRotationKeys; ++i) {
 		aiQuatKey keyFrame = pNodeAnim->mRotationKeys[i];
-		nodeAnim["RotationKeys"].push_back({ keyFrame.mTime, { keyFrame.mValue.x, keyFrame.mValue.y, keyFrame.mValue.z, keyFrame.mValue.w } });
+		keys.insert(keyFrame.mTime);
+	}
+	
+	for (int i = 0; i < pNodeAnim->mNumScalingKeys; ++i) {
+		aiVectorKey keyFrame = pNodeAnim->mScalingKeys[i];
+		keys.insert(keyFrame.mTime);
 	}
 
-	nodeAnim["nScalingKeys"] = pNodeAnim->mNumScalingKeys;
-	nodeAnim["ScalingKeys"] = nlohmann::ordered_json::array();
-	for (int i = 0; i < pNodeAnim->mNumRotationKeys; ++i) {
-		aiVectorKey keyFrame = pNodeAnim->mScalingKeys[i];
-		nodeAnim["ScalingKeys"].push_back({ keyFrame.mTime, { keyFrame.mValue.x, keyFrame.mValue.y, keyFrame.mValue.z } });
+	for (double key : keys)
+	{
+		KeyFrame keyFrame;
+		keyFrame.xmf3Position = SamplePosition(pNodeAnim, key);
+		keyFrame.xmf4RotationQuat = SampleRotation(pNodeAnim, key);
+		keyFrame.xmf3Scale = SampleScale(pNodeAnim, key);
+
+		keyFrameDatas[key] = keyFrame;
 	}
+
+	nodeAnim["nKeyFrames"] = keyFrameDatas.size();
+	nodeAnim["KeyFrames"] = nlohmann::ordered_json::array();
+	for (const auto& [fTimeKey, SRT] : keyFrameDatas) {
+		nodeAnim["KeyFrames"].push_back(
+			{ fTimeKey, 
+				{
+					SRT.xmf3Position.x, 
+					SRT.xmf3Position.y, 
+					SRT.xmf3Position.z
+				}, 
+				{
+					SRT.xmf4RotationQuat.x,
+					SRT.xmf4RotationQuat.y,
+					SRT.xmf4RotationQuat.z,
+					SRT.xmf4RotationQuat.w
+				}, 
+				{
+					SRT.xmf3Scale.x,
+					SRT.xmf3Scale.y,
+					SRT.xmf3Scale.z
+				} 
+			}
+		);
+	}
+
+	//nodeAnim["nPositionKeys"] = pNodeAnim->mNumPositionKeys;
+	//nodeAnim["PositionKeys"] = nlohmann::ordered_json::array();
+	//for (int i = 0; i < pNodeAnim->mNumPositionKeys; ++i) {
+	//	aiVectorKey keyFrame = pNodeAnim->mPositionKeys[i];
+	//	nodeAnim["PositionKeys"].push_back({ keyFrame.mTime, { keyFrame.mValue.x, keyFrame.mValue.y, keyFrame.mValue.z } });
+	//}
+	//
+	//nodeAnim["nRotationKeys"] = pNodeAnim->mNumRotationKeys;
+	//nodeAnim["RotationKeys"] = nlohmann::ordered_json::array();
+	//for (int i = 0; i < pNodeAnim->mNumRotationKeys; ++i) {
+	//	aiQuatKey keyFrame = pNodeAnim->mRotationKeys[i];
+	//	nodeAnim["RotationKeys"].push_back({ keyFrame.mTime, { keyFrame.mValue.x, keyFrame.mValue.y, keyFrame.mValue.z, keyFrame.mValue.w } });
+	//}
+	//
+	//nodeAnim["nScalingKeys"] = pNodeAnim->mNumScalingKeys;
+	//nodeAnim["ScalingKeys"] = nlohmann::ordered_json::array();
+	//for (int i = 0; i < pNodeAnim->mNumRotationKeys; ++i) {
+	//	aiVectorKey keyFrame = pNodeAnim->mScalingKeys[i];
+	//	nodeAnim["ScalingKeys"].push_back({ keyFrame.mTime, { keyFrame.mValue.x, keyFrame.mValue.y, keyFrame.mValue.z } });
+	//}
 
 	return nodeAnim;
+}
+
+XMFLOAT3 AssimpConverter::SamplePosition(const aiNodeAnim* pNodeAnim, double dTime) const
+{
+	// Check if no position key in node
+	if (pNodeAnim->mNumPositionKeys == 0)
+		return XMFLOAT3(0, 0, 0);
+
+	// Check if exact match is exist
+	for (unsigned i = 0; i < pNodeAnim->mNumPositionKeys; ++i)
+	{
+		if (pNodeAnim->mPositionKeys[i].mTime == dTime)
+		{
+			return aiVector3DToXMVector(pNodeAnim->mPositionKeys[i].mValue);
+		}
+	}
+
+	// Handle out of range
+	if (dTime <= pNodeAnim->mPositionKeys[0].mTime)
+		return aiVector3DToXMVector(pNodeAnim->mPositionKeys[0].mValue);
+
+	if (dTime >= pNodeAnim->mPositionKeys[pNodeAnim->mNumPositionKeys - 1].mTime)
+		return aiVector3DToXMVector(pNodeAnim->mPositionKeys[pNodeAnim->mNumPositionKeys - 1].mValue);
+
+	// find prev / next
+	unsigned index = 0;
+	for (; index < pNodeAnim->mNumPositionKeys - 1; ++index)
+	{
+		if (dTime < pNodeAnim->mPositionKeys[index + 1].mTime) {
+			break;
+		}
+	}
+
+	const aiVectorKey& key0 = pNodeAnim->mPositionKeys[index];
+	const aiVectorKey& key1 = pNodeAnim->mPositionKeys[index + 1];
+
+	double t = dTime;
+	double t0 = key0.mTime;
+	double t1 = key1.mTime;
+	double alpha = (t - t0) / (t1 - t0);
+
+	XMFLOAT3 xmf3Pos0 = aiVector3DToXMVector(key0.mValue);
+	XMFLOAT3 xmf3Pos1 = aiVector3DToXMVector(key1.mValue);
+
+	XMFLOAT3 xmf3Ret;
+	XMStoreFloat3(&xmf3Ret, XMVectorLerp(XMLoadFloat3(&xmf3Pos0), XMLoadFloat3(&xmf3Pos1), static_cast<float>(alpha)));
+	return xmf3Ret;
+}
+
+XMFLOAT4 AssimpConverter::SampleRotation(const aiNodeAnim* pNodeAnim, double dTime) const
+{
+	if (pNodeAnim->mNumRotationKeys == 0)
+		return XMFLOAT4(0, 0, 0, 1); // identity quat
+
+	for (unsigned i = 0; i < pNodeAnim->mNumRotationKeys; ++i)
+	{
+		if (pNodeAnim->mRotationKeys[i].mTime == dTime)
+		{
+			return aiQuaternionToXMVector(pNodeAnim->mRotationKeys[i].mValue);
+		}
+	}
+
+	if (dTime <= pNodeAnim->mRotationKeys[0].mTime)
+		return aiQuaternionToXMVector(pNodeAnim->mRotationKeys[0].mValue);
+
+	if (dTime >= pNodeAnim->mRotationKeys[pNodeAnim->mNumRotationKeys - 1].mTime)
+		return aiQuaternionToXMVector(pNodeAnim->mNumRotationKeys - 1 >= 0
+			? pNodeAnim->mRotationKeys[pNodeAnim->mNumRotationKeys - 1].mValue
+			: aiQuaternion(0, 0, 0, 1));
+
+	unsigned index = 0;
+	for (; index < pNodeAnim->mNumRotationKeys - 1; ++index)
+	{
+		if (dTime < pNodeAnim->mRotationKeys[index + 1].mTime)
+			break;
+	}
+
+	const aiQuatKey& key0 = pNodeAnim->mRotationKeys[index];
+	const aiQuatKey& key1 = pNodeAnim->mRotationKeys[index + 1];
+
+	double t = dTime;
+	double t0 = key0.mTime;
+	double t1 = key1.mTime;
+	double alpha = (t - t0) / (t1 - t0);
+
+	XMFLOAT4 xmf4Rot0 = aiQuaternionToXMVector(key0.mValue);
+	XMFLOAT4 xmf4Rot1 = aiQuaternionToXMVector(key1.mValue);
+
+	XMFLOAT4 xmf4Ret;
+	XMStoreFloat4(&xmf4Ret, XMQuaternionNormalize(XMQuaternionSlerp(XMLoadFloat4(&xmf4Rot0), XMLoadFloat4(&xmf4Rot1), static_cast<float>(alpha))));
+	return xmf4Ret;
+}
+
+XMFLOAT3 AssimpConverter::SampleScale(const aiNodeAnim* pNodeAnim, double dTime) const
+{
+	if (pNodeAnim->mNumScalingKeys == 0)
+		return XMFLOAT3(1, 1, 1);
+
+	for (unsigned i = 0; i < pNodeAnim->mNumScalingKeys; ++i)
+	{
+		if (pNodeAnim->mScalingKeys[i].mTime == dTime)
+		{
+			return aiVector3DToXMVector(pNodeAnim->mScalingKeys[i].mValue);
+		}
+	}
+
+	if (dTime <= pNodeAnim->mScalingKeys[0].mTime)
+		return aiVector3DToXMVector(pNodeAnim->mScalingKeys[0].mValue);
+
+	if (dTime >= pNodeAnim->mScalingKeys[pNodeAnim->mNumScalingKeys - 1].mTime)
+		return aiVector3DToXMVector(pNodeAnim->mScalingKeys[pNodeAnim->mNumScalingKeys - 1].mValue);
+
+	unsigned index = 0;
+	for (; index < pNodeAnim->mNumScalingKeys - 1; ++index)
+	{
+		if (dTime < pNodeAnim->mScalingKeys[index + 1].mTime)
+			break;
+	}
+
+	const aiVectorKey& key0 = pNodeAnim->mScalingKeys[index];
+	const aiVectorKey& key1 = pNodeAnim->mScalingKeys[index + 1];
+
+	double t = dTime;
+	double t0 = key0.mTime;
+	double t1 = key1.mTime;
+	double alpha = (t - t0) / (t1 - t0);
+
+	XMFLOAT3 xmf3Scale0 = aiVector3DToXMVector(key0.mValue);
+	XMFLOAT3 xmf3Scale1 = aiVector3DToXMVector(key1.mValue);
+
+	XMFLOAT3 xmf3Ret;
+	XMStoreFloat3(&xmf3Ret, XMVectorLerp(XMLoadFloat3(&xmf3Scale0), XMLoadFloat3(&xmf3Scale1), static_cast<float>(alpha)));
+	return xmf3Ret;
 }
 
 bool AssimpConverter::IsDDS(const aiTexture* tex)
@@ -784,60 +1065,4 @@ bool AssimpConverter::IsDDS(const aiTexture* tex)
 
 	const char* data = reinterpret_cast<const char*>(tex->pcData);
 	return memcmp(data, "DDS ", 4) == 0;
-}
-
-void AssimpConverter::ShowFrameData() const
-{
-	if (!m_pRootNode) {
-		std::println("No Model Loaded");
-	}
-
-	ProcessFrameData(m_pRootNode, 0);
-}
-
-void AssimpConverter::ProcessFrameData(const aiNode* pNode, UINT nTabs) const
-{
-	std::string strFrameName = pNode->mName.C_Str();
-
-	// Print
-	for (int i = 0; i < nTabs; ++i) {
-		std::print(".");
-	}
-
-	std::println("{} : nMeshes : {}", strFrameName, pNode->mNumMeshes);
-
-	for (int i = 0; i < pNode->mNumChildren; ++i) {
-		ProcessFrameData(pNode->mChildren[i], nTabs + 1);
-	}
-}
-
-void AssimpConverter::ProcessKeyframeData(const aiNodeAnim* pNode, UINT nTabs) const
-{
-	for (int i = 0; i < m_pScene->mNumAnimations; ++i) {
-		aiAnimation* pAnim = m_pScene->mAnimations[i];
-		for (int j = 0; j < pAnim->mNumChannels; ++j) {
-			// These two below are NOT keyframe animation data
-			//pAnim->mMeshChannels;
-			//pAnim->mMorphMeshChannels;
-			aiNodeAnim* pNodeAnim = pAnim->mChannels[j];
-
-			for (int k = 0; k < pNodeAnim->mNumPositionKeys; ++k) {
-				aiVectorKey Keyframe = pNodeAnim->mPositionKeys[k];
-				double dTimeKey = Keyframe.mTime;
-				aiVector3D v3Frame = Keyframe.mValue;
-			}
-
-			for (int k = 0; k < pNodeAnim->mNumRotationKeys; ++k) {
-				aiQuatKey Keyframe = pNodeAnim->mRotationKeys[k];
-				double dTimeKey = Keyframe.mTime;
-				aiQuaternion v3Frame = Keyframe.mValue;
-			}
-
-			for (int k = 0; k < pNodeAnim->mNumScalingKeys; ++k) {
-				aiVectorKey Keyframe = pNodeAnim->mScalingKeys[k];
-				double dTimeKey = Keyframe.mTime;
-				aiVector3D v3Frame = Keyframe.mValue;
-			}
-		}
-	}
 }
