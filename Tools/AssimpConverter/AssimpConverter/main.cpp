@@ -1,16 +1,10 @@
-#define _CRT_SECURE_NO_WARNINGS
+Ôªø#define _CRT_SECURE_NO_WARNINGS
 
 #include "stdafx.h"
 #include "AssimpConverter.h"
 #include <commdlg.h>
 #include <shlobj.h>
-
-HWND	g_hOpenButton;	// Open Button
-HWND	g_hConvertButton;	// Convert Button
-HWND	g_hMainEdit;	// Main Edit Control (Read Only)
-HWND	g_hScaleEdit;	// Scale Factor Edit
-HWND	g_hModelRadio;	// Model Radio
-HWND	g_hAnimRadio;	// Animation Radio
+#include <shobjidl.h>   // IFileDialog
 
 TCHAR g_str[1024] = L"";
 TCHAR g_lpstrFile[1024] = L"";
@@ -28,7 +22,13 @@ void DisplayText(const char* fmt, ...);
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-	// ¥Î»≠ªÛ¿⁄ ª˝º∫
+	HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+	if (FAILED(hr)) {
+		return -1;
+	}
+
+
+	// ÎåÄÌôîÏÉÅÏûê ÏÉùÏÑ±
 	DialogBox(hInstance, MAKEINTRESOURCE(IDD_DIALOG1), NULL, DlgProc);
 
 	return 0;
@@ -66,7 +66,10 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 			if (GetOpenFileName(&OFN) != 0) {
 				wsprintf(g_str, L"Open \"%s\" ?", OFN.lpstrFile);
-				MessageBox(hDlg, g_str, L"ø≠±‚", MB_OK);
+				MessageBox(hDlg, g_str, L"Ïó¥Í∏∞", MB_OK);
+			}
+			else {
+				return TRUE;
 			}
 
 			wchar_t buffer[64] = {};
@@ -89,17 +92,59 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				return TRUE;
 			}
 
-			char cstrFilepath[1024];
-			LPITEMIDLIST pidl = SHBrowseForFolderW(&bi);
-			if (pidl)
+			char cstrFilepath[1024] = {};
+
+			IFileDialog* pDialog = nullptr;
+			HRESULT hr = CoCreateInstance(
+				CLSID_FileOpenDialog,
+				nullptr,
+				CLSCTX_INPROC_SERVER,
+				IID_PPV_ARGS(&pDialog)
+			);
+
+			if (FAILED(hr))
+				return TRUE;
+
+			// Set Options
+			DWORD options;
+			pDialog->GetOptions(&options);
+			pDialog->SetOptions(
+				options |
+				FOS_PICKFOLDERS |        // Select folder
+				FOS_FORCEFILESYSTEM     // Only filesystem paths
+			);
+
+			hr = pDialog->Show(hDlg);
+			if (SUCCEEDED(hr))
 			{
-				TCHAR path[MAX_PATH];
-				if (SHGetPathFromIDListW(pidl, path))
+				IShellItem* pItem = nullptr;
+				if (SUCCEEDED(pDialog->GetResult(&pItem)))
 				{
-					WideCharToMultiByte(CP_ACP, 0, path, -1, cstrFilepath, sizeof(cstrFilepath), NULL, NULL);
+					PWSTR pszPath = nullptr;
+					if (SUCCEEDED(pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszPath)))
+					{
+						WideCharToMultiByte(
+							CP_ACP,
+							0,
+							pszPath,
+							-1,
+							cstrFilepath,
+							sizeof(cstrFilepath),
+							nullptr,
+							nullptr
+						);
+						CoTaskMemFree(pszPath);
+					}
+					pItem->Release();
 				}
-				CoTaskMemFree(pidl);
 			}
+			else
+			{
+				pDialog->Release();
+				return TRUE; // Cancel
+			}
+
+			pDialog->Release();
 
 			char cstrFilename[1024];
 			WideCharToMultiByte(CP_ACP, 0, g_lpstrFileTitle, -1, cstrFilename, sizeof(cstrFilename), NULL, NULL);
@@ -107,7 +152,6 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			std::string strExportName = p.stem().string();
 
 			g_Converter.Serialize(cstrFilepath, strExportName);
-			DisplayText("Successfully serialized at %s\r\n", cstrFilepath);
 			return TRUE;
 		}
 		case IDC_RADIO1:
@@ -126,24 +170,12 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		}
 		case IDCANCEL:
 		{
-			EndDialog(hDlg, IDCANCEL); // ¥Î»≠ªÛ¿⁄ ¥›±‚
+			EndDialog(hDlg, IDCANCEL); // ÎåÄÌôîÏÉÅÏûê Îã´Í∏∞
 			return TRUE;
 		}
 		}
 		return FALSE;
 	}
+
 	return FALSE;
-}
-
-void DisplayText(const char* fmt, ...)
-{
-	va_list arg;
-	va_start(arg, fmt);
-	char cbuf[512 * 2];
-	vsprintf_s(cbuf, fmt, arg);
-	va_end(arg);
-
-	int nLength = GetWindowTextLength(g_hMainEdit);
-	SendMessage(g_hMainEdit, EM_SETSEL, nLength, nLength);
-	SendMessageA(g_hMainEdit, EM_REPLACESEL, FALSE, (LPARAM)cbuf);
 }

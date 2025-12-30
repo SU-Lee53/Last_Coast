@@ -6,10 +6,6 @@ AssimpConverter::AssimpConverter()
 	m_pImporter = std::make_shared<Assimp::Importer>();
 }
 
-AssimpConverter::~AssimpConverter()
-{
-}
-
 void AssimpConverter::LoadFromFiles(const std::string& strPath, float fScaleFactor)
 {
 	m_fScale = fScaleFactor;
@@ -46,25 +42,29 @@ void AssimpConverter::LoadFromFiles(const std::string& strPath, float fScaleFact
 
 }
 
-void AssimpConverter::Serialize(const std::string& strPath, const std::string& strName) const
+void AssimpConverter::Serialize(const std::string& strPath, const std::string& strName)
 {
 	namespace fs = std::filesystem;
+	m_strSavePath = strPath + '\\' + strName;
+
 
 	// 1. Make save path (if not exists)
-	fs::path saveDirectoryPath{ strPath };
+	fs::path saveDirectoryPath{ m_strSavePath };
 	if (!fs::exists(saveDirectoryPath)) {
-		fs::create_directories(strPath);
+		fs::create_directories(m_strSavePath);
 	}
 
 	// 2. Defines Savefile name
-	std::string strSave = std::format("{}/{}.json", strPath, strName);
+	std::string strSave = std::format("{}/{}.json", m_strSavePath, strName);
 	std::ofstream out(strSave);
+
+	DisplayText("Serializing...\n");
 
 	nlohmann::ordered_json HierarchyJson = StoreNodeToJson(m_pRootNode);
 	out << HierarchyJson.dump(2);
 
 
-	std::cout << "Serialization Complete at " << strSave << '\n';
+	DisplayText("Successfully serialized at %s\r\n", m_strSavePath.c_str());
 
 }
 
@@ -121,20 +121,19 @@ nlohmann::ordered_json AssimpConverter::StoreNodeToJson(const aiNode* pNode) con
 		m._41, m._42, m._43, m._44,
 	};
 
-	// TODO : Mesh & Material
+	//Mesh & Material
 	node["nMeshes"] = pNode->mNumMeshes;
+	node["Meshes"] = nlohmann::ordered_json::array();
 	if (pNode->mNumMeshes != 0) {
 		for (int i = 0; i < pNode->mNumMeshes; ++i) {
-			// Mesh
-			std::string strMesh = "Mesh" + std::to_string(i);
 			aiMesh* pMesh = m_pScene->mMeshes[pNode->mMeshes[i]];
 			nlohmann::ordered_json mesh = StoreMeshToJson(pMesh);
-			node[strMesh] = mesh;
+			node["Meshes"].push_back(mesh);
 		}
 	}
 
+	node["nChildren"] = pNode->mNumChildren;
 	node["Children"] = nlohmann::ordered_json::array();
-
 	for (int i = 0; i < pNode->mNumChildren; ++i) {
 		nlohmann::ordered_json child = StoreNodeToJson(pNode->mChildren[i]);
 		node["Children"].push_back(child);
@@ -271,6 +270,11 @@ nlohmann::ordered_json AssimpConverter::StoreMeshToJson(const aiMesh* pMesh) con
 			mesh["BlendWeights"].push_back(v.fBlendWeights[3]);
 		}
 	}
+	else {
+		mesh["Skinned?"] = false;
+		mesh["BlendIndices"] = nullptr;
+		mesh["BlendWeights"] = nullptr;
+	}
 
 	// Indices
 	mesh["nIndices"] = pMesh->mNumFaces * 3;
@@ -395,29 +399,60 @@ nlohmann::ordered_json AssimpConverter::StoreMaterialToJson(const aiMaterial* pM
 
 	// Textures
 	// TODO : Make texture file from binary and serialize path
-	std::vector<aiTextureType> textureTypes = {
+	material["AlbedoMapName"] = nullptr;
+	material["SpecularMapName"] = nullptr;
+	material["MetallicMapName"] = nullptr;
+	material["NormalMapName"] = nullptr;
+
+	std::vector<aiTextureType> etextureTypes = {
 		aiTextureType_DIFFUSE,
 		aiTextureType_SPECULAR,
 		aiTextureType_METALNESS,
 		aiTextureType_NORMALS,
 	};
 
-	aiString aistrTexturePath{};
-	for (aiTextureType tType : textureTypes) {
-		UINT nTextures = pMaterial->GetTextureCount(tType);
+	for (aiTextureType eType : etextureTypes) {
+		UINT nTextures = pMaterial->GetTextureCount(eType);
 		for (int i = 0; i < nTextures; ++i) {
-			if (pMaterial->GetTexture(tType, i, &aistrTexturePath) == AI_SUCCESS) {
+			aiString aistrTexturePath{};
+			if (pMaterial->GetTexture(eType, i, &aistrTexturePath) == AI_SUCCESS) {
 				const aiTexture* pTexture = m_pScene->GetEmbeddedTexture(aistrTexturePath.C_Str());
-				std::string strTextureFormat = pTexture->achFormatHint;
-
 				// TODO : make it happen
 				if (pTexture) {
-					ExportTexture(pTexture);
+					ExportEmbeddedTexture(pTexture, eType);
+
+					std::string strTextureName = pTexture->mFilename.C_Str();
+					strTextureName = std::filesystem::path{ strTextureName }.stem().string();
+					switch (eType) {
+					case aiTextureType_DIFFUSE:
+					{
+						material["AlbedoMapName"] = strTextureName;
+						break;
+					}
+					case aiTextureType_SPECULAR:
+					{
+						material["SpecularMapName"] = strTextureName;
+						break;
+					}
+					case aiTextureType_METALNESS:
+					{
+						material["MetallicMapName"] = strTextureName;
+						break;
+					}
+					case aiTextureType_NORMALS:
+					{
+						material["NormalMapName"] = strTextureName;
+						break;
+					}
+					default:
+						std::unreachable();
+					}
 				}
 				else {
 					// External texture
-
+					ExportExternalTexture(aistrTexturePath, eType);
 				}
+
 			}
 		}
 	}
@@ -425,18 +460,219 @@ nlohmann::ordered_json AssimpConverter::StoreMaterialToJson(const aiMaterial* pM
 	return material;
 }
 
-void AssimpConverter::ExportTexture(const aiTexture* pTexture) const
+void AssimpConverter::ExportEmbeddedTexture(const aiTexture* pTexture, aiTextureType eTextureType) const
 {
+	namespace fs = std::filesystem;
+
+	HRESULT hr{};
+	ScratchImage img{};
+	TexMetadata metaData{};
 	std::string strTextureFormat = pTexture->achFormatHint;
+
+	// 1. Make save path (if not exists)
+	std::string strTexturePath = std::format("{}\\Textures", m_strSavePath);
+	fs::path saveDirectoryPath{ strTexturePath };
+	if (!fs::exists(saveDirectoryPath)) {
+		fs::create_directories(strTexturePath);
+	}
+
+	// 2. Get Texture name
+	std::string strTextureName = pTexture->mFilename.C_Str();
+	strTextureName = fs::path{ strTextureName }.stem().string();
+
+	std::string strTextureSaveName = std::format("{}\\{}.dds", strTexturePath, strTextureName);
+	if (fs::exists(fs::path{ strTextureSaveName })) {
+		DisplayText("Texture : %s is already exists\n", strTextureSaveName.c_str());
+		return;
+	}
+
 	if (pTexture->mHeight == 0) {
 		// Compressed
+		if (IsDDS(pTexture)) {
+			std::ofstream out{ strTextureSaveName , std::ios::binary };
+			out.write(
+				reinterpret_cast<const char*>(pTexture->pcData),
+				pTexture->mWidth
+			);
 
+			return;
+		}
+		else {
+			hr = ::LoadFromWICMemory(
+				reinterpret_cast<const uint8_t*>(pTexture->pcData),
+				pTexture->mWidth,
+				WIC_FLAGS_NONE,
+				&metaData,
+				img
+			);
+
+			// Filp Y if its normal map
+			if (eTextureType == aiTextureType_NORMALS) {
+				FlipNormalMapY(img);
+			}
+
+			if (FAILED(hr)) {
+				DisplayText("Failed to load texutre");
+				return;
+			}
+		}
 	}
 	else {
 		// Raw RGBA
+		hr = img.Initialize2D(
+			DXGI_FORMAT_R8G8B8A8_UNORM,
+			pTexture->mWidth,
+			pTexture->mHeight,
+			1,
+			1
+		);
+
+		// Filp Y if its normal map
+		if (eTextureType == aiTextureType_NORMALS) {
+			FlipNormalMapY(img);
+		}
+
+		if (FAILED(hr)) {
+			DisplayText("Failed to load texutre");
+			return;
+		}
+
+		::memcpy(img.GetImage(0, 0, 0)->pixels, pTexture->pcData, (pTexture->mWidth * pTexture->mHeight * 4));
 	}
 
+	// Generate Mipmaps
+	ScratchImage mipChain{};
 
+	HRESULT hrMipGenerated = ::GenerateMipMaps(
+		img.GetImages(),
+		img.GetImageCount(),
+		img.GetMetadata(),
+		TEX_FILTER_DEFAULT,
+		0,	// auto
+		mipChain
+	);
+
+	// Save
+	hr = ::SaveToDDSFile(
+		hrMipGenerated == S_OK ? mipChain.GetImages() : img.GetImages(),
+		hrMipGenerated == S_OK ? mipChain.GetImageCount() : img.GetImageCount(),
+		hrMipGenerated == S_OK ? mipChain.GetMetadata() : img.GetMetadata(),
+		DirectX::DDS_FLAGS_NONE,
+		StringToWString_UTF8(strTextureSaveName).c_str()
+	);
+
+	if (FAILED(hr)) {
+		DisplayText("Failed to save texutre");
+	}
+
+	return;
+}
+
+void AssimpConverter::ExportExternalTexture(const aiString& aistrTexturePath, aiTextureType eTextureType) const
+{
+	namespace fs = std::filesystem; 
+	fs::path texFullPath = fs::path{ m_strFilePath }.parent_path() / aistrTexturePath.C_Str();
+
+	// 1. Make save path (if not exists)
+	std::string strTexturePath = std::format("{}\\Textures", m_strSavePath);
+	fs::path saveDirectoryPath{ strTexturePath };
+	if (!fs::exists(saveDirectoryPath)) {
+		fs::create_directories(strTexturePath);
+	}
+
+	// 2. Get Texture name
+	std::string strTextureName = fs::path{ texFullPath }.stem().string();
+	std::string strTextureSaveName = std::format("{}\\{}.dds", strTexturePath, strTextureName);
+	if (fs::exists(fs::path{ strTextureSaveName })) {
+		DisplayText("Texture : %s is already exists\n", strTextureSaveName.c_str());
+		return;
+	}
+
+	ScratchImage img{};
+	TexMetadata metadata{};
+
+	HRESULT hr = LoadFromWICFile(
+		texFullPath.c_str(),
+		WIC_FLAGS_NONE,
+		&metadata,
+		img
+	);
+
+	if (FAILED(hr)) {
+		DisplayText("Failed to load texutre");
+	}
+
+	// Filp Y if its normal map
+	if (eTextureType == aiTextureType_NORMALS) {
+		FlipNormalMapY(img);
+	}
+
+	// Generate Mipmaps
+	ScratchImage mipChain{};
+
+	HRESULT hrMipGenerated = ::GenerateMipMaps(
+		img.GetImages(),
+		img.GetImageCount(),
+		img.GetMetadata(),
+		TEX_FILTER_DEFAULT,
+		0,	// auto
+		mipChain
+	);
+
+	// Save
+	hr = ::SaveToDDSFile(
+		hrMipGenerated == S_OK ? mipChain.GetImages() : img.GetImages(),
+		hrMipGenerated == S_OK ? mipChain.GetImageCount() : img.GetImageCount(),
+		hrMipGenerated == S_OK ? mipChain.GetMetadata() : img.GetMetadata(),
+		DirectX::DDS_FLAGS_NONE,
+		StringToWString_UTF8(strTextureSaveName).c_str()
+	);
+
+	if (FAILED(hr)) {
+		DisplayText("Failed to save texutre");
+	}
+
+	return;
+}
+
+void AssimpConverter::FlipNormalMapY(DirectX::ScratchImage& scratchImage) const
+{
+	const TexMetadata& metaData = scratchImage.GetMetadata();
+	
+	if (metaData.dimension != TEX_DIMENSION_TEXTURE2D) {
+		return;
+	}
+
+	if (metaData.format != DXGI_FORMAT_R8G8B8A8_UNORM &&
+		metaData.format != DXGI_FORMAT_R8G8B8A8_UNORM_SRGB) {
+		return;
+	}
+
+	for (size_t i = 0; i < scratchImage.GetImageCount(); ++i) {
+		const Image* img = scratchImage.GetImage(i, 0, 0);
+		uint8_t* pPixels = img->pixels;
+
+		for (size_t y = 0; y < img->height; ++y) {
+			uint8_t* pRow = pPixels + y * img->rowPitch;
+			for (size_t x = 0; x < img->width; ++x) {
+				uint8_t* pRGB = pRow + x * 4; // [0] : R, [1] : G, [2] : B
+				pRGB[1] = 255 - pRGB[1];
+			}
+		}
+
+	}
+}
+
+bool AssimpConverter::IsDDS(const aiTexture* tex)
+{
+	if (tex->mHeight != 0)
+		return false;
+
+	if (tex->mWidth < 4)
+		return false;
+
+	const char* data = reinterpret_cast<const char*>(tex->pcData);
+	return memcmp(data, "DDS ", 4) == 0;
 }
 
 void AssimpConverter::ShowFrameData() const

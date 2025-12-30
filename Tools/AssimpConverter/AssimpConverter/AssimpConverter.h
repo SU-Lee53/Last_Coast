@@ -67,13 +67,12 @@ struct Bone {	// == Frame
 class AssimpConverter {
 public:
 	AssimpConverter();
-	~AssimpConverter();
 
 	bool IsOpened() { return m_pScene; }
 	void LoadFromFiles(const std::string& strPath, float fScaleFactor = 1.f);
 
 public:
-	void Serialize(const std::string& strPath, const std::string& strName) const;
+	void Serialize(const std::string& strPath, const std::string& strName);
 
 
 public:
@@ -91,8 +90,9 @@ private:
 	nlohmann::ordered_json StoreMeshToJson(const aiMesh* pMesh) const;
 	nlohmann::ordered_json StoreMaterialToJson(const aiMaterial* pMaterial) const;
 
-	void ExportTexture(const aiTexture* pTexture) const;
-
+	void ExportEmbeddedTexture(const aiTexture* pTexture, aiTextureType eTextureType) const;
+	void ExportExternalTexture(const aiString& aistrTexturePath, aiTextureType eTextureType) const;
+	void FlipNormalMapY(DirectX::ScratchImage& img) const;
 
 private:
 	std::shared_ptr<Assimp::Importer> m_pImporter = nullptr;
@@ -106,9 +106,10 @@ private:
 	float m_fScale = 1.f;
 
 	std::string m_strFilePath;
+	std::string m_strSavePath;
 
-
-
+private:
+	static bool IsDDS(const aiTexture* tex);
 
 };
 

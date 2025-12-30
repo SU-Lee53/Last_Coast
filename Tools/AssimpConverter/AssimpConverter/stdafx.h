@@ -89,9 +89,61 @@ inline XMFLOAT3 aiVector3DToXMVector(const aiVector3D& aiVector) {
 	return xmf3Ret;
 }
 
+inline std::wstring StringToWString_UTF8(const std::string& str)
+{
+	if (str.empty())
+		return L"";
+
+	int size_needed = MultiByteToWideChar(
+		CP_UTF8,                // UTF-8
+		0,
+		str.c_str(),
+		(int)str.size(),
+		nullptr,
+		0
+	);
+
+	std::wstring wstr(size_needed, 0);
+
+	MultiByteToWideChar(
+		CP_UTF8,
+		0,
+		str.c_str(),
+		(int)str.size(),
+		&wstr[0],
+		size_needed
+	);
+
+	return wstr;
+}
+
 template<>
 struct std::hash<aiString> {
 	size_t operator()(const aiString& aiStr) const {
 		return std::hash<std::string>{}(std::string{ aiStr.C_Str() });
 	}
 };
+
+
+// Windows
+
+inline HWND		g_hOpenButton;		// Open Button
+inline HWND		g_hConvertButton;	// Convert Button
+inline HWND		g_hMainEdit;		// Main Edit Control (Read Only)
+inline HWND		g_hScaleEdit;		// Scale Factor Edit
+inline HWND		g_hModelRadio;		// Model Radio
+inline HWND		g_hAnimRadio;		// Animation Radio
+
+inline void DisplayText(const char* fmt, ...)
+{
+	va_list arg;
+	va_start(arg, fmt);
+	char cbuf[512 * 2];
+	vsprintf_s(cbuf, fmt, arg);
+	va_end(arg);
+
+	int nLength = GetWindowTextLength(g_hMainEdit);
+	SendMessage(g_hMainEdit, EM_SETSEL, nLength, nLength);
+	SendMessageA(g_hMainEdit, EM_REPLACESEL, FALSE, (LPARAM)cbuf);
+}
+
