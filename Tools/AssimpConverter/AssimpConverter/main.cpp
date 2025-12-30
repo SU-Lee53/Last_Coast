@@ -27,8 +27,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		return -1;
 	}
 
-
-	// 대화상자 생성
 	DialogBox(hInstance, MAKEINTRESOURCE(IDD_DIALOG1), NULL, DlgProc);
 
 	return 0;
@@ -48,6 +46,11 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		g_hScaleEdit = GetDlgItem(hDlg, IDC_EDIT2);
 		g_hModelRadio = GetDlgItem(hDlg, IDC_RADIO1);
 		g_hAnimRadio = GetDlgItem(hDlg, IDC_RADIO2);
+		CheckDlgButton(hDlg, IDC_RADIO1, BST_CHECKED);
+		SetDlgItemTextW(hDlg, IDC_EDIT2, L"1.0");
+
+		g_bModelConvertOn = (IsDlgButtonChecked(hDlg, IDC_RADIO1) == BST_CHECKED);
+		g_bAnimationConvertOn = (IsDlgButtonChecked(hDlg, IDC_RADIO2) == BST_CHECKED);
 
 		return TRUE;
 	case WM_COMMAND:
@@ -66,7 +69,7 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 			if (GetOpenFileName(&OFN) != 0) {
 				wsprintf(g_str, L"Open \"%s\" ?", OFN.lpstrFile);
-				MessageBox(hDlg, g_str, L"열기", MB_OK);
+				MessageBox(hDlg, g_str, L"Open", MB_OK);
 			}
 			else {
 				return TRUE;
@@ -151,7 +154,16 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			std::filesystem::path p{ cstrFilename };
 			std::string strExportName = p.stem().string();
 
-			g_Converter.Serialize(cstrFilepath, strExportName);
+			if (g_bModelConvertOn) {
+				g_Converter.SerializeModel(cstrFilepath, strExportName);
+			}
+			else {
+				g_Converter.SerializeAnimation(cstrFilepath, strExportName);
+			}
+
+			wsprintf(g_str, L"Conversion Complete");
+			MessageBox(hDlg, g_str, L"Convert", MB_OK);
+
 			return TRUE;
 		}
 		case IDC_RADIO1:

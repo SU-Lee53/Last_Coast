@@ -57,11 +57,11 @@ struct Animation {
 };
 
 struct Bone {	// == Frame
-	std::string strFrameName;
-	XMFLOAT4X4 Transform;
-
-	int nParentIdx = -1;
-	std::vector<int> nChildrenIdx;
+	std::string strName;
+	int nIndex;
+	int nParentIndex;
+	XMFLOAT4X4 xmf4x4Transform;	// aiNode::mTransformation
+	XMFLOAT4X4 xmf4x4Offset;	// Inverse bind pose
 };
 
 class AssimpConverter {
@@ -72,8 +72,8 @@ public:
 	void LoadFromFiles(const std::string& strPath, float fScaleFactor = 1.f);
 
 public:
-	void Serialize(const std::string& strPath, const std::string& strName);
-
+	void SerializeModel(const std::string& strPath, const std::string& strName);
+	void SerializeAnimation(const std::string& strPath, const std::string& strName);
 
 public:
 	void ShowFrameData() const;
@@ -82,17 +82,19 @@ private:
 	void ProcessFrameData(const aiNode* pNode, UINT nTabs = 0) const;
 	void ProcessKeyframeData(const aiNodeAnim* pNode, UINT nTabs = 0) const;
 
-	void CountBones(const aiNode* pNode, int& nNumBones);
-	void StoreBoneData(const aiNode* pNode);
-	void StoreBoneHeirachy(const aiNode* pNode);
+	void GatherBoneIndex(); 
+	void BuildBoneHierarchy(aiNode* node, int parentBoneIndex);
 	
 	nlohmann::ordered_json StoreNodeToJson(const aiNode* pNode) const;
 	nlohmann::ordered_json StoreMeshToJson(const aiMesh* pMesh) const;
 	nlohmann::ordered_json StoreMaterialToJson(const aiMaterial* pMaterial) const;
+	nlohmann::ordered_json StoreAnimationToJson(const aiAnimation* pAnimation) const;
+	nlohmann::ordered_json StoreNodeAnimToJson(const aiNodeAnim* pNodeAnim) const;
 
 	void ExportEmbeddedTexture(const aiTexture* pTexture, aiTextureType eTextureType) const;
 	void ExportExternalTexture(const aiString& aistrTexturePath, aiTextureType eTextureType) const;
 	void FlipNormalMapY(DirectX::ScratchImage& img) const;
+
 
 private:
 	std::shared_ptr<Assimp::Importer> m_pImporter = nullptr;

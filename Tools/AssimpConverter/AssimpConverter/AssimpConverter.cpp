@@ -30,19 +30,62 @@ void AssimpConverter::LoadFromFiles(const std::string& strPath, float fScaleFact
 	}
 
 	m_pRootNode = m_pScene->mRootNode;
-	int nBones{};
-	CountBones(m_pRootNode, nBones);
-	m_Bones.reserve(nBones);
 	
-	StoreBoneData(m_pRootNode);
-	for (int i = 0; i < nBones; ++i) {
-		m_BoneIndexMap.insert({ m_Bones[i].strFrameName, i });
-	}
-	StoreBoneHeirachy(m_pRootNode);
-
+	GatherBoneIndex();
+	BuildBoneHierarchy(m_pRootNode, -1);
 }
 
-void AssimpConverter::Serialize(const std::string& strPath, const std::string& strName)
+void AssimpConverter::GatherBoneIndex()
+{
+	for (int m = 0; m < m_pScene->mNumMeshes; ++m)
+	{
+		const aiMesh* pMesh = m_pScene->mMeshes[m];
+
+		for (int b = 0; b < pMesh->mNumBones; ++b)
+		{
+			const aiBone* pBone = pMesh->mBones[b];
+			std::string strName = pBone->mName.C_Str();
+
+			if (m_BoneIndexMap.find(strName) == m_BoneIndexMap.end())
+			{
+				int index = m_Bones.size();
+				m_BoneIndexMap[strName] = index;
+
+				Bone info{};
+				info.nIndex = index;
+				info.strName = strName;
+				info.xmf4x4Offset = aiMatrixToXMMatrix(pBone->mOffsetMatrix);
+				info.nParentIndex = -1;	// Later
+
+				m_Bones.push_back(info);
+			}
+		}
+	}
+}
+
+void AssimpConverter::BuildBoneHierarchy(aiNode* node, int parentBoneIndex)
+{
+	std::string nodeName = node->mName.C_Str();
+	int currentBoneIndex = -1;
+
+	auto it = m_BoneIndexMap.find(nodeName);
+	if (it != m_BoneIndexMap.end())
+	{
+		currentBoneIndex = it->second;
+		m_Bones[currentBoneIndex].nParentIndex = parentBoneIndex;
+		m_Bones[currentBoneIndex].xmf4x4Transform = aiMatrixToXMMatrix(node->mTransformation);
+	}
+
+	for (int i = 0; i < node->mNumChildren; ++i)
+	{
+		BuildBoneHierarchy(
+			node->mChildren[i],
+			currentBoneIndex == -1 ? parentBoneIndex : currentBoneIndex
+		);
+	}
+}
+
+void AssimpConverter::SerializeModel(const std::string& strPath, const std::string& strName)
 {
 	namespace fs = std::filesystem;
 	m_strSavePath = strPath + '\\' + strName;
@@ -60,51 +103,41 @@ void AssimpConverter::Serialize(const std::string& strPath, const std::string& s
 
 	DisplayText("Serializing...\n");
 
-	nlohmann::ordered_json HierarchyJson = StoreNodeToJson(m_pRootNode);
-	out << HierarchyJson.dump(2);
+	nlohmann::ordered_json hierarchyJson;
+	hierarchyJson["Hierarchy"] = StoreNodeToJson(m_pRootNode);
+
+	// Bone data (For animation retargeting)
+	hierarchyJson["nBones"] = m_Bones.size();
+	hierarchyJson["Bones"] = nlohmann::ordered_json::array();
+	for (const auto& boneData : m_Bones) {
+		nlohmann::ordered_json bone;
+		bone["Name"] = boneData.strName;
+		bone["Index"] = boneData.nIndex;
+		bone["ParentIndex"] = boneData.nParentIndex;
+		XMFLOAT4X4 m = boneData.xmf4x4Transform;
+		bone["localBind"] = {
+			m._11, m._12, m._13, m._14,
+			m._21, m._22, m._23, m._24,
+			m._31, m._32, m._33, m._34,
+			m._41, m._42, m._43, m._44,
+		};
+
+		m = boneData.xmf4x4Offset;
+		bone["inverseBind"] = {
+			m._11, m._12, m._13, m._14,
+			m._21, m._22, m._23, m._24,
+			m._31, m._32, m._33, m._34,
+			m._41, m._42, m._43, m._44,
+		};
+
+		hierarchyJson["Bones"].push_back(bone);
+	}
+
+	out << hierarchyJson.dump(2);
 
 
 	DisplayText("Successfully serialized at %s\r\n", m_strSavePath.c_str());
 
-}
-
-void AssimpConverter::CountBones(const aiNode* pNode, int& nNumBones)
-{
-	nNumBones++;
-	for (int i = 0; i < pNode->mNumChildren; ++i) {
-		CountBones(pNode->mChildren[i], nNumBones);
-	}
-}
-
-void AssimpConverter::StoreBoneData(const aiNode* pNode)
-{
-	Bone b{};
-	b.strFrameName = pNode->mName.C_Str();
-	b.Transform = aiMatrixToXMMatrix(pNode->mTransformation);
-	m_Bones.push_back(b);
-
-
-	for (int i = 0; i < pNode->mNumChildren; ++i) {
-		StoreBoneData(pNode->mChildren[i]);
-	}
-}
-
-void AssimpConverter::StoreBoneHeirachy(const aiNode* pNode)
-{
-	Bone& b = m_Bones[m_BoneIndexMap[pNode->mName.C_Str()]];
-
-	if (pNode->mParent != nullptr) {
-		b.nParentIdx = m_BoneIndexMap[pNode->mParent->mName.C_Str()];
-	}
-
-	b.nChildrenIdx.reserve(pNode->mNumChildren);
-	for (int i = 0; i < pNode->mNumChildren; ++i) {
-		b.nChildrenIdx.push_back(m_BoneIndexMap[std::string{ pNode->mChildren[i]->mName.C_Str() }]);
-	}
-	
-	for (int i = 0; i < pNode->mNumChildren; ++i) {
-		StoreBoneHeirachy(pNode->mChildren[i]);
-	}
 }
 
 nlohmann::ordered_json AssimpConverter::StoreNodeToJson(const aiNode* pNode) const
@@ -570,7 +603,7 @@ void AssimpConverter::ExportEmbeddedTexture(const aiTexture* pTexture, aiTexture
 
 void AssimpConverter::ExportExternalTexture(const aiString& aistrTexturePath, aiTextureType eTextureType) const
 {
-	namespace fs = std::filesystem; 
+	namespace fs = std::filesystem;
 	fs::path texFullPath = fs::path{ m_strFilePath }.parent_path() / aistrTexturePath.C_Str();
 
 	// 1. Make save path (if not exists)
@@ -638,7 +671,7 @@ void AssimpConverter::ExportExternalTexture(const aiString& aistrTexturePath, ai
 void AssimpConverter::FlipNormalMapY(DirectX::ScratchImage& scratchImage) const
 {
 	const TexMetadata& metaData = scratchImage.GetMetadata();
-	
+
 	if (metaData.dimension != TEX_DIMENSION_TEXTURE2D) {
 		return;
 	}
@@ -661,6 +694,84 @@ void AssimpConverter::FlipNormalMapY(DirectX::ScratchImage& scratchImage) const
 		}
 
 	}
+}
+
+void AssimpConverter::SerializeAnimation(const std::string& strPath, const std::string& strName)
+{
+	if (m_pScene->mNumAnimations == 0) {
+		DisplayText("File doesn't have keyframe animation");
+	}
+
+	namespace fs = std::filesystem;
+	m_strSavePath = strPath + '\\' + strName;
+
+	// 1. Make save path (if not exists)
+	fs::path saveDirectoryPath{ m_strSavePath };
+	if (!fs::exists(saveDirectoryPath)) {
+		fs::create_directories(m_strSavePath);
+	}
+
+	// 2. Defines Savefile name
+	std::string strSave = std::format("{}/{}.json", m_strSavePath, strName);
+	std::ofstream out(strSave);
+
+	DisplayText("Serializing...\n");
+
+	nlohmann::ordered_json animJson = nlohmann::ordered_json::array();
+	for (int i = 0; i < m_pScene->mNumAnimations; ++i) {
+		animJson.push_back(StoreAnimationToJson(m_pScene->mAnimations[i]));
+	}
+
+	out << animJson.dump(2);
+
+
+	DisplayText("Successfully serialized at %s\r\n", m_strSavePath.c_str());
+
+}
+
+nlohmann::ordered_json AssimpConverter::StoreAnimationToJson(const aiAnimation* pAnimation) const
+{
+	nlohmann::ordered_json anim;
+	anim["Name"] = pAnimation->mName.C_Str();
+	anim["Duration"] = pAnimation->mDuration;
+	anim["TicksPerSecond"] = pAnimation->mTicksPerSecond;
+
+	anim["nChannels"] = pAnimation->mNumChannels;
+	anim["Channels"] = nlohmann::ordered_json::array();
+	for (int i = 0; i < pAnimation->mNumChannels; ++i) {
+		anim["Channels"].push_back(StoreNodeAnimToJson(pAnimation->mChannels[i]));
+	}
+
+	return anim;
+}
+
+nlohmann::ordered_json AssimpConverter::StoreNodeAnimToJson(const aiNodeAnim* pNodeAnim) const
+{
+	nlohmann::ordered_json nodeAnim;
+	nodeAnim["Name"] = pNodeAnim->mNodeName.C_Str();	// name of bone
+
+	nodeAnim["nPositionKeys"] = pNodeAnim->mNumPositionKeys;
+	nodeAnim["PositionKeys"] = nlohmann::ordered_json::array();
+	for (int i = 0; i < pNodeAnim->mNumPositionKeys; ++i) {
+		aiVectorKey keyFrame = pNodeAnim->mPositionKeys[i];
+		nodeAnim["PositionKeys"].push_back({ keyFrame.mTime, { keyFrame.mValue.x, keyFrame.mValue.y, keyFrame.mValue.z } });
+	}
+
+	nodeAnim["nRotationKeys"] = pNodeAnim->mNumRotationKeys;
+	nodeAnim["RotationKeys"] = nlohmann::ordered_json::array();
+	for (int i = 0; i < pNodeAnim->mNumRotationKeys; ++i) {
+		aiQuatKey keyFrame = pNodeAnim->mRotationKeys[i];
+		nodeAnim["RotationKeys"].push_back({ keyFrame.mTime, { keyFrame.mValue.x, keyFrame.mValue.y, keyFrame.mValue.z, keyFrame.mValue.w } });
+	}
+
+	nodeAnim["nScalingKeys"] = pNodeAnim->mNumScalingKeys;
+	nodeAnim["ScalingKeys"] = nlohmann::ordered_json::array();
+	for (int i = 0; i < pNodeAnim->mNumRotationKeys; ++i) {
+		aiVectorKey keyFrame = pNodeAnim->mScalingKeys[i];
+		nodeAnim["ScalingKeys"].push_back({ keyFrame.mTime, { keyFrame.mValue.x, keyFrame.mValue.y, keyFrame.mValue.z } });
+	}
+
+	return nodeAnim;
 }
 
 bool AssimpConverter::IsDDS(const aiTexture* tex)
