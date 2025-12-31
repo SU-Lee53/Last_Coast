@@ -16,6 +16,8 @@ struct MESHLOADINFO;
 struct MATERIALLOADINFO;
 
 class GameObject : public std::enable_shared_from_this<GameObject> {
+	friend class ModelManager;
+
 public:
 	GameObject();
 	~GameObject();
@@ -34,13 +36,13 @@ public:
 	
 
 	// Create New
-	template<typename T, typename... Args> requires std::derived_from<T, MeshRenderer>
+	template<typename T, typename... Args> requires std::derived_from<T, IMeshRenderer>
 	void SetMeshRenderer(Args&&... args);
 	
 	// Set Existed
-	void SetMeshRenderer(std::shared_ptr<MeshRenderer> pMeshRenderer) { m_pMeshRenderer = pMeshRenderer; }
+	void SetMeshRenderer(std::shared_ptr<IMeshRenderer> pMeshRenderer) { m_pMeshRenderer = pMeshRenderer; }
 	
-	std::shared_ptr<MeshRenderer> GetMeshRenderer() const { return m_pMeshRenderer; }
+	std::shared_ptr<IMeshRenderer> GetMeshRenderer() const { return m_pMeshRenderer; }
 
 	void SetBound(Vector3 v3Center, Vector3 v3Extents);
 
@@ -72,7 +74,7 @@ protected:
 	bool m_bInitialized = false;
 	std::string m_strFrameName;
 	Transform m_Transform{};
-	std::shared_ptr<MeshRenderer> m_pMeshRenderer = nullptr;
+	std::shared_ptr<IMeshRenderer> m_pMeshRenderer = nullptr;
 
 	std::array<std::shared_ptr<Component>, COMPONENT_TYPE_COUNT> m_pComponents = {};
 
@@ -94,7 +96,7 @@ public:
 
 };
 
-template<typename T, typename... Args> requires std::derived_from<T, MeshRenderer>
+template<typename T, typename... Args> requires std::derived_from<T, IMeshRenderer>
 inline void GameObject::SetMeshRenderer(Args&&... args)
 {
 	m_pMeshRenderer = std::make_shared<T>(std::forward<Args>(args)...);

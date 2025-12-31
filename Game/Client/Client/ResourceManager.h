@@ -1,18 +1,18 @@
-#pragma once
+ï»¿#pragma once
 #include "ConstantBufferPool.h"
 
 // ===========================================================================================
 // ResourceManager
-// - Shader º¯¼öµéÀ» »ı¼º ¹× °ü¸®
+// - Shader ë³€ìˆ˜ë“¤ì„ ìƒì„± ë° ê´€ë¦¬
 //		- VertexBuffer, IndexBuffer
-//		- ConstantBuffer (ConstantBufferPool ¼ÒÀ¯)
+//		- ConstantBuffer (ConstantBufferPool ì†Œìœ )
 //		- StructuredBuffer	
 //		- Texture
-// - Á÷Á¢ »ı¼ºº¸´Ù Manager ¸¦ °ÅÃÄ »ı¼ºÇÒ °Í (ÃßÈÄ ResourcePool À» ÀÌ¿ëÇÏ¿© °ü¸®ÇÒ ¿¹Á¤ÀÌ¹Ç·Î)
+// - ì§ì ‘ ìƒì„±ë³´ë‹¤ Manager ë¥¼ ê±°ì³ ìƒì„±í•  ê²ƒ (ì¶”í›„ ResourcePool ì„ ì´ìš©í•˜ì—¬ ê´€ë¦¬í•  ì˜ˆì •ì´ë¯€ë¡œ)
 // 
 //  10.18
-//  - ShaderManager, TextureManager º°µµ ±¸Çö
-//  - Device¿Í CommandList ´Â ResourceManager ÀÇ °ÍÀ» °°ÀÌ¾´´Ù
+//  - ShaderManager, TextureManager ë³„ë„ êµ¬í˜„
+//  - Deviceì™€ CommandList ëŠ” ResourceManager ì˜ ê²ƒì„ ê°™ì´ì“´ë‹¤
 // ===========================================================================================
 
 constexpr static size_t MAX_CB_POOL_SIZE = 1024;
@@ -20,11 +20,11 @@ constexpr static size_t MAX_CB_POOL_SIZE = 1024;
 class Texture;
 
 class ResourceManager {
-public:
-	ResourceManager(ComPtr<ID3D12Device> pDevice);
-	~ResourceManager();
+	
+	DECLARE_SINGLE(ResourceManager)
 
 public:
+	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
 	void ResetCommandList();
 
 public:

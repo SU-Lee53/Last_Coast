@@ -1,9 +1,10 @@
 ﻿#include "pch.h"
 #include "TextureManager.h"
 
-TextureManager::TextureManager(ComPtr<ID3D12Device> pd3dDevice)
-	: m_pd3dDevice{ pd3dDevice }
+void TextureManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 {
+	m_pd3dDevice = pd3dDevice;
+
 	CreateCommandList();
 	CreateFence();
 
@@ -28,21 +29,17 @@ TextureManager::TextureManager(ComPtr<ID3D12Device> pd3dDevice)
 	m_DSVDescriptorHeap.Initialize(pd3dDevice, heapDesc);
 }
 
-TextureManager::~TextureManager()
-{
-}
-
 void TextureManager::LoadGameTextures()
 {
 	// Font
-	LoadTexture("font", L"../Resource/font.dds");
+	LoadTexture("font");
 }
 
-std::shared_ptr<Texture> TextureManager::LoadTexture(const std::string& strTextureName, const std::wstring& wstrTexturePath)
+std::shared_ptr<Texture> TextureManager::LoadTexture(const std::string& strTextureName)
 {
 	auto it = m_pTexturePool.find(strTextureName);
 	if (it == m_pTexturePool.end()) {
-		std::shared_ptr<Texture> pTexture = CreateTextureFromFile(wstrTexturePath);
+		std::shared_ptr<Texture> pTexture = CreateTextureFromFile(::StringToWString(strTextureName));
 		m_pTexturePool[strTextureName] = pTexture;
 	}
 
@@ -70,9 +67,11 @@ std::shared_ptr<Texture> TextureManager::Get(const std::string& strTextureName) 
 	return nullptr;
 }
 
-std::shared_ptr<Texture> TextureManager::CreateTextureFromFile(const std::wstring& wstrTexturePath)
+std::shared_ptr<Texture> TextureManager::CreateTextureFromFile(const std::wstring& wstrTextureName)
 {
 	namespace fs = std::filesystem;
+	
+	std::wstring wstrTexturePath = std::format(L"{}/{}.dds", g_wstrTextureBasePath, wstrTextureName);
 
 	fs::path texPath{ wstrTexturePath };
 	if (!fs::exists(texPath)) {
@@ -135,7 +134,7 @@ std::shared_ptr<Texture> TextureManager::CreateTextureFromFile(const std::wstrin
 	pTexture->m_d3dSRVDesc = srvDesc;
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE SRVHandle = m_SRVUAVDescriptorHeap.GetDescriptorHandleFromHeapStart().cpuHandle;
-	SRVHandle.Offset(m_nNumSRVUAVTextures++);
+	SRVHandle.Offset(m_nNumSRVUAVTextures++, D3DCORE->g_nCBVSRVDescriptorIncrementSize);
 	m_pd3dDevice->CreateShaderResourceView(pTexture->m_pTexResource.pResource.Get(), &srvDesc, SRVHandle);
 	pTexture->m_d3dSRVHandle = SRVHandle;
 

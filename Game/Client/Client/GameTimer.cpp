@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "GameTimer.h"
 
-GameTimer::GameTimer()
+void GameTimer::Initialize()
 {
 	::QueryPerformanceFrequency((LARGE_INTEGER*)&m_nPerformanceFrequencyPerSec);
 	::QueryPerformanceCounter((LARGE_INTEGER*)&m_nLastPerformanceCounter);
@@ -16,11 +16,6 @@ GameTimer::GameTimer()
 	m_nFramesPerSecond = 0;
 	m_fFPSTimeElapsed = 0.0f;
 }
-
-GameTimer::~GameTimer()
-{
-}
-
 void GameTimer::Tick(float fLockFPS)
 {
 	if (m_bStopped)

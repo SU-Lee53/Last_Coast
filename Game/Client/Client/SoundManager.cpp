@@ -69,10 +69,6 @@ void Sound::VolumeDown()
 
 FMOD_SYSTEM* SoundManager::m_gpSoundSystem = nullptr;
 
-SoundManager::SoundManager()
-{
-}
-
 SoundManager::~SoundManager()
 {
 	m_pSoundMap.clear();

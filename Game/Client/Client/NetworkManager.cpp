@@ -18,7 +18,12 @@ HANDLE NetworkManager::g_hPlayerWritePacketEvent = nullptr;
 HANDLE NetworkManager::g_hPacketReceivedEvent = nullptr;
 HANDLE NetworkManager::g_hNetworkThread = nullptr;
 
-NetworkManager::NetworkManager()
+NetworkManager::~NetworkManager()
+{
+	Disconnect();
+}
+
+void NetworkManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 {
 	WSADATA wsa;
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
@@ -37,13 +42,8 @@ NetworkManager::NetworkManager()
 
 	// 이벤트는 자동 리셋을 사용
 	g_hPlayerWritePacketEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-	
-	g_hPacketReceivedEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-}
 
-NetworkManager::~NetworkManager()
-{
-	Disconnect();
+	g_hPacketReceivedEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////

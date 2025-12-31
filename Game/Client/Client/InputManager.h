@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 const static int KEY_TYPE_COUNT = 256;
 
@@ -12,11 +12,11 @@ enum class KEY_STATE
 };
 
 class InputManager {
-public:
-	InputManager(HWND hWnd);
-	~InputManager();
+
+	DECLARE_SINGLE(InputManager)
 
 public:
+	void Initialize(HWND hWnd);
 	void Update();
 
 public:

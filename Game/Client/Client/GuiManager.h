@@ -1,10 +1,11 @@
 ﻿#pragma once
 
 class GuiManager {
-public:
-	GuiManager(ComPtr<ID3D12Device> pd3dDevice);
+
+	DECLARE_SINGLE(GuiManager)
 
 public:
+	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
 	void Update();
 	void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
 

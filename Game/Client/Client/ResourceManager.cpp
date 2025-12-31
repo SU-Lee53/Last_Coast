@@ -3,17 +3,13 @@
 #include "Texture.h"
 #include "TextureManager.h"
 
-ResourceManager::ResourceManager(ComPtr<ID3D12Device> pDevice)
-	: m_pd3dDevice { pDevice }
+void ResourceManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 {
+	m_pd3dDevice = pd3dDevice;
 	CreateCommandList();
 	CreateFence();
 
-	m_ConstantBufferPool.Initialize(pDevice, 1'0000);
-}
-
-ResourceManager::~ResourceManager()
-{
+	m_ConstantBufferPool.Initialize(pd3dDevice, 1'0000);
 }
 
 IndexBuffer ResourceManager::CreateIndexBuffer(std::vector<UINT> Indices)

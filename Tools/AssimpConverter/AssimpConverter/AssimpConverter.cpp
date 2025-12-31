@@ -22,7 +22,7 @@ void AssimpConverter::LoadFromFiles(const std::string& strPath, float fScaleFact
 		aiProcess_GenNormals |
 		aiProcess_CalcTangentSpace |
 		aiProcess_PopulateArmatureData | 
-		aiProcess_LimitBoneWeights	// limits influence bone count to for per vertex
+		aiProcess_LimitBoneWeights	// limits influencing bone count to for per vertex
 	);
 
 	if (!m_pScene) {
@@ -352,7 +352,7 @@ nlohmann::ordered_json AssimpConverter::StoreMeshToJson(const aiMesh* pMesh) con
 	mesh["Bounds"]["Extents"].push_back(xmAABB.Extents.z);
 
 	nlohmann::ordered_json material = StoreMaterialToJson(m_pScene->mMaterials[pMesh->mMaterialIndex]);
-	mesh["Material"] = material;
+	mesh["Material"].push_back(material);
 
 
 	return mesh;
@@ -447,16 +447,17 @@ nlohmann::ordered_json AssimpConverter::StoreMaterialToJson(const aiMaterial* pM
 
 	// Textures
 	// TODO : Make texture file from binary and serialize path
-	material["AlbedoMapName"] = nullptr;
-	material["SpecularMapName"] = nullptr;
-	material["MetallicMapName"] = nullptr;
-	material["NormalMapName"] = nullptr;
+	material["AlbedoMapName"] = "None";
+	material["SpecularMapName"] = "None";
+	material["MetallicMapName"] = "None";
+	material["NormalMapName"] = "None";
 
 	std::vector<aiTextureType> etextureTypes = {
 		aiTextureType_DIFFUSE,
 		aiTextureType_SPECULAR,
 		aiTextureType_METALNESS,
 		aiTextureType_NORMALS,
+		aiTextureType_EMISSIVE,
 	};
 
 	for (aiTextureType eType : etextureTypes) {
@@ -490,6 +491,11 @@ nlohmann::ordered_json AssimpConverter::StoreMaterialToJson(const aiMaterial* pM
 					case aiTextureType_NORMALS:
 					{
 						material["NormalMapName"] = strTextureName;
+						break;
+					}
+					case aiTextureType_EMISSIVE:
+					{
+						material["EmissionMapName"] = strTextureName;
 						break;
 					}
 					default:

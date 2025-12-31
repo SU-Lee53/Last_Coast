@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "Texture.h"
 #include "Shader.h"
 
@@ -51,40 +51,12 @@ protected:
 };
 
 //////////////////////////////////////////////////////////////////////////////////
-// DiffusedMaterial
+// StandardMaterial
 
-class DiffusedMaterial : public Material {
+class StandardMaterial : public Material {
 public:
-	DiffusedMaterial(const MATERIALLOADINFO& materialLoadInfo);
-	virtual ~DiffusedMaterial();
-
-	virtual void UpdateShaderVariables(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, void* dataForBind) override;
-	virtual void UpdateShaderVariables(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle) override;
-
-
-};
-
-//////////////////////////////////////////////////////////////////////////////////
-// TexturedMaterial
-
-class TexturedMaterial : public Material {
-public:
-	TexturedMaterial(const MATERIALLOADINFO& materialLoadInfo);
-	virtual ~TexturedMaterial();
-
-	virtual void UpdateShaderVariables(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, void* dataForBind) override;
-	virtual void UpdateShaderVariables(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle) override;
-
-};
-
-//////////////////////////////////////////////////////////////////////////////////
-// TexturedNormalMaterial
-// Diffuse + Normal ÅØ½ºÃÄ
-
-class TexturedNormalMaterial : public Material {
-public:
-	TexturedNormalMaterial(const MATERIALLOADINFO& materialLoadInfo);
-	virtual ~TexturedNormalMaterial();
+	StandardMaterial(const MATERIALLOADINFO& materialLoadInfo);
+	virtual ~StandardMaterial() {}
 
 	virtual void UpdateShaderVariables(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, void* dataForBind) override;
 	virtual void UpdateShaderVariables(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle) override;

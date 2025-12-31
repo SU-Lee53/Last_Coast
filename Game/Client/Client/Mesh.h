@@ -1,13 +1,13 @@
-#pragma once
+ï»¿#pragma once
 #include "ShaderResource.h"
 
 /*
-	- Mesh °³Æí
-		- ¼­·Î ´Ù¸¥ Input Element´Â º°°³ÀÇ Á¤Á¡¹öÆÛ¸¦ °®µµ·Ï ÇÑ´Ù
-			- ÀÌÀ¯ : ÇÑ¹ø¿¡ ¸ğµç Input Element¸¦ ÇÏ³ªÀÇ VB·Î ¹­À¸¸é 
-			         Prepass µî¿¡¼­ ¿øÇÏ´Â ¿ä¼Ò¸¸ ¹ÙÀÎµùÇÒ ¼ö ¾øÀ½
+	- Mesh ê°œí¸
+		- ì„œë¡œ ë‹¤ë¥¸ Input ElementëŠ” ë³„ê°œì˜ ì •ì ë²„í¼ë¥¼ ê°–ë„ë¡ í•œë‹¤
+			- ì´ìœ  : í•œë²ˆì— ëª¨ë“  Input Elementë¥¼ í•˜ë‚˜ì˜ VBë¡œ ë¬¶ìœ¼ë©´ 
+			         Prepass ë“±ì—ì„œ ì›í•˜ëŠ” ìš”ì†Œë§Œ ë°”ì¸ë”©í•  ìˆ˜ ì—†ìŒ
 
-		- ±âÁ¸ ¹æ½Äµµ ÀÏ´Ü À¯Áö
+		- ê¸°ì¡´ ë°©ì‹ë„ ì¼ë‹¨ ìœ ì§€
 */
 
 struct MESHLOADINFO {
@@ -15,26 +15,25 @@ struct MESHLOADINFO {
 
 	UINT					nType;			// MESH_ELEMENT_TYPE
 
-	Vector3				xmf3AABBCenter = Vector3(0.0f, 0.0f, 0.0f);
-	Vector3				xmf3AABBExtents = Vector3(0.0f, 0.0f, 0.0f);
+	Vector3					v3AABBCenter = Vector3(0.0f, 0.0f, 0.0f);
+	Vector3					v3AABBExtents = Vector3(1.0f, 1.0, 1.0f);
 
 	std::vector<Vector3>	v3Positions;
 	std::vector<Vector4>	v4Colors;
 	std::vector<Vector3>	v3Normals;
 	std::vector<Vector3>	v3Tangents;
-							
+
 	std::vector<Vector2>	v2TexCoord0;
 	std::vector<Vector2>	v2TexCoord1;
 	std::vector<Vector2>	v2TexCoord2;
 	std::vector<Vector2>	v2TexCoord3;
-	
+
 	std::vector<XMINT4>		xmi4BlendIndices;
 	std::vector<Vector4>	v4BlendWeights;
 
-	std::vector<UINT>		nIndices;
+	std::vector<UINT>		uiIndices;
 
-	std::vector<std::vector<UINT>> SubMeshes;
-
+	bool bIsSkinned = false;
 };
 
 class Mesh {
@@ -46,8 +45,8 @@ public:
 	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, UINT nSubSet, UINT nInstanceCount = 1) const = 0;
 
 protected:
-	VertexBuffer					m_PositionBuffer;
-	std::vector<IndexBuffer>		m_IndexBuffers;	// vector for submeshes
+	VertexBuffer					m_Positions;
+	IndexBuffer						m_IndexBuffer;	
 
 protected:
 	D3D12_PRIMITIVE_TOPOLOGY		m_d3dPrimitiveTopology;
@@ -60,19 +59,10 @@ protected:
 protected:
 	// Bounding Volume
 	BoundingOrientedBox m_xmOBB;
-};
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// DiffusedMesh
-
-class DiffusedMesh : public Mesh{
 public:
-	DiffusedMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, UINT nSubSet, UINT nInstanceCount = 1) const override;
-
-protected:
-	VertexBuffer	m_ColorBuffer;
+	static std::shared_ptr<Mesh> LoadMeshFromFile(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const nlohmann::json& inJson);
+	
 
 };
 
@@ -88,51 +78,7 @@ public:
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TexturedMesh
-
-class TexturedMesh : public Mesh {
-public:
-	TexturedMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, UINT nSubSet, UINT nInstanceCount = 1) const override;
-
-protected:
-	VertexBuffer	m_TexCoordBuffer;
-
-};
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TexturedNormalMesh
-
-class TexturedNormalMesh : public TexturedMesh {
-public:
-	TexturedNormalMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, UINT nSubSet, UINT nInstanceCount = 1) const override;
-
-protected:
-	VertexBuffer	m_NormalBuffer;
-
-};
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TexturedNormalTangentMesh
-
-class TexturedNormalTangentMesh : public TexturedNormalMesh {
-public:
-	TexturedNormalTangentMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, UINT nSubSet, UINT nInstanceCount = 1) const override;
-
-protected:
-	VertexBuffer	m_TangentBuffer;
-
-};
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // StandardMesh
-// TODO : ±¸Çö
-// ±¸Çö ¿Ï·á ÈÄ À§¿¡ Àâ´ÙÇÑ°Å ³¯¸±°Í
 
 class StandardMesh : public Mesh {
 public:
@@ -141,8 +87,23 @@ public:
 	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, UINT nSubSet, UINT nInstanceCount = 1) const override;
 
 protected:
-	VertexBuffer m_TexCoords;
 	VertexBuffer m_Normals;
 	VertexBuffer m_Tangents;
-	VertexBuffer m_BiTangents;
+	VertexBuffer m_TexCoords;
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// SkinnedMesh
+// TODO : êµ¬í˜„
+// êµ¬í˜„ ì™„ë£Œ í›„ ìœ„ì— ì¡ë‹¤í•œê±° ë‚ ë¦´ê²ƒ
+
+class SkinnedMesh : public StandardMesh {
+public:
+	SkinnedMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, UINT nSubSet, UINT nInstanceCount = 1) const override;
+
+protected:
+	VertexBuffer m_BlendIndices;
+	VertexBuffer m_BlendWeights;
 };

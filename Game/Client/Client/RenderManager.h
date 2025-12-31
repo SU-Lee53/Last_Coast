@@ -13,22 +13,16 @@
 		+ Global 로 사용할 Root Signature RenderManager 에서 관리하도록 하는것도 괜찮아보임
 */
 
-#define ROOT_PARAMETER_SCENE_CAM_DATA		0
-#define ROOT_PARAMETER_SCENE_LIGHT_DATA		1
-#define ROOT_PARAMETER_SCENE_SKYBOX			2
-#define ROOT_PARAMETER_PASS_INSTANCE_DATA	3
-#define ROOT_PARAMETER_OBJ_MATERIAL_DATA	4
-#define ROOT_PARAMETER_OBJ_TEXTURES			5
-#define ROOT_PARAMETER_PLAYER_DATA			6
+enum ROOT_PARAMETER {
+	ROOT_PARAMETER_SCENE_CAM_DATA		= 0,
+	ROOT_PARAMETER_SCENE_LIGHT_DATA		= 1,
+	ROOT_PARAMETER_SCENE_SKYBOX			= 2,
+	ROOT_PARAMETER_PASS_INSTANCE_DATA	= 3,
+	ROOT_PARAMETER_OBJ_MATERIAL_DATA	= 4,
+	ROOT_PARAMETER_OBJ_TEXTURES			= 5,
+};
 
 constexpr UINT DESCRIPTOR_PER_DRAW = 1000000;
-
-enum OBJECT_RENDER_TYPE : UINT {
-	OBJECT_RENDER_FORWARD = 0,
-	OBJECT_RENDER_DIFFERED,
-
-	OBJECT_RENDER_TYPE_COUNT
-};
 
 struct MeshRenderParameters {
 	Matrix mtxWorld;
@@ -36,26 +30,25 @@ struct MeshRenderParameters {
 
 
 struct InstancePair {
-	std::shared_ptr<MeshRenderer> meshRenderer;
+	std::shared_ptr<IMeshRenderer> meshRenderer;
 	std::vector<MeshRenderParameters> InstanceDatas;
 };
 
 class RenderManager {
+
+	DECLARE_SINGLE(RenderManager)
+
 public:
-	RenderManager(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
-	~RenderManager();
-
+	void Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
 	void CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
-	
 	void CreateSkyboxPipelineState(ComPtr<ID3D12Device> pd3dDevice);
-
 	void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
 
 private:
 	void RenderSkybox(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descriptorHandleFromPassStart);
 
 public:
-	template<typename T> requires std::derived_from<T, MeshRenderer> || std::same_as<T, Texture>
+	template<typename T> requires std::derived_from<T, IMeshRenderer>
 	void Add(std::shared_ptr<T> pRenderItem, MeshRenderParameters renderParam);
 	void Clear();
 
@@ -84,7 +77,7 @@ public:
 
 	// Pass 별 분리 필요 ( Forward / Differed )
 	// 방법은 더 연구할 것
-	std::array<std::unordered_map<MeshRenderer, UINT>, OBJECT_RENDER_TYPE_COUNT> m_InstanceIndexMap;
+	std::array<std::unordered_map<uint64_t, UINT>, OBJECT_RENDER_TYPE_COUNT> m_InstanceIndexMap;
 	std::array<std::vector<InstancePair>, 2> m_InstanceDatas;
 
 	UINT m_nInstanceIndex[2] = {0, 0};
@@ -92,11 +85,11 @@ public:
 
 };
 
-template<typename T> requires std::derived_from<T, MeshRenderer> || std::same_as<T, Texture>
+template<typename T> requires std::derived_from<T, IMeshRenderer>
 inline void RenderManager::Add(std::shared_ptr<T> pRenderItem, MeshRenderParameters renderParam)
 {
-	const MeshRenderer& key = *pRenderItem;
-	UINT nRenderType = pRenderItem->m_eObjectRenderType;
+	const uint64_t& key = pRenderItem->GetID();
+	UINT nRenderType = T::eRenderType;
 
 	auto it = m_InstanceIndexMap[nRenderType].find(key);
 	if (it == m_InstanceIndexMap[nRenderType].end()) {

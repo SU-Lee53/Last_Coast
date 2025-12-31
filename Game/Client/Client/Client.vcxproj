@@ -292,63 +292,43 @@
     <None Include="SimpleMath.inl" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\BillboardShader.hlsl">
+    <FxCompile Include="..\HLSL\Common.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\Common.hlsl">
+    <FxCompile Include="..\HLSL\EffectCommon.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\DiffusedShader.hlsl">
+    <FxCompile Include="..\HLSL\EffectShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\EffectCommon.hlsl">
+    <FxCompile Include="..\HLSL\FullScreenShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\EffectShader.hlsl">
+    <FxCompile Include="..\HLSL\Light.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\FullScreenShader.hlsl">
+    <FxCompile Include="..\HLSL\RayShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\Light.hlsl">
+    <FxCompile Include="..\HLSL\SkyboxShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\RayShader.hlsl">
+    <FxCompile Include="..\HLSL\Sprite.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\SkyboxShader.hlsl">
+    <FxCompile Include="..\HLSL\SpriteShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\Sprite.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\SpriteShader.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\StandardShader.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\TexturedIlluminatedShader.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\TexturedNormalShader.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\TexturedShader.hlsl">
+    <FxCompile Include="..\HLSL\StandardShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>

@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "GameObject.h"
 #include "Transform.h"
 
@@ -55,6 +55,10 @@ void GameObject::Update()
 void GameObject::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 {
 	// TODO : Render Logic Here
+	if (m_pMeshRenderer) {
+		m_pMeshRenderer->Update(shared_from_this());
+	}
+
 	for (auto& pChild : m_pChildren) {
 		pChild->Render(pd3dCommandList);
 	}

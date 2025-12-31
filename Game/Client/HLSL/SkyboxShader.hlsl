@@ -15,7 +15,7 @@ VS_SKYBOX_OUTPUT VSSkybox(uint nVertexID : SV_VertexID)
 {
     VS_SKYBOX_OUTPUT output;
     
-    output.position = gCameraData.gvCameraPosition;
+    output.position = gvCameraPosition;
     
     return output;
 }
@@ -44,7 +44,7 @@ void GSSkybox(point VS_SKYBOX_OUTPUT input[1], inout TriangleStream<GS_SKYBOX_OU
 	float3 ey = vAxisY * fSkyboxExtent;
 	float3 ez = vAxisZ * fSkyboxExtent;
     
-	matrix mtxVP = mul(gCameraData.gmtxView, gCameraData.gmtxProjection);
+	matrix mtxVP = mul(gmtxView, gmtxProjection);
     
 	float4 T00 = mul(float4(input[0].position - ex + ey + ez, 1.f), mtxVP).xyww;
 	float4 T01 = mul(float4(input[0].position + ex + ey + ez, 1.f), mtxVP).xyww;
@@ -56,7 +56,7 @@ void GSSkybox(point VS_SKYBOX_OUTPUT input[1], inout TriangleStream<GS_SKYBOX_OU
 	float4 B10 = mul(float4(input[0].position - ex - ey - ez, 1.f), mtxVP).xyww;
 	float4 B11 = mul(float4(input[0].position + ex - ey - ez, 1.f), mtxVP).xyww;
     
-    float4x4 VP = mul(gCameraData.gmtxView, gCameraData.gmtxProjection);
+    float4x4 VP = mul(gmtxView, gmtxProjection);
     GS_SKYBOX_OUTPUT output;
     
     // 앞 (+z)                                   

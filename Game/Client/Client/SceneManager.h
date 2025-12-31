@@ -2,9 +2,8 @@
 #include "Scene.h"	// Scene.h 포함
 
 class SceneManager {
-public:
-	SceneManager();
-	~SceneManager();
+
+	DECLARE_SINGLE(SceneManager)
 
 public:
 	void Initialize();

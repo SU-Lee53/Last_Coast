@@ -33,8 +33,8 @@ private:
 };
 
 class SoundManager {
-public:
-	SoundManager();
+
+	DECLARE_SINGLE(SoundManager)
 	~SoundManager();
 
 public:

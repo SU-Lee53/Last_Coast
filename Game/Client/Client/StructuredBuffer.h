@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 
 //#define WITH_UPLOAD_BUFFER
@@ -12,13 +12,13 @@ public:
 	void Create(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, UINT nDatas, size_t elementSize, bool bCreateView = false);
 
 	template<typename T>
-	void UpdateData(std::vector<T> data, UINT offset = 0);
+	void UpdateData(const std::vector<T>& data, UINT offset = 0);
 
 	template<typename T>
-	void UpdateData(const T& const data, UINT offset, UINT nDatas);
+	void UpdateData(const T& data, UINT offset, UINT nDatas);
 
 	template<typename T>
-	void UpdateData(const T& const data, UINT index);
+	void UpdateData(const T& data, UINT index);
 
 	void SetBufferToPipeline(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, UINT uiRootParameterIndex) const;
 
@@ -43,7 +43,7 @@ private:
 };
 
 template<typename T>
-inline void StructuredBuffer::UpdateData(std::vector<T> data, UINT offset)
+inline void StructuredBuffer::UpdateData(const std::vector<T>& data, UINT offset)
 {
 	assert(data.size() < m_nDatas);
 	T* pMappedPtr = reinterpret_cast<T*>(m_pMappedPtr);
@@ -52,7 +52,7 @@ inline void StructuredBuffer::UpdateData(std::vector<T> data, UINT offset)
 }
 
 template<typename T>
-inline void StructuredBuffer::UpdateData(const T& const data, UINT offset, UINT nDatas)
+inline void StructuredBuffer::UpdateData(const T& data, UINT offset, UINT nDatas)
 {
 	assert(offset + nDatas < m_nDatas);
 	T* pMappedPtr = reinterpret_cast<T*>(m_pMappedPtr);
@@ -60,7 +60,7 @@ inline void StructuredBuffer::UpdateData(const T& const data, UINT offset, UINT 
 }
 
 template<typename T>
-inline void StructuredBuffer::UpdateData(const T& const data, UINT index)
+inline void StructuredBuffer::UpdateData(const T& data, UINT index)
 {
 	assert(index < m_nDatas);
 	T* pMappedPtr = reinterpret_cast<T*>(m_pMappedPtr);

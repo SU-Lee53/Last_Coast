@@ -1,14 +1,6 @@
 ﻿#include "pch.h"
 #include "SceneManager.h"
 
-SceneManager::SceneManager()
-{
-}
-
-SceneManager::~SceneManager()
-{
-}
-
 void SceneManager::Initialize()
 {
 	//m_upCurrentScene = std::make_unique<IntroScene>();

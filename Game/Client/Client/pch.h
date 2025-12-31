@@ -81,6 +81,11 @@ using namespace Microsoft::WRL;
 #pragma comment(lib, "fmod_vc.lib")
 #endif
 
+// Json
+#include <nlohmann_json/json.hpp>
+#include <nlohmann_json/json_fwd.hpp>
+
+
 // WinSock
 #include "WinSockCommon.h"
 
@@ -102,3 +107,19 @@ using namespace Microsoft::WRL;
 #include "WinCore.h"
 #include "D3DCore.h"
 #include "GameFramework.h"
+
+// Managers
+#include "ResourceManager.h"
+#include "RenderManager.h"
+#include "ShaderManager.h"
+#include "TextureManager.h"
+#include "SceneManager.h"
+#include "InputManager.h"
+#include "GameTimer.h"
+#include "ModelManager.h"
+#include "GuiManager.h"
+#include "NetworkManager.h"
+#include "EffectManager.h"
+#include "SoundManager.h"
+#include "UIManager.h"
+#include "GameTimer.h"

@@ -5,11 +5,12 @@
 // Packet 선언 Packets 로 이동
 
 class NetworkManager {
-public:
-	NetworkManager();
+
+	DECLARE_SINGLE(NetworkManager)
 	~NetworkManager();
 
 public:
+	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
 	void ConnectToServer();
 
 private:

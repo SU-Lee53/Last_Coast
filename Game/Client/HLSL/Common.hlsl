@@ -3,68 +3,20 @@
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// DIFFUSED INOUT
+// VS_TEXTURED_NORMAL_TANGENT_INPUT
 
-struct VS_DIFFUSED_INPUT
+struct VS_STANDARD_INPUT
 {
-    float3 pos : POSITION;
-    float4 color : COLOR;
-};
-
-struct VS_DIFFUSED_OUTPUT
-{
-    float4 pos : SV_POSITION;
-    float4 color : COLOR;
-};
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TEXTURED INOUT
-
-struct VS_TEXTURED_INPUT
-{
-    float3 pos : POSITION;
-    float2 uv : TEXCOORD0;
-};
-
-struct VS_TEXTURED_OUTPUT
-{
-    float4 pos : SV_POSITION;
-    float2 uv : TEXCOORD0;
-};
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TEXTURED_NORMAL INOUT
-
-struct VS_TEXTURED_NORMAL_INPUT
-{
-    float3 pos : POSITION;
-    float3 normal : NORMAL;
-    float2 uv : TEXCOORD0;
-};
-
-struct VS_TEXTURED_NORMAL_OUTPUT
-{
-    float4 pos : SV_POSITION;
-    float3 posW : POSITION;
-    float3 normalW : NORMAL;
-    float2 uv : TEXCOORD0;
-};
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// VS_TEXTURED_NORMAL_TANGENT_INPUT INOUT
-
-struct VS_TEXTURED_NORMAL_TANGENT_INPUT
-{
-    float3 pos : POSITION;
+    float3 position : POSITION;
     float3 normal : NORMAL;
     float3 tangent : TANGENT;
     float2 uv : TEXCOORD0;
 };
 
-struct VS_TEXTURED_NORMAL_TANGENT_OUTPUT
+struct VS_STANDARD_OUTPUT
 {
-    float4 pos : SV_POSITION;
-    float3 posW : POSITION;
+    float4 position : SV_POSITION;
+	float3 positionW : POSITION;
     float3 normalW : NORMAL;
     float3 tangentW : TANGENT;
     float2 uv : TEXCOORD0;
@@ -101,16 +53,11 @@ struct LIGHT
     float       padding;
 };
 
-struct CAMERA
-{
-    matrix gmtxView;
-    matrix gmtxProjection;
-    float3 gvCameraPosition;
-};
-
 cbuffer cbCamera : register(b0)
 {
-    CAMERA gCameraData;
+	matrix gmtxView;
+	matrix gmtxProjection;
+	float3 gvCameraPosition;
 }
 
 cbuffer cbLights : register(b1)
@@ -154,34 +101,14 @@ cbuffer cbGameObjectInfo : register(b2)
 
 cbuffer cbWorldTransformData : register(b3)
 {
-    matrix mtxWorld;
+    matrix gmtxWorld;
 }
 
 Texture2D gtxtDiffuseTexture : register(t2);
 Texture2D gtxtNormalTexture : register(t3);
+Texture2D gtxtMetaillicTexture : register(t4);
+Texture2D gtxtEmissionTexture : register(t5);
 
 SamplerState gSamplerState : register(s1);
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Others
-
-cbuffer cbPlayerData : register(b4)
-{
-    float3 gvPositionW;
-    float pad0 = 0.f;
-    float3 gvLookW;             // ray direction
-    float pad1 = 0.f;
-    float3 gvUpW;               // ray Up -> 축 구성을 위함
-    float pad2 = 0.f;
-    float gfRayLength;          // ray length
-    float gfRayHalfWidth;       // ray halfWidth
-    float2 gvBillboardSizeW;    // billboard
-    float3 gvRayPositionW;
-    float pad3 = 0.f;
-    float3 gvRaDirectionW; // ray direction
-    float pad4 = 0.f;
-};
-
-Texture2D gtxtBillboardTexture : register(t4);  // billboard texture
 
 #endif

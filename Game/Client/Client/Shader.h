@@ -38,11 +38,11 @@ public:
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// DiffusedShader
+// StandardShader
 
-class DiffusedShader : public Shader {
+class StandardShader : public Shader {
 public:
-	virtual void Initialize(ComPtr<ID3D12Device> pd3dDevice, 
+	virtual void Initialize(ComPtr<ID3D12Device> pd3dDevice,
 		ComPtr<ID3D12RootSignature> pd3dRootSignature = nullptr) override;
 
 protected:
@@ -50,38 +50,11 @@ protected:
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TexturedShader
-// 텍스쳐 맵핑 "만"
+// AnimatedShader
 
-class TexturedShader : public Shader {
+class AnimatedShader : public Shader {
 public:
-	virtual void Initialize(ComPtr<ID3D12Device> pd3dDevice, 
-		ComPtr<ID3D12RootSignature> pd3dRootSignature = nullptr) override;
-
-protected:
-	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout() override;
-};
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TexturedIlluminatedShader
-// 텍스쳐 맵핑 + 조명 처리
-
-class TexturedIlluminatedShader : public Shader {
-public:
-	virtual void Initialize(ComPtr<ID3D12Device> pd3dDevice, 
-		ComPtr<ID3D12RootSignature> pd3dRootSignature = nullptr) override;
-
-protected:
-	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout() override;
-};
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TexturedNormalShader
-// 텍스쳐 맵핑 + 조명 처리 + Normal Mapping
-
-class TexturedNormalShader : public Shader {
-public:
-	virtual void Initialize(ComPtr<ID3D12Device> pd3dDevice, 
+	virtual void Initialize(ComPtr<ID3D12Device> pd3dDevice,
 		ComPtr<ID3D12RootSignature> pd3dRootSignature = nullptr) override;
 
 protected:

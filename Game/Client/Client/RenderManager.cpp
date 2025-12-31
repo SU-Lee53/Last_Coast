@@ -4,52 +4,12 @@
 
 ComPtr<ID3D12RootSignature> RenderManager::g_pd3dGlobalRootSignature = nullptr;
 
-/*
-
-							  +-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--
- D3D12_DESCRIPTOR_HEAP_TYPE   |    CBV    |    CBV    |    SRV    |    CBV    |    SRV    |    SRV    |    CBV    |    CBV    |    SRV    |    SRV    |  ...
-							  +-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--
-					  Value   |   Camera  |   Lights  |  CubeMap  |  Material |  Diffused |   Normal  |   World   |  Material |  Diffused |InstanceBuf|  ...
-							  +-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--
-				  data type   |        여기까지 Scene Data        |            Object 예시1(인스턴싱 X)           |       Object 예시2(인스턴싱)      |  ...
-							  +-----------------------------------+-----------------------------------+-----------+-----------------------+-----------+--
-				바인딩 함수   | SetGraphicsRootDescriptorTable(0) | SetGraphicsRootDescriptorTable(1) |   ...(2)  |        ...(1)         |   ...(3)  |
-							  +-----------------------------------+-----------------------------------+-----------+-----------------------+-----------+
-							  - 그림처럼 Object(MeshRenderer) 마다 구성이 다를 수 있음
-							  - Bind 가 안된다고 안돌아가는게 아닌것으로 암 -> Shader 에서 접근을 안하면 Bind 안되도 가능한 것으로 알고있음
-							  - 실제로 될지는 나도 아직 모름ㅎㅎ
-
-	- 10.18 계획 수정
-		- 인스턴싱 하고 안하고 구분은 없음
-		- 1개짜리도 InstanceBuffer 에 월드행렬을 때려박아 Per-Pass Data 로 Bind
-		- 나중에 Differed 할때가 되면 G-Buffer 를 Per-Shader 데이터에 박으면 됨 (지금은 일단 World만)
-		- 그러면 그림은 아래처럼 바뀜
-
-							  +-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+------------+--
- D3D12_DESCRIPTOR_HEAP_TYPE   |    CBV    |    CBV    |    SRV    |    SRV    |    CBV    |    SRV    |    SRV    |    CBV    |    SRV    |     SRV    |  ...
-							  +-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+------------+--
-					  Value   |   Camera  |   Lights  |  CubeMap  | World Inst|  Material |  Diffused |   Normal  |  Material |  Diffused | World Inst |  ...
-							  +-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+------------+--
-				  data type   |             Scene Data            | Pass Data |            Object 예시1           |      Object 예시2     | Pass Data  |  ...
-							  +-----------------------+-----------+-----------+-----------+-----------------------+-----------------------+------------+--
-				바인딩 함수   |          ...(0)       |   ...(1)  |   ...(2)  |   ...(3)  |        ...(4)         |   ...(3)  |   ...(4)  |   ...(1)   |
-							  +-----------------------+-----------+-----------+-----------+-----------------------+-----------------------+------------+
-
-	- 10.27
-		- 너무 많이 바뀜 나중에 주석 수정 필요
-*/
-
-RenderManager::RenderManager(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
+void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 {
 	CreateGlobalRootSignature(pd3dDevice, pd3dCommandList);
 	CreateSkyboxPipelineState(pd3dDevice);
 
 	m_pForwardPass = std::make_shared<ForwardPass>(pd3dDevice, pd3dCommandList);
-
-}
-
-RenderManager::~RenderManager()
-{ 
 }
 
 void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
@@ -57,23 +17,20 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice, C
 	m_pd3dDevice = pd3dDevice;
 
 	// Global Root Signature
-	CD3DX12_DESCRIPTOR_RANGE d3dDescriptorRanges[7];
+	CD3DX12_DESCRIPTOR_RANGE d3dDescriptorRanges[5];
 	d3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, 0);	// Per Scene (Camera)
 	d3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, 0);	// Per Scene (Cubemap)
 	d3dDescriptorRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, 0);	// Per Pass	 (World 변환)
 	d3dDescriptorRanges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2, 2, 0, 0);	// Per Object (Material, instance base) + 필요한경우 World
-	d3dDescriptorRanges[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 2, 0, 0);	// Diffuse, Normal/Height
-	d3dDescriptorRanges[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 4, 0, 0);	// Player Data
-	d3dDescriptorRanges[6].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4, 0, 0);	// Billboard texture
+	d3dDescriptorRanges[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 2, 0, 0);	// Diffuse, Normal/Height
 
-	CD3DX12_ROOT_PARAMETER d3dRootParameters[7];
-	d3dRootParameters[0].InitAsDescriptorTable(1, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);	// Scene (Camera & Light)
-	d3dRootParameters[1].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL);	// Scene (Camera & Light)
+	CD3DX12_ROOT_PARAMETER d3dRootParameters[6];
+	d3dRootParameters[0].InitAsDescriptorTable(1, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);	// Scene (Camera)
+	d3dRootParameters[1].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL);						// Scene (Light)
 	d3dRootParameters[2].InitAsDescriptorTable(1, &d3dDescriptorRanges[1], D3D12_SHADER_VISIBILITY_ALL);	// Scene (Cubemap(Skybox))
 	d3dRootParameters[3].InitAsDescriptorTable(1, &d3dDescriptorRanges[2], D3D12_SHADER_VISIBILITY_ALL);	// Pass (World)
 	d3dRootParameters[4].InitAsDescriptorTable(1, &d3dDescriptorRanges[3], D3D12_SHADER_VISIBILITY_ALL);	// Material
 	d3dRootParameters[5].InitAsDescriptorTable(1, &d3dDescriptorRanges[4], D3D12_SHADER_VISIBILITY_ALL);	// Texture(Diffused, Normal/Height)
-	d3dRootParameters[6].InitAsDescriptorTable(2, &d3dDescriptorRanges[5], D3D12_SHADER_VISIBILITY_ALL);	// Player Data
 
 	/*
 
@@ -235,12 +192,15 @@ void RenderManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 
 void RenderManager::RenderSkybox(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descriptorHandleFromPassStart)
 {
+	std::shared_ptr<Texture> pSkyboxTexture = TEXTURE->Get("Skybox");
+	if (!pSkyboxTexture) {
+		return;
+	}
+
 	pd3dCommandList->SetPipelineState(m_pd3dSkyboxPipelineState.Get());
 	DescriptorHandle descHandle = m_DescriptorHeapForDraw.GetDescriptorHandleFromHeapStart();
 	descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 	descHandle.gpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-	std::shared_ptr<Texture> pSkyboxTexture = TEXTURE->Get("Skybox");
 
 	m_pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, pSkyboxTexture->GetHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);

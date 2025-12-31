@@ -1,128 +1,149 @@
 ﻿#pragma once
-#include "Component.h"
 #include "Mesh.h"
 #include "Material.h"
+#include "MeshRenderer.h"
 
 class GameObject;
 
-class MeshRenderer : public std::enable_shared_from_this<MeshRenderer> {
+enum OBJECT_RENDER_TYPE : UINT {
+	OBJECT_RENDER_FORWARD = 0,
+	OBJECT_RENDER_DIFFERED,
+
+	OBJECT_RENDER_TYPE_COUNT
+};
+
+class IMeshRenderer abstract : public std::enable_shared_from_this<IMeshRenderer> {
 public:
-	UINT m_eObjectRenderType = -1;
-	friend struct std::hash<MeshRenderer>;
+	using mesh_type = nullptr_t;
+	using material_type = nullptr_t;
+
+	constexpr static UINT eRenderType = std::numeric_limits<UINT>::max();
+
+	friend struct std::hash<IMeshRenderer>;
 
 public:
-	MeshRenderer();
-	MeshRenderer(std::shared_ptr<Mesh> pMesh, std::vector<std::shared_ptr<Material>> pMaterials);
-	MeshRenderer(const MESHLOADINFO& meshLoadInfo, const std::vector<MATERIALLOADINFO>& materialLoadInfo);
-	virtual ~MeshRenderer() {}
+	IMeshRenderer();
+	IMeshRenderer(const IMeshRenderer& other);
+	IMeshRenderer(IMeshRenderer&& other);
 
-	MeshRenderer(const MeshRenderer& other);
-	MeshRenderer(MeshRenderer&& other);
-	
-	MeshRenderer& operator=(const MeshRenderer& other);
-	MeshRenderer& operator=(MeshRenderer&& other);
+	IMeshRenderer& operator=(const IMeshRenderer& other);
+	IMeshRenderer& operator=(IMeshRenderer&& other);
 
-public:
-	const std::shared_ptr<Mesh>& GetMesh() const { return m_pMesh; }
+	virtual ~IMeshRenderer() {}
+	virtual void Initialize() = 0;
+	virtual void Update(std::shared_ptr<GameObject> pOwner) = 0;
+	virtual void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
+		DescriptorHandle& descHandle, int nInstanceCount, int& refnInstanceBase) const = 0;
+
+	bool operator==(const IMeshRenderer& rhs) const;
+
+	const std::vector<std::shared_ptr<Mesh>>& GetMeshes() const { return m_pMeshes; }
 	const std::vector<std::shared_ptr<Material>>& GetMaterials() const { return m_pMaterials; };
+
+	uint64_t GetID() const { return m_ui64RendererID; }
+
 
 	void SetTexture(std::shared_ptr<Texture> pTexture, UINT nMaterialIndex, TEXTURE_TYPE eTextureType);
 
-public:
-	virtual void Initialize();
-	virtual void Update(std::shared_ptr<GameObject> pOwner);
-	
-	virtual void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle, int nInstanceCount, int& refnInstanceBase) {};
+protected:
+	std::vector<std::shared_ptr<Mesh>> m_pMeshes;
+	std::vector<std::shared_ptr<Material>> m_pMaterials;
 
-
-public:
-	bool operator==(const MeshRenderer& rhs) const;
+	uint64_t m_ui64RendererID = 0;
 
 protected:
-	std::shared_ptr<Mesh> m_pMesh = nullptr;
-	std::vector<std::shared_ptr<Material>> m_pMaterials;
-	bool m_bAddToRenderManager = true;	// 독립적인 렌더링 방법을 가지는 경우 false
+	static uint64_t g_ui64RendererIDBase;
 
 };
 
+template<typename meshType, UINT eRenderType = OBJECT_RENDER_FORWARD>
+class MeshRenderer : public IMeshRenderer {
+public:
+	using mesh_type = meshType;
+	using material_type = StandardMaterial;
+
+	constexpr static UINT eRenderType = eRenderType;
+
+public:
+	MeshRenderer() = default;
+	MeshRenderer(const std::vector<MESHLOADINFO>& meshLoadInfos, const std::vector<MATERIALLOADINFO>& materialLoadInfo);
+	virtual ~MeshRenderer() {}
+
+public:
+	virtual void Initialize() override;
+	virtual void Update(std::shared_ptr<GameObject> pOwner)override;
+	virtual void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
+		DescriptorHandle& descHandle, int nInstanceCount, int& refnInstanceBase) const override;
+};
+
 template<>
-struct std::hash<MeshRenderer> {
-	size_t operator()(const MeshRenderer& meshRenderer) const {
-		return (std::hash<decltype(meshRenderer.m_pMesh)>{}(meshRenderer.m_pMesh) ^
+struct std::hash<IMeshRenderer> {
+	size_t operator()(const IMeshRenderer& meshRenderer) const {
+		return (std::hash<decltype(meshRenderer.m_pMeshes)::value_type>{}(meshRenderer.m_pMeshes[0]) ^
 			std::hash<decltype(meshRenderer.m_pMaterials)::value_type>{}(meshRenderer.m_pMaterials[0]));
 	}
 };
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// DiffusedRenderer
-// Position + 정점 색상
+template<typename meshType, UINT eRenderType>
+inline MeshRenderer<meshType, eRenderType>::MeshRenderer(const std::vector<MESHLOADINFO>& meshLoadInfos, const std::vector<MATERIALLOADINFO>& materialLoadInfo)
+{
+	m_pMeshes.reserve(meshLoadInfos.size());
 
-class DiffusedRenderer : public MeshRenderer {
-public:
-	DiffusedRenderer(std::shared_ptr<Mesh> pMesh, std::vector<std::shared_ptr<Material>> pMaterials);
-	DiffusedRenderer(const MESHLOADINFO& meshLoadInfo, const std::vector<MATERIALLOADINFO>& materialLoadInfo);
-	virtual ~DiffusedRenderer() {}
+	for (const auto& meshLoadInfo : meshLoadInfos) {
+		std::shared_ptr<meshType> pMesh = std::make_shared<meshType>(meshLoadInfo);
+		m_pMeshes.push_back(pMesh);
+	}
 
+	for (const auto& materialInfo : materialLoadInfo) {
+		std::shared_ptr<StandardMaterial> pMaterial = std::make_shared<StandardMaterial>(materialInfo);
+		m_pMaterials.push_back(pMaterial);
+	}
+}
 
-public:
-	virtual void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle, int nInstanceCount, int& refnInstanceBase) override;
+template<typename meshType, UINT eRenderType>
+inline void MeshRenderer<meshType, eRenderType>::Initialize()
+{
+}
 
+template<typename meshType, UINT eRenderType>
+inline void MeshRenderer<meshType, eRenderType>::Update(std::shared_ptr<GameObject> pOwner)
+{
+	MeshRenderParameters meshParam{
+		.mtxWorld = pOwner->GetWorldMatrix().Transpose()
+	};
+#ifdef WITH_FRUSTUM_CULLING
 
-};
+#else
+	for (int i = 0; i < m_pMeshes.size(); ++i) {
+		RENDER->Add(shared_from_this(), meshParam);
+	}
+#endif
+}
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TexturedRenderer
-// Texture (조명, 노말맵 X)
+template<typename meshType, UINT eRenderType>
+inline void MeshRenderer<meshType, eRenderType>::Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
+	DescriptorHandle& descHandle, int nInstanceCount, int& refnInstanceBase) const
+{
+	for (int i = 0; i < m_pMeshes.size(); ++i) {
+		// Per Object CB
+		CB_PER_OBJECT_DATA cbData = { m_pMaterials[i]->GetMaterialColors(), refnInstanceBase };
+		ConstantBuffer cbuffer = RESOURCE->AllocCBuffer<CB_PER_OBJECT_DATA>();
+		cbuffer.WriteData(&cbData);
 
-class TexturedRenderer : public MeshRenderer {
-public:
-	TexturedRenderer(std::shared_ptr<Mesh> pMesh, std::vector<std::shared_ptr<Material>> pMaterials);
-	TexturedRenderer(const MESHLOADINFO& meshLoadInfo, const std::vector<MATERIALLOADINFO>& materialLoadInfo);
-	virtual ~TexturedRenderer() {}
+		pd3dDevice->CopyDescriptorsSimple(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, descHandle.cpuHandle, cbuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		descHandle.cpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 
+		// 4
+		pd3dCommandList->SetGraphicsRootDescriptorTable(ROOT_PARAMETER_OBJ_MATERIAL_DATA, descHandle.gpuHandle);
+		descHandle.gpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 
-public:
-	virtual void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle, int nInstanceCount, int& refnInstanceBase) override;
+		// Texture (있다면)
+		m_pMaterials[i]->UpdateShaderVariables(pd3dDevice, pd3dCommandList, descHandle);	// Texture 가 있다면 Descriptor 가 복사될 것이고 아니면 안될것
 
+		const auto& pipelineStates = m_pMaterials[i]->GetShader()->GetPipelineStates();
+		pd3dCommandList->SetPipelineState(pipelineStates[0].Get());
 
-};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TexturedIlluminatedRenderer
-// Texture + 조명
-
-class TexturedIlluminatedRenderer : public MeshRenderer {
-public:
-	TexturedIlluminatedRenderer(std::shared_ptr<Mesh> pMesh, std::vector<std::shared_ptr<Material>> pMaterials);
-	TexturedIlluminatedRenderer(const MESHLOADINFO& meshLoadInfo, const std::vector<MATERIALLOADINFO>& materialLoadInfo);
-	virtual ~TexturedIlluminatedRenderer() {}
-
-
-public:
-	virtual void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle, int nInstanceCount, int& refnInstanceBase) override;
-
-
-};
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TexturedNormalRenderer
-// Texture + 조명 + Normal Mapping
-
-class TexturedNormalRenderer : public MeshRenderer {
-public:
-	TexturedNormalRenderer(std::shared_ptr<Mesh> pMesh, std::vector<std::shared_ptr<Material>> pMaterials);
-	TexturedNormalRenderer(const MESHLOADINFO& meshLoadInfo, const std::vector<MATERIALLOADINFO>& materialLoadInfo);
-	virtual ~TexturedNormalRenderer() {}
-
-
-public:
-	virtual void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle, int nInstanceCount, int& refnInstanceBase) override;
-
-
-};
-
-
-
-// 2025.12.27
-// TODO : 위 MeshRenderer 를 통합하는 Renderer 객체가 필요함
+		m_pMeshes[i]->Render(pd3dCommandList, 0, nInstanceCount);
+	}
+	refnInstanceBase += nInstanceCount;
+}

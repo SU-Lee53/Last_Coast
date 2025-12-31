@@ -1,11 +1,11 @@
-#pragma once
+ï»¿#pragma once
 #include "Sprite.h"
 
 #define MAX_UI_LAYER_COUNT 3
 #define MAX_SPRITE_PER_DRAW 100
 
 struct SpriteParameter {
-	SpriteRect spriteRect;	// ±×¸² / ÅØ½ºÆ®°¡ µé¾î°¥ »ç°¢Çü (Window ÁÂÇ¥°è)
+	SpriteRect spriteRect;	// ê·¸ë¦¼ / í…ìŠ¤íŠ¸ê°€ ë“¤ì–´ê°ˆ ì‚¬ê°í˜• (Window ì¢Œí‘œê³„)
 	bool bClickable;
 	SPRITE_TYPE eSpriteType;
 };
@@ -34,9 +34,11 @@ private:
 };
 
 class UIManager {
-public:
-	UIManager(ComPtr<ID3D12Device> pd3dDevice);
 
+	DECLARE_SINGLE(UIManager)
+
+public:
+	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
 	void Add(std::shared_ptr<Sprite> pSprite, UINT nSpriteType, UINT nLayerIndex);
 	void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
 	void Clear();
@@ -51,7 +53,7 @@ private:
 	ComPtr<ID3D12RootSignature> m_pd3dUIRootSignature = nullptr;
 	ComPtr<ID3D12PipelineState> m_pd3dUIPipelineStates[3];
 
-	ComPtr<ID3D12Device>			m_pd3dDevice = nullptr;	// GameFramewok::m_pd3dDevice ÀÇ ÂüÁ¶
+	ComPtr<ID3D12Device>			m_pd3dDevice = nullptr;	// GameFramewok::m_pd3dDevice ì˜ ì°¸ì¡°
 	ComPtr<ID3D12DescriptorHeap>	m_pd3dDescriptorHeap = nullptr;
 
 	UILayer m_UILayer{};

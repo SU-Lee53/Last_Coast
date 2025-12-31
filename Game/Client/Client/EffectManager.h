@@ -4,8 +4,8 @@
 using EffectPair = std::pair<std::shared_ptr<Effect>, std::vector<EffectParameter>>;
 
 class EffectManager {
-public:
-	EffectManager() {}
+
+	DECLARE_SINGLE(EffectManager)
 
 public:
 	void Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);

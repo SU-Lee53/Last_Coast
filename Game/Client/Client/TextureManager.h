@@ -1,21 +1,21 @@
-#pragma once
+ï»¿#pragma once
 #include "Texture.h"
 
 //#define ASSERT_WHEN_TEXTURE_NAME_IS_BLANK
 
 constexpr static UINT MAX_TEXTURE_COUNT = 100;
 
-
 class TextureManager {
-public:
-	TextureManager(ComPtr<ID3D12Device> pDevice);
-	~TextureManager();
+	
+	DECLARE_SINGLE(TextureManager)
 
 public:
+	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
+
 	void LoadGameTextures();
 
 public:
-	std::shared_ptr<Texture> LoadTexture(const std::string& strTextureName, const std::wstring& wstrTexturePath);
+	std::shared_ptr<Texture> LoadTexture(const std::string& strTextureName);
 	std::shared_ptr<Texture> LoadTextureArray(const std::string& strTextureName, const std::wstring& wstrTexturePath);
 	std::shared_ptr<Texture> Get(const std::string& strTextureName) const;
 
@@ -32,7 +32,7 @@ public:
 private:
 	void LoadFromDDSFile(ID3D12Resource** ppOutResource, const std::wstring& wstrTexturePath, std::unique_ptr<uint8_t[]>& ddsData, std::vector<D3D12_SUBRESOURCE_DATA>& subResources);
 
-	// ¿Ø¸¸ÇÏ¸é ¾µÀÏ ¾øµµ·Ï ÇÕ½Ã´Ù
+	// ì™ ë§Œí•˜ë©´ ì“¸ì¼ ì—†ë„ë¡ í•©ì‹œë‹¤
 	void LoadFromWICFile(ID3D12Resource** ppOutResource, const std::wstring& wstrTexturePath, std::unique_ptr<uint8_t[]>& ddsData, std::vector<D3D12_SUBRESOURCE_DATA>& subResources);
 
 private:
@@ -68,6 +68,9 @@ private:
 	UINT m_nNumSRVUAVTextures = 0;
 	UINT m_nNumRTVTextures = 0;
 	UINT m_nNumDSVTextures = 0;
+
+private:
+	inline static std::wstring g_wstrTextureBasePath = L"../Resources/Textures";
 
 };
 

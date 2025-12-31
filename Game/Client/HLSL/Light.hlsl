@@ -5,8 +5,8 @@
 
 // ==============================================================
 // 10.31
-// ÇöÀç Á¶¸íÃ³¸®¿¡¼­ Material ¹İ¿µÀ» Á¦°ÅÇÔ
-// »çÀ¯ : Sphere ¸ğµ¨ÀÇ Material¿¡ Á¤Ã¼¸ğ¸¦ Çª¸¥»öÀÌ µé¾î°¡ÀÖÀ½;;
+// í˜„ì¬ ì¡°ëª…ì²˜ë¦¬ì—ì„œ Material ë°˜ì˜ì„ ì œê±°í•¨
+// ì‚¬ìœ  : Sphere ëª¨ë¸ì˜ Materialì— ì •ì²´ëª¨ë¥¼ í‘¸ë¥¸ìƒ‰ì´ ë“¤ì–´ê°€ìˆìŒ;;
 // ==============================================================
 
 
@@ -116,7 +116,7 @@ float4 SpotLight(int nIndex, float3 vPosition, float3 vNormal, float3 vToCamera)
 
 float4 Lighting(float3 vPosition, float3 vNormal)
 {
-    float3 vCameraPosition = gCameraData.gvCameraPosition.xyz;
+    float3 vCameraPosition = gvCameraPosition.xyz;
     float3 vToCamera = normalize(vCameraPosition - vPosition);
 
     float4 cColor = float4(0.0f, 0.0f, 0.0f, 0.0f);

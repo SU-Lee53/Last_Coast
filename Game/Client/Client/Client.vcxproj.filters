@@ -442,49 +442,34 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\TexturedShader.hlsl">
+    <FxCompile Include="..\HLSL\Common.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\BillboardShader.hlsl">
+    <FxCompile Include="..\HLSL\EffectCommon.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\Common.hlsl">
+    <FxCompile Include="..\HLSL\EffectShader.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\DiffusedShader.hlsl">
+    <FxCompile Include="..\HLSL\FullScreenShader.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\EffectCommon.hlsl">
+    <FxCompile Include="..\HLSL\Light.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\EffectShader.hlsl">
+    <FxCompile Include="..\HLSL\RayShader.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\FullScreenShader.hlsl">
+    <FxCompile Include="..\HLSL\SkyboxShader.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\Light.hlsl">
+    <FxCompile Include="..\HLSL\Sprite.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\RayShader.hlsl">
+    <FxCompile Include="..\HLSL\SpriteShader.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\SkyboxShader.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\Sprite.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\SpriteShader.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\TexturedIlluminatedShader.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\TexturedNormalShader.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\..\..\..\3-2\NGP\Project\4팀_최종산출물 및 Project Progress Report\Client\HLSL\StandardShader.hlsl">
+    <FxCompile Include="..\HLSL\StandardShader.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
   </ItemGroup>

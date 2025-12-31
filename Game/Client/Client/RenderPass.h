@@ -1,9 +1,9 @@
-#pragma once
+﻿#pragma once
 #include "Scene.h"
 #include "StructuredBuffer.h"
 
 struct InstancePair;
-struct RenderTargetTexture;
+class RenderTargetTexture;
 
 struct CB_PER_OBJECT_DATA {
 	MaterialColors materialColors;

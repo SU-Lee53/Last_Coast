@@ -2,7 +2,7 @@
 #include "UIManager.h"
 #include "Texture.h"
 
-UIManager::UIManager(ComPtr<ID3D12Device> pd3dDevice)
+void UIManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 {
 	m_pd3dDevice = pd3dDevice;
 
@@ -19,7 +19,6 @@ UIManager::UIManager(ComPtr<ID3D12Device> pd3dDevice)
 	if (FAILED(hr)) {
 		__debugbreak();
 	}
-
 }
 
 void UIManager::CreateRootSignature()

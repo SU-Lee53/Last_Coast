@@ -1,16 +1,11 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "InputManager.h"
 
-InputManager::InputManager(HWND hWnd)
+void InputManager::Initialize(HWND hWnd)
 {
 	m_hWnd = hWnd;
 	std::fill(m_eKeyStates.begin(), m_eKeyStates.end(), KEY_STATE::NONE);
 }
-
-InputManager::~InputManager()
-{
-}
-
 
 void InputManager::Update()
 {

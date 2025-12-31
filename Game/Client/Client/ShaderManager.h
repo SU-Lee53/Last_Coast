@@ -1,12 +1,12 @@
 ﻿#pragma once
 
 class ShaderManager {
-public:
-	ShaderManager(ComPtr<ID3D12Device> pDevice);
+	
+	DECLARE_SINGLE(ShaderManager)
 	~ShaderManager();
 
 public:
-	void Initialize();
+	void Initialize(ComPtr<ID3D12Device> pDevice);
 
 	template<typename T> requires std::derived_from<T, Shader>
 	bool Load(ComPtr<ID3D12RootSignature> pRootSignature = RenderManager::g_pd3dGlobalRootSignature);

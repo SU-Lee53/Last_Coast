@@ -1,12 +1,12 @@
-#pragma once
+﻿#pragma once
 #include "GameObject.h"
 
 class ModelManager {
-public:
-	ModelManager(ComPtr<ID3D12Device> pDevice);
-	~ModelManager();
+
+	DECLARE_SINGLE(ModelManager)
 
 public:
+	void Initialize();
 	void LoadGameModels();
 
 public:
@@ -14,7 +14,17 @@ public:
 	std::shared_ptr<GameObject> Get(const std::string& strObjName);
 
 private:
-	// Texture Pool
+	std::shared_ptr<GameObject> LoadFrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, const nlohmann::json& inJson);
+	std::shared_ptr<GameObject> LoadModelFromFile(const std::string& strFilePath);
+
+	std::pair<MESHLOADINFO, MATERIALLOADINFO> LoadMeshInfoFromFiles(const nlohmann::json& inJson);
+	MATERIALLOADINFO LoadMaterialInfoFromFiles(const nlohmann::json& inJson);
+
+private:
+	// Model Pool
 	std::unordered_map<std::string, std::shared_ptr<GameObject>> m_pModelPool;
+
+private:
+	inline static std::string g_strTextureBasePath = "../Resources/Models";
 
 };

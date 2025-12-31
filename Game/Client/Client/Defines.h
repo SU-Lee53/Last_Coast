@@ -1,7 +1,39 @@
-#pragma once
+Ôªø#pragma once
 
 
+//////////////////////////////////////////////////////////////////////////////////
+// Macros
 
+#define DECLARE_SINGLE(classname)			\
+private:									\
+	classname() { }							\
+public:										\
+	static classname* GetInstance()			\
+	{										\
+		static classname s_instance;		\
+		return &s_instance;					\
+	}										\
+
+
+#define GET_SINGLE(classname)	classname::GetInstance()
+
+#define RESOURCE		GET_SINGLE(ResourceManager)
+#define RENDER			GET_SINGLE(RenderManager)
+#define SHADER			GET_SINGLE(ShaderManager)
+#define TEXTURE			GET_SINGLE(TextureManager)
+#define SCENE			GET_SINGLE(SceneManager)
+#define INPUT			GET_SINGLE(InputManager)
+#define TIMER			GET_SINGLE(GameTimer)
+#define MODEL			GET_SINGLE(ModelManager)
+#define GUI				GET_SINGLE(GuiManager)
+#define NETWORK			GET_SINGLE(NetworkManager)
+#define EFFECT			GET_SINGLE(EffectManager)
+#define SOUND			GET_SINGLE(SoundManager)
+#define UI				GET_SINGLE(UIManager)
+#define TIME			GET_SINGLE(GameTimer)
+
+#define CUR_SCENE		SCENE->GetCurrentScene()
+#define DT				TIME->GetTimeElapsed()
 
 //////////////////////////////////////////////////////////////////////////////////
 // Constants
@@ -23,7 +55,7 @@ enum SHADER_RESOURCE_TYPE : UINT8 {
 };
 
 enum ROOT_PARAMETER_TYPE : UINT8 {
-	// Root Constant ¥¬ ªÁøÎ«œ¡ˆ æ ¿ªµÌ
+	// Root Constant Îäî ÏÇ¨Ïö©ÌïòÏßÄ ÏïäÏùÑÎìØ
 	ROOT_PARAMETER_TYPE_ROOT_DESCRIPTOR,
 	ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
 
@@ -34,7 +66,7 @@ enum ROOT_PARAMETER_TYPE : UINT8 {
 
 enum COMPONENT_TYPE : UINT8 {
 	//COMPONENT_TYPE_MOVEMENT,			// undefined
-	//COMPONENT_TYPE_MESH_RENDERER,		// ¿Ã¡¶ Component æ∆¥‘
+	//COMPONENT_TYPE_MESH_RENDERER,		// Ïù¥Ï†ú Component ÏïÑÎãò
 	//COMPONENT_TYPE_ANIMATION,			// undefined
 	//COMPONENT_TYPE_BEHAVIOR_TREE,		// undefined
 	//COMPONENT_TYPE_PHYSICS,				// undefined

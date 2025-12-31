@@ -3,9 +3,11 @@
 const ULONG MAX_SAMPLE_COUNT = 50; // Maximum frame time sample count
 
 class GameTimer {
+
+	DECLARE_SINGLE(GameTimer);
+
 public:
-	GameTimer();
-	virtual ~GameTimer();
+	void Initialize();
 
 	void Tick(float fLockFPS = 0.0f);
 	void Start();
