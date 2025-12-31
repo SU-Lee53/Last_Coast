@@ -11,5 +11,4 @@ Intermediates/
 *.tlog 
 *.lastbuildstate 
 *.suo 
-*.db 
-
+*.db
