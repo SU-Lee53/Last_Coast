@@ -1,0 +1,132 @@
+[
+{
+	"ActorName": "StaticMeshActor_0",
+	"ActorClass": "StaticMeshActor",
+	"Transform":
+	{
+		"Location":
+		{
+			"X": 0,
+			"Y": 870,
+			"Z": 0
+		},
+		"Rotation":
+		{
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": -0
+		},
+		"Scale":
+		{
+			"X": 400,
+			"Y": 400,
+			"Z": 400
+		}
+	},
+	"MeshName": "SM_SkySphere"
+},
+{
+	"ActorName": "StaticMeshActor_2",
+	"ActorClass": "StaticMeshActor",
+	"Transform":
+	{
+		"Location":
+		{
+			"X": 10,
+			"Y": 10,
+			"Z": 10
+		},
+		"Rotation":
+		{
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": -0
+		},
+		"Scale":
+		{
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		}
+	},
+	"MeshName": "Cube"
+},
+{
+	"ActorName": "StaticMeshActor_1",
+	"ActorClass": "StaticMeshActor",
+	"Transform":
+	{
+		"Location":
+		{
+			"X": 10,
+			"Y": 140,
+			"Z": 10
+		},
+		"Rotation":
+		{
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": -0
+		},
+		"Scale":
+		{
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		}
+	},
+	"MeshName": "Cube"
+},
+{
+	"ActorName": "StaticMeshActor_3",
+	"ActorClass": "StaticMeshActor",
+	"Transform":
+	{
+		"Location":
+		{
+			"X": 10,
+			"Y": 310,
+			"Z": 10
+		},
+		"Rotation":
+		{
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": -0
+		},
+		"Scale":
+		{
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		}
+	},
+	"MeshName": "Cube"
+},
+{
+	"ActorName": "StaticMeshActor_4",
+	"ActorClass": "StaticMeshActor",
+	"Transform":
+	{
+		"Location":
+		{
+			"X": 10,
+			"Y": 440,
+			"Z": 10
+		},
+		"Rotation":
+		{
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": -0
+		},
+		"Scale":
+		{
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		}
+	},
+	"MeshName": "Cube"
+}
+]

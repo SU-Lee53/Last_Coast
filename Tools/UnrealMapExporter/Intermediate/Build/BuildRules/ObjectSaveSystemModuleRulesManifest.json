@@ -1,0 +1,8 @@
+{
+	"SourceFiles": [
+		"C:\\GitHub\\Last_Coast\\Tools\\UnrealMapExporter\\Source\\ObjectSaveSystem\\ObjectSaveSystem.Build.cs",
+		"C:\\GitHub\\Last_Coast\\Tools\\UnrealMapExporter\\Source\\ObjectSaveSystem.Target.cs",
+		"C:\\GitHub\\Last_Coast\\Tools\\UnrealMapExporter\\Source\\ObjectSaveSystemEditor.Target.cs"
+	],
+	"EngineVersion": "5.5.4"
+}
