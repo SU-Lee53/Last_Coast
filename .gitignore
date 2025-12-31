@@ -13,3 +13,15 @@ Intermediates/
 *.suo 
 *.db 
 
+Binaries/
+Build/
+Intermediate/
+DerivedDataCache/
+Saved/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.tmp
+.DS_Store
+Thumbs.db
