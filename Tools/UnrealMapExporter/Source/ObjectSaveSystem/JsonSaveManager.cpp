@@ -58,7 +58,7 @@ bool UJsonSaveManager::SaveActorsToJson(const TArray<AActor*>& Actors, const FSt
 
 FString UJsonSaveManager::GetSaveFilePath(const FString& FileName)
 {
-    return FPaths::ProjectSavedDir() + TEXT("/SaveData/") + FileName + TEXT(".json");
+    return FPaths::ProjectSavedDir() + TEXT("../") + FileName + TEXT(".json");
 }
 
 TSharedPtr<FJsonObject> UJsonSaveManager::TransformToJson(const FTransform& Transform)
