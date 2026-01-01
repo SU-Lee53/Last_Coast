@@ -31,8 +31,6 @@ void TestScene::Update()
 	}
 	ImGui::End();
 
-
-	Scene::UpdateObjects();
 }
 
 void TestScene::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList)

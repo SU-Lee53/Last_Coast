@@ -33,6 +33,11 @@ public:
 	virtual void Update() = 0;
 	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList) = 0;
 
+	void OnPreProcessInput();
+	void OnPostProcessInput();
+	void OnPreUpdate();
+	void OnPostUpdate();
+
 	virtual void SyncSceneWithServer() {}
 
 public:
@@ -46,6 +51,7 @@ protected:
 	void InitializeObjects();
 	void UpdateObjects();
 	void RenderObjects(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
+
 
 protected:
 	std::vector<std::shared_ptr<GameObject>> m_pGameObjects = {};

@@ -53,6 +53,12 @@ void GameFramework::Update()
 	SCENE->Update();
 
 	EFFECT->Update(DT);
+
+
+	// 게임 중간에 리소스 생성이 필요할 수 있으므로 대기
+	// 리소스 생성될게 없으면 바로 리턴함
+	RESOURCE->WaitForCopyComplete();
+	TEXTURE->WaitForCopyComplete();
 }
 
 void GameFramework::Render()

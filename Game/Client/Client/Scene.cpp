@@ -41,6 +41,38 @@ void Scene::RenderObjects(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 	}
 }
 
+void Scene::OnPreProcessInput()
+{
+	// TODO : Cache last frame world transform
+	// Reason : to generate motion vector
+}
+
+void Scene::OnPostProcessInput()
+{
+	if (m_pPlayer) {
+		m_pPlayer->ProcessInput();
+	}
+
+	for (auto& obj : m_pGameObjects) {
+		obj->ProcessInput();
+	}
+}
+
+void Scene::OnPreUpdate()
+{
+}
+
+void Scene::OnPostUpdate()
+{
+	if (m_pPlayer) {
+		m_pPlayer->Update();
+	}
+
+	for (auto& obj : m_pGameObjects) {
+		obj->Update();
+	}
+}
+
 CB_LIGHT_DATA Scene::MakeLightData()
 {
 	CB_LIGHT_DATA lightData;

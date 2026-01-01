@@ -79,21 +79,6 @@ SoundManager::~SoundManager()
 
 void SoundManager::LoadSounds()
 {
-	AddSound("bgm", "../Resource/sound/Gravitation_2018_Remix.mp3", true);
-	AddSound("laser_effect", "../Resource/sound/laser_sound.mp3", false);
-	AddSound("explosion_effect", "../Resource/sound/explosion_sound.mp3", false);
-	VolumeDown("explosion_effect");
-	VolumeDown("explosion_effect");
-	AddSound("spaceship_sfx", "../Resource/sound/spaceship-ambient-sfx.mp3", true);
-	Play("spaceship_sfx");
-	Pause("spaceship_sfx");
-
-	AddSound("damage_sound", "../Resource/sound/damage_sound.mp3", false);
-
-	AddSound("ending", "../Resource/sound/Stellardrone_-_Pale_Blue_Dot.mp3", true);
-	VolumeUp("ending");
-	VolumeUp("ending");
-	VolumeUp("ending");
 }
 
 void SoundManager::Initialize()
