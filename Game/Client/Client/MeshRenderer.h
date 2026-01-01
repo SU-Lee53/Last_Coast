@@ -16,9 +16,6 @@ class IMeshRenderer abstract : public std::enable_shared_from_this<IMeshRenderer
 public:
 	using mesh_type = nullptr_t;
 	using material_type = nullptr_t;
-
-	constexpr static UINT eRenderType = std::numeric_limits<UINT>::max();
-
 	friend struct std::hash<IMeshRenderer>;
 
 public:
@@ -41,6 +38,7 @@ public:
 	const std::vector<std::shared_ptr<Material>>& GetMaterials() const { return m_pMaterials; };
 
 	uint64_t GetID() const { return m_ui64RendererID; }
+	UINT GetRenderType() const { return m_eRenderType; }
 
 
 	void SetTexture(std::shared_ptr<Texture> pTexture, UINT nMaterialIndex, TEXTURE_TYPE eTextureType);
@@ -50,6 +48,7 @@ protected:
 	std::vector<std::shared_ptr<Material>> m_pMaterials;
 
 	uint64_t m_ui64RendererID = 0;
+	UINT m_eRenderType = std::numeric_limits<UINT>::max();
 
 protected:
 	static uint64_t g_ui64RendererIDBase;
@@ -61,8 +60,6 @@ class MeshRenderer : public IMeshRenderer {
 public:
 	using mesh_type = meshType;
 	using material_type = StandardMaterial;
-
-	constexpr static UINT eRenderType = eRenderType;
 
 public:
 	MeshRenderer() = default;
@@ -103,6 +100,7 @@ inline MeshRenderer<meshType, eRenderType>::MeshRenderer(const std::vector<MESHL
 template<typename meshType, UINT eRenderType>
 inline void MeshRenderer<meshType, eRenderType>::Initialize()
 {
+	m_eRenderType = eRenderType;
 }
 
 template<typename meshType, UINT eRenderType>

@@ -91,14 +91,13 @@ void AssimpConverter::SerializeModel(const std::string& strPath, const std::stri
 	m_strSavePath = strPath + '\\' + strName;
 
 
-	// 1. Make save path (if not exists)
-	fs::path saveDirectoryPath{ m_strSavePath };
+	std::string strSave = std::format("{}\\Models\\", m_strSavePath);
+	fs::path saveDirectoryPath{ strSave };
 	if (!fs::exists(saveDirectoryPath)) {
-		fs::create_directories(m_strSavePath);
+		fs::create_directories(strSave);
 	}
 
-	// 2. Defines Savefile name
-	std::string strSave = std::format("{}/{}.json", m_strSavePath, strName);
+	strSave = std::format("{}\\Models\\{}.json", m_strSavePath, strName);
 	std::ofstream out(strSave);
 
 	DisplayText("Serializing...\n");

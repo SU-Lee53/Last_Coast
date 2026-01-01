@@ -89,7 +89,7 @@ template<typename T> requires std::derived_from<T, IMeshRenderer>
 inline void RenderManager::Add(std::shared_ptr<T> pRenderItem, MeshRenderParameters renderParam)
 {
 	const uint64_t& key = pRenderItem->GetID();
-	UINT nRenderType = T::eRenderType;
+	UINT nRenderType = pRenderItem->GetRenderType();
 
 	auto it = m_InstanceIndexMap[nRenderType].find(key);
 	if (it == m_InstanceIndexMap[nRenderType].end()) {

@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "Camera.h"
 
 
@@ -87,6 +87,19 @@ void Camera::SetLookAt(float x, float y, float z)
 void Camera::SetLookAt(const Vector3& v3Look)
 {
 	Matrix mtxLookAt = XMMatrixLookAtLH(m_v3Position, v3Look, m_wpOwner.lock()->GetTransform().GetUp());
+	m_v3Right = Vector3(mtxLookAt._11, mtxLookAt._21, mtxLookAt._31);
+	m_v3Up = Vector3(mtxLookAt._12, mtxLookAt._22, mtxLookAt._32);
+	m_v3Look = Vector3(mtxLookAt._13, mtxLookAt._23, mtxLookAt._33);
+}
+
+void Camera::SetLookTo(float x, float y, float z)
+{
+	SetLookTo(Vector3(x, y, z));
+}
+
+void Camera::SetLookTo(const Vector3& v3Look)
+{
+	Matrix mtxLookAt = XMMatrixLookToLH(m_v3Position, v3Look, m_wpOwner.lock()->GetTransform().GetUp());
 	m_v3Right = Vector3(mtxLookAt._11, mtxLookAt._21, mtxLookAt._31);
 	m_v3Up = Vector3(mtxLookAt._12, mtxLookAt._22, mtxLookAt._32);
 	m_v3Look = Vector3(mtxLookAt._13, mtxLookAt._23, mtxLookAt._33);

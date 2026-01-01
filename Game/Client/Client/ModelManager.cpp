@@ -7,7 +7,7 @@ void ModelManager::Initialize()
 
 void ModelManager::LoadGameModels()
 {
-	LoadModelFromFile("Ch33_nonPBR.json");
+	LoadModelFromFile("Ch33_nonPBR");
 }
 
 void ModelManager::Add(const std::string& strModelName, std::shared_ptr<GameObject> pObj)
@@ -29,7 +29,7 @@ std::shared_ptr<GameObject> ModelManager::Get(const std::string& strObjName)
 
 std::shared_ptr<GameObject> ModelManager::LoadModelFromFile(const std::string& strFileName)
 {
-	std::string strFilePath = std::format("{}/{}", g_strTextureBasePath, strFileName);
+	std::string strFilePath = std::format("{}/{}.json", g_strTextureBasePath, strFileName);
 
 	if (auto pObj = Get(strFileName)) {
 		return pObj;

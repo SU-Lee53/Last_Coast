@@ -32,20 +32,6 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice, C
 	d3dRootParameters[4].InitAsDescriptorTable(1, &d3dDescriptorRanges[3], D3D12_SHADER_VISIBILITY_ALL);	// Material
 	d3dRootParameters[5].InitAsDescriptorTable(1, &d3dDescriptorRanges[4], D3D12_SHADER_VISIBILITY_ALL);	// Texture(Diffused, Normal/Height)
 
-	/*
-
-		cbuffer cbPlayerData : register(b4)
-		{
-			float3 gvPositionW;
-			float2 gvBillboardSizeW;    // billboard
-			float3 gvLookW;             // ray direction
-			float3 gvUpW;               // ray Up -> 축 구성을 위함
-			float gfRayLength;          // ray length
-			float gfRayHalfWidth;       // ray halfWidth
-		};
-
-	*/
-
 	// s0 : SkyboxSampler
 	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[2];
 	d3dSamplerDesc[0].Init(0);
