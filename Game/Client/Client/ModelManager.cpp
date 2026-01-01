@@ -29,7 +29,7 @@ std::shared_ptr<GameObject> ModelManager::Get(const std::string& strObjName)
 
 std::shared_ptr<GameObject> ModelManager::LoadModelFromFile(const std::string& strFileName)
 {
-	std::string strFilePath = std::format("{}/{}.json", g_strTextureBasePath, strFileName);
+	std::string strFilePath = std::format("{}/{}.bin", g_strTextureBasePath, strFileName);
 
 	if (auto pObj = Get(strFileName)) {
 		return pObj;
@@ -40,7 +40,9 @@ std::shared_ptr<GameObject> ModelManager::LoadModelFromFile(const std::string& s
 		__debugbreak();
 		return nullptr;
 	}
-	nlohmann::json j = nlohmann::json::parse(inFile);
+
+	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {}); 
+	nlohmann::json j = nlohmann::json::from_bson(bson);;
 
 	std::shared_ptr<GameObject> pGameObject;
 	for (const auto& data : j.items()) {

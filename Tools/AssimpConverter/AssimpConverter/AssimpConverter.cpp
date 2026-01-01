@@ -129,7 +129,7 @@ void AssimpConverter::SerializeModel(const std::string& strPath, const std::stri
 		hierarchyJson["Bones"].push_back(bone);
 	}
 
-	strSave = std::format("{}\\Models\\{}.json", m_strSavePath, strName);
+	strSave = std::format("{}\\Models\\{}.bin", m_strSavePath, strName);
 	std::ofstream out(strSave, std::ios::binary);
 
 	//out << hierarchyJson.dump(2);
