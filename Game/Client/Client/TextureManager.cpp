@@ -118,8 +118,9 @@ std::shared_ptr<Texture> TextureManager::CreateTextureFromFile(const std::wstrin
 		pTexture->m_pTexResource.StateTransition(m_pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 	}
 	ExcuteCommandList();
-	Fence();
-	WaitForGPUComplete();
+	UINT64 ui64FenceValue = Fence();
+	//WaitForGPUComplete();
+	m_PendingUploadBuffers.push_back({ pd3dUploadBuffer, ui64FenceValue });
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
 	{
@@ -190,8 +191,9 @@ std::shared_ptr<Texture> TextureManager::CreateTextureArrayFromFile(const std::w
 		pTexture->m_pTexResource.StateTransition(m_pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 	}
 	ExcuteCommandList();
-	Fence();
-	WaitForGPUComplete();
+	UINT64 ui64FenceValue = Fence();
+	//WaitForGPUComplete();
+	m_PendingUploadBuffers.push_back({ pd3dUploadBuffer, ui64FenceValue });
 
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
@@ -322,6 +324,22 @@ void TextureManager::LoadFromWICFile(ID3D12Resource** ppOutResource, const std::
 	}
 }
 
+void TextureManager::WaitForCopyComplete()
+{
+	while (m_PendingUploadBuffers.size() == 0) {
+		ReleaseCompletedUploadBuffers();
+	}
+}
+
+void TextureManager::ReleaseCompletedUploadBuffers()
+{
+	UINT64 ui64CompletedValue = m_pd3dFence->GetCompletedValue();
+
+	std::erase_if(m_PendingUploadBuffers, [&ui64CompletedValue](const PendingUploadBuffer& pended) {
+		return pended.ui64FenceValue < ui64CompletedValue;
+	});
+}
+
 #pragma region D3D
 void TextureManager::ResetCommandList()
 {
@@ -333,7 +351,6 @@ void TextureManager::ResetCommandList()
 		__debugbreak();
 	}
 }
-
 
 void TextureManager::CreateCommandList()
 {
@@ -389,10 +406,11 @@ void TextureManager::ExcuteCommandList()
 	WaitForGPUComplete();
 }
 
-void TextureManager::Fence()
+UINT64 TextureManager::Fence()
 {
 	m_nFenceValue++;
 	m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), m_nFenceValue);
+	return m_nFenceValue;
 }
 
 void TextureManager::WaitForGPUComplete()

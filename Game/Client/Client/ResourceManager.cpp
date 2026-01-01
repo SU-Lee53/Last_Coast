@@ -68,8 +68,10 @@ IndexBuffer ResourceManager::CreateIndexBuffer(std::vector<UINT> Indices)
 		Buffer.StateTransition(m_pd3dCommandList, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
 		ExcuteCommandList();
-		Fence();
-		WaitForGPUComplete();
+		UINT64 ui64FenceValue = Fence();
+		//WaitForGPUComplete();
+		m_PendingUploadBuffers.push_back({ pUploadBuffer, ui64FenceValue });
+
 	}
 
 	D3D12_INDEX_BUFFER_VIEW IndexBufferView;
@@ -131,9 +133,10 @@ ComPtr<ID3D12Resource> ResourceManager::CreateBufferResource(void* pData, UINT n
 			m_pd3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(pd3dBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, d3dResourceStates));
 
 			ExcuteCommandList();
-			Fence();
-			WaitForGPUComplete();
-			
+			UINT64 ui64FenceValue = Fence();
+			//WaitForGPUComplete();
+			m_PendingUploadBuffers.push_back({ pUploadBuffer, ui64FenceValue });
+
 			break;
 		}
 		case D3D12_HEAP_TYPE_UPLOAD:
@@ -151,6 +154,22 @@ ComPtr<ID3D12Resource> ResourceManager::CreateBufferResource(void* pData, UINT n
 	}
 
 	return pd3dBuffer;
+}
+
+void ResourceManager::WaitForCopyComplete()
+{
+	while (m_PendingUploadBuffers.size() == 0) {
+		ReleaseCompletedUploadBuffers();
+	}
+}
+
+void ResourceManager::ReleaseCompletedUploadBuffers()
+{
+	UINT64 ui64CompletedValue = m_pd3dFence->GetCompletedValue();
+
+	std::erase_if(m_PendingUploadBuffers, [&ui64CompletedValue](const PendingUploadBuffer& pended) {
+		return pended.ui64FenceValue < ui64CompletedValue;
+	});
 }
 
 #pragma region D3D
@@ -225,15 +244,16 @@ void ResourceManager::ExcuteCommandList()
 	WaitForGPUComplete();
 }
 
-void ResourceManager::Fence()
+UINT64 ResourceManager::Fence()
 {
 	m_nFenceValue++;
 	m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), m_nFenceValue);
+
+	return m_nFenceValue;
 }
 
 void ResourceManager::WaitForGPUComplete()
 {
-
 	const UINT64 expectedFenceValue = m_nFenceValue;
 
 	if (m_pd3dFence->GetCompletedValue() < expectedFenceValue)

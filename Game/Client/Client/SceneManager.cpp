@@ -6,6 +6,9 @@ void SceneManager::Initialize()
 {
 	m_upCurrentScene = std::make_unique<TestScene>();
 	m_upCurrentScene->BuildObjects();
+
+	RESOURCE->WaitForCopyComplete();
+	TEXTURE->WaitForCopyComplete();
 }
 
 void SceneManager::ProcessInput() 

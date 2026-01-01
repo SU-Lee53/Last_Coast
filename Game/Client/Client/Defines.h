@@ -109,6 +109,11 @@ struct MaterialColors {
 	float			fGlossyReflection = 0.0f;
 };
 
+struct PendingUploadBuffer {
+	ComPtr<ID3D12Resource> pd3dPendingUploadBuffer = nullptr;
+	UINT64 ui64FenceValue = 0;
+};
+
 //////////////////////////////////////////////////////////////////////////////////
 // Default Constants
 
