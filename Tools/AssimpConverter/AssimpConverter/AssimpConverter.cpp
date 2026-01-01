@@ -97,9 +97,6 @@ void AssimpConverter::SerializeModel(const std::string& strPath, const std::stri
 		fs::create_directories(strSave);
 	}
 
-	strSave = std::format("{}\\Models\\{}.json", m_strSavePath, strName);
-	std::ofstream out(strSave);
-
 	DisplayText("Serializing...\n");
 
 	nlohmann::ordered_json hierarchyJson;
@@ -132,8 +129,13 @@ void AssimpConverter::SerializeModel(const std::string& strPath, const std::stri
 		hierarchyJson["Bones"].push_back(bone);
 	}
 
-	out << hierarchyJson.dump(2);
+	strSave = std::format("{}\\Models\\{}.json", m_strSavePath, strName);
+	std::ofstream out(strSave, std::ios::binary);
 
+	//out << hierarchyJson.dump(2);
+
+	std::vector<uint8_t> bson = nlohmann::json::to_bson(hierarchyJson);
+	out.write(reinterpret_cast<const char*>(bson.data()), bson.size());
 
 	DisplayText("Successfully serialized at %s\r\n", m_strSavePath.c_str());
 
