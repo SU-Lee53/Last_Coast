@@ -9,7 +9,7 @@ void ResourceManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 	CreateCommandList();
 	CreateFence();
 
-	m_ConstantBufferPool.Initialize(pd3dDevice, 1'0000);
+	m_ConstantBufferPool.Initialize(pd3dDevice, 5000);
 }
 
 IndexBuffer ResourceManager::CreateIndexBuffer(std::vector<UINT> Indices)

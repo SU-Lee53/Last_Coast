@@ -21,9 +21,11 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV)
 	TEXTURE->Initialize(g_pD3DCore->GetDevice());
 	EFFECT->Initialize(g_pD3DCore->GetDevice(), g_pD3DCore->GetCommandList());
 	UI->Initialize(g_pD3DCore->GetDevice());
+	ANIMATION->Initialize();
 
 	TEXTURE->LoadGameTextures();
 	MODEL->LoadGameModels();
+	ANIMATION->LoadGameAnimations();
 
 	SCENE->Initialize();
 
@@ -66,8 +68,8 @@ void GameFramework::Render()
 	g_pD3DCore->RenderBegin();
 
 	// TODO : Render Logic Here
+	SCENE->Render(g_pD3DCore->GetCommandList());
 	RENDER->Render(g_pD3DCore->GetCommandList());
-	SCENE->Render(g_pD3DCore->GetCommandList());		// 별도의 렌더링 방법을 갖는다면 여기서 렌더링 함
 	EFFECT->Render(g_pD3DCore->GetCommandList());
 	UI->Render(g_pD3DCore->GetCommandList());
 	GUI->Render(g_pD3DCore->GetCommandList());

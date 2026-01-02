@@ -25,6 +25,6 @@ private:
 	std::unordered_map<std::string, std::shared_ptr<GameObject>> m_pModelPool;
 
 private:
-	inline static std::string g_strTextureBasePath = "../Resources/Models";
+	inline static std::string g_strModelBasePath = "../Resources/Models";
 
 };

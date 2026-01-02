@@ -190,8 +190,8 @@ void AnimatedShader::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Ro
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC d3dPipelineDesc{};
 	{
 		d3dPipelineDesc.pRootSignature = (pd3dRootSignature) ? pd3dRootSignature.Get() : RenderManager::g_pd3dGlobalRootSignature.Get();
-		d3dPipelineDesc.VS = { nullptr,0 };	// TODO : FILL
-		d3dPipelineDesc.PS = { nullptr,0 };	// TODO : FILL
+		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("AnimatedVS");
+		d3dPipelineDesc.PS = SHADER->GetShaderByteCode("AnimatedPS");
 		d3dPipelineDesc.RasterizerState = CreateRasterizerState();
 		d3dPipelineDesc.BlendState = CreateBlendState();
 		d3dPipelineDesc.DepthStencilState = CreateDepthStencilState();
@@ -218,7 +218,7 @@ D3D12_INPUT_LAYOUT_DESC AnimatedShader::CreateInputLayout()
 		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 		{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 3, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-		{"BLENDINDICES", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 4, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"BLENDINDICES", 0, DXGI_FORMAT_R32G32B32A32_UINT, 4, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 		{"BLENDWEIGHTS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 5, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 	};
 

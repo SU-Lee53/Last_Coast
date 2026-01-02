@@ -122,4 +122,4 @@ using namespace Microsoft::WRL;
 #include "EffectManager.h"
 #include "SoundManager.h"
 #include "UIManager.h"
-#include "GameTimer.h"
+#include "AnimationManager.h"

@@ -63,3 +63,16 @@ public:
 
 };
 
+//////////////////////////////////////////////////////////////////////////////////
+// SkinnedMaterial
+
+class SkinnedMaterial : public Material {
+public:
+	SkinnedMaterial(const MATERIALLOADINFO& materialLoadInfo);
+	virtual ~SkinnedMaterial() {}
+
+	virtual void UpdateShaderVariables(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, void* dataForBind) override;
+	virtual void UpdateShaderVariables(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle) override;
+
+};
+

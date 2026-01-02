@@ -74,3 +74,34 @@ void StandardMaterial::UpdateShaderVariables(ComPtr<ID3D12Device> pd3dDevice, Co
 	pd3dCommandList->SetGraphicsRootDescriptorTable(ROOT_PARAMETER_OBJ_TEXTURES, descHandle.gpuHandle);
 	descHandle.gpuHandle.Offset(4, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 }
+
+//////////////////////////////////////////////////////////////////////////////////
+// SkinnedMaterial
+
+SkinnedMaterial::SkinnedMaterial(const MATERIALLOADINFO& materialLoadInfo)
+	:Material(materialLoadInfo)
+{
+	m_pTextures.resize(4);
+	m_pTextures[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName);		// Diffused
+	m_pTextures[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName);		// Normal
+	m_pTextures[2] = TEXTURE->LoadTexture(materialLoadInfo.strMetallicMapName);	// Metallic
+	m_pTextures[3] = TEXTURE->LoadTexture(materialLoadInfo.strSpecularMapName);	// Specular
+	m_pShader = SHADER->Get<AnimatedShader>();
+}
+
+void SkinnedMaterial::UpdateShaderVariables(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, void* dataForBind)
+{
+}
+
+void SkinnedMaterial::UpdateShaderVariables(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle)
+{
+	for (int i = 0; i < m_pTextures.size(); ++i) {
+		if (m_pTextures[i]) {
+			pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, m_pTextures[i]->GetHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		}
+		descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+	}
+
+	pd3dCommandList->SetGraphicsRootDescriptorTable(ROOT_PARAMETER_OBJ_TEXTURES, descHandle.gpuHandle);
+	descHandle.gpuHandle.Offset(4, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+}

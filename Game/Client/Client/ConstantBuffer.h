@@ -8,18 +8,13 @@ struct ConstantBuffer
 	size_t nSize = 0;
 
 	template<typename T>
-	void WriteData(const T* pData) {
-		::memcpy(pMappedPtr, pData, sizeof(T));
-	}
-
-	template<typename T>
-	void WriteData(const T* pData, UINT offset) {
+	void WriteData(const T* pData, UINT offset = 0) {
 		T* p = reinterpret_cast<T*>(pMappedPtr);
 		::memcpy(p + offset, pData, sizeof(T));
 	}
 
 	template<typename T>
-	void WriteData(std::vector<T> contiguousData, UINT offset) {
+	void WriteData(std::vector<T> contiguousData, UINT offset = 0) {
 		T* p = reinterpret_cast<T*>(pMappedPtr);
 		::memcpy(p + offset, contiguousData.data(), sizeof(T) * contiguousData.size());
 	}

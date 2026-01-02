@@ -13,13 +13,19 @@
 		+ Global 로 사용할 Root Signature RenderManager 에서 관리하도록 하는것도 괜찮아보임
 */
 
+// TODO : RenderManager에서 Animation을 재생할 방법을 찾아야 함 (01.02)
+// Shader 등은 준비되었고, 분류 및 bone Transform 바인딩이 문제
+// 특성상 어차피 인스턴싱은 어려울것 같음
+
+
 enum ROOT_PARAMETER {
-	ROOT_PARAMETER_SCENE_CAM_DATA		= 0,
-	ROOT_PARAMETER_SCENE_LIGHT_DATA		= 1,
-	ROOT_PARAMETER_SCENE_SKYBOX			= 2,
-	ROOT_PARAMETER_PASS_INSTANCE_DATA	= 3,
-	ROOT_PARAMETER_OBJ_MATERIAL_DATA	= 4,
-	ROOT_PARAMETER_OBJ_TEXTURES			= 5,
+	ROOT_PARAMETER_SCENE_CAM_DATA			= 0,
+	ROOT_PARAMETER_SCENE_LIGHT_DATA			= 1,
+	ROOT_PARAMETER_SCENE_SKYBOX				= 2,
+	ROOT_PARAMETER_PASS_INSTANCE_DATA		= 3,
+	ROOT_PARAMETER_OBJ_MATERIAL_DATA		= 4,
+	ROOT_PARAMETER_OBJ_BONE_TRANSFORM_DATA	= 5,
+	ROOT_PARAMETER_OBJ_TEXTURES				= 6,
 };
 
 constexpr UINT DESCRIPTOR_PER_DRAW = 1000000;
@@ -27,7 +33,6 @@ constexpr UINT DESCRIPTOR_PER_DRAW = 1000000;
 struct MeshRenderParameters {
 	Matrix mtxWorld;
 };
-
 
 struct InstancePair {
 	std::shared_ptr<IMeshRenderer> meshRenderer;
@@ -45,11 +50,13 @@ public:
 	void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
 
 private:
+	void RenderAnimated(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descriptorHandleFromPassStart);
 	void RenderSkybox(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descriptorHandleFromPassStart);
 
 public:
 	template<typename T> requires std::derived_from<T, IMeshRenderer>
 	void Add(std::shared_ptr<T> pRenderItem, MeshRenderParameters renderParam);
+	void AddAnimatedObject(std::shared_ptr<GameObject> pObj);
 	void Clear();
 
 public:
@@ -66,11 +73,7 @@ public:
 	// Mesh
 	static ComPtr<ID3D12RootSignature> g_pd3dGlobalRootSignature;
 	DescriptorHeap m_DescriptorHeapForDraw;
-
-	// Sprite
-	ComPtr<ID3D12RootSignature> m_pSpriteRootSignature;
-	ComPtr<ID3D12PipelineState> m_pd3dSpritePipelineState;
-	DescriptorHeap m_DescriptorHeapForSprite;
+	
 
 	// Skybox
 	ComPtr<ID3D12PipelineState> m_pd3dSkyboxPipelineState;
@@ -80,9 +83,10 @@ public:
 	std::array<std::unordered_map<uint64_t, UINT>, OBJECT_RENDER_TYPE_COUNT> m_InstanceIndexMap;
 	std::array<std::vector<InstancePair>, 2> m_InstanceDatas;
 
+	// 키프레임 애니메이션 GameObjects (인스턴싱 불가)
+	std::vector<std::shared_ptr<GameObject>> m_pAnimatedObjects;
+
 	UINT m_nInstanceIndex[2] = {0, 0};
-
-
 };
 
 template<typename T> requires std::derived_from<T, IMeshRenderer>

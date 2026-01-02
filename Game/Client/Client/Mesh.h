@@ -28,7 +28,7 @@ struct MESHLOADINFO {
 	std::vector<Vector2>	v2TexCoord2;
 	std::vector<Vector2>	v2TexCoord3;
 
-	std::vector<XMINT4>		xmi4BlendIndices;
+	std::vector<XMUINT4>	xmui4BlendIndices;
 	std::vector<Vector4>	v4BlendWeights;
 
 	std::vector<UINT>		uiIndices;

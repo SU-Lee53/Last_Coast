@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "ConstantBuffer.h"
-
+#include <bit>
 // ================================================================================
 // ConstantBufferPool
 // - 하나의 ID3D12Resource 를 이용하여 여러개의 ConstantBuffer 를 사용하기 위함
@@ -12,6 +12,17 @@
 //			  CopyDescriptorsSimple를 수행해야 함
 // - 나중에 딱 필요한 최대 크기만큼함 Pool 크기를 잡아서 사용
 // ================================================================================
+
+template<typename T>
+constexpr size_t ComputeCBSize()
+{
+	return sizeof(T) <= 256 ? 256 : std::bit_ceil(sizeof(T));
+}
+
+template<typename T>
+struct ConstantBufferPoolSize {
+	constexpr static size_t value = ComputeCBSize<T>();
+};
 
 class ConstantBufferPool {
 public:
@@ -41,7 +52,7 @@ private:
 template<typename T>
 inline ConstantBuffer& ConstantBufferPool::Allocate()
 {
-	size_t requiredCBSize = ConstantBufferSize<T>::value;
+	size_t requiredCBSize = ConstantBufferPoolSize<T>::value;
 	assert(requiredCBSize <= m_nMaxCBVSize);
 	assert(m_nAllocated[requiredCBSize] <= m_nCBVCount[requiredCBSize]);
 

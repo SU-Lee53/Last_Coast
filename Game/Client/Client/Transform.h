@@ -42,12 +42,12 @@ public:
 	void Scale(float fScale);
 
 public:
-	Vector3 GetPosition() const;
-	Vector3 GetRight() const;
-	Vector3 GetUp() const;
-	Vector3 GetLook() const;
+	const Vector3& GetPosition() const;
+	const Vector3& GetRight() const;
+	const Vector3& GetUp() const;
+	const Vector3& GetLook() const;
 	
-	Matrix GetWorldMatrix() const;
+	const Matrix& GetWorldMatrix() const;
 
 private:
 	// m_mtxFrameRelative : 계층 모델에서 부모로부터의 상대 변환

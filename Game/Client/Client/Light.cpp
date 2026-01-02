@@ -1,9 +1,9 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "Light.h"
 
-LIGHT_DATA PointLight::MakeLightData()
+LightData PointLight::MakeLightData()
 {
-	LIGHT_DATA data{};
+	LightData data{};
 	{
 		data.nType = LIGHT_TYPE_POINT_LIGHT;
 		data.bEnable = TRUE;
@@ -20,9 +20,9 @@ LIGHT_DATA PointLight::MakeLightData()
 	return data;
 }
 
-LIGHT_DATA SpotLight::MakeLightData()
+LightData SpotLight::MakeLightData()
 {
-	LIGHT_DATA data{};
+	LightData data{};
 	{
 		data.nType = LIGHT_TYPE_SPOT_LIGHT;
 		data.bEnable = TRUE;
@@ -43,9 +43,9 @@ LIGHT_DATA SpotLight::MakeLightData()
 	return data;
 }
 
-LIGHT_DATA DirectionalLight::MakeLightData()
+LightData DirectionalLight::MakeLightData()
 {
-	LIGHT_DATA data{};
+	LightData data{};
 	{
 		data.nType = LIGHT_TYPE_DIRECTIONAL_LIGHT;
 		data.bEnable = TRUE;

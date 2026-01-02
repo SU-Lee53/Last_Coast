@@ -1,13 +1,6 @@
 ﻿#pragma once
 
 
-struct CB_CAMERA_DATA
-{
-	Matrix	mtxView;
-	Matrix	mtxProjection;
-	Vector3 v3CameraPosition;
-};
-
 
 class Camera {
 public:

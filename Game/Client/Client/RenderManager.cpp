@@ -10,6 +10,18 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Gra
 	CreateSkyboxPipelineState(pd3dDevice);
 
 	m_pForwardPass = std::make_shared<ForwardPass>(pd3dDevice, pd3dCommandList);
+
+
+	// DescriptorHandle Heap For Draw
+	D3D12_DESCRIPTOR_HEAP_DESC d3dHeapDesc;
+	{
+		d3dHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		d3dHeapDesc.NumDescriptors = DESCRIPTOR_PER_DRAW;
+		d3dHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		d3dHeapDesc.NodeMask = 0;
+	}
+
+	m_DescriptorHeapForDraw.Initialize(pd3dDevice, d3dHeapDesc);
 }
 
 void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
@@ -17,20 +29,22 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice, C
 	m_pd3dDevice = pd3dDevice;
 
 	// Global Root Signature
-	CD3DX12_DESCRIPTOR_RANGE d3dDescriptorRanges[5];
+	CD3DX12_DESCRIPTOR_RANGE d3dDescriptorRanges[6];
 	d3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, 0);	// Per Scene (Camera)
 	d3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, 0);	// Per Scene (Cubemap)
 	d3dDescriptorRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, 0);	// Per Pass	 (World 변환)
 	d3dDescriptorRanges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2, 2, 0, 0);	// Per Object (Material, instance base) + 필요한경우 World
-	d3dDescriptorRanges[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 2, 0, 0);	// Diffuse, Normal/Height
+	d3dDescriptorRanges[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 4, 0, 0);	// Bone Transform
+	d3dDescriptorRanges[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 2, 0, 0);	// Diffuse, Normal/Height
 
-	CD3DX12_ROOT_PARAMETER d3dRootParameters[6];
+	CD3DX12_ROOT_PARAMETER d3dRootParameters[7];
 	d3dRootParameters[0].InitAsDescriptorTable(1, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);	// Scene (Camera)
 	d3dRootParameters[1].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL);						// Scene (Light)
 	d3dRootParameters[2].InitAsDescriptorTable(1, &d3dDescriptorRanges[1], D3D12_SHADER_VISIBILITY_ALL);	// Scene (Cubemap(Skybox))
 	d3dRootParameters[3].InitAsDescriptorTable(1, &d3dDescriptorRanges[2], D3D12_SHADER_VISIBILITY_ALL);	// Pass (World)
 	d3dRootParameters[4].InitAsDescriptorTable(1, &d3dDescriptorRanges[3], D3D12_SHADER_VISIBILITY_ALL);	// Material
-	d3dRootParameters[5].InitAsDescriptorTable(1, &d3dDescriptorRanges[4], D3D12_SHADER_VISIBILITY_ALL);	// Texture(Diffused, Normal/Height)
+	d3dRootParameters[5].InitAsDescriptorTable(1, &d3dDescriptorRanges[4], D3D12_SHADER_VISIBILITY_ALL);	// Bone Transform
+	d3dRootParameters[6].InitAsDescriptorTable(1, &d3dDescriptorRanges[5], D3D12_SHADER_VISIBILITY_ALL);	// Texture(Diffused, Normal/Height)
 
 	// s0 : SkyboxSampler
 	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[2];
@@ -79,16 +93,6 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice, C
 
 	pd3dDevice->CreateRootSignature(0, pd3dSignatureBlob->GetBufferPointer(), pd3dSignatureBlob->GetBufferSize(), IID_PPV_ARGS(g_pd3dGlobalRootSignature.GetAddressOf()));
 
-	// DescriptorHandle Heap For Draw
-	D3D12_DESCRIPTOR_HEAP_DESC d3dHeapDesc;
-	{
-		d3dHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		d3dHeapDesc.NumDescriptors = DESCRIPTOR_PER_DRAW;
-		d3dHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		d3dHeapDesc.NodeMask = 0;
-	}
-
-	m_DescriptorHeapForDraw.Initialize(pd3dDevice, d3dHeapDesc);
 }
 
 void RenderManager::CreateSkyboxPipelineState(ComPtr<ID3D12Device> pd3dDevice)
@@ -171,8 +175,26 @@ void RenderManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 	// Pass 수행
 	// Run 안에서 descHandle 의 offset 이 사용된만큼 움직임
 	m_pForwardPass->Run(m_pd3dDevice, pd3dCommandList, m_InstanceDatas[OBJECT_RENDER_FORWARD], descHandle);
+	RenderAnimated(pd3dCommandList, descHandle);
 
 	RenderSkybox(pd3dCommandList, descHandle);
+
+}
+
+void RenderManager::RenderAnimated(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle)
+{
+	for (const auto& pObj : m_pAnimatedObjects) {
+		const auto& boneTransforms = pObj->GetAnimationController()->GetKeyframeSRT();
+		ConstantBuffer& boneCBuffer = RESOURCE->AllocCBuffer<CB_BONE_TRANSFORM_DATA>();
+		boneCBuffer.WriteData(boneTransforms);
+
+		m_pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, boneCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		pd3dCommandList->SetGraphicsRootDescriptorTable(ROOT_PARAMETER_OBJ_BONE_TRANSFORM_DATA, descHandle.gpuHandle);
+		descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+		descHandle.gpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+
+		pObj->RenderDirectly(m_pd3dDevice, pd3dCommandList, descHandle);
+	}
 
 }
 
@@ -199,6 +221,11 @@ void RenderManager::RenderSkybox(ComPtr<ID3D12GraphicsCommandList> pd3dCommandLi
 	pd3dCommandList->DrawInstanced(1, 1, 0, 0);
 }
 
+void RenderManager::AddAnimatedObject(std::shared_ptr<GameObject> pObj)
+{
+	m_pAnimatedObjects.push_back(pObj);
+}
+
 void RenderManager::Clear()
 {
 	for (int i = 0; i < 2; ++i) {
@@ -206,4 +233,5 @@ void RenderManager::Clear()
 		m_InstanceDatas[i].clear();
 		m_nInstanceIndex[i] = 0;
 	}
+	m_pAnimatedObjects.clear();
 }

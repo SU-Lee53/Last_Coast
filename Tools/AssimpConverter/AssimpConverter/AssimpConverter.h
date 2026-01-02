@@ -107,6 +107,8 @@ private:
 	UINT m_nNodes = 0;
 
 	std::vector<Bone> m_Bones;
+	std::vector<Bone> m_DFSBones;
+	std::unordered_map<int, int> m_BoneIndexRemappedDFS;	// old(not DFS order) - new(DFS order)
 	std::unordered_map<std::string, UINT> m_BoneIndexMap;
 
 	float m_fScale = 1.f;

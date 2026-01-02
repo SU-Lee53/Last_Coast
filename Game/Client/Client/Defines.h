@@ -31,6 +31,7 @@ public:										\
 #define SOUND			GET_SINGLE(SoundManager)
 #define UI				GET_SINGLE(UIManager)
 #define TIME			GET_SINGLE(GameTimer)
+#define ANIMATION		GET_SINGLE(AnimationManager)
 
 #define CUR_SCENE		SCENE->GetCurrentScene()
 #define DT				TIME->GetTimeElapsed()
@@ -38,7 +39,6 @@ public:										\
 //////////////////////////////////////////////////////////////////////////////////
 // Constants
 constexpr static float PLANET_ROTATION = 20.f;
-
 
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -93,8 +93,37 @@ enum MESH_ELEMENT_TYPE : UINT {
 	MESH_ELEMENT_TYPE_END = 0x0400,
 };
 
+enum ANIMATION_PLAY_TYPE : UINT {
+	ANIMATION_PLAY_ONCE,
+	ANIMATION_PLAY_LOOP,
+};
+
+enum SPRITE_TYPE : UINT8 {
+	SPRITE_TYPE_TEXTURE = 0,
+	SPRITE_TYPE_TEXT,
+	SPRITE_TYPE_BILLBOARD,
+
+	SPRITE_TYPE_COUNT
+};
+
 //////////////////////////////////////////////////////////////////////////////////
 // Structs
+
+struct LightData {
+	Vector4 v4Ambient;                // c0
+	Vector4 v4Diffuse;                // c1
+	Vector4 v4Specular;               // c2
+	Vector3 v3Position;               // c3.xyz
+	float fFalloff;                   // c3.w
+	Vector3 v3Direction;              // c4.xyz
+	float fTheta; //cos(fTheta)     // c4.w
+	Vector3 v3Attenuation;            // c5.xyz
+	float fPhi; //cos(fPhi)         // c5.w
+	BOOL bEnable;                     // c6.x
+	int nType;                        // c6.y
+	float fRange;                     // c6.z
+	float padding;                      // c6.w
+};
 
 struct MaterialColors {
 	XMFLOAT4		xmf4Ambient;
@@ -109,9 +138,94 @@ struct MaterialColors {
 	float			fGlossyReflection = 0.0f;
 };
 
+struct EffectParameter {
+	Vector3		xmf3Position;
+	float		fElapsedTime = 0.f;
+	Vector3		xmf3Force;
+	float		fAdditionalData = 0.f;
+};
+
+struct SpriteRect {
+	float fLeft;
+	float fTop;
+	float fRight;
+	float fBottom;
+};
+
+struct Bone {
+	std::string strBoneName;
+	int nIndex;
+	int nParentIndex;
+	Matrix mtxTransform;
+	Matrix mtxOffset;
+};
+
 struct PendingUploadBuffer {
 	ComPtr<ID3D12Resource> pd3dPendingUploadBuffer = nullptr;
 	UINT64 ui64FenceValue = 0;
+};
+
+//////////////////////////////////////////////////////////////////////////////////
+// CB Types
+
+constexpr static UINT MAX_BONE_TRANSFORMS		= 150;
+constexpr static UINT MAX_EFFECT_PER_DRAW		= 100;
+constexpr static UINT MAX_CHARACTER_PER_SPRITE	= 40;
+constexpr static UINT MAX_LIGHTS = 16;
+
+struct CB_CAMERA_DATA
+{
+	Matrix	mtxView;
+	Matrix	mtxProjection;
+	Vector3 v3CameraPosition;
+};
+
+struct CB_PER_OBJECT_DATA {
+	MaterialColors materialColors;
+	int nInstanceBase;
+};
+
+struct CB_WORLD_TRANSFORM_DATA {
+	Matrix mtxTransforms;
+};
+
+struct CB_BONE_TRANSFORM_DATA
+{
+	Matrix mtxBoneTransforms[MAX_BONE_TRANSFORMS];
+};
+
+struct CB_PARTICLE_DATA {
+	EffectParameter parameters[MAX_EFFECT_PER_DRAW];
+};
+
+struct CB_LIGHT_DATA
+{
+	LightData gLights[MAX_LIGHTS];
+	Vector4 gcGlobalAmbientLight;
+	int gnLights;
+};
+
+struct CB_SPRITE_DATA {
+	float fLeft;
+	float fTop;
+	float fRight;
+	float fBottom;
+};
+
+struct CB_TEXT_DATA {
+	UINT nCharacters[MAX_CHARACTER_PER_SPRITE];
+	XMFLOAT4 xmf4TextColor;
+	UINT nLength;
+};
+
+struct CB_BILLBOARD_SPRITE_DATA {
+	XMFLOAT3 xmf3Position;
+	UINT pad1 = 0;
+	XMFLOAT2 xmf2Size;
+	XMUINT2 pad2 = XMUINT2(0, 0);
+	XMFLOAT3 xmf3CameraPosition;
+	UINT pad3 = 0;
+	XMFLOAT4X4 xmf4x4ViewProjection;
 };
 
 //////////////////////////////////////////////////////////////////////////////////

@@ -18,6 +18,7 @@ void ShaderManager::Initialize(ComPtr<ID3D12Device> pDevice)
 
 	Load<FullScreenShader>();
 	Load<StandardShader>();
+	Load<AnimatedShader>();
 }
 
 D3D12_SHADER_BYTECODE ShaderManager::GetShaderByteCode(const std::string& strShaderName)
@@ -47,8 +48,13 @@ void ShaderManager::CompileShaders()
 	ComPtr<ID3DBlob> m_pd3dPSBlob;
 
 	// Shaders.hlsl
-	m_pCompiledShaderByteCodeMap.insert({ "StandardVS", Shader::CompileShader(L"../HLSL/StandardShader.hlsl", "VSStandard", "vs_5_1", m_pd3dVSBlob.GetAddressOf()) });
-	m_pCompiledShaderByteCodeMap.insert({ "StandardPS", Shader::CompileShader(L"../HLSL/StandardShader.hlsl", "PSStandard", "ps_5_1", m_pd3dGSBlob.GetAddressOf()) });
+	m_pCompiledShaderByteCodeMap.insert({ "StandardVS", Shader::CompileShader(L"../HLSL/Shaders.hlsl", "VSStandard", "vs_5_1", m_pd3dVSBlob.GetAddressOf()) });
+	m_pCompiledShaderByteCodeMap.insert({ "StandardPS", Shader::CompileShader(L"../HLSL/Shaders.hlsl", "PSStandard", "ps_5_1", m_pd3dGSBlob.GetAddressOf()) });
+	m_pd3dBlobs.push_back(m_pd3dVSBlob);
+	m_pd3dBlobs.push_back(m_pd3dPSBlob);
+	
+	m_pCompiledShaderByteCodeMap.insert({ "AnimatedVS", Shader::CompileShader(L"../HLSL/Shaders.hlsl", "VSAnimated", "vs_5_1", m_pd3dVSBlob.GetAddressOf()) });
+	m_pCompiledShaderByteCodeMap.insert({ "AnimatedPS", Shader::CompileShader(L"../HLSL/Shaders.hlsl", "PSAnimated", "ps_5_1", m_pd3dGSBlob.GetAddressOf()) });
 	m_pd3dBlobs.push_back(m_pd3dVSBlob);
 	m_pd3dBlobs.push_back(m_pd3dPSBlob);
 
