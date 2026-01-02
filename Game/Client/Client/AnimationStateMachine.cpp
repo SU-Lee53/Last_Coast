@@ -48,18 +48,18 @@ void PlayerAnimationStateMachine::InitializeStateGraph()
 	std::shared_ptr<AnimationState> pRun = std::make_shared<AnimationState>();
 	
 	pIdle->strName = "Idle";
-	//pIdle->pAnimationToPlay = ANIMATION->Get("Breathing Idle");
-	pIdle->pAnimationToPlay = ANIMATION->Get("Silly Dancing");
+	pIdle->pAnimationToPlay = ANIMATION->Get("Breathing Idle");
+	//pIdle->pAnimationToPlay = ANIMATION->Get("Silly Dancing");
 	pIdle->eAnimationPlayType = ANIMATION_PLAY_LOOP;
 	pIdle->fnStateTransitionCallback = IdleCallback;
 	
 	pWalk->strName = "Walk";
-	pWalk->pAnimationToPlay = ANIMATION->Get("Walk");
+	pWalk->pAnimationToPlay = ANIMATION->Get("Walking");
 	pWalk->eAnimationPlayType = ANIMATION_PLAY_LOOP;
 	pWalk->fnStateTransitionCallback = WalkCallback;
 	
 	pRun->strName = "Run";
-	pRun->pAnimationToPlay = ANIMATION->Get("Run");
+	pRun->pAnimationToPlay = ANIMATION->Get("Jog Forward");
 	pRun->eAnimationPlayType = ANIMATION_PLAY_LOOP;
 	pRun->fnStateTransitionCallback = RunCallback;
 
@@ -82,17 +82,18 @@ void PlayerAnimationStateMachine::InitializeStateGraph()
 bool PlayerAnimationStateMachine::IdleCallback(std::shared_ptr<GameObject> pObj)
 {
 	// TODO : 구현
-	return false;
+	return !INPUT->GetButtonPressed(VK_UP) && !INPUT->GetButtonPressed(VK_LSHIFT);
 }
 
 bool PlayerAnimationStateMachine::WalkCallback(std::shared_ptr<GameObject> pObj)
 {
 	// TODO : 구현
-	return false;
+
+	return INPUT->GetButtonPressed(VK_UP) && !INPUT->GetButtonPressed(VK_LSHIFT);
 }
 
 bool PlayerAnimationStateMachine::RunCallback(std::shared_ptr<GameObject> pObj)
 {
 	// TODO : 구현
-	return false;
+	return INPUT->GetButtonPressed(VK_UP) && INPUT->GetButtonPressed(VK_LSHIFT);
 }

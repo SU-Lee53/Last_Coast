@@ -11,6 +11,12 @@ void AssimpConverter::LoadFromFiles(const std::string& strPath, float fScaleFact
 	m_fScale = fScaleFactor;
 	m_strFilePath = strPath;
 
+	m_Bones.clear();
+	m_DFSBones.clear();
+	m_BoneIndexRemappedDFS.clear();
+	m_BoneIndexMap.clear();
+
+
 	m_pScene = m_pImporter->ReadFile(
 		strPath,
 		aiProcess_MakeLeftHanded |

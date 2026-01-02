@@ -8,7 +8,8 @@ void AnimationManager::Initialize()
 void AnimationManager::LoadGameAnimations()
 {
 	LoadAndAdd("Breathing Idle");
-	LoadAndAdd("Silly Dancing");
+	LoadAndAdd("Walking");
+	LoadAndAdd("Jog Forward");
 }
 
 std::shared_ptr<Animation> AnimationManager::LoadAndAdd(const std::string& strName)

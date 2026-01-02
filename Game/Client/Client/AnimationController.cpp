@@ -36,7 +36,7 @@ const std::vector<Matrix> AnimationController::GetKeyframeSRT() const
 
 double AnimationController::GetCurrentAnimationDuration() const
 {
-	return m_pStateMachine->GetCurrentAnimationState()->pAnimationToPlay->GetDuration();;
+	return m_pStateMachine->GetCurrentAnimationState()->pAnimationToPlay->GetDuration();
 }
 
 void PlayerAnimationController::Initialize(std::shared_ptr<GameObject> pOwner)
