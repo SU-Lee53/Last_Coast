@@ -325,7 +325,7 @@ void TextureManager::LoadFromWICFile(ID3D12Resource** ppOutResource, const std::
 
 void TextureManager::WaitForCopyComplete()
 {
-	while (m_PendingUploadBuffers.size() == 0) {
+	while (m_PendingUploadBuffers.size() != 0) {
 		ReleaseCompletedUploadBuffers();
 	}
 }

@@ -158,7 +158,7 @@ ComPtr<ID3D12Resource> ResourceManager::CreateBufferResource(void* pData, UINT n
 
 void ResourceManager::WaitForCopyComplete()
 {
-	while (m_PendingUploadBuffers.size() == 0) {
+	while (m_PendingUploadBuffers.size() != 0) {
 		ReleaseCompletedUploadBuffers();
 	}
 }

@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-constexpr static UINT MAX_CMDLIST_POOL_SIZE = 100;
+constexpr static UINT MAX_CMDLIST_POOL_SIZE = 50;
 
 struct CommandListPair {
 	friend class CommandListPool;

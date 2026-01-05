@@ -137,7 +137,7 @@ inline VertexBuffer ResourceManager::CreateVertexBuffer(std::vector<T> vertices,
 		Buffer.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
 		ExcuteCommandList(*cmdList);
-		UINT64 ui64FenceValue = Fence();
+		cmdList->ui64FenceValue = Fence();
 		m_PendingUploadBuffers.push_back({ pUploadBuffer, cmdList });
 	}
 
