@@ -39,6 +39,15 @@ void AssimpConverter::LoadFromFiles(const std::string& strPath, float fScaleFact
 	
 	GatherBoneIndex();
 	BuildBoneHierarchy(m_pRootNode, -1);
+
+	for (int i = 0; i < m_DFSBones.size(); ++i) {
+		int nParentIndex = m_DFSBones[i].nParentIndex;
+		if (nParentIndex != -1) {
+			m_DFSBones[nParentIndex].nChildren++;
+			m_DFSBones[nParentIndex].nChilerenIndex.push_back(i);
+			m_DFSBones[i].nDepth = m_DFSBones[nParentIndex].nDepth + 1;
+		}
+	}
 }
 
 std::string NormalizeBoneName(const std::string& name)
@@ -93,9 +102,9 @@ void AssimpConverter::BuildBoneHierarchy(aiNode* node, int parentBoneIndex)
 		Bone info{};
 		info.nIndex = newBoneIndex;
 		info.strName = strNodeName;
-		info.nParentIndex = parentBoneIndex;	// Later
+		info.nParentIndex = parentBoneIndex;
 		info.xmf4x4Transform = aiMatrixToXMMatrix(node->mTransformation);
-		info.xmf4x4Offset = m_Bones[oldBoneIndex].xmf4x4Offset;	// Later
+		info.xmf4x4Offset = m_Bones[oldBoneIndex].xmf4x4Offset;
 
 		m_DFSBones.push_back(info);
 
@@ -131,13 +140,22 @@ void AssimpConverter::SerializeModel(const std::string& strPath, const std::stri
 	hierarchyJson["Hierarchy"] = StoreNodeToJson(m_pRootNode);
 
 	// Bone data (For animation retargeting)
-	hierarchyJson["nBones"] = m_Bones.size();
+	hierarchyJson["nBones"] = m_DFSBones.size();
 	hierarchyJson["Bones"] = nlohmann::ordered_json::array();
 	for (const auto& boneData : m_DFSBones) {
 		nlohmann::ordered_json bone;
 		bone["Name"] = boneData.strName;
 		bone["Index"] = boneData.nIndex;
 		bone["ParentIndex"] = boneData.nParentIndex;
+		bone["Depth"] = boneData.nDepth;
+
+		int nChildren = boneData.nChildren;
+		bone["nChildren"] = nChildren;
+		bone["Children"] = nlohmann::ordered_json::array();
+		for (int i = 0; i < nChildren; ++i) {
+			bone["Children"].push_back(boneData.nChilerenIndex[i]);
+		}
+
 		XMFLOAT4X4 m = boneData.xmf4x4Transform;
 		bone["localBind"] = {
 			m._11, m._12, m._13, m._14,

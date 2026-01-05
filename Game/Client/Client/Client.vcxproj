@@ -159,6 +159,7 @@
     <ClInclude Include="AnimationManager.h" />
     <ClInclude Include="AnimationStateMachine.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="CommandListPool.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="Concepts.h" />
     <ClInclude Include="ConstantBuffer.h" />
@@ -258,6 +259,7 @@
     <ClCompile Include="AnimationManager.cpp" />
     <ClCompile Include="AnimationStateMachine.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="CommandListPool.cpp" />
     <ClCompile Include="Component.cpp" />
     <ClCompile Include="ConstantBuffer.cpp" />
     <ClCompile Include="ConstantBufferPool.cpp" />

@@ -21,7 +21,10 @@
 #include <string>
 #include <array>
 #include <vector>
+#include <set>
+#include <unordered_set>
 #include <unordered_map>
+#include <deque>
 #include <span>
 #include <algorithm>
 #include <type_traits>
@@ -90,6 +93,7 @@ using namespace Microsoft::WRL;
 #include "WinSockCommon.h"
 
 // Additional Helper Headers
+#include "CommandListPool.h"
 #include "Defines.h"
 #include "Concepts.h"
 #include "Utility.h"
