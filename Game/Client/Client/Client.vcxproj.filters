@@ -281,7 +281,7 @@
     <ClInclude Include="AnimationController.h">
       <Filter>02.Game\Animation</Filter>
     </ClInclude>
-    <ClInclude Include="TestScene.h">
+    <ClInclude Include="AnimationTestScene.h">
       <Filter>02.Game\Scene</Filter>
     </ClInclude>
     <ClInclude Include="FirstPersonCamera.h">
@@ -470,7 +470,7 @@
     <ClCompile Include="AnimationStateMachine.cpp">
       <Filter>02.Game\Animation</Filter>
     </ClCompile>
-    <ClCompile Include="TestScene.cpp">
+    <ClCompile Include="AnimationTestScene.cpp">
       <Filter>02.Game\Scene</Filter>
     </ClCompile>
     <ClCompile Include="FirstPersonCamera.cpp">

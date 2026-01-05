@@ -27,7 +27,7 @@ public:
 	void SetRotation(float fPitch, float fYaw, float fRoll);
 
 	// Rotate 이후 이걸 쓰면 기존의 모든 회전이 날아감
-	void SetRotation(const Vector3& xmf3Position);
+	void SetRotation(const Vector3& xmf3Rotation);
 
 	void Rotate(const Vector3& v3Rotation);
 	void Rotate(float fPitch, float fYaw, float fRoll);

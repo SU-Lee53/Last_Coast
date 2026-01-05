@@ -501,46 +501,48 @@ nlohmann::ordered_json AssimpConverter::StoreMaterialToJson(const aiMaterial* pM
 			if (pMaterial->GetTexture(eType, i, &aistrTexturePath) == AI_SUCCESS) {
 				const aiTexture* pTexture = m_pScene->GetEmbeddedTexture(aistrTexturePath.C_Str());
 				// TODO : make it happen
+				std::string strTextureName;
 				if (pTexture) {
 					ExportEmbeddedTexture(pTexture, eType);
-
-					std::string strTextureName = pTexture->mFilename.C_Str();
+					strTextureName = pTexture->mFilename.C_Str();
 					strTextureName = std::filesystem::path{ strTextureName }.stem().string();
-					switch (eType) {
-					case aiTextureType_DIFFUSE:
-					{
-						material["AlbedoMapName"] = strTextureName;
-						break;
-					}
-					case aiTextureType_SPECULAR:
-					{
-						material["SpecularMapName"] = strTextureName;
-						break;
-					}
-					case aiTextureType_METALNESS:
-					{
-						material["MetallicMapName"] = strTextureName;
-						break;
-					}
-					case aiTextureType_NORMALS:
-					{
-						material["NormalMapName"] = strTextureName;
-						break;
-					}
-					case aiTextureType_EMISSIVE:
-					{
-						material["EmissionMapName"] = strTextureName;
-						break;
-					}
-					default:
-						std::unreachable();
-					}
 				}
 				else {
 					// External texture
 					ExportExternalTexture(aistrTexturePath, eType);
+					strTextureName = aistrTexturePath.C_Str();
+					strTextureName = std::filesystem::path{ strTextureName }.stem().string();
 				}
 
+				switch (eType) {
+				case aiTextureType_DIFFUSE:
+				{
+					material["AlbedoMapName"] = strTextureName;
+					break;
+				}
+				case aiTextureType_SPECULAR:
+				{
+					material["SpecularMapName"] = strTextureName;
+					break;
+				}
+				case aiTextureType_METALNESS:
+				{
+					material["MetallicMapName"] = strTextureName;
+					break;
+				}
+				case aiTextureType_NORMALS:
+				{
+					material["NormalMapName"] = strTextureName;
+					break;
+				}
+				case aiTextureType_EMISSIVE:
+				{
+					material["EmissionMapName"] = strTextureName;
+					break;
+				}
+				default:
+					std::unreachable();
+				}
 			}
 		}
 	}

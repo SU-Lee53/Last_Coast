@@ -21,7 +21,7 @@ public:
 
 private:
 	double							m_dTimeScale;
-	double							m_dTimeElapsed;
+	double							m_dTotalTimeElapsed;
 
 	__int64							m_nBasePerformanceCounter;
 	__int64							m_nPausedPerformanceCounter;

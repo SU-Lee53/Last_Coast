@@ -20,7 +20,7 @@ void GameTimer::Tick(float fLockFPS)
 {
 	if (m_bStopped)
 	{
-		m_dTimeElapsed = 0.0f;
+		m_dTotalTimeElapsed = 0.0f;
 		return;
 	}
 	float fTimeElapsed;
@@ -39,7 +39,7 @@ void GameTimer::Tick(float fLockFPS)
 
 	m_nLastPerformanceCounter = m_nCurrentPerformanceCounter;
 
-	if (fabsf(fTimeElapsed - m_dTimeElapsed) < 1.0f)
+	if (fabsf(fTimeElapsed - m_dTotalTimeElapsed) < 1.0f)
 	{
 		::memmove(&m_dFrameTime[1], m_dFrameTime, (MAX_SAMPLE_COUNT - 1) * sizeof(float));
 		m_dFrameTime[0] = fTimeElapsed;
@@ -55,9 +55,9 @@ void GameTimer::Tick(float fLockFPS)
 		m_dFPSTimeElapsed = 0.0f;
 	}
 
-	m_dTimeElapsed = 0.0f;
-	for (ULONG i = 0; i < m_nSampleCount; i++) m_dTimeElapsed += m_dFrameTime[i];
-	if (m_nSampleCount > 0) m_dTimeElapsed /= m_nSampleCount;
+	m_dTotalTimeElapsed = 0.0f;
+	for (ULONG i = 0; i < m_nSampleCount; i++) m_dTotalTimeElapsed += m_dFrameTime[i];
+	if (m_nSampleCount > 0) m_dTotalTimeElapsed /= m_nSampleCount;
 }
 
 unsigned long GameTimer::GetFrameRate(const std::wstring& wsvGameName, std::wstring& wstrString)
@@ -69,7 +69,7 @@ unsigned long GameTimer::GetFrameRate(const std::wstring& wsvGameName, std::wstr
 
 float GameTimer::GetTimeElapsed()
 {
-	return m_dTimeElapsed;
+	return m_dTotalTimeElapsed;
 }
 
 double GameTimer::GetTotalTime()

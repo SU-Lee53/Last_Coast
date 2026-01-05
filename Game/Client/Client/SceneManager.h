@@ -19,10 +19,7 @@ public:
 	void ProcessInput();
 	void Update();
 	void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList);
-
-	template<typename T> requires std::derived_from<T, Scene>
-	void LoadFromFiles();
-
+	
 private:
 	std::unique_ptr<Scene> m_upCurrentScene;
 
@@ -35,9 +32,4 @@ inline void SceneManager::ChangeScene()
 	m_upCurrentScene.reset(new T());
 	m_upCurrentScene->BuildObjects();
 	m_upCurrentScene->OnEnterScene();
-}
-
-template<typename T> requires std::derived_from<T, Scene>
-inline void SceneManager::LoadFromFiles()
-{
 }

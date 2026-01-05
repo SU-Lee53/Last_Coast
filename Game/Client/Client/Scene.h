@@ -24,6 +24,9 @@ public:
 		(m_pGameObjects.push_back(std::forward<Objs>(pObjs)), ...);
 	}
 
+	HRESULT LoadFromFiles(const std::string& strFileName);
+
+
 public:
 	virtual void OnEnterScene() = 0;
 	virtual void OnLeaveScene() = 0;
@@ -62,5 +65,11 @@ protected:
 	//std::shared_ptr<Camera> m_pMainCamera = nullptr;
 
 	Vector4 m_v4GlobalAmbient;
+
+
+private:
+	inline static std::string g_strSceneBasePath = "../Resources/Scenes";
+
+
 };
 

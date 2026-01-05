@@ -9,6 +9,8 @@ void ModelManager::Initialize()
 void ModelManager::LoadGameModels()
 {
 	LoadModelFromFile("Ch33_nonPBR");
+	LoadModelFromFile("vintage_wooden_sniper_optimized_for_fpstps");
+	LoadModelFromFile("Cube");
 }
 
 void ModelManager::Add(const std::string& strModelName, std::shared_ptr<GameObject> pObj)
@@ -23,6 +25,16 @@ std::shared_ptr<GameObject> ModelManager::Get(const std::string& strObjName)
 	auto it = m_pModelPool.find(strObjName);
 	if (it == m_pModelPool.end()) {
 		return nullptr;
+	}
+
+	return it->second;
+}
+
+std::shared_ptr<GameObject> ModelManager::LoadOrGet(const std::string& strFileName)
+{
+	auto it = m_pModelPool.find(strFileName);
+	if (it == m_pModelPool.end()) {
+		return LoadModelFromFile(strFileName);
 	}
 
 	return it->second;
@@ -65,8 +77,6 @@ std::shared_ptr<GameObject> ModelManager::LoadModelFromFile(const std::string& s
 			if (bones[nBoneIndex].nParentIndex == -1) {
 				pGameObject->m_nRootBoneIndex = bones[nBoneIndex].nIndex;
 			}
-
-
 		}
 		pGameObject->m_Bones = bones;
 	}
@@ -118,7 +128,7 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 	MESHLOADINFO meshLoadInfo;
 	MATERIALLOADINFO materialLoadInfo;
 
-	size_t nVertices = 0;
+	unsigned nVertices = 0;
 	std::vector<size_t> loadIndices;
 	nVertices = inJson["nVertices"].get<unsigned>();
 	loadIndices.resize(nVertices);
@@ -149,13 +159,19 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 	});
 
 	// TexCoord0
-	const nlohmann::json& texCoordData = inJson["TexCoord0"];
-	std::vector<float> texCoord = texCoordData["TexCoord"].get<std::vector<float>>();
-	meshLoadInfo.v2TexCoord0.reserve(nVertices);
-	std::transform(loadIndices.begin(), loadIndices.end(), std::back_inserter(meshLoadInfo.v2TexCoord0), [&](size_t i) {
-		size_t base = i * 2;
-		return Vector2{ texCoord[base], texCoord[base + 1] };
-	});
+	unsigned nUVChannels = inJson["nUVChannels"].get<unsigned>();
+	if (nUVChannels != 0) {
+		const nlohmann::json& texCoordData = inJson["TexCoord0"];
+		std::vector<float> texCoord = texCoordData["TexCoord"].get<std::vector<float>>();
+		meshLoadInfo.v2TexCoord0.reserve(nVertices);
+		std::transform(loadIndices.begin(), loadIndices.end(), std::back_inserter(meshLoadInfo.v2TexCoord0), [&](size_t i) {
+			size_t base = i * 2;
+			return Vector2{ texCoord[base], texCoord[base + 1] };
+			});
+	}
+	else {
+		meshLoadInfo.v2TexCoord0.resize(nVertices);
+	}
 
 	meshLoadInfo.bIsSkinned = inJson["Skinned?"].get<bool>();
 	if (meshLoadInfo.bIsSkinned) {
