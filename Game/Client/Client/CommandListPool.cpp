@@ -61,7 +61,7 @@ UINT64 CommandListPool::ReclaimEnded(ComPtr<ID3D12Fence> pd3dFence)
 		m_InUseCmdListID.pop_front();
 		m_FreeCmdListID.push_back(nCurrentID);
 
-		m_CmdListPool[nCurrentID].bInUse = TRUE;
+		m_CmdListPool[nCurrentID].bInUse = FALSE;
 	}
 
 	return ui64CompletedValue;
@@ -78,7 +78,7 @@ UINT64 CommandListPool::ReclaimEnded(UINT64 ui64CompletedFenceValue)
 		m_InUseCmdListID.pop_front();
 		m_FreeCmdListID.push_back(nCurrentID);
 
-		m_CmdListPool[nCurrentID].bInUse = TRUE;
+		m_CmdListPool[nCurrentID].bInUse = FALSE;
 	}
 
 	return ui64CompletedFenceValue;
