@@ -99,6 +99,9 @@
     <Filter Include="02.Game\GameObject\Player">
       <UniqueIdentifier>{bd303fff-a702-4887-a017-37eda17ff600}</UniqueIdentifier>
     </Filter>
+    <Filter Include="03.Engine\D3D Resource Management">
+      <UniqueIdentifier>{53fc0395-bf79-4039-b616-770a3fe13367}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h">
@@ -293,6 +296,9 @@
     <ClInclude Include="Player.h">
       <Filter>02.Game\GameObject\Player</Filter>
     </ClInclude>
+    <ClInclude Include="CommandListPool.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -482,6 +488,7 @@
     <ClCompile Include="Player.cpp">
       <Filter>02.Game\GameObject\Player</Filter>
     </ClCompile>
+    <ClCompile Include="CommandListPool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui.ini" />

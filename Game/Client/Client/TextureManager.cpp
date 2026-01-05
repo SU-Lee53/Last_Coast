@@ -27,6 +27,8 @@ void TextureManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 		heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 	}
 	m_DSVDescriptorHeap.Initialize(pd3dDevice, heapDesc);
+
+	m_CommandListPool.Initialize(pd3dDevice);
 }
 
 void TextureManager::LoadGameTextures()
@@ -109,18 +111,17 @@ std::shared_ptr<Texture> TextureManager::CreateTextureFromFile(const std::wstrin
 	);
 
 	// BinaryResource -> Upload Buffer -> Texture Buffer
-	ResetCommandList();
+	auto cmdList = AllocateCommandListSafe();
 	{
-		pTexture->m_pTexResource.StateTransition(m_pd3dCommandList, D3D12_RESOURCE_STATE_COPY_DEST);
+		pTexture->m_pTexResource.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_COPY_DEST);
 		{
-			::UpdateSubresources(m_pd3dCommandList.Get(), pTexture->m_pTexResource.pResource.Get(), pd3dUploadBuffer.Get(), 0, 0, nSubResources, subresources.data());
+			::UpdateSubresources(cmdList->pd3dCommandList.Get(), pTexture->m_pTexResource.pResource.Get(), pd3dUploadBuffer.Get(), 0, 0, nSubResources, subresources.data());
 		}
-		pTexture->m_pTexResource.StateTransition(m_pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+		pTexture->m_pTexResource.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 	}
-	ExcuteCommandList();
-	UINT64 ui64FenceValue = Fence();
-	//WaitForGPUComplete();
-	m_PendingUploadBuffers.push_back({ pd3dUploadBuffer, ui64FenceValue });
+	ExcuteCommandList(*cmdList);
+	cmdList->ui64FenceValue = Fence();
+	m_PendingUploadBuffers.push_back({ pd3dUploadBuffer, cmdList });
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
 	{
@@ -182,19 +183,17 @@ std::shared_ptr<Texture> TextureManager::CreateTextureArrayFromFile(const std::w
 	);
 
 	// BinaryResource -> Upload Buffer -> Texture Buffer
-	ResetCommandList();
+	auto cmdList = AllocateCommandListSafe();
 	{
-		pTexture->m_pTexResource.StateTransition(m_pd3dCommandList, D3D12_RESOURCE_STATE_COPY_DEST);
+		pTexture->m_pTexResource.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_COPY_DEST);
 		{
-			::UpdateSubresources(m_pd3dCommandList.Get(), pTexture->m_pTexResource.pResource.Get(), pd3dUploadBuffer.Get(), 0, 0, nSubResources, subresources.data());
+			::UpdateSubresources(cmdList->pd3dCommandList.Get(), pTexture->m_pTexResource.pResource.Get(), pd3dUploadBuffer.Get(), 0, 0, nSubResources, subresources.data());
 		}
-		pTexture->m_pTexResource.StateTransition(m_pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+		pTexture->m_pTexResource.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 	}
-	ExcuteCommandList();
-	UINT64 ui64FenceValue = Fence();
-	//WaitForGPUComplete();
-	m_PendingUploadBuffers.push_back({ pd3dUploadBuffer, ui64FenceValue });
-
+	ExcuteCommandList(*cmdList);
+	cmdList->ui64FenceValue = Fence();
+	m_PendingUploadBuffers.push_back({ pd3dUploadBuffer, cmdList });
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
 	{
@@ -334,24 +333,14 @@ void TextureManager::WaitForCopyComplete()
 void TextureManager::ReleaseCompletedUploadBuffers()
 {
 	UINT64 ui64CompletedValue = m_pd3dFence->GetCompletedValue();
+	m_CommandListPool.ReclaimEnded(ui64CompletedValue);
 
-	std::erase_if(m_PendingUploadBuffers, [&ui64CompletedValue](const PendingUploadBuffer& pended) {
-		return pended.ui64FenceValue < ui64CompletedValue;
+	std::erase_if(m_PendingUploadBuffers, [](const PendingUploadBuffer& pended) {
+		return !pended.cmdListPair->bInUse;
 	});
 }
 
 #pragma region D3D
-void TextureManager::ResetCommandList()
-{
-	HRESULT hr;
-	hr = m_pd3dCommandAllocator->Reset();
-	hr = m_pd3dCommandList->Reset(m_pd3dCommandAllocator.Get(), NULL);
-	if (FAILED(hr)) {
-		SHOW_ERROR("Faied to reset CommandList");
-		__debugbreak();
-	}
-}
-
 void TextureManager::CreateCommandList()
 {
 	HRESULT hr{};
@@ -367,21 +356,6 @@ void TextureManager::CreateCommandList()
 	if (FAILED(hr)) {
 		SHOW_ERROR("Failed to create CommandQueue");
 	}
-
-	// Create Command Allocator
-	hr = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_pd3dCommandAllocator.GetAddressOf()));
-	if (FAILED(hr)) {
-		SHOW_ERROR("Failed to create CommandAllocator");
-	}
-
-	// Create Command List
-	hr = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dCommandAllocator.Get(), NULL, IID_PPV_ARGS(m_pd3dCommandList.GetAddressOf()));
-	if (FAILED(hr)) {
-		SHOW_ERROR("Failed to create CommandList");
-	}
-
-	// Close Command List(default is opened)
-	hr = m_pd3dCommandList->Close();
 }
 
 void TextureManager::CreateFence()
@@ -396,11 +370,16 @@ void TextureManager::CreateFence()
 	m_hFenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
 }
 
-void TextureManager::ExcuteCommandList()
+void TextureManager::ExcuteCommandList(CommandListPair& cmdPair)
 {
-	m_pd3dCommandList->Close();
+	HRESULT hr = cmdPair.pd3dCommandList->Close();
+	if (FAILED(hr)) {
+		SHOW_ERROR("Failed to close CommandList");
+		__debugbreak();
+	}
 
-	ID3D12CommandList* ppCommandLists[] = { m_pd3dCommandList.Get() };
+
+	ID3D12CommandList* ppCommandLists[] = { cmdPair.pd3dCommandList.Get() };
 	m_pd3dCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	WaitForGPUComplete();
@@ -422,6 +401,24 @@ void TextureManager::WaitForGPUComplete()
 		m_pd3dFence->SetEventOnCompletion(expectedFenceValue, m_hFenceEvent);
 		::WaitForSingleObject(m_hFenceEvent, INFINITE);
 	}
+}
+
+CommandListPair* TextureManager::AllocateCommandListSafe()
+{
+	auto cmdList = m_CommandListPool.Allocate(m_nFenceValue);
+	if (!cmdList) {
+		while (true) {
+			UINT64 ui64CompletedValue = m_pd3dFence->GetCompletedValue();
+			m_CommandListPool.ReclaimEnded(ui64CompletedValue);
+			cmdList = m_CommandListPool.Allocate(m_nFenceValue);
+			if (cmdList) {
+				break;
+			}
+
+		}
+	}
+
+	return cmdList;
 }
 
 

@@ -52,16 +52,17 @@ struct Material {
 
 };
 
-struct Animation {
-
-};
-
 struct Bone {	// == Frame
 	std::string strName;
 	int nIndex;
 	int nParentIndex;
 	XMFLOAT4X4 xmf4x4Transform;	// aiNode::mTransformation
 	XMFLOAT4X4 xmf4x4Offset;	// Inverse bind pose
+
+	int nChildren = 0;
+	std::vector<int> nChilerenIndex;
+	int nDepth = 0;
+
 };
 
 struct KeyFrame {

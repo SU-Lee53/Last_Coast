@@ -10,6 +10,7 @@ void ResourceManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 	CreateFence();
 
 	m_ConstantBufferPool.Initialize(pd3dDevice, 5000);
+	m_CommandListPool.Initialize(pd3dDevice);
 }
 
 IndexBuffer ResourceManager::CreateIndexBuffer(std::vector<UINT> Indices)
@@ -35,7 +36,8 @@ IndexBuffer ResourceManager::CreateIndexBuffer(std::vector<UINT> Indices)
 	}
 
 	if (!Indices.empty()) {
-		ResetCommandList();
+		//ResetCommandList();
+		auto cmdList = AllocateCommandListSafe();
 
 		hr = m_pd3dDevice->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
@@ -61,17 +63,15 @@ IndexBuffer ResourceManager::CreateIndexBuffer(std::vector<UINT> Indices)
 		pUploadBuffer->Unmap(0, nullptr);
 
 
-		Buffer.StateTransition(m_pd3dCommandList, D3D12_RESOURCE_STATE_COPY_DEST);
+		Buffer.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_COPY_DEST);
 		{
-			m_pd3dCommandList->CopyBufferRegion(Buffer.pResource.Get(), 0, pUploadBuffer.Get(), 0, IndexBufferSize);
+			cmdList->pd3dCommandList->CopyBufferRegion(Buffer.pResource.Get(), 0, pUploadBuffer.Get(), 0, IndexBufferSize);
 		}
-		Buffer.StateTransition(m_pd3dCommandList, D3D12_RESOURCE_STATE_INDEX_BUFFER);
+		Buffer.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
-		ExcuteCommandList();
-		UINT64 ui64FenceValue = Fence();
-		//WaitForGPUComplete();
-		m_PendingUploadBuffers.push_back({ pUploadBuffer, ui64FenceValue });
-
+		ExcuteCommandList(*cmdList);
+		cmdList->ui64FenceValue = Fence();
+		m_PendingUploadBuffers.push_back({ pUploadBuffer, cmdList });
 	}
 
 	D3D12_INDEX_BUFFER_VIEW IndexBufferView;
@@ -108,7 +108,8 @@ ComPtr<ID3D12Resource> ResourceManager::CreateBufferResource(void* pData, UINT n
 		{
 		case D3D12_HEAP_TYPE_DEFAULT:
 		{
-			ResetCommandList();
+			//ResetCommandList();
+			auto cmdList = AllocateCommandListSafe();
 
 			ComPtr<ID3D12Resource> pUploadBuffer;
 
@@ -128,14 +129,13 @@ ComPtr<ID3D12Resource> ResourceManager::CreateBufferResource(void* pData, UINT n
 			memcpy(pBufferDataBegin, pData, nBytes);
 			pUploadBuffer->Unmap(0, NULL);
 
-			m_pd3dCommandList->CopyResource(pd3dBuffer.Get(), pUploadBuffer.Get());
+			cmdList->pd3dCommandList->CopyResource(pd3dBuffer.Get(), pUploadBuffer.Get());
 
-			m_pd3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(pd3dBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, d3dResourceStates));
+			cmdList->pd3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(pd3dBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, d3dResourceStates));
 
-			ExcuteCommandList();
-			UINT64 ui64FenceValue = Fence();
-			//WaitForGPUComplete();
-			m_PendingUploadBuffers.push_back({ pUploadBuffer, ui64FenceValue });
+			ExcuteCommandList(*cmdList);
+			cmdList->ui64FenceValue = Fence();
+			m_PendingUploadBuffers.push_back({ pUploadBuffer, cmdList });
 
 			break;
 		}
@@ -166,25 +166,14 @@ void ResourceManager::WaitForCopyComplete()
 void ResourceManager::ReleaseCompletedUploadBuffers()
 {
 	UINT64 ui64CompletedValue = m_pd3dFence->GetCompletedValue();
+	m_CommandListPool.ReclaimEnded(ui64CompletedValue);
 
-	std::erase_if(m_PendingUploadBuffers, [&ui64CompletedValue](const PendingUploadBuffer& pended) {
-		return pended.ui64FenceValue < ui64CompletedValue;
+	std::erase_if(m_PendingUploadBuffers, [](const PendingUploadBuffer& pended) {
+		return !pended.cmdListPair->bInUse;
 	});
 }
 
 #pragma region D3D
-void ResourceManager::ResetCommandList()
-{
-	HRESULT hr;
-	hr = m_pd3dCommandAllocator->Reset();
-	hr = m_pd3dCommandList->Reset(m_pd3dCommandAllocator.Get(), NULL);
-	if (FAILED(hr)) {
-		SHOW_ERROR("Faied to reset CommandList");
-		__debugbreak();
-	}
-}
-
-
 void ResourceManager::CreateCommandList()
 {
 	HRESULT hr{};
@@ -200,21 +189,6 @@ void ResourceManager::CreateCommandList()
 	if (FAILED(hr)) {
 		SHOW_ERROR("Failed to create CommandQueue");
 	}
-
-	// Create Command Allocator
-	hr = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_pd3dCommandAllocator.GetAddressOf()));
-	if (FAILED(hr)) {
-		SHOW_ERROR("Failed to create CommandAllocator");
-	}
-
-	// Create Command List
-	hr = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dCommandAllocator.Get(), NULL, IID_PPV_ARGS(m_pd3dCommandList.GetAddressOf()));
-	if (FAILED(hr)) {
-		SHOW_ERROR("Failed to create CommandList");
-	}
-
-	// Close Command List(default is opened)
-	hr = m_pd3dCommandList->Close();
 }
 
 void ResourceManager::CreateFence()
@@ -229,19 +203,37 @@ void ResourceManager::CreateFence()
 	m_hFenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
 }
 
-void ResourceManager::ExcuteCommandList()
+void ResourceManager::ExcuteCommandList(CommandListPair& cmdPair)
 {
-	HRESULT hr = m_pd3dCommandList->Close();
+	HRESULT hr = cmdPair.pd3dCommandList->Close();
 	if (FAILED(hr)) {
 		SHOW_ERROR("Failed to close CommandList");
 		__debugbreak();
 	}
 
 
-	ID3D12CommandList* ppCommandLists[] = { m_pd3dCommandList.Get() };
+	ID3D12CommandList* ppCommandLists[] = { cmdPair.pd3dCommandList.Get() };
 	m_pd3dCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	WaitForGPUComplete();
+}
+
+CommandListPair* ResourceManager::AllocateCommandListSafe()
+{
+	auto cmdList = m_CommandListPool.Allocate(m_nFenceValue);
+	if (!cmdList) {
+		while (true) {
+			UINT64 ui64CompletedValue = m_pd3dFence->GetCompletedValue();
+			m_CommandListPool.ReclaimEnded(ui64CompletedValue);
+			cmdList = m_CommandListPool.Allocate(m_nFenceValue);
+			if (cmdList) {
+				break;
+			}
+
+		}
+	}
+
+	return cmdList;
 }
 
 UINT64 ResourceManager::Fence()

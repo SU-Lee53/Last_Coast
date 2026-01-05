@@ -71,6 +71,12 @@ std::shared_ptr<GameObject> ModelManager::LoadModelFromFile(const std::string& s
 			bones[nBoneIndex].nParentIndex = jBone["ParentIndex"].get<int>();
 			bones[nBoneIndex].strBoneName = jBone["Name"].get<std::string>();
 
+			bones[nBoneIndex].nDepth = jBone["Depth"].get<int>();
+			bones[nBoneIndex].nChildren = jBone["nChildren"].get<int>();
+			bones[nBoneIndex].nChilerenIndex.resize(bones[nBoneIndex].nChildren);
+			std::vector<int> childrenIndex = jBone["Children"].get<std::vector<int>>();
+			std::copy(childrenIndex.begin(), childrenIndex.end(), bones[nBoneIndex].nChilerenIndex.begin());
+
 			bones[nBoneIndex].mtxTransform = Matrix(jBone["localBind"].get<std::vector<float>>().data());
 			bones[nBoneIndex].mtxOffset = Matrix(jBone["inverseBind"].get<std::vector<float>>().data());
 

@@ -158,11 +158,15 @@ struct Bone {
 	int nParentIndex;
 	Matrix mtxTransform;
 	Matrix mtxOffset;
+
+	int nChildren = 0;
+	std::vector<int> nChilerenIndex;
+	int nDepth = 0;
 };
 
 struct PendingUploadBuffer {
 	ComPtr<ID3D12Resource> pd3dPendingUploadBuffer = nullptr;
-	UINT64 ui64FenceValue = 0;
+	CommandListPair* cmdListPair;	// Only for ref
 };
 
 //////////////////////////////////////////////////////////////////////////////////
