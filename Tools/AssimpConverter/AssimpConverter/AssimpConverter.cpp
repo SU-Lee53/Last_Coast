@@ -11,6 +11,12 @@ void AssimpConverter::LoadFromFiles(const std::string& strPath, float fScaleFact
 	m_fScale = fScaleFactor;
 	m_strFilePath = strPath;
 
+	m_Bones.clear();
+	m_DFSBones.clear();
+	m_BoneIndexRemappedDFS.clear();
+	m_BoneIndexMap.clear();
+
+
 	m_pScene = m_pImporter->ReadFile(
 		strPath,
 		aiProcess_MakeLeftHanded |
@@ -35,6 +41,14 @@ void AssimpConverter::LoadFromFiles(const std::string& strPath, float fScaleFact
 	BuildBoneHierarchy(m_pRootNode, -1);
 }
 
+std::string NormalizeBoneName(const std::string& name)
+{
+	auto pos = name.find(':');
+	if (pos != std::string::npos)
+		return name.substr(pos + 1);
+	return name;
+}
+
 void AssimpConverter::GatherBoneIndex()
 {
 	for (int m = 0; m < m_pScene->mNumMeshes; ++m)
@@ -44,7 +58,7 @@ void AssimpConverter::GatherBoneIndex()
 		for (int b = 0; b < pMesh->mNumBones; ++b)
 		{
 			const aiBone* pBone = pMesh->mBones[b];
-			std::string strName = pBone->mName.C_Str();
+			std::string strName = NormalizeBoneName(pBone->mName.C_Str());
 
 			if (m_BoneIndexMap.find(strName) == m_BoneIndexMap.end())
 			{
@@ -65,22 +79,36 @@ void AssimpConverter::GatherBoneIndex()
 
 void AssimpConverter::BuildBoneHierarchy(aiNode* node, int parentBoneIndex)
 {
-	std::string nodeName = node->mName.C_Str();
-	int currentBoneIndex = -1;
+	std::string strNodeName = NormalizeBoneName(node->mName.C_Str());
+	int newBoneIndex = -1;
 
-	auto it = m_BoneIndexMap.find(nodeName);
+	auto it = m_BoneIndexMap.find(strNodeName);
 	if (it != m_BoneIndexMap.end())
 	{
-		currentBoneIndex = it->second;
-		m_Bones[currentBoneIndex].nParentIndex = parentBoneIndex;
-		m_Bones[currentBoneIndex].xmf4x4Transform = aiMatrixToXMMatrix(node->mTransformation);
+		int oldBoneIndex = it->second;
+
+		newBoneIndex = (int)m_DFSBones.size();
+		m_BoneIndexRemappedDFS[oldBoneIndex] = newBoneIndex;
+
+		Bone info{};
+		info.nIndex = newBoneIndex;
+		info.strName = strNodeName;
+		info.nParentIndex = parentBoneIndex;	// Later
+		info.xmf4x4Transform = aiMatrixToXMMatrix(node->mTransformation);
+		info.xmf4x4Offset = m_Bones[oldBoneIndex].xmf4x4Offset;	// Later
+
+		m_DFSBones.push_back(info);
+
+		//currentBoneIndex = it->second;
+		//m_Bones[currentBoneIndex].nParentIndex = parentBoneIndex;
+		//m_Bones[currentBoneIndex].xmf4x4Transform = aiMatrixToXMMatrix(node->mTransformation);
 	}
 
 	for (int i = 0; i < node->mNumChildren; ++i)
 	{
 		BuildBoneHierarchy(
 			node->mChildren[i],
-			currentBoneIndex == -1 ? parentBoneIndex : currentBoneIndex
+			newBoneIndex == -1 ? parentBoneIndex : newBoneIndex
 		);
 	}
 }
@@ -91,15 +119,11 @@ void AssimpConverter::SerializeModel(const std::string& strPath, const std::stri
 	m_strSavePath = strPath + '\\' + strName;
 
 
-	// 1. Make save path (if not exists)
-	fs::path saveDirectoryPath{ m_strSavePath };
+	std::string strSave = std::format("{}\\Models\\", m_strSavePath);
+	fs::path saveDirectoryPath{ strSave };
 	if (!fs::exists(saveDirectoryPath)) {
-		fs::create_directories(m_strSavePath);
+		fs::create_directories(strSave);
 	}
-
-	// 2. Defines Savefile name
-	std::string strSave = std::format("{}/{}.json", m_strSavePath, strName);
-	std::ofstream out(strSave);
 
 	DisplayText("Serializing...\n");
 
@@ -109,7 +133,7 @@ void AssimpConverter::SerializeModel(const std::string& strPath, const std::stri
 	// Bone data (For animation retargeting)
 	hierarchyJson["nBones"] = m_Bones.size();
 	hierarchyJson["Bones"] = nlohmann::ordered_json::array();
-	for (const auto& boneData : m_Bones) {
+	for (const auto& boneData : m_DFSBones) {
 		nlohmann::ordered_json bone;
 		bone["Name"] = boneData.strName;
 		bone["Index"] = boneData.nIndex;
@@ -133,8 +157,13 @@ void AssimpConverter::SerializeModel(const std::string& strPath, const std::stri
 		hierarchyJson["Bones"].push_back(bone);
 	}
 
-	out << hierarchyJson.dump(2);
+	strSave = std::format("{}\\Models\\{}.bin", m_strSavePath, strName);
+	std::ofstream out{ strSave, std::ios::binary };
 
+	//out << hierarchyJson.dump(2);
+
+	std::vector<uint8_t> bson = nlohmann::json::to_bson(hierarchyJson);
+	out.write(reinterpret_cast<const char*>(bson.data()), bson.size());
 
 	DisplayText("Successfully serialized at %s\r\n", m_strSavePath.c_str());
 
@@ -284,14 +313,19 @@ nlohmann::ordered_json AssimpConverter::StoreMeshToJson(const aiMesh* pMesh) con
 		// Gather skin data
 		std::vector<SkinData> skinDatas(pMesh->mNumVertices);
 		for (int boneIdx = 0; boneIdx < pMesh->mNumBones; ++boneIdx) {
-			aiBone* pBone = pMesh->mBones[boneIdx];
+			const aiBone* pBone = pMesh->mBones[boneIdx];
+
+			int oldBoneIndex = m_BoneIndexMap.at(NormalizeBoneName(pBone->mName.C_Str()));
+			int nDFSIndex = m_BoneIndexRemappedDFS.at(oldBoneIndex);
+
 			for (int weightIdx = 0; weightIdx < pBone->mNumWeights; ++weightIdx) {
 				const aiVertexWeight& vertexWeight = pBone->mWeights[weightIdx];
 				UINT vertexID = vertexWeight.mVertexId;
 				float weight = vertexWeight.mWeight;
+
 				for (int i = 0; i < 4; ++i) {
 					if (skinDatas[vertexID].fBlendWeights[i] == 0.f) {
-						skinDatas[vertexID].uiBlendIndices[i] = boneIdx;
+						skinDatas[vertexID].uiBlendIndices[i] = nDFSIndex;
 						skinDatas[vertexID].fBlendWeights[i] = weight;
 						break;
 					}
@@ -467,46 +501,48 @@ nlohmann::ordered_json AssimpConverter::StoreMaterialToJson(const aiMaterial* pM
 			if (pMaterial->GetTexture(eType, i, &aistrTexturePath) == AI_SUCCESS) {
 				const aiTexture* pTexture = m_pScene->GetEmbeddedTexture(aistrTexturePath.C_Str());
 				// TODO : make it happen
+				std::string strTextureName;
 				if (pTexture) {
 					ExportEmbeddedTexture(pTexture, eType);
-
-					std::string strTextureName = pTexture->mFilename.C_Str();
+					strTextureName = pTexture->mFilename.C_Str();
 					strTextureName = std::filesystem::path{ strTextureName }.stem().string();
-					switch (eType) {
-					case aiTextureType_DIFFUSE:
-					{
-						material["AlbedoMapName"] = strTextureName;
-						break;
-					}
-					case aiTextureType_SPECULAR:
-					{
-						material["SpecularMapName"] = strTextureName;
-						break;
-					}
-					case aiTextureType_METALNESS:
-					{
-						material["MetallicMapName"] = strTextureName;
-						break;
-					}
-					case aiTextureType_NORMALS:
-					{
-						material["NormalMapName"] = strTextureName;
-						break;
-					}
-					case aiTextureType_EMISSIVE:
-					{
-						material["EmissionMapName"] = strTextureName;
-						break;
-					}
-					default:
-						std::unreachable();
-					}
 				}
 				else {
 					// External texture
 					ExportExternalTexture(aistrTexturePath, eType);
+					strTextureName = aistrTexturePath.C_Str();
+					strTextureName = std::filesystem::path{ strTextureName }.stem().string();
 				}
 
+				switch (eType) {
+				case aiTextureType_DIFFUSE:
+				{
+					material["AlbedoMapName"] = strTextureName;
+					break;
+				}
+				case aiTextureType_SPECULAR:
+				{
+					material["SpecularMapName"] = strTextureName;
+					break;
+				}
+				case aiTextureType_METALNESS:
+				{
+					material["MetallicMapName"] = strTextureName;
+					break;
+				}
+				case aiTextureType_NORMALS:
+				{
+					material["NormalMapName"] = strTextureName;
+					break;
+				}
+				case aiTextureType_EMISSIVE:
+				{
+					material["EmissionMapName"] = strTextureName;
+					break;
+				}
+				default:
+					std::unreachable();
+				}
 			}
 		}
 	}
@@ -726,28 +762,31 @@ void AssimpConverter::SerializeAnimation(const std::string& strPath, const std::
 	namespace fs = std::filesystem;
 	m_strSavePath = strPath + '\\' + strName;
 
-	// 1. Make save path (if not exists)
+	// Make save path (if not exists)
 	fs::path saveDirectoryPath{ m_strSavePath };
 	if (!fs::exists(saveDirectoryPath)) {
 		fs::create_directories(m_strSavePath);
 	}
 
-	// 2. Defines Savefile name
-	std::string strSave = std::format("{}/{}.json", m_strSavePath, strName);
-	std::ofstream out(strSave);
-
 	DisplayText("Serializing...\n");
 
-	nlohmann::ordered_json animJson = nlohmann::ordered_json::array();
+	nlohmann::ordered_json animJson;
+	animJson["nAnimations"] = m_pScene->mNumAnimations;
+	animJson["Animations"] = nlohmann::ordered_json::array();
 	for (int i = 0; i < m_pScene->mNumAnimations; ++i) {
-		animJson.push_back(StoreAnimationToJson(m_pScene->mAnimations[i]));
+		animJson["Animations"].push_back(StoreAnimationToJson(m_pScene->mAnimations[i]));
 	}
 
-	out << animJson.dump(2);
+	//std::ofstream out(strSave);
+	//out << animJson.dump(2);
 
+	std::string strSave = std::format("{}/{}.bin", m_strSavePath, strName);
+	std::ofstream out{ strSave, std::ios::binary };
+
+	std::vector<uint8_t> bson = nlohmann::json::to_bson(animJson);
+	out.write(reinterpret_cast<const char*>(bson.data()), bson.size());
 
 	DisplayText("Successfully serialized at %s\r\n", m_strSavePath.c_str());
-
 }
 
 nlohmann::ordered_json AssimpConverter::StoreAnimationToJson(const aiAnimation* pAnimation) const
@@ -756,7 +795,7 @@ nlohmann::ordered_json AssimpConverter::StoreAnimationToJson(const aiAnimation* 
 	//	pAnimation->mMeshChannels; -> Tweening
 	//	pAnimation->mMorphMeshChannels; -> Morphing
 	nlohmann::ordered_json anim;
-	anim["Name"] = pAnimation->mName.C_Str();
+	anim["Name"] = NormalizeBoneName(pAnimation->mName.C_Str());
 	anim["Duration"] = pAnimation->mDuration;
 	anim["TicksPerSecond"] = pAnimation->mTicksPerSecond;
 
@@ -772,98 +811,7 @@ nlohmann::ordered_json AssimpConverter::StoreAnimationToJson(const aiAnimation* 
 nlohmann::ordered_json AssimpConverter::StoreNodeAnimToJson(const aiNodeAnim* pNodeAnim) const
 {
 	nlohmann::ordered_json nodeAnim;
-	nodeAnim["Name"] = pNodeAnim->mNodeName.C_Str();	// name of bone
-
-	//	for (int i = 0; i < pNodeAnim->mNumPositionKeys; ++i) {
-	//		aiVectorKey keyFrame = pNodeAnim->mPositionKeys[i];
-	//		keyFrameDatas[keyFrame.mTime].xmf3Position = aiVector3DToXMVector(keyFrame.mValue);
-	//	}
-	//	
-	//	for (int i = 0; i < pNodeAnim->mNumRotationKeys; ++i) {
-	//		aiQuatKey keyFrame = pNodeAnim->mRotationKeys[i];
-	//		auto it = keyFrameDatas.find(keyFrame.mTime);
-	//		if (it != keyFrameDatas.end()) {
-	//			keyFrameDatas[keyFrame.mTime].xmf4RotationQuat = aiQuaternionToXMVector(keyFrame.mValue);
-	//		}
-	//		else {
-	//			// Interpolate
-	//			KeyFrame newKeyFrame;
-	//	
-	//			keyFrameDatas.insert({ keyFrame.mTime, {} });
-	//			auto it = keyFrameDatas.find(keyFrame.mTime);
-	//			if (it == keyFrameDatas.begin()) {
-	//				auto nextKeyFrame = *std::next(it);
-	//				newKeyFrame.xmf3Position = nextKeyFrame.second.xmf3Position;
-	//				newKeyFrame.xmf4RotationQuat = aiQuaternionToXMVector(keyFrame.mValue);
-	//				newKeyFrame.xmf3Scale = nextKeyFrame.second.xmf3Scale;
-	//			}
-	//			else if (std::next(it) == keyFrameDatas.end()) {
-	//				auto prevKeyFrame = *std::prev(it);
-	//				newKeyFrame.xmf3Position = prevKeyFrame.second.xmf3Position;
-	//				newKeyFrame.xmf4RotationQuat = aiQuaternionToXMVector(keyFrame.mValue);
-	//				newKeyFrame.xmf3Scale = prevKeyFrame.second.xmf3Scale;
-	//			}
-	//			else {
-	//				auto prevKeyFrame = *std::prev(it);
-	//				auto nextKeyFrame = *std::next(it);
-	//	
-	//				double t = keyFrame.mTime;
-	//				double t0 = prevKeyFrame.first;
-	//				double t1 = nextKeyFrame.first;
-	//	
-	//				double alpha = (t - t0) / (t1 - t0);
-	//	
-	//				XMStoreFloat3(&newKeyFrame.xmf3Position, XMVectorLerp(XMLoadFloat3(&prevKeyFrame.second.xmf3Position), XMLoadFloat3(&nextKeyFrame.second.xmf3Position), alpha));
-	//				XMStoreFloat3(&newKeyFrame.xmf3Scale, XMVectorLerp(XMLoadFloat3(&prevKeyFrame.second.xmf3Scale), XMLoadFloat3(&nextKeyFrame.second.xmf3Scale), alpha));
-	//				newKeyFrame.xmf4RotationQuat = aiQuaternionToXMVector(keyFrame.mValue);
-	//			}
-	//	
-	//			it->second = newKeyFrame;
-	//		}
-	//	}
-	//	
-	//	for (int i = 0; i < pNodeAnim->mNumScalingKeys; ++i) {
-	//		aiVectorKey keyFrame = pNodeAnim->mScalingKeys[i];
-	//		auto it = keyFrameDatas.find(keyFrame.mTime);
-	//		if (it != keyFrameDatas.end()) {
-	//			keyFrameDatas[keyFrame.mTime].xmf3Scale = aiVector3DToXMVector(keyFrame.mValue);
-	//		}
-	//		else {
-	//			// Interpolate
-	//			KeyFrame newKeyFrame;
-	//	
-	//			keyFrameDatas.insert({ keyFrame.mTime, {} });
-	//			auto it = keyFrameDatas.find(keyFrame.mTime);
-	//			if (it == keyFrameDatas.begin()) {
-	//				auto nextKeyFrame = *std::next(it);
-	//				newKeyFrame.xmf3Position = nextKeyFrame.second.xmf3Position;
-	//				newKeyFrame.xmf4RotationQuat = nextKeyFrame.second.xmf4RotationQuat;
-	//				newKeyFrame.xmf3Scale = aiVector3DToXMVector(keyFrame.mValue);
-	//			}
-	//			else if (std::next(it) == keyFrameDatas.end()) {
-	//				auto prevKeyFrame = *std::prev(it);
-	//				newKeyFrame.xmf3Position = prevKeyFrame.second.xmf3Position;
-	//				newKeyFrame.xmf4RotationQuat = prevKeyFrame.second.xmf4RotationQuat;
-	//				newKeyFrame.xmf3Scale = aiVector3DToXMVector(keyFrame.mValue);
-	//			}
-	//			else {
-	//				auto prevKeyFrame = *std::prev(it);
-	//				auto nextKeyFrame = *std::next(it);
-	//	
-	//				double t = keyFrame.mTime;
-	//				double t0 = prevKeyFrame.first;
-	//				double t1 = nextKeyFrame.first;
-	//	
-	//				double alpha = (t - t0) / (t1 - t0);
-	//	
-	//				XMStoreFloat3(&newKeyFrame.xmf3Position, XMVectorLerp(XMLoadFloat3(&prevKeyFrame.second.xmf3Position), XMLoadFloat3(&nextKeyFrame.second.xmf3Position), alpha));
-	//				XMStoreFloat4(&newKeyFrame.xmf4RotationQuat, XMQuaternionSlerp(XMLoadFloat4(&prevKeyFrame.second.xmf4RotationQuat), XMLoadFloat4(&nextKeyFrame.second.xmf4RotationQuat), alpha));
-	//				newKeyFrame.xmf3Scale = aiVector3DToXMVector(keyFrame.mValue);
-	//			}
-	//	
-	//			it->second = newKeyFrame;
-	//		}
-	//	}
+	nodeAnim["Name"] = NormalizeBoneName(pNodeAnim->mNodeName.C_Str());	// name of bone
 
 	std::map<double, KeyFrame> keyFrameDatas;
 
@@ -883,14 +831,14 @@ nlohmann::ordered_json AssimpConverter::StoreNodeAnimToJson(const aiNodeAnim* pN
 		keys.insert(keyFrame.mTime);
 	}
 
-	for (double key : keys)
+	for (double timeKey : keys)
 	{
 		KeyFrame keyFrame;
-		keyFrame.xmf3Position = SamplePosition(pNodeAnim, key);
-		keyFrame.xmf4RotationQuat = SampleRotation(pNodeAnim, key);
-		keyFrame.xmf3Scale = SampleScale(pNodeAnim, key);
+		keyFrame.xmf3Position = SamplePosition(pNodeAnim, timeKey);
+		keyFrame.xmf4RotationQuat = SampleRotation(pNodeAnim, timeKey);
+		keyFrame.xmf3Scale = SampleScale(pNodeAnim, timeKey);
 
-		keyFrameDatas[key] = keyFrame;
+		keyFrameDatas[timeKey] = keyFrame;
 	}
 
 	nodeAnim["nKeyFrames"] = keyFrameDatas.size();

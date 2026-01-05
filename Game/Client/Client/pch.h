@@ -78,7 +78,7 @@ using namespace Microsoft::WRL;
 #ifdef _DEBUG
 #pragma comment(lib, "fmod/fmodL_vc.lib")
 #else
-#pragma comment(lib, "fmod_vc.lib")
+#pragma comment(lib, "fmod/fmod_vc.lib")
 #endif
 
 // Json
@@ -122,4 +122,4 @@ using namespace Microsoft::WRL;
 #include "EffectManager.h"
 #include "SoundManager.h"
 #include "UIManager.h"
-#include "GameTimer.h"
+#include "AnimationManager.h"

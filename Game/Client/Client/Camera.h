@@ -1,12 +1,5 @@
-#pragma once
+﻿#pragma once
 
-
-struct CB_CAMERA_DATA
-{
-	Matrix	mtxView;
-	Matrix	mtxProjection;
-	Vector3 v3CameraPosition;
-};
 
 
 class Camera {
@@ -44,6 +37,8 @@ public:
 	void SetRotation(float fPitch, float fYaw, float fRoll);
 	void SetLookAt(float x, float y, float z);
 	void SetLookAt(const Vector3& v3Look);
+	void SetLookTo(float x, float y, float z);
+	void SetLookTo(const Vector3& v3Look);
 
 	void Rotate(float x, float y, float z);
 	void Rotate(const Vector3 v3Rotation);

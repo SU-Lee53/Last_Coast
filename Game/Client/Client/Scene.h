@@ -24,6 +24,9 @@ public:
 		(m_pGameObjects.push_back(std::forward<Objs>(pObjs)), ...);
 	}
 
+	HRESULT LoadFromFiles(const std::string& strFileName);
+
+
 public:
 	virtual void OnEnterScene() = 0;
 	virtual void OnLeaveScene() = 0;
@@ -32,6 +35,11 @@ public:
 	virtual void ProcessInput() = 0;
 	virtual void Update() = 0;
 	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList) = 0;
+
+	void OnPreProcessInput();
+	void OnPostProcessInput();
+	void OnPreUpdate();
+	void OnPostUpdate();
 
 	virtual void SyncSceneWithServer() {}
 
@@ -47,6 +55,7 @@ protected:
 	void UpdateObjects();
 	void RenderObjects(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
 
+
 protected:
 	std::vector<std::shared_ptr<GameObject>> m_pGameObjects = {};
 	std::vector<std::shared_ptr<Sprite>>		m_pSprites;
@@ -56,5 +65,11 @@ protected:
 	//std::shared_ptr<Camera> m_pMainCamera = nullptr;
 
 	Vector4 m_v4GlobalAmbient;
+
+
+private:
+	inline static std::string g_strSceneBasePath = "../Resources/Scenes";
+
+
 };
 

@@ -3,7 +3,7 @@
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// VS_TEXTURED_NORMAL_TANGENT_INPUT
+// Shader Inputs
 
 struct VS_STANDARD_INPUT
 {
@@ -14,6 +14,26 @@ struct VS_STANDARD_INPUT
 };
 
 struct VS_STANDARD_OUTPUT
+{
+    float4 position : SV_POSITION;
+	float3 positionW : POSITION;
+    float3 normalW : NORMAL;
+    float3 tangentW : TANGENT;
+    float2 uv : TEXCOORD0;
+};
+
+struct VS_SKINNED_INPUT
+{
+    float3 position : POSITION;
+    float3 normal : NORMAL;
+    float3 tangent : TANGENT;
+    float2 uv : TEXCOORD0;
+	
+    uint4 blendInices : BLENDINDICES;
+    float4 blendWeights : BLENDWEIGHTS;
+};
+
+struct VS_SKINNED_OUTPUT
 {
     float4 position : SV_POSITION;
 	float3 positionW : POSITION;
@@ -102,6 +122,13 @@ cbuffer cbGameObjectInfo : register(b2)
 cbuffer cbWorldTransformData : register(b3)
 {
     matrix gmtxWorld;
+}
+
+#define MAX_BONES 150
+
+cbuffer cbBoneTransformData : register(b4)
+{
+	matrix boneTransforms[MAX_BONES];
 }
 
 Texture2D gtxtDiffuseTexture : register(t2);

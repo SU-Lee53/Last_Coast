@@ -28,6 +28,8 @@ public:
 	std::shared_ptr<Texture> CreateUAVTexture(const std::string& strName, UINT uiWidth, UINT uiHeight, DXGI_FORMAT dxgiFormat = DXGI_FORMAT_UNKNOWN);
 	std::shared_ptr<Texture> CreateDSVTexture(const std::string& strName, UINT uiWidth, UINT uiHeight, DXGI_FORMAT dxgiFormat);
 
+	void WaitForCopyComplete();
+
 
 private:
 	void LoadFromDDSFile(ID3D12Resource** ppOutResource, const std::wstring& wstrTexturePath, std::unique_ptr<uint8_t[]>& ddsData, std::vector<D3D12_SUBRESOURCE_DATA>& subResources);
@@ -36,17 +38,21 @@ private:
 	void LoadFromWICFile(ID3D12Resource** ppOutResource, const std::wstring& wstrTexturePath, std::unique_ptr<uint8_t[]>& ddsData, std::vector<D3D12_SUBRESOURCE_DATA>& subResources);
 
 private:
+	void ReleaseCompletedUploadBuffers();
+
+private:
 	// Texture Pool
 	std::unordered_map<std::string, std::shared_ptr<Texture>> m_pTexturePool;
+	std::vector<PendingUploadBuffer> m_PendingUploadBuffers;
 
-
+#pragma region D3D
 public:
 	void ResetCommandList();
 
 private:
 	void CreateCommandList();
 	void CreateFence();
-	void Fence();
+	UINT64 Fence();
 	void WaitForGPUComplete();
 
 	void ExcuteCommandList();
@@ -68,6 +74,7 @@ private:
 	UINT m_nNumSRVUAVTextures = 0;
 	UINT m_nNumRTVTextures = 0;
 	UINT m_nNumDSVTextures = 0;
+#pragma endregion
 
 private:
 	inline static std::wstring g_wstrTextureBasePath = L"../Resources/Textures";

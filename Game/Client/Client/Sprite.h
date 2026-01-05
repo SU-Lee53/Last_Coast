@@ -1,29 +1,5 @@
 ﻿#pragma once
 
-#define MAX_CHARACTER_PER_SPRITE 40
-
-enum SPRITE_TYPE : UINT8 {
-	SPRITE_TYPE_TEXTURE = 0,
-	SPRITE_TYPE_TEXT,
-	SPRITE_TYPE_BILLBOARD,
-
-	SPRITE_TYPE_COUNT
-};
-
-struct SpriteRect {
-	float fLeft;
-	float fTop;
-	float fRight;
-	float fBottom;
-};
-
-struct CB_SPRITE_DATA {
-	float fLeft;
-	float fTop;
-	float fRight;
-	float fBottom;
-};
-
 class Sprite : public std::enable_shared_from_this<Sprite> {
 public:
 	Sprite(float fLeft, float fTop, float fRight, float fBottom, UINT uiLayerIndex = 0, bool bClickable = false);
@@ -69,12 +45,6 @@ private:
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TextSprite
 
-struct CB_TEXT_DATA {
-	UINT nCharacters[MAX_CHARACTER_PER_SPRITE];
-	XMFLOAT4 xmf4TextColor;
-	UINT nLength;
-};
-
 class TextSprite : public Sprite {
 public:
 	TextSprite(const std::string& strText, float fLeft, float fTop, float fRight, float fBottom, XMFLOAT4 xmf4TextColor = XMFLOAT4(1, 1, 1, 1), UINT uiLayerIndex = 0, bool bClickable = false);
@@ -96,16 +66,6 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // BillboardSprite
-
-struct CB_BILLBOARD_SPRITE_DATA {
-	XMFLOAT3 xmf3Position;
-	UINT pad1 = 0;
-	XMFLOAT2 xmf2Size;
-	XMUINT2 pad2 = XMUINT2(0,0);
-	XMFLOAT3 xmf3CameraPosition;
-	UINT pad3 = 0;
-	XMFLOAT4X4 xmf4x4ViewProjection;
-};
 
 class BillboardSprite : public Sprite {
 public:

@@ -1,18 +1,5 @@
 ﻿#pragma once
 
-#define MAX_EFFECT_PER_DRAW 100
-
-struct EffectParameter {
-	Vector3		xmf3Position;
-	float		fElapsedTime = 0.f;
-	Vector3		xmf3Force;
-	float		fAdditionalData = 0.f;
-};
-
-struct CB_PARTICLE_DATA {
-	EffectParameter parameters[MAX_EFFECT_PER_DRAW];
-};
-
 struct ParticleVertexType {
 	XMFLOAT3 xmf3Position;
 	XMFLOAT4 xmf4Color;

@@ -16,9 +16,6 @@ class IMeshRenderer abstract : public std::enable_shared_from_this<IMeshRenderer
 public:
 	using mesh_type = nullptr_t;
 	using material_type = nullptr_t;
-
-	constexpr static UINT eRenderType = std::numeric_limits<UINT>::max();
-
 	friend struct std::hash<IMeshRenderer>;
 
 public:
@@ -33,7 +30,7 @@ public:
 	virtual void Initialize() = 0;
 	virtual void Update(std::shared_ptr<GameObject> pOwner) = 0;
 	virtual void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
-		DescriptorHandle& descHandle, int nInstanceCount, int& refnInstanceBase) const = 0;
+		DescriptorHandle& descHandle, int nInstanceCount, int& refnInstanceBase, const Matrix& mtxWorld = Matrix::Identity) const = 0;
 
 	bool operator==(const IMeshRenderer& rhs) const;
 
@@ -41,6 +38,7 @@ public:
 	const std::vector<std::shared_ptr<Material>>& GetMaterials() const { return m_pMaterials; };
 
 	uint64_t GetID() const { return m_ui64RendererID; }
+	UINT GetRenderType() const { return m_eRenderType; }
 
 
 	void SetTexture(std::shared_ptr<Texture> pTexture, UINT nMaterialIndex, TEXTURE_TYPE eTextureType);
@@ -50,6 +48,7 @@ protected:
 	std::vector<std::shared_ptr<Material>> m_pMaterials;
 
 	uint64_t m_ui64RendererID = 0;
+	UINT m_eRenderType = std::numeric_limits<UINT>::max();
 
 protected:
 	static uint64_t g_ui64RendererIDBase;
@@ -60,9 +59,8 @@ template<typename meshType, UINT eRenderType = OBJECT_RENDER_FORWARD>
 class MeshRenderer : public IMeshRenderer {
 public:
 	using mesh_type = meshType;
-	using material_type = StandardMaterial;
-
-	constexpr static UINT eRenderType = eRenderType;
+	using material_type = typename std::conditional_t<std::same_as<meshType, StandardMesh>, StandardMaterial, SkinnedMaterial>;
+	friend struct std::hash<IMeshRenderer>;
 
 public:
 	MeshRenderer() = default;
@@ -73,7 +71,7 @@ public:
 	virtual void Initialize() override;
 	virtual void Update(std::shared_ptr<GameObject> pOwner)override;
 	virtual void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
-		DescriptorHandle& descHandle, int nInstanceCount, int& refnInstanceBase) const override;
+		DescriptorHandle& descHandle, int nInstanceCount, int& refnInstanceBase, const Matrix& mtxWorld = Matrix::Identity) const override;
 };
 
 template<>
@@ -95,7 +93,13 @@ inline MeshRenderer<meshType, eRenderType>::MeshRenderer(const std::vector<MESHL
 	}
 
 	for (const auto& materialInfo : materialLoadInfo) {
-		std::shared_ptr<StandardMaterial> pMaterial = std::make_shared<StandardMaterial>(materialInfo);
+		std::shared_ptr<Material> pMaterial;
+		if constexpr (std::same_as<meshType, StandardMesh>) {
+			pMaterial = std::make_shared<StandardMaterial>(materialInfo);
+		}
+		else {
+			pMaterial = std::make_shared<SkinnedMaterial>(materialInfo);
+		}
 		m_pMaterials.push_back(pMaterial);
 	}
 }
@@ -103,6 +107,7 @@ inline MeshRenderer<meshType, eRenderType>::MeshRenderer(const std::vector<MESHL
 template<typename meshType, UINT eRenderType>
 inline void MeshRenderer<meshType, eRenderType>::Initialize()
 {
+	m_eRenderType = eRenderType;
 }
 
 template<typename meshType, UINT eRenderType>
@@ -122,7 +127,7 @@ inline void MeshRenderer<meshType, eRenderType>::Update(std::shared_ptr<GameObje
 
 template<typename meshType, UINT eRenderType>
 inline void MeshRenderer<meshType, eRenderType>::Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
-	DescriptorHandle& descHandle, int nInstanceCount, int& refnInstanceBase) const
+	DescriptorHandle& descHandle, int nInstanceCount, int& refnInstanceBase, const Matrix& mtxWorld) const
 {
 	for (int i = 0; i < m_pMeshes.size(); ++i) {
 		// Per Object CB
@@ -130,12 +135,27 @@ inline void MeshRenderer<meshType, eRenderType>::Render(ComPtr<ID3D12Device> pd3
 		ConstantBuffer cbuffer = RESOURCE->AllocCBuffer<CB_PER_OBJECT_DATA>();
 		cbuffer.WriteData(&cbData);
 
-		pd3dDevice->CopyDescriptorsSimple(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, descHandle.cpuHandle, cbuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		descHandle.cpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+		if constexpr (std::same_as <meshType, SkinnedMesh>) {
+			Matrix mtxWorldTransposed = mtxWorld.Transpose();
+			ConstantBuffer worldCBuffer = RESOURCE->AllocCBuffer<CB_WORLD_TRANSFORM_DATA>();
+			worldCBuffer.WriteData(&mtxWorldTransposed);
 
-		// 4
-		pd3dCommandList->SetGraphicsRootDescriptorTable(ROOT_PARAMETER_OBJ_MATERIAL_DATA, descHandle.gpuHandle);
-		descHandle.gpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+			pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, cbuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			descHandle.cpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+			pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, worldCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			descHandle.cpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+
+			pd3dCommandList->SetGraphicsRootDescriptorTable(ROOT_PARAMETER_OBJ_MATERIAL_DATA, descHandle.gpuHandle);
+			descHandle.gpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+		}
+		else {
+			// 4
+			pd3dDevice->CopyDescriptorsSimple(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, descHandle.cpuHandle, cbuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			pd3dCommandList->SetGraphicsRootDescriptorTable(ROOT_PARAMETER_OBJ_MATERIAL_DATA, descHandle.gpuHandle);
+			descHandle.cpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+			descHandle.gpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+		}
+
 
 		// Texture (있다면)
 		m_pMaterials[i]->UpdateShaderVariables(pd3dDevice, pd3dCommandList, descHandle);	// Texture 가 있다면 Descriptor 가 복사될 것이고 아니면 안될것

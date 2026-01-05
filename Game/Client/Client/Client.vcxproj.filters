@@ -93,6 +93,12 @@
     <Filter Include="99.Etc">
       <UniqueIdentifier>{30b7772c-034e-46bb-a171-da984b12266a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02.Game\Animation">
+      <UniqueIdentifier>{8659f121-1b9b-4edf-9cc9-d215f461e5a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Game\GameObject\Player">
+      <UniqueIdentifier>{bd303fff-a702-4887-a017-37eda17ff600}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h">
@@ -151,9 +157,6 @@
     </ClInclude>
     <ClInclude Include="pch.h">
       <Filter>99.pch</Filter>
-    </ClInclude>
-    <ClInclude Include="Player.h">
-      <Filter>02.Game\GameObject</Filter>
     </ClInclude>
     <ClInclude Include="RandomGenerator.h">
       <Filter>99.Utility</Filter>
@@ -266,6 +269,30 @@
     <ClInclude Include="Resource.h">
       <Filter>99.Etc</Filter>
     </ClInclude>
+    <ClInclude Include="AnimationManager.h">
+      <Filter>04.Managers\Resource Management</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimationStateMachine.h">
+      <Filter>02.Game\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Animation.h">
+      <Filter>02.Game\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimationController.h">
+      <Filter>02.Game\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimationTestScene.h">
+      <Filter>02.Game\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="FirstPersonCamera.h">
+      <Filter>02.Game\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="DebugPlayer.h">
+      <Filter>02.Game\GameObject\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="Player.h">
+      <Filter>02.Game\GameObject\Player</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -328,9 +355,6 @@
     </ClCompile>
     <ClCompile Include="pch.cpp">
       <Filter>99.pch</Filter>
-    </ClCompile>
-    <ClCompile Include="Player.cpp">
-      <Filter>02.Game\GameObject</Filter>
     </ClCompile>
     <ClCompile Include="RandomGenerator.cpp">
       <Filter>99.Utility</Filter>
@@ -434,6 +458,30 @@
     <ClCompile Include="TextureManager.cpp">
       <Filter>04.Managers\Resource Management</Filter>
     </ClCompile>
+    <ClCompile Include="AnimationManager.cpp">
+      <Filter>04.Managers\Resource Management</Filter>
+    </ClCompile>
+    <ClCompile Include="Animation.cpp">
+      <Filter>02.Game\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimationController.cpp">
+      <Filter>02.Game\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimationStateMachine.cpp">
+      <Filter>02.Game\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimationTestScene.cpp">
+      <Filter>02.Game\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="FirstPersonCamera.cpp">
+      <Filter>02.Game\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="DebugPlayer.cpp">
+      <Filter>02.Game\GameObject\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="Player.cpp">
+      <Filter>02.Game\GameObject\Player</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui.ini" />
@@ -469,7 +517,7 @@
     <FxCompile Include="..\HLSL\SpriteShader.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
-    <FxCompile Include="..\HLSL\StandardShader.hlsl">
+    <FxCompile Include="..\HLSL\Shaders.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
   </ItemGroup>

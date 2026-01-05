@@ -34,6 +34,8 @@ public:
 
 	ComPtr<ID3D12Resource> CreateBufferResource(void* pData, UINT nBytes, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates);
 
+	void WaitForCopyComplete();
+
 public:
 	template<typename T>
 	ConstantBuffer& AllocCBuffer() {
@@ -45,9 +47,13 @@ public:
 	}
 
 private:
+	void ReleaseCompletedUploadBuffers();
+
+
+private:
 	void CreateCommandList();
 	void CreateFence();
-	void Fence();
+	UINT64 Fence();
 	void WaitForGPUComplete();
 
 	void ExcuteCommandList();
@@ -64,6 +70,8 @@ private:
 
 private:
 	ConstantBufferPool		m_ConstantBufferPool;
+	std::vector<PendingUploadBuffer> m_PendingUploadBuffers;
+
 
 };
 
@@ -126,8 +134,11 @@ inline VertexBuffer ResourceManager::CreateVertexBuffer(std::vector<T> vertices,
 		Buffer.StateTransition(m_pd3dCommandList, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
 		ExcuteCommandList();
-		Fence();
-		WaitForGPUComplete();
+		UINT64 ui64FenceValue = Fence();
+		//WaitForGPUComplete();
+		m_PendingUploadBuffers.push_back({pUploadBuffer, ui64FenceValue});
+
+
 	}
 
 	D3D12_VERTEX_BUFFER_VIEW VertexBufferView;

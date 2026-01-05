@@ -81,7 +81,7 @@ void StandardMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, UIN
 SkinnedMesh::SkinnedMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology)
 	: StandardMesh(meshLoadInfo, d3dTopology)
 {
-	m_BlendIndices = RESOURCE->CreateVertexBuffer(meshLoadInfo.xmi4BlendIndices, MESH_ELEMENT_TYPE_TANGENT);
+	m_BlendIndices = RESOURCE->CreateVertexBuffer(meshLoadInfo.xmui4BlendIndices, MESH_ELEMENT_TYPE_TANGENT);
 	m_BlendWeights = RESOURCE->CreateVertexBuffer(meshLoadInfo.v4BlendWeights, MESH_ELEMENT_TYPE_TEXCOORD0);
 }
 

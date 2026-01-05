@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "ModelManager.h"
+#include "AnimationManager.h"
 
 void ModelManager::Initialize()
 {
@@ -7,7 +8,9 @@ void ModelManager::Initialize()
 
 void ModelManager::LoadGameModels()
 {
-	LoadModelFromFile("Ch33_nonPBR.json");
+	LoadModelFromFile("Ch33_nonPBR");
+	LoadModelFromFile("vintage_wooden_sniper_optimized_for_fpstps");
+	LoadModelFromFile("Cube");
 }
 
 void ModelManager::Add(const std::string& strModelName, std::shared_ptr<GameObject> pObj)
@@ -27,9 +30,19 @@ std::shared_ptr<GameObject> ModelManager::Get(const std::string& strObjName)
 	return it->second;
 }
 
+std::shared_ptr<GameObject> ModelManager::LoadOrGet(const std::string& strFileName)
+{
+	auto it = m_pModelPool.find(strFileName);
+	if (it == m_pModelPool.end()) {
+		return LoadModelFromFile(strFileName);
+	}
+
+	return it->second;
+}
+
 std::shared_ptr<GameObject> ModelManager::LoadModelFromFile(const std::string& strFileName)
 {
-	std::string strFilePath = std::format("{}/{}", g_strTextureBasePath, strFileName);
+	std::string strFilePath = std::format("{}/{}.bin", g_strModelBasePath, strFileName);
 
 	if (auto pObj = Get(strFileName)) {
 		return pObj;
@@ -40,13 +53,32 @@ std::shared_ptr<GameObject> ModelManager::LoadModelFromFile(const std::string& s
 		__debugbreak();
 		return nullptr;
 	}
-	nlohmann::json j = nlohmann::json::parse(inFile);
+
+	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {}); 
+	nlohmann::json j = nlohmann::json::from_bson(bson);;
 
 	std::shared_ptr<GameObject> pGameObject;
-	for (const auto& data : j.items()) {
-		if (data.key() == "Hierarchy") {
-			pGameObject = LoadFrameHierarchyFromFile(nullptr, data.value());
+	pGameObject = LoadFrameHierarchyFromFile(nullptr, j["Hierarchy"]);
+
+	size_t nBones = j["nBones"].get<size_t>();
+	if (nBones != 0) {
+		std::vector<Bone> bones;
+		bones.resize(nBones);
+		for (const auto& jBone : j["Bones"]) {
+			int nBoneIndex = jBone["Index"].get<int>();
+
+			bones[nBoneIndex].nIndex = nBoneIndex;
+			bones[nBoneIndex].nParentIndex = jBone["ParentIndex"].get<int>();
+			bones[nBoneIndex].strBoneName = jBone["Name"].get<std::string>();
+
+			bones[nBoneIndex].mtxTransform = Matrix(jBone["localBind"].get<std::vector<float>>().data());
+			bones[nBoneIndex].mtxOffset = Matrix(jBone["inverseBind"].get<std::vector<float>>().data());
+
+			if (bones[nBoneIndex].nParentIndex == -1) {
+				pGameObject->m_nRootBoneIndex = bones[nBoneIndex].nIndex;
+			}
 		}
+		pGameObject->m_Bones = bones;
 	}
 
 	if (pGameObject) {
@@ -74,7 +106,12 @@ std::shared_ptr<GameObject> ModelManager::LoadFrameHierarchyFromFile(std::shared
 	}
 
 	for (int i = 0; i < nMeshes; ++i) {
-		pGameObject->SetMeshRenderer<MeshRenderer<StandardMesh>>(meshLoadInfos, materialLoadInfos);
+		if (meshLoadInfos[0].bIsSkinned) {
+			pGameObject->SetMeshRenderer<MeshRenderer<SkinnedMesh>>(meshLoadInfos, materialLoadInfos);
+		}
+		else {
+			pGameObject->SetMeshRenderer<MeshRenderer<StandardMesh>>(meshLoadInfos, materialLoadInfos);
+		}
 	}
 	
 	unsigned nChildren = inJson["nChildren"].get<unsigned>();
@@ -91,7 +128,7 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 	MESHLOADINFO meshLoadInfo;
 	MATERIALLOADINFO materialLoadInfo;
 
-	size_t nVertices = 0;
+	unsigned nVertices = 0;
 	std::vector<size_t> loadIndices;
 	nVertices = inJson["nVertices"].get<unsigned>();
 	loadIndices.resize(nVertices);
@@ -122,22 +159,28 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 	});
 
 	// TexCoord0
-	const nlohmann::json& texCoordData = inJson["TexCoord0"];
-	std::vector<float> texCoord = texCoordData["TexCoord"].get<std::vector<float>>();
-	meshLoadInfo.v2TexCoord0.reserve(nVertices);
-	std::transform(loadIndices.begin(), loadIndices.end(), std::back_inserter(meshLoadInfo.v2TexCoord0), [&](size_t i) {
-		size_t base = i * 2;
-		return Vector2{ texCoord[base], texCoord[base + 1] };
-	});
+	unsigned nUVChannels = inJson["nUVChannels"].get<unsigned>();
+	if (nUVChannels != 0) {
+		const nlohmann::json& texCoordData = inJson["TexCoord0"];
+		std::vector<float> texCoord = texCoordData["TexCoord"].get<std::vector<float>>();
+		meshLoadInfo.v2TexCoord0.reserve(nVertices);
+		std::transform(loadIndices.begin(), loadIndices.end(), std::back_inserter(meshLoadInfo.v2TexCoord0), [&](size_t i) {
+			size_t base = i * 2;
+			return Vector2{ texCoord[base], texCoord[base + 1] };
+			});
+	}
+	else {
+		meshLoadInfo.v2TexCoord0.resize(nVertices);
+	}
 
-	bool isSkinned = inJson["Skinned?"].get<bool>();
-	if (isSkinned) {
+	meshLoadInfo.bIsSkinned = inJson["Skinned?"].get<bool>();
+	if (meshLoadInfo.bIsSkinned) {
 		// BlendIndices
 		std::vector<int> blendIndices = inJson["BlendIndices"].get<std::vector<int>>();
-		meshLoadInfo.xmi4BlendIndices.reserve(nVertices);
-		std::transform(loadIndices.begin(), loadIndices.end(), std::back_inserter(meshLoadInfo.xmi4BlendIndices), [&](size_t i) {
+		meshLoadInfo.xmui4BlendIndices.reserve(nVertices);
+		std::transform(loadIndices.begin(), loadIndices.end(), std::back_inserter(meshLoadInfo.xmui4BlendIndices), [&](size_t i) {
 			size_t base = i * 4;
-			return XMINT4{ blendIndices[base], blendIndices[base + 1], blendIndices[base + 2], blendIndices[base + 3] };
+			return XMUINT4{ (UINT)blendIndices[base], (UINT)blendIndices[base + 1], (UINT)blendIndices[base + 2], (UINT)blendIndices[base + 3] };
 		});
 
 		// BlendWeights
@@ -147,7 +190,10 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 			size_t base = i * 4;
 			return Vector4{ blendWeights[base], blendWeights[base + 1], blendWeights[base + 2], blendWeights[base + 3] };
 		});
-
+	}
+	else {
+		meshLoadInfo.xmui4BlendIndices.resize(nVertices);
+		meshLoadInfo.v4BlendWeights.resize(nVertices);
 	}
 
 	// Indices

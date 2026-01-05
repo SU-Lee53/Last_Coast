@@ -1,29 +1,4 @@
-#pragma once
-
-#define MAX_LIGHTS			16 
-
-struct LIGHT_DATA {
-    Vector4 v4Ambient;                // c0
-    Vector4 v4Diffuse;                // c1
-    Vector4 v4Specular;               // c2
-    Vector3 v3Position;               // c3.xyz
-    float fFalloff;                   // c3.w
-    Vector3 v3Direction;              // c4.xyz
-    float fTheta; //cos(fTheta)     // c4.w
-    Vector3 v3Attenuation;            // c5.xyz
-    float fPhi; //cos(fPhi)         // c5.w
-    BOOL bEnable;                     // c6.x
-    int nType;                        // c6.y
-    float fRange;                     // c6.z
-    float padding;                      // c6.w
-};
-
-struct CB_LIGHT_DATA
-{
-    LIGHT_DATA gLights[MAX_LIGHTS];
-    Vector4 gcGlobalAmbientLight;
-    int gnLights;
-};
+﻿#pragma once
 
 enum LIGHT_TYPE : int {
     LIGHT_TYPE_POINT_LIGHT = 1,
@@ -33,7 +8,7 @@ enum LIGHT_TYPE : int {
 
 class Light {
 public:
-    virtual LIGHT_DATA MakeLightData() { return LIGHT_DATA{}; }
+    virtual LightData MakeLightData() { return LightData{}; }
 
 public:
     bool m_bEnable;
@@ -41,7 +16,7 @@ public:
 
 class PointLight : public Light {
 public:
-    virtual LIGHT_DATA MakeLightData() override;
+    virtual LightData MakeLightData() override;
 
     Vector4    m_v4Diffuse;
     Vector4    m_v4Ambient;
@@ -59,7 +34,7 @@ public:
 
 class SpotLight : public Light {
 public:
-    virtual LIGHT_DATA MakeLightData() override;
+    virtual LightData MakeLightData() override;
 
     Vector4    m_v4Diffuse;
     Vector4    m_v4Ambient;
@@ -79,7 +54,7 @@ public:
 
 class DirectionalLight : public Light {
 public:
-    virtual LIGHT_DATA MakeLightData() override;
+    virtual LightData MakeLightData() override;
 
     Vector4    m_v4Diffuse;
     Vector4    m_v4Ambient;

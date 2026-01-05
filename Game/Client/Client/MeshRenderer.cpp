@@ -44,7 +44,7 @@ IMeshRenderer& IMeshRenderer::operator=(IMeshRenderer&& other)
 
 bool IMeshRenderer::operator==(const IMeshRenderer& rhs) const
 {
-	return m_pMeshes == rhs.m_pMeshes && m_pMaterials == rhs.m_pMaterials;
+	return m_ui64RendererID == rhs.m_ui64RendererID;
 }
 
 void IMeshRenderer::SetTexture(std::shared_ptr<Texture> pTexture, UINT nMaterialIndex, TEXTURE_TYPE eTextureType)

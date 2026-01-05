@@ -2,6 +2,7 @@
 #include "Component.h"
 #include "Transform.h"
 #include "MeshRenderer.h"
+#include "AnimationController.h"
 
 /*
 	- 10.18
@@ -27,13 +28,20 @@ public:
 	virtual void ProcessInput() {}
 	virtual void Update();
 
-	// RenderManager 가 아닌 별도의 렌더링 방법이 존재하는 경우 이걸로 렌더링 함
 	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
+	void RenderDirectly(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle);
 
 public:
-	Transform& GetTransform() { return m_Transform; }
-	Matrix GetWorldMatrix() const { return m_Transform.GetWorldMatrix(); }
-	
+
+	template<ComponentType T>
+	void AddComponent();
+
+	template<ComponentType T, typename... Args>
+	void AddComponent(Args&&... args);
+
+	template<ComponentType T, typename... Args>
+	void AddComponent(std::shared_ptr<T> pComponent);
+
 
 	// Create New
 	template<typename T, typename... Args> requires std::derived_from<T, IMeshRenderer>
@@ -42,39 +50,40 @@ public:
 	// Set Existed
 	void SetMeshRenderer(std::shared_ptr<IMeshRenderer> pMeshRenderer) { m_pMeshRenderer = pMeshRenderer; }
 	
-	std::shared_ptr<IMeshRenderer> GetMeshRenderer() const { return m_pMeshRenderer; }
-
-	void SetBound(Vector3 v3Center, Vector3 v3Extents);
-
-public:
-	template<ComponentType T>
-	void AddComponent();
-	
-	template<ComponentType T, typename... Args>
-	void AddComponent(Args&&... args);
-	
-	template<ComponentType T, typename... Args>
-	void AddComponent(std::shared_ptr<T> pComponent);
-	
-	template<ComponentType T>
-	std::shared_ptr<T> GetComponent();
-
+	void SetBound(const Vector3& v3Center, const Vector3& v3Extents);
 	void SetParent(std::shared_ptr<GameObject> pParent);
 	void SetChild(std::shared_ptr<GameObject> pChild);
 	void SetFrameName(const std::string& strFrameName);
+	void SetAnimationController(std::shared_ptr<AnimationController> pController) { m_pAnimationController = pController; }
 
-	std::shared_ptr<GameObject> GetParent() { return m_pParent.lock(); }
+	template<ComponentType T>
+	std::shared_ptr<T> GetComponent();
+	std::shared_ptr<GameObject> GetParent() const { return m_pParent.lock(); }
+	std::shared_ptr<IMeshRenderer> GetMeshRenderer() const { return m_pMeshRenderer; }
+	Transform& GetTransform() { return m_Transform; }
+	const Matrix& GetWorldMatrix() const { return m_Transform.GetWorldMatrix(); }
+	const std::vector<Bone>& GetBones() const { return m_Bones; }
+	size_t GetRootBoneIndex() const { return m_nRootBoneIndex; }
+	std::shared_ptr<AnimationController> GetAnimationController() const { return m_pAnimationController; }
+
+
+public:
 	std::shared_ptr<GameObject> FindFrame(const std::string& strFrameName);
 	std::shared_ptr<GameObject> FindMeshedFrame(const std::string& strFrameName);
 
 	template<typename T>
-	std::shared_ptr<T> CopyObject(std::shared_ptr<GameObject> pParent = nullptr);
+	std::shared_ptr<T> CopyObject(std::shared_ptr<GameObject> pParent = nullptr) const;
 
 protected:
 	bool m_bInitialized = false;
 	std::string m_strFrameName;
 	Transform m_Transform{};
 	std::shared_ptr<IMeshRenderer> m_pMeshRenderer = nullptr;
+
+	// 아래 2가지 애니메이션과 관련된 것들은 반드시 Root에 보관되어야 함
+	std::vector<Bone> m_Bones;
+	size_t m_nRootBoneIndex = 0;
+	std::shared_ptr<AnimationController> m_pAnimationController = nullptr;
 
 	std::array<std::shared_ptr<Component>, COMPONENT_TYPE_COUNT> m_pComponents = {};
 
@@ -131,7 +140,7 @@ inline 	std::shared_ptr<T> GameObject::GetComponent()
 }
 
 template<typename T>
-std::shared_ptr<T> GameObject::CopyObject(std::shared_ptr<GameObject> pParent)
+std::shared_ptr<T> GameObject::CopyObject(std::shared_ptr<GameObject> pParent) const
 {
 	std::shared_ptr<T> pClone = std::make_shared<T>();
 	pClone->m_strFrameName = m_strFrameName;

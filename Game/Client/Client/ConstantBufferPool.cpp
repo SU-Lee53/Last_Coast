@@ -7,7 +7,7 @@ ConstantBufferPool::ConstantBufferPool()
 
 void ConstantBufferPool::Initialize(ComPtr<ID3D12Device> pd3dDevice, size_t nCBVCountIn256Bytes, UINT minCBVSize, UINT maxCBVSize)
 {
-	// Goal : Create CB in size of 256 -> 512 -> 768 -> 1024 -> ... -> 65536 (max size of constant buffer)
+	// Goal : Create CB in size of 256 -> 512 -> 1024 -> 2048 -> ... -> 65536 (max size of constant buffer)
 	// Number of CBV will be half of previous size's CBV Count
 
 	HRESULT hr;
@@ -24,7 +24,8 @@ void ConstantBufferPool::Initialize(ComPtr<ID3D12Device> pd3dDevice, size_t nCBV
 		m_nCBVCount.insert({ nCBSize, nCBVCount });
 		m_CBuffers.insert({ nCBSize, {} });
 		nCBVCount /= 2;
-		nCBSize += ConstantBufferSize<Matrix>::value;
+		//nCBSize += ConstantBufferSize<Matrix>::value;
+		nCBSize *= 2;
 	}
 
 	m_nMaxCBVSize = nCBSize;

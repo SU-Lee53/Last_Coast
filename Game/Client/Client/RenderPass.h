@@ -5,11 +5,6 @@
 struct InstancePair;
 class RenderTargetTexture;
 
-struct CB_PER_OBJECT_DATA {
-	MaterialColors materialColors;
-	int nInstanceBase;
-};
-
 class RenderPass {
 public:
 	RenderPass() {}
