@@ -23,10 +23,9 @@ bool UJsonSaveManager::SaveActorsToJson(const TArray<AActor*>& Actors, const FSt
                 {
                     TSharedPtr<FJsonObject> ActorJson = MakeShareable(new FJsonObject);
                     ActorJson->SetStringField(TEXT("ActorName"), Actor->GetName());
-                    ActorJson->SetStringField(TEXT("ActorClass"), Actor->GetClass()->GetName());
-                    ActorJson->SetObjectField(TEXT("Transform"), TransformToJson(Actor->GetActorTransform()));
                     ActorJson->SetStringField(TEXT("MeshName"), Mesh->GetName());
-
+                    ActorJson->SetObjectField(TEXT("Transform"), TransformToJson(Actor->GetActorTransform()));
+                    
                     FString ActorString;
                     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&ActorString);
                     FJsonSerializer::Serialize(ActorJson.ToSharedRef(), Writer);
@@ -67,28 +66,52 @@ TSharedPtr<FJsonObject> UJsonSaveManager::TransformToJson(const FTransform& Tran
 
     // Location
     FVector Location = Transform.GetLocation();
-    TSharedPtr<FJsonObject> LocationJson = MakeShareable(new FJsonObject);
-    LocationJson->SetNumberField(TEXT("X"), Location.X);
-    LocationJson->SetNumberField(TEXT("Y"), Location.Y);
-    LocationJson->SetNumberField(TEXT("Z"), Location.Z);
-    TransformJson->SetObjectField(TEXT("Location"), LocationJson);
+    TArray<TSharedPtr<FJsonValue>> LocationArray;
+    LocationArray.Add(MakeShareable(new FJsonValueNumber(Location.X)));
+    LocationArray.Add(MakeShareable(new FJsonValueNumber(Location.Y)));
+    LocationArray.Add(MakeShareable(new FJsonValueNumber(Location.Z)));
+    TransformJson->SetArrayField(TEXT("Location"), LocationArray);
 
     // Rotation
     FRotator Rotation = Transform.Rotator();
-    TSharedPtr<FJsonObject> RotationJson = MakeShareable(new FJsonObject);
-    RotationJson->SetNumberField(TEXT("Pitch"), Rotation.Pitch);
-    RotationJson->SetNumberField(TEXT("Yaw"), Rotation.Yaw);
-    RotationJson->SetNumberField(TEXT("Roll"), Rotation.Roll);
-    TransformJson->SetObjectField(TEXT("Rotation"), RotationJson);
+    TArray<TSharedPtr<FJsonValue>> RotationArray;
+    RotationArray.Add(MakeShareable(new FJsonValueNumber(Rotation.Pitch)));
+    RotationArray.Add(MakeShareable(new FJsonValueNumber(Rotation.Yaw)));
+    RotationArray.Add(MakeShareable(new FJsonValueNumber(Rotation.Roll)));
+    TransformJson->SetArrayField(TEXT("Rotation"), RotationArray);
 
     // Scale
     FVector Scale = Transform.GetScale3D();
-    TSharedPtr<FJsonObject> ScaleJson = MakeShareable(new FJsonObject);
-    ScaleJson->SetNumberField(TEXT("X"), Scale.X);
-    ScaleJson->SetNumberField(TEXT("Y"), Scale.Y);
-    ScaleJson->SetNumberField(TEXT("Z"), Scale.Z);
-    TransformJson->SetObjectField(TEXT("Scale"), ScaleJson);
+    TArray<TSharedPtr<FJsonValue>> ScaleArray;
+    ScaleArray.Add(MakeShareable(new FJsonValueNumber(Scale.X)));
+    ScaleArray.Add(MakeShareable(new FJsonValueNumber(Scale.Y)));
+    ScaleArray.Add(MakeShareable(new FJsonValueNumber(Scale.Z)));
+    TransformJson->SetArrayField(TEXT("Scale"), ScaleArray);
 
     return TransformJson;
 }
 
+
+//#if WITH_EDITOR
+//#include "Exporters/Exporter.h"
+//#include "AssetExportTask.h"
+//
+//bool UJsonSaveManager::ExportMeshToFBX(UStaticMesh* Mesh, const FString& FilePath)
+//{
+//    if (!Mesh) return false;
+//
+//    UAssetExportTask* ExportTask = NewObject<UAssetExportTask>();
+//    ExportTask->Object = Mesh;
+//    ExportTask->Exporter = nullptr; // Auto-detect
+//    ExportTask->Filename = FilePath;
+//    ExportTask->bSelected = false;
+//    ExportTask->bReplaceIdentical = true;
+//    ExportTask->bPrompt = false;
+//    ExportTask->bUseFileArchive = false;
+//    ExportTask->bWriteEmptyFiles = false;
+//
+//    UExporter::RunAssetExportTask(ExportTask);
+//
+//    return ExportTask->bSuccess;
+//}
+//#endif

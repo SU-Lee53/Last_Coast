@@ -2,391 +2,166 @@
 {
 	"ActorName": "StaticMeshActor_2",
 	"ActorClass": "StaticMeshActor",
+	"MeshName": "Cube",
 	"Transform":
 	{
-		"Location":
-		{
-			"X": 10,
-			"Y": -140,
-			"Z": 10
-		},
-		"Rotation":
-		{
-			"Pitch": 0,
-			"Yaw": 0,
-			"Roll": -0
-		},
-		"Scale":
-		{
-			"X": 1,
-			"Y": 1,
-			"Z": 1
-		}
-	},
-	"MeshName": "Cube"
+		"Location": [ 10, -140, 10 ],
+		"Rotation": [ 0, 0, -0 ],
+		"Scale": [ 1, 1, 1 ]
+	}
 },
 {
 	"ActorName": "StaticMeshActor_1",
 	"ActorClass": "StaticMeshActor",
+	"MeshName": "Cube",
 	"Transform":
 	{
-		"Location":
-		{
-			"X": 10,
-			"Y": -340,
-			"Z": 10
-		},
-		"Rotation":
-		{
-			"Pitch": 0,
-			"Yaw": 0,
-			"Roll": -0
-		},
-		"Scale":
-		{
-			"X": 1,
-			"Y": 1,
-			"Z": 1
-		}
-	},
-	"MeshName": "Cube"
+		"Location": [ 10, -340, 10 ],
+		"Rotation": [ 0, 0, -0 ],
+		"Scale": [ 1, 1, 1 ]
+	}
 },
 {
 	"ActorName": "StaticMeshActor_3",
 	"ActorClass": "StaticMeshActor",
+	"MeshName": "Cube",
 	"Transform":
 	{
-		"Location":
-		{
-			"X": 10,
-			"Y": 310,
-			"Z": 10
-		},
-		"Rotation":
-		{
-			"Pitch": 0,
-			"Yaw": 0,
-			"Roll": -0
-		},
-		"Scale":
-		{
-			"X": 1,
-			"Y": 1,
-			"Z": 1
-		}
-	},
-	"MeshName": "Cube"
+		"Location": [ 10, 60, 10 ],
+		"Rotation": [ 0, 0, -0 ],
+		"Scale": [ 1, 1, 1 ]
+	}
 },
 {
 	"ActorName": "StaticMeshActor_4",
 	"ActorClass": "StaticMeshActor",
+	"MeshName": "Cube",
 	"Transform":
 	{
-		"Location":
-		{
-			"X": 10,
-			"Y": 440,
-			"Z": 10
-		},
-		"Rotation":
-		{
-			"Pitch": 0,
-			"Yaw": 0,
-			"Roll": -0
-		},
-		"Scale":
-		{
-			"X": 1,
-			"Y": 1,
-			"Z": 1
-		}
-	},
-	"MeshName": "Cube"
+		"Location": [ 10, 440, 10 ],
+		"Rotation": [ 0, 0, -0 ],
+		"Scale": [ 1, 1, 1 ]
+	}
 },
 {
 	"ActorName": "StaticMeshActor_6",
 	"ActorClass": "StaticMeshActor",
+	"MeshName": "vintage_wooden_sniper_optimized_for_fpstps",
 	"Transform":
 	{
-		"Location":
-		{
-			"X": 20,
-			"Y": 330,
-			"Z": 120
-		},
-		"Rotation":
-		{
-			"Pitch": 0,
-			"Yaw": 0,
-			"Roll": -0
-		},
-		"Scale":
-		{
-			"X": 1,
-			"Y": 1,
-			"Z": 1
-		}
-	},
-	"MeshName": "vintage_wooden_sniper_optimized_for_fpstps"
+		"Location": [ 20, 330, 120 ],
+		"Rotation": [ 0, 0, -0 ],
+		"Scale": [ 1, 1, 1 ]
+	}
 },
 {
 	"ActorName": "StaticMeshActor_5",
 	"ActorClass": "StaticMeshActor",
+	"MeshName": "Cube",
 	"Transform":
 	{
-		"Location":
-		{
-			"X": 10,
-			"Y": -40,
-			"Z": 10
-		},
-		"Rotation":
-		{
-			"Pitch": 0,
-			"Yaw": 0,
-			"Roll": -0
-		},
-		"Scale":
-		{
-			"X": 1,
-			"Y": 1,
-			"Z": 1
-		}
-	},
-	"MeshName": "Cube"
+		"Location": [ 10, -40, 10 ],
+		"Rotation": [ 0, 0, -0 ],
+		"Scale": [ 1, 1, 1 ]
+	}
 },
 {
 	"ActorName": "StaticMeshActor_7",
 	"ActorClass": "StaticMeshActor",
+	"MeshName": "Cube",
 	"Transform":
 	{
-		"Location":
-		{
-			"X": 280,
-			"Y": 160,
-			"Z": 10
-		},
-		"Rotation":
-		{
-			"Pitch": 0,
-			"Yaw": 0,
-			"Roll": -0
-		},
-		"Scale":
-		{
-			"X": 1,
-			"Y": 1,
-			"Z": 1
-		}
-	},
-	"MeshName": "Cube"
+		"Location": [ 310, -140, 10 ],
+		"Rotation": [ 0, 0, -0 ],
+		"Scale": [ 1, 1, 1 ]
+	}
 },
 {
 	"ActorName": "StaticMeshActor_8",
 	"ActorClass": "StaticMeshActor",
+	"MeshName": "Cube",
 	"Transform":
 	{
-		"Location":
-		{
-			"X": 310,
-			"Y": -240,
-			"Z": 10
-		},
-		"Rotation":
-		{
-			"Pitch": 0,
-			"Yaw": 0,
-			"Roll": -0
-		},
-		"Scale":
-		{
-			"X": 1,
-			"Y": 1,
-			"Z": 1
-		}
-	},
-	"MeshName": "Cube"
+		"Location": [ 310, -240, 10 ],
+		"Rotation": [ 0, 0, -0 ],
+		"Scale": [ 1, 1, 1 ]
+	}
 },
 {
 	"ActorName": "StaticMeshActor_9",
 	"ActorClass": "StaticMeshActor",
+	"MeshName": "Cube",
 	"Transform":
 	{
-		"Location":
-		{
-			"X": 210,
-			"Y": -140,
-			"Z": 10
-		},
-		"Rotation":
-		{
-			"Pitch": 0,
-			"Yaw": 0,
-			"Roll": -0
-		},
-		"Scale":
-		{
-			"X": 1,
-			"Y": 1,
-			"Z": 1
-		}
-	},
-	"MeshName": "Cube"
+		"Location": [ 210, -140, 10 ],
+		"Rotation": [ 0, 0, -0 ],
+		"Scale": [ 1, 1, 1 ]
+	}
 },
 {
 	"ActorName": "StaticMeshActor_10",
 	"ActorClass": "StaticMeshActor",
+	"MeshName": "vintage_wooden_sniper_optimized_for_fpstps",
 	"Transform":
 	{
-		"Location":
-		{
-			"X": 190,
-			"Y": 330,
-			"Z": 120
-		},
-		"Rotation":
-		{
-			"Pitch": 0,
-			"Yaw": 0,
-			"Roll": -0
-		},
-		"Scale":
-		{
-			"X": 1,
-			"Y": 1,
-			"Z": 1
-		}
-	},
-	"MeshName": "vintage_wooden_sniper_optimized_for_fpstps"
+		"Location": [ 190, 330, 120 ],
+		"Rotation": [ 0, 0, -0 ],
+		"Scale": [ 1, 1, 1 ]
+	}
 },
 {
 	"ActorName": "StaticMeshActor_11",
 	"ActorClass": "StaticMeshActor",
+	"MeshName": "vintage_wooden_sniper_optimized_for_fpstps",
 	"Transform":
 	{
-		"Location":
-		{
-			"X": 190,
-			"Y": 260,
-			"Z": 120
-		},
-		"Rotation":
-		{
-			"Pitch": 0,
-			"Yaw": 0,
-			"Roll": -0
-		},
-		"Scale":
-		{
-			"X": 1,
-			"Y": 1,
-			"Z": 1
-		}
-	},
-	"MeshName": "vintage_wooden_sniper_optimized_for_fpstps"
+		"Location": [ 190, 260, 120 ],
+		"Rotation": [ 0, 0, -0 ],
+		"Scale": [ 1, 1, 1 ]
+	}
 },
 {
 	"ActorName": "StaticMeshActor_12",
 	"ActorClass": "StaticMeshActor",
+	"MeshName": "Cube",
 	"Transform":
 	{
-		"Location":
-		{
-			"X": 10,
-			"Y": -240,
-			"Z": 10
-		},
-		"Rotation":
-		{
-			"Pitch": 0,
-			"Yaw": 0,
-			"Roll": -0
-		},
-		"Scale":
-		{
-			"X": 1,
-			"Y": 1,
-			"Z": 1
-		}
-	},
-	"MeshName": "Cube"
+		"Location": [ 10, -240, 10 ],
+		"Rotation": [ 0, 0, -0 ],
+		"Scale": [ 1, 1, 1 ]
+	}
 },
 {
 	"ActorName": "StaticMeshActor_13",
 	"ActorClass": "StaticMeshActor",
+	"MeshName": "Cube",
 	"Transform":
 	{
-		"Location":
-		{
-			"X": 110,
-			"Y": -240,
-			"Z": 10
-		},
-		"Rotation":
-		{
-			"Pitch": 0,
-			"Yaw": 0,
-			"Roll": -0
-		},
-		"Scale":
-		{
-			"X": 1,
-			"Y": 1,
-			"Z": 1
-		}
-	},
-	"MeshName": "Cube"
+		"Location": [ 110, -240, 10 ],
+		"Rotation": [ 0, 0, -0 ],
+		"Scale": [ 1, 1, 1 ]
+	}
 },
 {
 	"ActorName": "StaticMeshActor_14",
 	"ActorClass": "StaticMeshActor",
+	"MeshName": "Cube",
 	"Transform":
 	{
-		"Location":
-		{
-			"X": 210,
-			"Y": -240,
-			"Z": 10
-		},
-		"Rotation":
-		{
-			"Pitch": 0,
-			"Yaw": 0,
-			"Roll": -0
-		},
-		"Scale":
-		{
-			"X": 1,
-			"Y": 1,
-			"Z": 1
-		}
-	},
-	"MeshName": "Cube"
+		"Location": [ 210, -240, 10 ],
+		"Rotation": [ 0, 0, -0 ],
+		"Scale": [ 1, 1, 1 ]
+	}
 },
 {
 	"ActorName": "StaticMeshActor_15",
 	"ActorClass": "StaticMeshActor",
+	"MeshName": "Cube",
 	"Transform":
 	{
-		"Location":
-		{
-			"X": 110,
-			"Y": -140,
-			"Z": 10
-		},
-		"Rotation":
-		{
-			"Pitch": 0,
-			"Yaw": 0,
-			"Roll": -0
-		},
-		"Scale":
-		{
-			"X": 1,
-			"Y": 1,
-			"Z": 1
-		}
-	},
-	"MeshName": "Cube"
+		"Location": [ 110, -140, 10 ],
+		"Rotation": [ 0, 0, -0 ],
+		"Scale": [ 1, 1, 1 ]
+	}
 }
 ]
