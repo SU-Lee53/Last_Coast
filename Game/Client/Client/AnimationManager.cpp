@@ -10,6 +10,8 @@ void AnimationManager::LoadGameAnimations()
 	LoadAndAdd("Breathing Idle");
 	LoadAndAdd("Walking");
 	LoadAndAdd("Jog Forward");
+	LoadAndAdd("Rifle Aiming Idle");
+	LoadAndAdd("Firing Rifle");
 }
 
 std::shared_ptr<Animation> AnimationManager::LoadAndAdd(const std::string& strName)
@@ -74,8 +76,8 @@ std::shared_ptr<Animation> AnimationManager::LoadFromFile(const std::string& str
 	const nlohmann::json& jAnimation = j["Animations"][0];
 
 	pAnimation->m_strName = jAnimation["Name"].get<std::string>();
-	pAnimation->m_dDuration = jAnimation["Duration"].get<double>();
-	pAnimation->m_dTicksPerSecond = jAnimation["TicksPerSecond"].get<double>();
+	pAnimation->m_fDuration = jAnimation["Duration"].get<double>();
+	pAnimation->m_fTicksPerSecond = jAnimation["TicksPerSecond"].get<double>();
 
 	unsigned nChannels = jAnimation["nChannels"].get<unsigned>();
 	const nlohmann::json& jChannels = jAnimation["Channels"];
@@ -88,7 +90,7 @@ std::shared_ptr<Animation> AnimationManager::LoadFromFile(const std::string& str
 		for (int keyIndex = 0; keyIndex < nKeyFrames; ++keyIndex) {
 			KeyFrame k;
 			//k.dTime = jChannels["KeyFrames"];
-			k.dTime = jKeyFrames[keyIndex][0].get<double>();
+			k.fTime = jKeyFrames[keyIndex][0].get<double>();
 
 			std::vector<float> keyData = jKeyFrames[keyIndex][1].get<std::vector<float>>();
 			k.animationKeys.v3Position = Vector3(keyData.data());

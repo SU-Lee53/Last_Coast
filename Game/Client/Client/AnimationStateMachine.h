@@ -1,6 +1,6 @@
 ﻿#pragma once
+#include "Animation.h"
 
-class Animation;
 struct AnimationState;
 
 struct TransitionEdges {
@@ -30,15 +30,12 @@ class AnimationStateMachine {
 public:
 	AnimationStateMachine();
 
-	void Initialize(std::shared_ptr<GameObject> pOwner);
+	void Initialize(std::shared_ptr<GameObject> pOwner, float fInitialTime);
 	void Update();
-
-	void ComputeAnimation();
 
 	std::shared_ptr<AnimationState> GetCurrentAnimationState() const { return m_pCurrentState; }
 
-	double GetElapsedTime() const { return m_dTotalTimeElapsed; }
-	const std::vector<Matrix>& GetFinalMatrix() const { return m_mtxfinalBoneTransforms; }
+	const std::vector<AnimationKey>& GetOutputPose() const { return m_mtxOutputPose; }
 
 private:
 	virtual void InitializeStateGraph() = 0;
@@ -49,12 +46,11 @@ protected:
 	std::shared_ptr<AnimationState> m_pCurrentState = nullptr;
 	std::weak_ptr<GameObject> m_wpOwner;
 
-	double m_dTotalTimeElapsed = 0;				// 시작부터 흐른시간
-	double m_dCurrentAnimationTime = 0;			// 현재 애니메이션 시작부터 흐른 시간
-	double m_dLastAnimationChangedTime = 0;		// 마지막 애니메이션 전환 시점
-	double m_dCurrentTransitionTime = 0;		// 마지막 애니메이션 전환 시간
+	float m_fTotalAnimationTime = 0;			// 초기화부터 총 흐른시간
+	float m_fLastAnimationChangedTime = 0;		// 마지막 애니메이션 전환 시점
+	float m_fCurrentTransitionTime = 0;			// 마지막 애니메이션 전환 시간
 
-	std::vector<Matrix> m_mtxfinalBoneTransforms;	// Transposed
+	std::vector<AnimationKey> m_mtxOutputPose;
 
 };
 

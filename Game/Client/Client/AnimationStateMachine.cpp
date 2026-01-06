@@ -3,20 +3,20 @@
 
 AnimationStateMachine::AnimationStateMachine()
 {
-	m_mtxfinalBoneTransforms.reserve(MAX_BONE_TRANSFORMS);
+	m_mtxOutputPose.reserve(MAX_BONE_TRANSFORMS);
 }
 
-void AnimationStateMachine::Initialize(std::shared_ptr<GameObject> pOwner)
+void AnimationStateMachine::Initialize(std::shared_ptr<GameObject> pOwner, float fInitialTime)
 {
 	m_wpOwner = pOwner;
+	m_fTotalAnimationTime = fInitialTime;
 
 	InitializeStateGraph();
 }
 
 void AnimationStateMachine::Update()
 {
-	m_dTotalTimeElapsed += DT * 20;			// Test
-	m_dCurrentAnimationTime += DT * 20;		// Test
+	m_fTotalAnimationTime += DT * 20;			// Test
 
 	// Update StateMachine
 	std::shared_ptr<AnimationState> pNextState = nullptr;
@@ -24,7 +24,7 @@ void AnimationStateMachine::Update()
 		if (!pEdges.pConnectedState.expired()) {
 			if (pEdges.pConnectedState.lock()->fnStateTransitionCallback(m_wpOwner.lock())) {
 				pNextState = pEdges.pConnectedState.lock();
-				m_dCurrentTransitionTime = pEdges.dTransitionTime;
+				m_fCurrentTransitionTime = pEdges.dTransitionTime;
 				break;
 			}
 		}
@@ -34,50 +34,32 @@ void AnimationStateMachine::Update()
 		m_pBeforeState = m_pCurrentState;
 		m_pCurrentState = pNextState;
 
-		m_dLastAnimationChangedTime = m_dTotalTimeElapsed;
-		m_dCurrentAnimationTime = 0.f;
+		m_fLastAnimationChangedTime = m_fTotalAnimationTime;
 	}
-}
 
-void AnimationStateMachine::ComputeAnimation()
-{
 	const std::vector<Bone>& ownerBones = m_wpOwner.lock()->GetBones();
 	int nBones = ownerBones.size();
 	auto pAnimation = m_pCurrentState->pAnimationToPlay;
 
-	double dTime = std::fmod(m_dCurrentAnimationTime, pAnimation->GetDuration());
-
-	std::vector<Matrix> boneTransforms(ownerBones.size());
-
-	if (m_dCurrentAnimationTime < m_dCurrentTransitionTime) {
+	double fTime = std::fmod(m_fTotalAnimationTime, pAnimation->GetDuration());
+	
+	m_mtxOutputPose.resize(nBones);
+	if ((m_fTotalAnimationTime - m_fLastAnimationChangedTime) < m_fCurrentTransitionTime) {
 		auto pLastAnimation = m_pBeforeState->pAnimationToPlay;
-		double dLastTime = std::fmod(m_dLastAnimationChangedTime, pLastAnimation->GetDuration());
-		double dWeight = std::clamp((m_dTotalTimeElapsed - m_dLastAnimationChangedTime) / m_dCurrentTransitionTime, 0.0, 1.0);
-		dWeight = ::SmoothStep(dWeight, 0.0, 1.0);
+		float fLastTime = std::fmod(m_fLastAnimationChangedTime, pLastAnimation->GetDuration());
+		float fWeight = std::clamp((m_fTotalAnimationTime - m_fLastAnimationChangedTime) / m_fCurrentTransitionTime, 0.f, 1.f);
+		fWeight = ::SmoothStep(fWeight, 0.f, 1.f);
 
 		for (const auto& bone : ownerBones) {
-			AnimationKey key0 = pLastAnimation->GetKeyFrameSRT(bone.strBoneName, m_dLastAnimationChangedTime + dTime, bone.mtxTransform);
-			AnimationKey key1 = pAnimation->GetKeyFrameSRT(bone.strBoneName, dTime, bone.mtxTransform);
-			boneTransforms[bone.nIndex] = AnimationKey::Lerp(key0, key1, dWeight).CreateSRT();
+			AnimationKey key0 = pLastAnimation->GetKeyFrameSRT(bone.strBoneName, m_fLastAnimationChangedTime + fTime, bone.mtxTransform);
+			AnimationKey key1 = pAnimation->GetKeyFrameSRT(bone.strBoneName, fTime, bone.mtxTransform);
+			m_mtxOutputPose[bone.nIndex] = AnimationKey::Lerp(key0, key1, fWeight);
 		}
 	}
 	else {
 		for (const auto& bone : ownerBones) {
-			boneTransforms[bone.nIndex] = pAnimation->GetKeyFrameMatrix(bone.strBoneName, dTime, bone.mtxTransform);
+			m_mtxOutputPose[bone.nIndex] = pAnimation->GetKeyFrameSRT(bone.strBoneName, fTime, bone.mtxTransform);
 		}
-	}
-
-	std::vector<Matrix> mtxToRootTransforms(nBones);
-	for (int i = 0; i < nBones; ++i) {
-		int nParentIndex = ownerBones[i].nParentIndex;
-		Matrix mtxToRoot = nParentIndex >= 0 ? boneTransforms[i] * mtxToRootTransforms[nParentIndex] : boneTransforms[i];
-		mtxToRootTransforms[i] = mtxToRoot;
-	}
-
-	m_mtxfinalBoneTransforms.resize(nBones);
-	for (int i = 0; i < nBones; ++i) {
-		m_mtxfinalBoneTransforms[i] = ownerBones[i].mtxOffset * mtxToRootTransforms[i];
-		m_mtxfinalBoneTransforms[i] = m_mtxfinalBoneTransforms[i].Transpose();
 	}
 }
 

@@ -119,6 +119,37 @@ void GameObject::SetFrameName(const std::string& strFrameName)
 	m_strFrameName = strFrameName;
 }
 
+int GameObject::FindBoneIndex(const std::string& strBoneName) const
+{
+	if (m_Bones.size() == 0) {
+		return -1;
+	}
+	
+	std::vector<const Bone*> DFSStack;
+	DFSStack.reserve(m_Bones.size());
+	DFSStack.push_back(&m_Bones[m_nRootBoneIndex]);
+
+	const Bone* pCurBone = nullptr;
+	while (true) {
+		if (DFSStack.size() == 0) {
+			break;
+		}
+
+		pCurBone = DFSStack.back();
+		DFSStack.pop_back();
+
+		if (pCurBone->strBoneName == strBoneName) {
+			return pCurBone->nIndex;
+		}
+
+		for (int i = 0; i < pCurBone->nChildren; ++i) {
+			DFSStack.push_back(&m_Bones[pCurBone->nChilerenIndex[i]]);
+		}
+	}
+
+	return -1;
+}
+
 std::shared_ptr<GameObject> GameObject::FindFrame(const std::string& strFrameName)
 {
 	std::shared_ptr<GameObject> pFrameObject;
