@@ -42,7 +42,9 @@ std::shared_ptr<Texture> TextureManager::LoadTexture(const std::string& strTextu
 	auto it = m_pTexturePool.find(strTextureName);
 	if (it == m_pTexturePool.end()) {
 		std::shared_ptr<Texture> pTexture = CreateTextureFromFile(::StringToWString(strTextureName));
-		m_pTexturePool[strTextureName] = pTexture;
+		if (pTexture) {
+			m_pTexturePool[strTextureName] = pTexture;
+		}
 	}
 
 	return m_pTexturePool[strTextureName];
@@ -53,7 +55,9 @@ std::shared_ptr<Texture> TextureManager::LoadTextureArray(const std::string& str
 	auto it = m_pTexturePool.find(strTextureName);
 	if (it == m_pTexturePool.end()) {
 		std::shared_ptr<Texture> pTexture = CreateTextureArrayFromFile(wstrTexturePath);
-		m_pTexturePool[strTextureName] = pTexture;
+		if (pTexture) {
+			m_pTexturePool[strTextureName] = pTexture;
+		}
 	}
 
 	return m_pTexturePool[strTextureName];
