@@ -71,8 +71,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ExternalIncludePath>$(SolutionDir)Library\Include\;$(ExternalIncludePath)</ExternalIncludePath>
-    <LibraryPath>$(SolutionDir)Library\Lib;$(LibraryPath)</LibraryPath>
+    <ExternalIncludePath>$(SolutionDir)Dependencies\Include\;$(ExternalIncludePath)</ExternalIncludePath>
+    <LibraryPath>$(SolutionDir)Dependencies\Lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)Executables\</OutDir>
     <IntDir>$(SolutionDir)Intermediates\</IntDir>
     <TargetName>$(ProjectName)_dbg</TargetName>
