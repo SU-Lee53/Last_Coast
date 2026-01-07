@@ -1,10 +1,26 @@
 [
 {
-	"ActorName": "StaticMeshActor_2",
+	"ActorName": "StaticMeshActor_1",
 	"MeshName": "vintage_wooden_sniper_optimized_for_fpstps",
 	"Transform":
 	{
-		"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 219.99999999999889, 70.000000000000327, 130.0000000000008, 1 ]
+		"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 430, 140, 140, 1 ]
+	}
+},
+{
+	"ActorName": "StaticMeshActor_4",
+	"MeshName": "vintage_wooden_sniper_optimized_for_fpstps",
+	"Transform":
+	{
+		"WorldMatrix": [ 0.86602540581535803, 3.3053282333384004e-11, 0.49999999648234433, 0, 0.38302221666755853, 0.64278761487984437, -0.66341394596145664, 0, -0.32139380520074462, 0.76604443876127759, 0.55667040501674314, 0, 310, 200, 150, 1 ]
+	}
+},
+{
+	"ActorName": "StaticMeshActor_6",
+	"MeshName": "vintage_wooden_sniper_optimized_for_fpstps",
+	"Transform":
+	{
+		"WorldMatrix": [ 0.64278761486896763, 2.8829383325046365e-11, -0.76604443877040418, 0, 0.71984630381152359, 0.34202015225183346, 0.60402277634417056, 0, 0.26200263559733744, -0.93969261753704991, 0.21984631788232445, 0, 220, 220, 50, 1 ]
 	}
 }
 ]
