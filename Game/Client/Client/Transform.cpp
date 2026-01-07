@@ -31,7 +31,7 @@ void Transform::SetFrameMatrix(const Matrix& mtxFrame)
 
 void Transform::SetWorldMatrix(const Matrix& mtxWorld)
 {
-	m_mtxWorld = mtxWorld;
+	m_mtxTransform = mtxWorld;
 	m_bWorldSetFromOutside = true;
 }
 
@@ -74,6 +74,13 @@ void Transform::SetRotation(float fPitch, float fYaw, float fRoll)
 void Transform::SetRotation(const Vector3& xmf3Rotation)
 {
 	Matrix mtxRotation = Matrix::CreateFromYawPitchRoll(xmf3Rotation);
+	mtxRotation = mtxRotation * Matrix::CreateTranslation(m_mtxTransform.Translation());
+	m_mtxTransform = mtxRotation;
+}
+
+void Transform::SetRotation(const Quaternion& xmf3Rotation)
+{
+	Matrix mtxRotation = Matrix::CreateFromQuaternion(xmf3Rotation);
 	mtxRotation = mtxRotation * Matrix::CreateTranslation(m_mtxTransform.Translation());
 	m_mtxTransform = mtxRotation;
 }
