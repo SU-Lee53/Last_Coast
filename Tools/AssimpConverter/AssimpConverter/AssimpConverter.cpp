@@ -3,6 +3,7 @@
 
 AssimpConverter::AssimpConverter()
 {
+	XMStoreFloat4x4(&m_xmf4x4SourceToEngine, XMMatrixIdentity());
 	m_pImporter = std::make_shared<Assimp::Importer>();
 }
 
@@ -16,20 +17,31 @@ void AssimpConverter::LoadFromFiles(const std::string& strPath, float fScaleFact
 	m_BoneIndexRemappedDFS.clear();
 	m_BoneIndexMap.clear();
 
-
-	m_pScene = m_pImporter->ReadFile(
-		strPath,
-		aiProcess_MakeLeftHanded |
-		aiProcess_FlipUVs |
-		aiProcess_FlipWindingOrder |	// Convert to D3D
+	unsigned flags = 
 		aiProcess_JoinIdenticalVertices |
 		aiProcess_Triangulate |
 		aiProcess_GenUVCoords |
 		aiProcess_GenNormals |
 		aiProcess_CalcTangentSpace |
-		aiProcess_PopulateArmatureData | 
-		aiProcess_LimitBoneWeights	// limits influencing bone count to for per vertex
-	);
+		aiProcess_PopulateArmatureData |
+		aiProcess_LimitBoneWeights | 
+		aiProcess_FlipUVs;
+
+	m_pScene = m_pImporter->ReadFile(strPath, flags);
+
+	//m_pScene = m_pImporter->ReadFile(
+	//	strPath,
+	//	aiProcess_MakeLeftHanded |
+	//	aiProcess_FlipUVs |
+	//	aiProcess_FlipWindingOrder |	// Convert to D3D
+	//	aiProcess_JoinIdenticalVertices |
+	//	aiProcess_Triangulate |
+	//	aiProcess_GenUVCoords |
+	//	aiProcess_GenNormals |
+	//	aiProcess_CalcTangentSpace |
+	//	aiProcess_PopulateArmatureData | 
+	//	aiProcess_LimitBoneWeights	// limits influencing bone count to for per vertex
+	//);
 
 	if (!m_pScene) {
 		__debugbreak();
@@ -37,6 +49,11 @@ void AssimpConverter::LoadFromFiles(const std::string& strPath, float fScaleFact
 
 	m_pRootNode = m_pScene->mRootNode;
 	
+	SceneAxis axisMetaData = ReadSceneAxisMetaData(m_pScene);
+	bool bSourceWasRH = false;
+	m_xmf4x4SourceToEngine = BuildSourceToEngineMatrix(axisMetaData, bSourceWasRH);
+	m_bSourceWasRH = bSourceWasRH;
+
 	GatherBoneIndex();
 	BuildBoneHierarchy(m_pRootNode, -1);
 
@@ -48,6 +65,111 @@ void AssimpConverter::LoadFromFiles(const std::string& strPath, float fScaleFact
 			m_DFSBones[i].nDepth = m_DFSBones[nParentIndex].nDepth + 1;
 		}
 	}
+}
+
+SceneAxis AssimpConverter::ReadSceneAxisMetaData(const aiScene* pScene)
+{
+	SceneAxis sceneAxis{};
+	if (!pScene || !pScene->mMetaData) {
+		return sceneAxis;
+	}
+
+	bool bHasMetaData = true;
+	bHasMetaData &= pScene->mMetaData->Get("UpAxis", sceneAxis.nUpAxis);
+	bHasMetaData &= pScene->mMetaData->Get("UpAxisSign", sceneAxis.nUpSign);
+
+	bHasMetaData &= pScene->mMetaData->Get("FrontAxis", sceneAxis.nFrontAxis);
+	bHasMetaData &= pScene->mMetaData->Get("FrontAxisSign", sceneAxis.nFrontSign);
+
+	bHasMetaData &= pScene->mMetaData->Get("CoordAxis", sceneAxis.nCoordAxis);
+	bHasMetaData &= pScene->mMetaData->Get("CoordAxisSign", sceneAxis.nCoordSign);
+
+	sceneAxis.bHasMetadata = bHasMetaData;
+
+	return sceneAxis;
+}
+
+XMFLOAT3 AssimpConverter::AxisToVector(int nAxisIndex, int nSign)
+{
+	float fSign = (nSign >= 0) ? 1.0f : -1.0f;
+	switch (nAxisIndex) {
+	case 0:
+	{
+		return XMFLOAT3(fSign, 0.f, 0.f);
+	}
+	case 1:
+	{
+		return XMFLOAT3(0.f, fSign, 0.f);
+	}
+	case 2:
+	{
+		return XMFLOAT3(0.f, 0.f, fSign);
+	}
+	default:
+	{
+		return XMFLOAT3(0.f, 0.f, 0.f);
+	}
+	}
+
+	return XMFLOAT3(0.f, 0.f, 0.f);
+}
+
+Basis3 AssimpConverter::MakeSourceBasis(const SceneAxis& metaData)
+{
+	Basis3 basis{};
+	if (!metaData.bHasMetadata) {
+		basis.xmf3Right = XMFLOAT3(1.f, 0.f, 0.f);
+		basis.xmf3Up = XMFLOAT3(0.f, 1.f, 0.f);
+		basis.xmf3Forward = XMFLOAT3(0.f, 0.f, 1.f);
+		return basis;
+	}
+
+	basis.xmf3Right = AxisToVector(metaData.nCoordAxis, metaData.nCoordSign);
+	basis.xmf3Up = AxisToVector(metaData.nUpAxis, metaData.nUpSign);
+	basis.xmf3Forward = AxisToVector(metaData.nFrontAxis, metaData.nFrontSign);
+
+	return basis;
+}
+
+bool AssimpConverter::IsRightHanded(const Basis3& basis)
+{
+	XMVECTOR xmvCross = XMVector3Cross(XMLoadFloat3(&basis.xmf3Right), XMLoadFloat3(&basis.xmf3Up));
+	float fCheck = XMVectorGetX(XMVector3Dot(xmvCross, XMLoadFloat3(&basis.xmf3Forward)));
+
+	return fCheck > 0.f;
+}
+
+void AssimpConverter::ApplyReflectionRH(Basis3& basis, bool& outbSceneWasRH)
+{
+	outbSceneWasRH = IsRightHanded(basis);
+	if (outbSceneWasRH) {
+		XMVECTOR xmvNegate = XMVectorNegate(XMLoadFloat3(&basis.xmf3Forward));
+		XMStoreFloat3(&basis.xmf3Forward, xmvNegate);
+	}
+}
+
+XMFLOAT4X4 AssimpConverter::MakeBasisMatrix(const Basis3& basis)
+{
+	return XMFLOAT4X4(
+		basis.xmf3Right.x,		basis.xmf3Right.y,		basis.xmf3Right.z,		0.f,
+		basis.xmf3Up.x,			basis.xmf3Up.y,			basis.xmf3Up.z,			0.f,
+		basis.xmf3Forward.x,	basis.xmf3Forward.y,	basis.xmf3Forward.z,	0.f,
+		0.f,					0.f,					0.f,					1.f
+	);
+}
+
+XMFLOAT4X4 AssimpConverter::BuildSourceToEngineMatrix(const SceneAxis& metaData, bool& outbWasRH)
+{
+	Basis3 sourceBasis = MakeSourceBasis(metaData);
+	ApplyReflectionRH(sourceBasis, outbWasRH);
+	XMFLOAT4X4 xmf4x4SrcToScene = MakeBasisMatrix(sourceBasis);
+
+	XMMATRIX xmmtxSrcToScene = XMLoadFloat4x4(&xmf4x4SrcToScene);
+	xmmtxSrcToScene = XMMatrixMultiply(xmmtxSrcToScene, XMMatrixRotationY(-XM_PIDIV2));
+
+	XMStoreFloat4x4(&xmf4x4SrcToScene, xmmtxSrcToScene);
+
+	return xmf4x4SrcToScene;
 }
 
 std::string NormalizeBoneName(const std::string& name)
@@ -156,7 +278,7 @@ void AssimpConverter::SerializeModel(const std::string& strPath, const std::stri
 			bone["Children"].push_back(boneData.nChilerenIndex[i]);
 		}
 
-		XMFLOAT4X4 m = boneData.xmf4x4Transform;
+		XMFLOAT4X4 m = ConvertMatrixToEngine(boneData.xmf4x4Transform);
 		bone["localBind"] = {
 			m._11, m._12, m._13, m._14,
 			m._21, m._22, m._23, m._24,
@@ -164,7 +286,7 @@ void AssimpConverter::SerializeModel(const std::string& strPath, const std::stri
 			m._41, m._42, m._43, m._44,
 		};
 
-		m = boneData.xmf4x4Offset;
+		m = ConvertMatrixToEngine(boneData.xmf4x4Offset);
 		bone["inverseBind"] = {
 			m._11, m._12, m._13, m._14,
 			m._21, m._22, m._23, m._24,
@@ -191,7 +313,8 @@ nlohmann::ordered_json AssimpConverter::StoreNodeToJson(const aiNode* pNode) con
 {
 	nlohmann::ordered_json node;
 	std::string strFrameName = pNode->mName.C_Str();
-	XMFLOAT4X4 m = aiMatrixToXMMatrix(pNode->mTransformation);
+	XMFLOAT4X4 xmf4x4Transform = aiMatrixToXMMatrix(pNode->mTransformation);
+	XMFLOAT4X4 m = ConvertMatrixToEngine(xmf4x4Transform);
 
 	node["Name"] = strFrameName;
 	node["Transform"] = {
@@ -225,6 +348,7 @@ nlohmann::ordered_json AssimpConverter::StoreNodeToJson(const aiNode* pNode) con
 
 nlohmann::ordered_json AssimpConverter::StoreMeshToJson(const aiMesh* pMesh) const
 {
+	XMMATRIX xmmtxSceneToEngine = XMLoadFloat4x4(&m_xmf4x4SourceToEngine);
 	nlohmann::ordered_json mesh;
 	
 	mesh["Name"] = std::string{ pMesh->mName.C_Str() };
@@ -241,9 +365,13 @@ nlohmann::ordered_json AssimpConverter::StoreMeshToJson(const aiMesh* pMesh) con
 		XMFLOAT3 xmf3Position = aiVector3DToXMVector(v3Positions);
 		
 		// Scale if needs
-		if (m_fScale != 1.f) {
+		if (pMesh->mNumBones <= 0 && m_fScale != 1.f) {
 			XMStoreFloat3(&xmf3Position, XMVectorScale(XMLoadFloat3(&xmf3Position), m_fScale));
 		}
+
+		XMVECTOR xmvPosition = XMLoadFloat3(&xmf3Position);
+		xmvPosition = XMVector3TransformCoord(xmvPosition, xmmtxSceneToEngine);
+		XMStoreFloat3(&xmf3Position, xmvPosition);
 
 		mesh["Positions"].push_back(xmf3Position.x);
 		mesh["Positions"].push_back(xmf3Position.y);
@@ -269,9 +397,16 @@ nlohmann::ordered_json AssimpConverter::StoreMeshToJson(const aiMesh* pMesh) con
 	mesh["Normals"] = nlohmann::ordered_json::array();
 	for (int i = 0; i < pMesh->mNumVertices; ++i) {
 		aiVector3D v3Normals = pMesh->mNormals[i];
-		mesh["Normals"].push_back(v3Normals.x);
-		mesh["Normals"].push_back(v3Normals.y);
-		mesh["Normals"].push_back(v3Normals.z);
+		XMFLOAT3 xmf3Normals = aiVector3DToXMVector(v3Normals);
+
+		XMVECTOR xmvNormal = XMLoadFloat3(&xmf3Normals);
+		xmvNormal = XMVector3TransformNormal(xmvNormal, xmmtxSceneToEngine);
+		xmvNormal = XMVector3Normalize(xmvNormal);
+		XMStoreFloat3(&xmf3Normals, xmvNormal);
+
+		mesh["Normals"].push_back(xmf3Normals.x);
+		mesh["Normals"].push_back(xmf3Normals.y);
+		mesh["Normals"].push_back(xmf3Normals.z);
 	}
 
 	// Tangents
@@ -279,9 +414,16 @@ nlohmann::ordered_json AssimpConverter::StoreMeshToJson(const aiMesh* pMesh) con
 	if (pMesh->mTangents) {
 		for (int i = 0; i < pMesh->mNumVertices; ++i) {
 			aiVector3D v3Tangents = pMesh->mTangents[i];
-			mesh["Tangents"].push_back(v3Tangents.x);
-			mesh["Tangents"].push_back(v3Tangents.y);
-			mesh["Tangents"].push_back(v3Tangents.z);
+			XMFLOAT3 xmf3Tangents = aiVector3DToXMVector(v3Tangents);
+
+			XMVECTOR xmvTangent = XMLoadFloat3(&xmf3Tangents);
+			xmvTangent = XMVector3TransformNormal(xmvTangent, xmmtxSceneToEngine);
+			xmvTangent = XMVector3Normalize(xmvTangent);
+			XMStoreFloat3(&xmf3Tangents, xmvTangent);
+
+			mesh["Tangents"].push_back(xmf3Tangents.x);
+			mesh["Tangents"].push_back(xmf3Tangents.y);
+			mesh["Tangents"].push_back(xmf3Tangents.z);
 		}
 	}
 	else {
@@ -295,9 +437,16 @@ nlohmann::ordered_json AssimpConverter::StoreMeshToJson(const aiMesh* pMesh) con
 	if (pMesh->mBitangents) {
 		for (int i = 0; i < pMesh->mNumVertices; ++i) {
 			aiVector3D v3BiTangents = pMesh->mBitangents[i];
-			mesh["BiTangents"].push_back(v3BiTangents.x);
-			mesh["BiTangents"].push_back(v3BiTangents.y);
-			mesh["BiTangents"].push_back(v3BiTangents.z);
+			XMFLOAT3 xmf3BiTangents = aiVector3DToXMVector(v3BiTangents);
+
+			XMVECTOR xmvBiTangents = XMLoadFloat3(&xmf3BiTangents);
+			xmvBiTangents = XMVector3TransformNormal(xmvBiTangents, xmmtxSceneToEngine);
+			xmvBiTangents = XMVector3Normalize(xmvBiTangents);
+			XMStoreFloat3(&xmf3BiTangents, xmvBiTangents);
+
+			mesh["BiTangents"].push_back(xmf3BiTangents.x);
+			mesh["BiTangents"].push_back(xmf3BiTangents.y);
+			mesh["BiTangents"].push_back(xmf3BiTangents.z);
 		}
 	}
 	else {
@@ -379,13 +528,22 @@ nlohmann::ordered_json AssimpConverter::StoreMeshToJson(const aiMesh* pMesh) con
 	// Indices
 	mesh["nIndices"] = pMesh->mNumFaces * 3;
 	mesh["Indices"] = nlohmann::ordered_json::array();
+	std::vector<UINT> faces(3);
 	for (int i = 0; i < pMesh->mNumFaces; ++i) {
 		// Faces MUST have triangle primitives bc aiProcess_Triangulate is activated.
 		aiFace face = pMesh->mFaces[i];
 		for (int j = 0; j < face.mNumIndices; ++j) {
-			UINT idx = face.mIndices[j];
-			mesh["Indices"].push_back(idx);
+			faces[j] = face.mIndices[j];
 		}
+
+		if (m_bSourceWasRH) {
+			std::swap(faces[1], faces[2]);
+		}
+
+		for (int j = 0; j < face.mNumIndices; ++j) {
+			mesh["Indices"].push_back(faces[j]);
+		}
+
 	}
 
 	// Bounds (AABB)
@@ -743,34 +901,6 @@ void AssimpConverter::ExportExternalTexture(const aiString& aistrTexturePath, ai
 	return;
 }
 
-void AssimpConverter::FlipNormalMapY(DirectX::ScratchImage& scratchImage) const
-{
-	const TexMetadata& metaData = scratchImage.GetMetadata();
-
-	if (metaData.dimension != TEX_DIMENSION_TEXTURE2D) {
-		return;
-	}
-
-	if (metaData.format != DXGI_FORMAT_R8G8B8A8_UNORM &&
-		metaData.format != DXGI_FORMAT_R8G8B8A8_UNORM_SRGB) {
-		return;
-	}
-
-	for (size_t i = 0; i < scratchImage.GetImageCount(); ++i) {
-		const Image* img = scratchImage.GetImage(i, 0, 0);
-		uint8_t* pPixels = img->pixels;
-
-		for (size_t y = 0; y < img->height; ++y) {
-			uint8_t* pRow = pPixels + y * img->rowPitch;
-			for (size_t x = 0; x < img->width; ++x) {
-				uint8_t* pRGB = pRow + x * 4; // [0] : R, [1] : G, [2] : B
-				pRGB[1] = 255 - pRGB[1];
-			}
-		}
-
-	}
-}
-
 void AssimpConverter::SerializeAnimation(const std::string& strPath, const std::string& strName)
 {
 	if (m_pScene->mNumAnimations == 0) {
@@ -813,20 +943,25 @@ nlohmann::ordered_json AssimpConverter::StoreAnimationToJson(const aiAnimation* 
 	//	pAnimation->mMeshChannels; -> Tweening
 	//	pAnimation->mMorphMeshChannels; -> Morphing
 	nlohmann::ordered_json anim;
+	double dTicksPerSecond = pAnimation->mTicksPerSecond;
+	if (pAnimation->mTicksPerSecond == 0) {
+		dTicksPerSecond = 30.0;
+	}
+
 	anim["Name"] = NormalizeBoneName(pAnimation->mName.C_Str());
-	anim["Duration"] = pAnimation->mDuration;
-	anim["TicksPerSecond"] = pAnimation->mTicksPerSecond;
+	anim["Duration"] = pAnimation->mDuration / dTicksPerSecond;
+	anim["TicksPerSecond"] = dTicksPerSecond;
 
 	anim["nChannels"] = pAnimation->mNumChannels;
 	anim["Channels"] = nlohmann::ordered_json::array();
 	for (int i = 0; i < pAnimation->mNumChannels; ++i) {
-		anim["Channels"].push_back(StoreNodeAnimToJson(pAnimation->mChannels[i]));
+		anim["Channels"].push_back(StoreNodeAnimToJson(pAnimation->mChannels[i], dTicksPerSecond));
 	}
 
 	return anim;
 }
 
-nlohmann::ordered_json AssimpConverter::StoreNodeAnimToJson(const aiNodeAnim* pNodeAnim) const
+nlohmann::ordered_json AssimpConverter::StoreNodeAnimToJson(const aiNodeAnim* pNodeAnim, double dTicksPerSecond) const
 {
 	nlohmann::ordered_json nodeAnim;
 	nodeAnim["Name"] = NormalizeBoneName(pNodeAnim->mNodeName.C_Str());	// name of bone
@@ -849,6 +984,8 @@ nlohmann::ordered_json AssimpConverter::StoreNodeAnimToJson(const aiNodeAnim* pN
 		keys.insert(keyFrame.mTime);
 	}
 
+	XMFLOAT4 xmf4PrevQuaternion = { 0,0,0,1 };
+	bool bHasPrevQuaternion = false;
 	for (double timeKey : keys)
 	{
 		KeyFrame keyFrame;
@@ -856,7 +993,48 @@ nlohmann::ordered_json AssimpConverter::StoreNodeAnimToJson(const aiNodeAnim* pN
 		keyFrame.xmf4RotationQuat = SampleRotation(pNodeAnim, timeKey);
 		keyFrame.xmf3Scale = SampleScale(pNodeAnim, timeKey);
 
-		keyFrameDatas[timeKey] = keyFrame;
+		XMVECTOR xmvRotate = XMLoadFloat4(&keyFrame.xmf4RotationQuat);
+		xmvRotate = XMQuaternionNormalize(xmvRotate);
+
+		XMMATRIX xmmtxSrc = XMMatrixScaling(keyFrame.xmf3Scale.x, keyFrame.xmf3Scale.y, keyFrame.xmf3Scale.z) *
+			XMMatrixRotationQuaternion(xmvRotate) * 
+			XMMatrixTranslation(keyFrame.xmf3Position.x, keyFrame.xmf3Position.y, keyFrame.xmf3Position.z);
+		
+		XMFLOAT4X4 xmf4x4Src;
+		XMStoreFloat4x4(&xmf4x4Src, xmmtxSrc);
+		XMFLOAT4X4 xmf4x4Engine = ConvertMatrixToEngine(xmf4x4Src);
+		XMMATRIX xmmtxEngine = XMLoadFloat4x4(&xmf4x4Engine);
+
+		// Decompose SRT
+		XMVECTOR xmvEngineScale;
+		XMVECTOR xmvEngineRotate;
+		XMVECTOR xmvEngineTranslate;
+		if (!XMMatrixDecompose(&xmvEngineScale, &xmvEngineRotate, &xmvEngineTranslate, xmmtxEngine)) {
+			// Fallback
+			xmvEngineScale = XMVectorSet(1.f, 1.f, 1.f, 0.f);
+			xmvEngineRotate = XMQuaternionIdentity();
+			xmvEngineTranslate = XMVectorZero();
+		}
+
+		// Scale guard (incomplete)
+		FixNegativeScaleAfterDecompose(xmvEngineScale, xmvEngineRotate);
+
+		xmvEngineRotate = XMQuaternionNormalize(xmvEngineRotate);
+		if (bHasPrevQuaternion) {
+			float fDot = XMVectorGetX(XMVector4Dot(XMLoadFloat4(&xmf4PrevQuaternion), xmvEngineRotate));
+			if (fDot < 0.f) {
+				xmvEngineRotate = XMVectorNegate(xmvEngineRotate);
+			}
+		}
+
+		XMStoreFloat3(&keyFrame.xmf3Scale, xmvEngineScale);
+		XMStoreFloat4(&keyFrame.xmf4RotationQuat, xmvEngineRotate);
+		XMStoreFloat3(&keyFrame.xmf3Position, xmvEngineTranslate);
+
+		xmf4PrevQuaternion = keyFrame.xmf4RotationQuat;
+		bHasPrevQuaternion = true;
+
+		keyFrameDatas[timeKey / dTicksPerSecond] = keyFrame;
 	}
 
 	nodeAnim["nKeyFrames"] = keyFrameDatas.size();
@@ -883,27 +1061,6 @@ nlohmann::ordered_json AssimpConverter::StoreNodeAnimToJson(const aiNodeAnim* pN
 			}
 		);
 	}
-
-	//nodeAnim["nPositionKeys"] = pNodeAnim->mNumPositionKeys;
-	//nodeAnim["PositionKeys"] = nlohmann::ordered_json::array();
-	//for (int i = 0; i < pNodeAnim->mNumPositionKeys; ++i) {
-	//	aiVectorKey keyFrame = pNodeAnim->mPositionKeys[i];
-	//	nodeAnim["PositionKeys"].push_back({ keyFrame.mTime, { keyFrame.mValue.x, keyFrame.mValue.y, keyFrame.mValue.z } });
-	//}
-	//
-	//nodeAnim["nRotationKeys"] = pNodeAnim->mNumRotationKeys;
-	//nodeAnim["RotationKeys"] = nlohmann::ordered_json::array();
-	//for (int i = 0; i < pNodeAnim->mNumRotationKeys; ++i) {
-	//	aiQuatKey keyFrame = pNodeAnim->mRotationKeys[i];
-	//	nodeAnim["RotationKeys"].push_back({ keyFrame.mTime, { keyFrame.mValue.x, keyFrame.mValue.y, keyFrame.mValue.z, keyFrame.mValue.w } });
-	//}
-	//
-	//nodeAnim["nScalingKeys"] = pNodeAnim->mNumScalingKeys;
-	//nodeAnim["ScalingKeys"] = nlohmann::ordered_json::array();
-	//for (int i = 0; i < pNodeAnim->mNumRotationKeys; ++i) {
-	//	aiVectorKey keyFrame = pNodeAnim->mScalingKeys[i];
-	//	nodeAnim["ScalingKeys"].push_back({ keyFrame.mTime, { keyFrame.mValue.x, keyFrame.mValue.y, keyFrame.mValue.z } });
-	//}
 
 	return nodeAnim;
 }
@@ -1051,4 +1208,85 @@ bool AssimpConverter::IsDDS(const aiTexture* tex)
 
 	const char* data = reinterpret_cast<const char*>(tex->pcData);
 	return memcmp(data, "DDS ", 4) == 0;
+}
+
+XMFLOAT4X4 AssimpConverter::ConvertMatrixToEngine(const XMFLOAT4X4& xmf4x4Matrix) const
+{
+	XMFLOAT4X4 xmf4x4Return;
+
+	XMMATRIX xmmtxSceneToEngine = XMLoadFloat4x4(&m_xmf4x4SourceToEngine);
+
+	XMMATRIX xmmtxInverseSceneToEngine = XMMatrixInverse(nullptr, xmmtxSceneToEngine);
+	XMMATRIX xmmtxTransform = XMLoadFloat4x4(&xmf4x4Matrix);
+	XMMATRIX xmmtxFinalTransform = xmmtxInverseSceneToEngine * xmmtxTransform * xmmtxSceneToEngine;
+
+	XMStoreFloat4x4(&xmf4x4Return, xmmtxFinalTransform);
+
+	return xmf4x4Return;
+}
+
+void AssimpConverter::FixNegativeScaleAfterDecompose(XMVECTOR& xmvScale, XMVECTOR& xmvRotate) const
+{
+	XMMATRIX xmmtxRotate = XMMatrixRotationQuaternion(xmvRotate);
+	float fDeterminant = XMVectorGetX(XMVector3Dot(XMVector3Cross(xmmtxRotate.r[0], xmmtxRotate.r[1]), xmmtxRotate.r[2]));
+	if (fDeterminant >= 0.f) {
+		return;
+	}
+
+	// Select axis to negate
+	XMFLOAT3 xmf3Scale;
+	XMStoreFloat3(&xmf3Scale, xmvScale);
+	float ax = fabsf(xmf3Scale.x);
+	float ay = fabsf(xmf3Scale.y);
+	float az = fabsf(xmf3Scale.z);
+
+	int nAxis = 0;
+	float fBest = ax;
+	if (ay < fBest) {
+		fBest = ay;
+		nAxis = 1;
+	}
+	if (az < fBest) {
+		nAxis = 2;
+	}
+
+	// Nagate Axis of xmvScale
+	if (nAxis == 0) xmf3Scale.x = -xmf3Scale.x;
+	if (nAxis == 1) xmf3Scale.y = -xmf3Scale.y;
+	if (nAxis == 2) xmf3Scale.z = -xmf3Scale.z;
+	xmvScale = XMLoadFloat3(&xmf3Scale);
+
+	if (nAxis == 0) xmmtxRotate.r[0] = XMVectorNegate(xmmtxRotate.r[0]);
+	if (nAxis == 1) xmmtxRotate.r[1] = XMVectorNegate(xmmtxRotate.r[1]);
+	if (nAxis == 2) xmmtxRotate.r[2] = XMVectorNegate(xmmtxRotate.r[2]);
+
+	xmvRotate = XMQuaternionNormalize(XMQuaternionRotationMatrix(xmmtxRotate));
+}
+
+void AssimpConverter::FlipNormalMapY(DirectX::ScratchImage& scratchImage) const
+{
+	const TexMetadata& metaData = scratchImage.GetMetadata();
+
+	if (metaData.dimension != TEX_DIMENSION_TEXTURE2D) {
+		return;
+	}
+
+	if (metaData.format != DXGI_FORMAT_R8G8B8A8_UNORM &&
+		metaData.format != DXGI_FORMAT_R8G8B8A8_UNORM_SRGB) {
+		return;
+	}
+
+	for (size_t i = 0; i < scratchImage.GetImageCount(); ++i) {
+		const Image* img = scratchImage.GetImage(i, 0, 0);
+		uint8_t* pPixels = img->pixels;
+
+		for (size_t y = 0; y < img->height; ++y) {
+			uint8_t* pRow = pPixels + y * img->rowPitch;
+			for (size_t x = 0; x < img->width; ++x) {
+				uint8_t* pRGB = pRow + x * 4; // [0] : R, [1] : G, [2] : B
+				pRGB[1] = 255 - pRGB[1];
+			}
+		}
+
+	}
 }

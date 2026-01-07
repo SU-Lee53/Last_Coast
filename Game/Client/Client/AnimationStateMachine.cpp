@@ -16,7 +16,7 @@ void AnimationStateMachine::Initialize(std::shared_ptr<GameObject> pOwner, float
 
 void AnimationStateMachine::Update()
 {
-	m_fTotalAnimationTime += DT * 20;			// Test
+	m_fTotalAnimationTime += DT;			// Test
 
 	// Update StateMachine
 	std::shared_ptr<AnimationState> pNextState = nullptr;
@@ -88,13 +88,13 @@ void PlayerAnimationStateMachine::InitializeStateGraph()
 	pRun->eAnimationPlayType = ANIMATION_PLAY_LOOP;
 	pRun->fnStateTransitionCallback = RunCallback;
 
-	pIdle->Connect(pWalk, 1.0);
+	pIdle->Connect(pWalk, 0.5);
 
-	pWalk->Connect(pIdle, 1.0);
-	pWalk->Connect(pRun, 1.0);
+	pWalk->Connect(pIdle, 0.5);
+	pWalk->Connect(pRun, 0.5);
 
-	pRun->Connect(pWalk, 1.0);
-	pRun->Connect(pIdle, 1.0);
+	pRun->Connect(pWalk, 0.5);
+	pRun->Connect(pIdle, 0.5);
 
 	m_pCurrentState = pIdle;
 

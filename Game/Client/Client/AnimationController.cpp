@@ -43,7 +43,7 @@ void LayeredBlendMachine::Blend(const std::vector<AnimationKey>& mtxBasePose, co
 
 void AnimationController::Update()
 {
-	m_fTotalTimeElapsed += DT * 20;
+	m_fTotalTimeElapsed += DT;
 	if (m_pStateMachine) {
 		m_pStateMachine->Update();
 	}
