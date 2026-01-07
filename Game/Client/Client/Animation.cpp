@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "Animation.h"
 
-Matrix Animation::GetKeyFrameMatrix(const std::string& strChannelName, double dTime, const Matrix& mtxTransformation)
+Matrix Animation::GetKeyFrameMatrix(const std::string& strChannelName, float fTime, const Matrix& mtxTransformation)
 {
 	auto it = m_keyFrameMap.find(strChannelName);
 	if (it == m_keyFrameMap.end()) {
@@ -18,9 +18,9 @@ Matrix Animation::GetKeyFrameMatrix(const std::string& strChannelName, double dT
 	}
 
 	// dTime 이 마지막 키를 지나 처음으로 되돌아옴
-	if (dTime >= keyFrames.back().dTime) {
-		double dInterval = keyFrames.back().dTime - keyFrames.front().dTime;
-		double t = (dTime - keyFrames.back().dTime) / dInterval;
+	if (fTime >= keyFrames.back().fTime) {
+		float dInterval = keyFrames.back().fTime - keyFrames.front().fTime;
+		float t = (fTime - keyFrames.back().fTime) / dInterval;
 
 		Vector3 v3Scale0 = keyFrames.back().animationKeys.v3Scale;
 		Quaternion v4Rotation0 = keyFrames.back().animationKeys.v4RotationQuat;
@@ -39,8 +39,8 @@ Matrix Animation::GetKeyFrameMatrix(const std::string& strChannelName, double dT
 		return AnimationKey::CreateSRT(v3Translation, v4Rotation, v3Scale);
 	}
 
-	auto curIt = std::lower_bound(keyFrames.begin(), keyFrames.end(), dTime, [](const KeyFrame& keyFrame, double dTime) {
-		return keyFrame.dTime < dTime;
+	auto curIt = std::lower_bound(keyFrames.begin(), keyFrames.end(), fTime, [](const KeyFrame& keyFrame, float fTime) {
+		return keyFrame.fTime < fTime;
 	});
 
 	if (curIt == keyFrames.begin()) {
@@ -50,8 +50,8 @@ Matrix Animation::GetKeyFrameMatrix(const std::string& strChannelName, double dT
 	auto curKeyFrame = *std::prev(curIt);
 	auto nextKeyFrame = *curIt;
 
-	double dInterval = nextKeyFrame.dTime - curKeyFrame.dTime;
-	double t = (dTime - curKeyFrame.dTime) / dInterval;
+	float dInterval = nextKeyFrame.fTime - curKeyFrame.fTime;
+	float t = (fTime - curKeyFrame.fTime) / dInterval;
 
 	Vector3 v3Scale0 = curKeyFrame.animationKeys.v3Scale;
 	Quaternion v4Rotation0 = curKeyFrame.animationKeys.v4RotationQuat;
@@ -71,7 +71,7 @@ Matrix Animation::GetKeyFrameMatrix(const std::string& strChannelName, double dT
 
 }
 
-AnimationKey Animation::GetKeyFrameSRT(const std::string& strChannelName, double dTime, const Matrix& mtxTransformation)
+AnimationKey Animation::GetKeyFrameSRT(const std::string& strChannelName, float fTime, const Matrix& mtxTransformation)
 {
 	auto it = m_keyFrameMap.find(strChannelName);
 	if (it == m_keyFrameMap.end()) {
@@ -108,9 +108,9 @@ AnimationKey Animation::GetKeyFrameSRT(const std::string& strChannelName, double
 	}
 
 	// dTime 이 마지막 키를 지나 처음으로 되돌아옴
-	if (dTime >= keyFrames.back().dTime) {
-		double dInterval = keyFrames.back().dTime - keyFrames.front().dTime;
-		double t = (dTime - keyFrames.back().dTime) / dInterval;
+	if (fTime >= keyFrames.back().fTime) {
+		float dInterval = keyFrames.back().fTime - keyFrames.front().fTime;
+		float t = (fTime - keyFrames.back().fTime) / dInterval;
 
 		Vector3 v3Scale0 = keyFrames.back().animationKeys.v3Scale;
 		Quaternion v4Rotation0 = keyFrames.back().animationKeys.v4RotationQuat;
@@ -129,8 +129,8 @@ AnimationKey Animation::GetKeyFrameSRT(const std::string& strChannelName, double
 		return { v3Translation, v4Rotation, v3Scale };
 	}
 
-	auto curIt = std::lower_bound(keyFrames.begin(), keyFrames.end(), dTime, [](const KeyFrame& keyFrame, double dTime) {
-		return keyFrame.dTime < dTime;
+	auto curIt = std::lower_bound(keyFrames.begin(), keyFrames.end(), fTime, [](const KeyFrame& keyFrame, float fTime) {
+		return keyFrame.fTime < fTime;
 		});
 
 	if (curIt == keyFrames.begin()) {
@@ -140,8 +140,8 @@ AnimationKey Animation::GetKeyFrameSRT(const std::string& strChannelName, double
 	auto curKeyFrame = *std::prev(curIt);
 	auto nextKeyFrame = *curIt;
 
-	double dInterval = nextKeyFrame.dTime - curKeyFrame.dTime;
-	double t = (dTime - curKeyFrame.dTime) / dInterval;
+	float dInterval = nextKeyFrame.fTime - curKeyFrame.fTime;
+	float t = (fTime - curKeyFrame.fTime) / dInterval;
 
 	Vector3 v3Scale0 = curKeyFrame.animationKeys.v3Scale;
 	Quaternion v4Rotation0 = curKeyFrame.animationKeys.v4RotationQuat;

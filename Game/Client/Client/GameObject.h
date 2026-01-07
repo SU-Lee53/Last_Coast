@@ -64,6 +64,7 @@ public:
 	const Matrix& GetWorldMatrix() const { return m_Transform.GetWorldMatrix(); }
 	const std::vector<Bone>& GetBones() const { return m_Bones; }
 	size_t GetRootBoneIndex() const { return m_nRootBoneIndex; }
+	int FindBoneIndex(const std::string& strBoneName) const;
 	std::shared_ptr<AnimationController> GetAnimationController() const { return m_pAnimationController; }
 
 

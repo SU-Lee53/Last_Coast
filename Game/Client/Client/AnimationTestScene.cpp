@@ -11,8 +11,10 @@ void AnimationTestScene::BuildObjects()
 	pGameObject1->SetAnimationController(pAnimationCtrl);
 	m_pGameObjects.push_back(pGameObject1);
 
-	LoadFromFiles("TEST");
+	std::shared_ptr<GameObject> pGameObject2 = MODEL->Get("vintage_wooden_sniper_optimized_for_fpstps");
+	m_pGameObjects.push_back(pGameObject2);
 
+	//LoadFromFiles("TEST");
 
 	Scene::InitializeObjects();
 }
@@ -35,9 +37,9 @@ void AnimationTestScene::Update()
 	{
 		if (m_pGameObjects[0]->GetAnimationController()) {
 			const auto& SRTs = m_pGameObjects[0]->GetAnimationController()->GetFinalOutput();
-			double dTime = m_pGameObjects[0]->GetAnimationController()->GetElapsedTime();
+			double fTime = m_pGameObjects[0]->GetAnimationController()->GetElapsedTime();
 			double dDuration = m_pGameObjects[0]->GetAnimationController()->GetCurrentAnimationDuration();
-			ImGui::Text("ElapsedTime : %f", dTime);
+			ImGui::Text("ElapsedTime : %f", fTime);
 			ImGui::Text("Duration : %f", dDuration);
 			for (int i = 0; i < SRTs.size(); ++i) {
 				if (ImGui::TreeNode(std::format("Animation SRT#{}", i).c_str())) {

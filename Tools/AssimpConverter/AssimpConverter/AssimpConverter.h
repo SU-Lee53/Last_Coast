@@ -71,6 +71,22 @@ struct KeyFrame {
 	XMFLOAT3 xmf3Scale{ 1.f, 1.f, 1.f };
 };
 
+struct SceneAxis {
+	int nUpAxis = -1;
+	int nUpSign = 1;
+	int nFrontAxis = -1;
+	int nFrontSign = 1;
+	int nCoordAxis = -1;	// Right
+	int nCoordSign = 1;		// Right
+	bool bHasMetadata = false;
+};
+
+struct Basis3 {
+	XMFLOAT3 xmf3Right;
+	XMFLOAT3 xmf3Up;
+	XMFLOAT3 xmf3Forward;
+};
+
 class AssimpConverter {
 public:
 	AssimpConverter();
@@ -82,6 +98,15 @@ public:
 	void SerializeAnimation(const std::string& strPath, const std::string& strName);
 
 private:
+	SceneAxis ReadSceneAxisMetaData(const aiScene* pScene);
+	XMFLOAT3 AxisToVector(int nAxisIndex, int nSign);
+	Basis3 MakeSourceBasis(const SceneAxis& metaData);
+	bool IsRightHanded(const Basis3& basis);
+	void ApplyReflectionRH(Basis3& basis, bool& outbSceneWasRH);
+	XMFLOAT4X4 MakeBasisMatrix(const Basis3& basis);
+	XMFLOAT4X4 BuildSourceToEngineMatrix(const SceneAxis& metaData, bool& outbWasRH);
+
+
 	void GatherBoneIndex(); 
 	void BuildBoneHierarchy(aiNode* node, int parentBoneIndex);
 	
@@ -89,7 +114,7 @@ private:
 	nlohmann::ordered_json StoreMeshToJson(const aiMesh* pMesh) const;
 	nlohmann::ordered_json StoreMaterialToJson(const aiMaterial* pMaterial) const;
 	nlohmann::ordered_json StoreAnimationToJson(const aiAnimation* pAnimation) const;
-	nlohmann::ordered_json StoreNodeAnimToJson(const aiNodeAnim* pNodeAnim) const;
+	nlohmann::ordered_json StoreNodeAnimToJson(const aiNodeAnim* pNodeAnim, double dTicksPerSecond) const;
 
 	void ExportEmbeddedTexture(const aiTexture* pTexture, aiTextureType eTextureType) const;
 	void ExportExternalTexture(const aiString& aistrTexturePath, aiTextureType eTextureType) const;
@@ -99,7 +124,8 @@ private:
 	XMFLOAT4 SampleRotation(const aiNodeAnim* pNodeAnim, double dTime) const;
 	XMFLOAT3 SampleScale(const aiNodeAnim* pNodeAnim, double dTime) const;
 
-
+	XMFLOAT4X4 ConvertMatrixToEngine(const XMFLOAT4X4& xmf4x4Matrix) const;
+	void FixNegativeScaleAfterDecompose(XMVECTOR& xmvScale, XMVECTOR& xmvRotate) const;
 
 private:
 	std::shared_ptr<Assimp::Importer> m_pImporter = nullptr;
@@ -116,6 +142,9 @@ private:
 
 	std::string m_strFilePath;
 	std::string m_strSavePath;
+
+	XMFLOAT4X4 m_xmf4x4SourceToEngine;
+	bool m_bSourceWasRH = false;
 
 private:
 	static bool IsDDS(const aiTexture* tex);
