@@ -13,12 +13,14 @@ TCHAR g_lpstrFileTitle[256] = L"";
 
 bool g_bModelConvertOn = false;
 bool g_bAnimationConvertOn = false;
+bool g_bForceBakeForwardZ = true;
 
 AssimpConverter g_Converter;
-
+std::vector<std::wstring> g_wstrFileSelected;
 
 INT_PTR CALLBACK	DlgProc(HWND, UINT, WPARAM, LPARAM);
 void DisplayText(const char* fmt, ...);
+int ParseFilePaths(wchar_t* pwstrBuffer, std::vector<std::wstring>& outwstrFilePathes);
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -35,6 +37,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	OPENFILENAME OFN;
+	OFN_EXPLORER |
+		OFN_ALLOWMULTISELECT |
+		OFN_FILEMUSTEXIST;
+
+
 	BROWSEINFOW bi = {};
 	bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
 
@@ -46,11 +53,15 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		g_hScaleEdit = GetDlgItem(hDlg, IDC_EDIT2);
 		g_hModelRadio = GetDlgItem(hDlg, IDC_RADIO1);
 		g_hAnimRadio = GetDlgItem(hDlg, IDC_RADIO2);
+		g_hBakeOptionCheck = GetDlgItem(hDlg, IDC_CHECK1);
+		CheckDlgButton(hDlg, IDC_RADIO1, BST_CHECKED);
 		CheckDlgButton(hDlg, IDC_RADIO1, BST_CHECKED);
 		SetDlgItemTextW(hDlg, IDC_EDIT2, L"1.0");
 
 		g_bModelConvertOn = (IsDlgButtonChecked(hDlg, IDC_RADIO1) == BST_CHECKED);
 		g_bAnimationConvertOn = (IsDlgButtonChecked(hDlg, IDC_RADIO2) == BST_CHECKED);
+		g_bForceBakeForwardZ = IsDlgButtonChecked(hDlg, IDC_CHECK1) == BST_CHECKED;
+		g_Converter.SeBakeForwardOption(g_bForceBakeForwardZ);
 
 		return TRUE;
 	case WM_COMMAND:
@@ -66,31 +77,39 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			OFN.lpstrFileTitle = g_lpstrFileTitle;
 			OFN.nMaxFileTitle = 256;
 			OFN.lpstrInitialDir = L".";
+			OFN.Flags = OFN_EXPLORER |
+				OFN_ALLOWMULTISELECT |
+				OFN_FILEMUSTEXIST;
 
+			int nPathes{};
 			if (GetOpenFileName(&OFN) != 0) {
-				wsprintf(g_str, L"Open \"%s\" ?", OFN.lpstrFile);
-				MessageBox(hDlg, g_str, L"Open", MB_OK);
+				nPathes = ParseFilePaths(g_lpstrFile, g_wstrFileSelected);
 			}
 			else {
 				return TRUE; // Cancel
 			}
 
-			wchar_t buffer[64] = {};
-			GetWindowTextW(g_hScaleEdit, buffer, _countof(buffer));
-			float fValue = static_cast<float>(_wtof(buffer));
-			fValue = fValue <= 0.f ? 1.f : fValue;
+			if (nPathes == 1) {
+				wchar_t buffer[64] = {};
+				GetWindowTextW(g_hScaleEdit, buffer, _countof(buffer));
+				float fValue = static_cast<float>(_wtof(buffer));
+				fValue = fValue <= 0.f ? 1.f : fValue;
 
-			char cstrFilepath[1024];
-			WideCharToMultiByte(CP_ACP, 0, g_lpstrFile, -1, cstrFilepath, sizeof(cstrFilepath), NULL, NULL);
+				char cstrFilepath[1024];
+				WideCharToMultiByte(CP_ACP, 0, g_lpstrFile, -1, cstrFilepath, sizeof(cstrFilepath), NULL, NULL);
 
-			g_Converter.LoadFromFiles(cstrFilepath, fValue);
-			DisplayText("File opened (%s)\r\n", cstrFilepath);
+				g_Converter.LoadFromFiles(cstrFilepath, fValue);
+				DisplayText("File opened (%s)\r\n", cstrFilepath);
+			}
+			else {
+				DisplayText("Seleted %d files. Nothing is opened yet\n", nPathes);
+			}
 
 			return TRUE;
 		}
 		case IDC_BUTTON4:
 		{
-			if (!g_Converter.IsOpened()) {
+			if (!g_Converter.IsOpened() && g_wstrFileSelected.size() == 0) {
 				DisplayText("Nothing is opened yet!!\n");
 				return TRUE;
 			}
@@ -149,16 +168,41 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 			pDialog->Release();
 
-			char cstrFilename[1024];
-			WideCharToMultiByte(CP_ACP, 0, g_lpstrFileTitle, -1, cstrFilename, sizeof(cstrFilename), NULL, NULL);
-			std::filesystem::path p{ cstrFilename };
-			std::string strExportName = p.stem().string();
+			if (g_wstrFileSelected.size() == 1) {
+				char cstrFilename[1024];
+				WideCharToMultiByte(CP_ACP, 0, g_lpstrFileTitle, -1, cstrFilename, sizeof(cstrFilename), NULL, NULL);
+				std::filesystem::path p{ cstrFilename };
+				std::string strExportName = p.stem().string();
 
-			if (g_bModelConvertOn) {
-				g_Converter.SerializeModel(cstrFilepath, strExportName);
+				if (g_bModelConvertOn) {
+					g_Converter.SerializeModel(cstrFilepath, strExportName);
+				}
+				else {
+					g_Converter.SerializeAnimation(cstrFilepath, strExportName);
+				}
 			}
 			else {
-				g_Converter.SerializeAnimation(cstrFilepath, strExportName);
+				wchar_t buffer[64] = {};
+				GetWindowTextW(g_hScaleEdit, buffer, _countof(buffer));
+				float fValue = static_cast<float>(_wtof(buffer));
+				fValue = fValue <= 0.f ? 1.f : fValue;
+
+				for (const auto& wstrPath : g_wstrFileSelected) {
+					char cstrPath[1024];
+					WideCharToMultiByte(CP_ACP, 0, wstrPath.c_str(), -1, cstrPath, sizeof(cstrPath), NULL, NULL);
+					std::string strFileName = std::filesystem::path{ cstrPath }.filename().string();
+					std::string strExportName = std::filesystem::path{ cstrPath }.stem().string();
+
+					g_Converter.LoadFromFiles(cstrPath, fValue);
+					DisplayText("File opened (%s)\r\n", cstrPath);
+
+					if (g_bModelConvertOn) {
+						g_Converter.SerializeModel(cstrFilepath, strExportName);
+					}
+					else {
+						g_Converter.SerializeAnimation(cstrFilepath, strExportName);
+					}
+				}
 			}
 
 			wsprintf(g_str, L"Conversion Complete");
@@ -176,6 +220,12 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			g_bModelConvertOn = (IsDlgButtonChecked(hDlg, IDC_RADIO1) == BST_CHECKED);
 			g_bAnimationConvertOn = (IsDlgButtonChecked(hDlg, IDC_RADIO2) == BST_CHECKED);
+			return TRUE;
+		}
+		case IDC_CHECK1:
+		{
+			g_bForceBakeForwardZ = IsDlgButtonChecked(hDlg, IDC_CHECK1) == BST_CHECKED;
+			g_Converter.SeBakeForwardOption(g_bForceBakeForwardZ);
 			return TRUE;
 		}
 		case IDOK:

@@ -97,6 +97,9 @@ public:
 	void SerializeModel(const std::string& strPath, const std::string& strName);
 	void SerializeAnimation(const std::string& strPath, const std::string& strName);
 
+public:
+	void SeBakeForwardOption(bool bValue) { m_bForceBakeForwardZ = bValue; }
+
 private:
 	SceneAxis ReadSceneAxisMetaData(const aiScene* pScene);
 	XMFLOAT3 AxisToVector(int nAxisIndex, int nSign);
@@ -145,6 +148,8 @@ private:
 
 	XMFLOAT4X4 m_xmf4x4SourceToEngine;
 	bool m_bSourceWasRH = false;
+
+	bool m_bForceBakeForwardZ = false;
 
 private:
 	static bool IsDDS(const aiTexture* tex);

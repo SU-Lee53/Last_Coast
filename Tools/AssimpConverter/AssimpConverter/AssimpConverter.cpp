@@ -162,14 +162,15 @@ XMFLOAT4X4 AssimpConverter::BuildSourceToEngineMatrix(const SceneAxis& metaData,
 {
 	Basis3 sourceBasis = MakeSourceBasis(metaData);
 	ApplyReflectionRH(sourceBasis, outbWasRH);
-	XMFLOAT4X4 xmf4x4SrcToScene = MakeBasisMatrix(sourceBasis);
+	XMFLOAT4X4 xmf4x4SrcToEngine = MakeBasisMatrix(sourceBasis);
+	
+	if (m_bForceBakeForwardZ) {
+		XMMATRIX xmmtxSrcToEngine = XMLoadFloat4x4(&xmf4x4SrcToEngine);
+		xmmtxSrcToEngine = XMMatrixMultiply(xmmtxSrcToEngine, XMMatrixRotationY(-XM_PIDIV2));
+		XMStoreFloat4x4(&xmf4x4SrcToEngine, xmmtxSrcToEngine);
+	}
 
-	XMMATRIX xmmtxSrcToScene = XMLoadFloat4x4(&xmf4x4SrcToScene);
-	xmmtxSrcToScene = XMMatrixMultiply(xmmtxSrcToScene, XMMatrixRotationY(-XM_PIDIV2));
-
-	XMStoreFloat4x4(&xmf4x4SrcToScene, xmmtxSrcToScene);
-
-	return xmf4x4SrcToScene;
+	return xmf4x4SrcToEngine;
 }
 
 std::string NormalizeBoneName(const std::string& name)

@@ -147,6 +147,7 @@ inline HWND		g_hMainEdit;		// Main Edit Control (Read Only)
 inline HWND		g_hScaleEdit;		// Scale Factor Edit
 inline HWND		g_hModelRadio;		// Model Radio
 inline HWND		g_hAnimRadio;		// Animation Radio
+inline HWND		g_hBakeOptionCheck;	
 
 inline void DisplayText(const char* fmt, ...)
 {
@@ -159,5 +160,30 @@ inline void DisplayText(const char* fmt, ...)
 	int nLength = GetWindowTextLength(g_hMainEdit);
 	SendMessage(g_hMainEdit, EM_SETSEL, nLength, nLength);
 	SendMessageA(g_hMainEdit, EM_REPLACESEL, FALSE, (LPARAM)cbuf);
+}
+
+inline int ParseFilePaths(wchar_t* pwstrBuffer, std::vector<std::wstring>& outwstrFilePathes)
+{
+	wchar_t* p = pwstrBuffer;
+	std::wstring directory = p;
+	p += directory.length() + 1;
+
+	if (*p == L'\0')
+	{
+		// 파일 1개
+		outwstrFilePathes.push_back(directory);
+	}
+	else
+	{
+		// 여러 개
+		while (*p)
+		{
+			std::wstring filename = p;
+			outwstrFilePathes.push_back(directory + L"\\" + filename);
+			p += filename.length() + 1;
+		}
+	}
+
+	return outwstrFilePathes.size();
 }
 
