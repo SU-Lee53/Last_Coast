@@ -55,13 +55,13 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		g_hAnimRadio = GetDlgItem(hDlg, IDC_RADIO2);
 		g_hBakeOptionCheck = GetDlgItem(hDlg, IDC_CHECK1);
 		CheckDlgButton(hDlg, IDC_RADIO1, BST_CHECKED);
-		CheckDlgButton(hDlg, IDC_RADIO1, BST_CHECKED);
+		CheckDlgButton(hDlg, IDC_CHECK1, BST_CHECKED);
 		SetDlgItemTextW(hDlg, IDC_EDIT2, L"1.0");
 
 		g_bModelConvertOn = (IsDlgButtonChecked(hDlg, IDC_RADIO1) == BST_CHECKED);
 		g_bAnimationConvertOn = (IsDlgButtonChecked(hDlg, IDC_RADIO2) == BST_CHECKED);
 		g_bForceBakeForwardZ = IsDlgButtonChecked(hDlg, IDC_CHECK1) == BST_CHECKED;
-		g_Converter.SeBakeForwardOption(g_bForceBakeForwardZ);
+		g_Converter.SetBakeForwardOption(g_bForceBakeForwardZ);
 
 		return TRUE;
 	case WM_COMMAND:
@@ -83,6 +83,7 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 			int nPathes{};
 			if (GetOpenFileName(&OFN) != 0) {
+				g_wstrFileSelected.clear();
 				nPathes = ParseFilePaths(g_lpstrFile, g_wstrFileSelected);
 			}
 			else {
@@ -225,7 +226,7 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case IDC_CHECK1:
 		{
 			g_bForceBakeForwardZ = IsDlgButtonChecked(hDlg, IDC_CHECK1) == BST_CHECKED;
-			g_Converter.SeBakeForwardOption(g_bForceBakeForwardZ);
+			g_Converter.SetBakeForwardOption(g_bForceBakeForwardZ);
 			return TRUE;
 		}
 		case IDOK:

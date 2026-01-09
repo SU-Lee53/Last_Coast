@@ -93,7 +93,7 @@ std::shared_ptr<Animation> AnimationManager::LoadFromFile(const std::string& str
 			k.fTime = jKeyFrames[keyIndex][0].get<double>();
 
 			std::vector<float> keyData = jKeyFrames[keyIndex][1].get<std::vector<float>>();
-			k.animationKeys.v3Position = Vector3(keyData.data());
+			k.animationKeys.v3Translation = Vector3(keyData.data());
 			
 			keyData = jKeyFrames[keyIndex][2].get<std::vector<float>>();
 			k.animationKeys.v4RotationQuat = Vector4(keyData.data());

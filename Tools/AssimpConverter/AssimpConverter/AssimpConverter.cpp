@@ -29,6 +29,10 @@ void AssimpConverter::LoadFromFiles(const std::string& strPath, float fScaleFact
 
 	m_pScene = m_pImporter->ReadFile(strPath, flags);
 
+	if (m_pScene->mMetaData) {
+		m_pScene->mMetaData->Get("UnitScaleFactor", m_dUnitScaleCM);
+	}
+
 	//m_pScene = m_pImporter->ReadFile(
 	//	strPath,
 	//	aiProcess_MakeLeftHanded |
@@ -229,6 +233,16 @@ void AssimpConverter::BuildBoneHierarchy(aiNode* node, int parentBoneIndex)
 		info.xmf4x4Transform = aiMatrixToXMMatrix(node->mTransformation);
 		info.xmf4x4Offset = m_Bones[oldBoneIndex].xmf4x4Offset;
 
+		float fScale = GetFinalScale();
+
+		info.xmf4x4Transform._41 *= fScale;
+		info.xmf4x4Transform._42 *= fScale;
+		info.xmf4x4Transform._43 *= fScale;
+
+		info.xmf4x4Offset._41 *= fScale;
+		info.xmf4x4Offset._42 *= fScale;
+		info.xmf4x4Offset._43 *= fScale;
+
 		m_DFSBones.push_back(info);
 
 		//currentBoneIndex = it->second;
@@ -350,6 +364,7 @@ nlohmann::ordered_json AssimpConverter::StoreNodeToJson(const aiNode* pNode) con
 nlohmann::ordered_json AssimpConverter::StoreMeshToJson(const aiMesh* pMesh) const
 {
 	XMMATRIX xmmtxSceneToEngine = XMLoadFloat4x4(&m_xmf4x4SourceToEngine);
+	float fScale = GetFinalScale();
 	nlohmann::ordered_json mesh;
 	
 	mesh["Name"] = std::string{ pMesh->mName.C_Str() };
@@ -366,9 +381,12 @@ nlohmann::ordered_json AssimpConverter::StoreMeshToJson(const aiMesh* pMesh) con
 		XMFLOAT3 xmf3Position = aiVector3DToXMVector(v3Positions);
 		
 		// Scale if needs
-		if (pMesh->mNumBones <= 0 && m_fScale != 1.f) {
-			XMStoreFloat3(&xmf3Position, XMVectorScale(XMLoadFloat3(&xmf3Position), m_fScale));
-		}
+		//if (pMesh->mNumBones <= 0 && m_fScale != 1.f) {
+		//	XMStoreFloat3(&xmf3Position, XMVectorScale(XMLoadFloat3(&xmf3Position), m_fScale));
+		//}
+		XMStoreFloat3(&xmf3Position, XMVectorScale(XMLoadFloat3(&xmf3Position), fScale));
+
+
 
 		XMVECTOR xmvPosition = XMLoadFloat3(&xmf3Position);
 		xmvPosition = XMVector3TransformCoord(xmvPosition, xmmtxSceneToEngine);
@@ -1072,21 +1090,31 @@ XMFLOAT3 AssimpConverter::SamplePosition(const aiNodeAnim* pNodeAnim, double dTi
 	if (pNodeAnim->mNumPositionKeys == 0)
 		return XMFLOAT3(0, 0, 0);
 
+	float fScale = GetFinalScale();
+
 	// Check if exact match is exist
 	for (unsigned i = 0; i < pNodeAnim->mNumPositionKeys; ++i)
 	{
 		if (pNodeAnim->mPositionKeys[i].mTime == dTime)
 		{
-			return aiVector3DToXMVector(pNodeAnim->mPositionKeys[i].mValue);
+			XMFLOAT3 xmf3Pos = aiVector3DToXMVector(pNodeAnim->mPositionKeys[i].mValue);
+			XMStoreFloat3(&xmf3Pos, XMVectorScale(XMLoadFloat3(&xmf3Pos), fScale));
+			return xmf3Pos;
 		}
 	}
 
 	// Handle out of range
-	if (dTime <= pNodeAnim->mPositionKeys[0].mTime)
-		return aiVector3DToXMVector(pNodeAnim->mPositionKeys[0].mValue);
+	if (dTime <= pNodeAnim->mPositionKeys[0].mTime) {
+		XMFLOAT3 xmf3Pos = aiVector3DToXMVector(pNodeAnim->mPositionKeys[0].mValue);
+		XMStoreFloat3(&xmf3Pos, XMVectorScale(XMLoadFloat3(&xmf3Pos), fScale));
+		return xmf3Pos;
+	}
 
-	if (dTime >= pNodeAnim->mPositionKeys[pNodeAnim->mNumPositionKeys - 1].mTime)
-		return aiVector3DToXMVector(pNodeAnim->mPositionKeys[pNodeAnim->mNumPositionKeys - 1].mValue);
+	if (dTime >= pNodeAnim->mPositionKeys[pNodeAnim->mNumPositionKeys - 1].mTime) {
+		XMFLOAT3 xmf3Pos = aiVector3DToXMVector(pNodeAnim->mPositionKeys[pNodeAnim->mNumPositionKeys - 1].mValue);
+		XMStoreFloat3(&xmf3Pos, XMVectorScale(XMLoadFloat3(&xmf3Pos), fScale));
+		return xmf3Pos;
+	}
 
 	// find prev / next
 	unsigned index = 0;
@@ -1110,6 +1138,8 @@ XMFLOAT3 AssimpConverter::SamplePosition(const aiNodeAnim* pNodeAnim, double dTi
 
 	XMFLOAT3 xmf3Ret;
 	XMStoreFloat3(&xmf3Ret, XMVectorLerp(XMLoadFloat3(&xmf3Pos0), XMLoadFloat3(&xmf3Pos1), static_cast<float>(alpha)));
+	XMStoreFloat3(&xmf3Ret, XMVectorScale(XMLoadFloat3(&xmf3Ret), fScale));
+
 	return xmf3Ret;
 }
 
@@ -1262,6 +1292,11 @@ void AssimpConverter::FixNegativeScaleAfterDecompose(XMVECTOR& xmvScale, XMVECTO
 	if (nAxis == 2) xmmtxRotate.r[2] = XMVectorNegate(xmmtxRotate.r[2]);
 
 	xmvRotate = XMQuaternionNormalize(XMQuaternionRotationMatrix(xmmtxRotate));
+}
+
+float AssimpConverter::GetFinalScale() const
+{
+	return m_dUnitScaleCM * m_fScale;
 }
 
 void AssimpConverter::FlipNormalMapY(DirectX::ScratchImage& scratchImage) const

@@ -14,7 +14,7 @@ Matrix Animation::GetKeyFrameMatrix(const std::string& strChannelName, float fTi
 	}
 
 	if (keyFrames.size() == 1) {
-		return AnimationKey::CreateSRT(keyFrames[0].animationKeys.v3Position, keyFrames[0].animationKeys.v4RotationQuat, keyFrames[0].animationKeys.v3Scale);
+		return AnimationKey::CreateSRT(keyFrames[0].animationKeys.v3Translation, keyFrames[0].animationKeys.v4RotationQuat, keyFrames[0].animationKeys.v3Scale);
 	}
 
 	// dTime 이 마지막 키를 지나 처음으로 되돌아옴
@@ -24,12 +24,12 @@ Matrix Animation::GetKeyFrameMatrix(const std::string& strChannelName, float fTi
 
 		Vector3 v3Scale0 = keyFrames.back().animationKeys.v3Scale;
 		Quaternion v4Rotation0 = keyFrames.back().animationKeys.v4RotationQuat;
-		Vector3 v3Translation0 = keyFrames.back().animationKeys.v3Position;
+		Vector3 v3Translation0 = keyFrames.back().animationKeys.v3Translation;
 		v4Rotation0.Normalize();
 
 		Vector3 v3Scale1 = keyFrames.front().animationKeys.v3Scale;
 		Quaternion v4Rotation1 = keyFrames.front().animationKeys.v4RotationQuat;
-		Vector3 v3Translation1 = keyFrames.front().animationKeys.v3Position;
+		Vector3 v3Translation1 = keyFrames.front().animationKeys.v3Translation;
 		v4Rotation1.Normalize();
 
 		Vector3 v3Scale = Vector3::Lerp(v3Scale0, v3Scale1, t);
@@ -44,7 +44,7 @@ Matrix Animation::GetKeyFrameMatrix(const std::string& strChannelName, float fTi
 	});
 
 	if (curIt == keyFrames.begin()) {
-		return AnimationKey::CreateSRT(keyFrames[0].animationKeys.v3Position, keyFrames[0].animationKeys.v4RotationQuat, keyFrames[0].animationKeys.v3Scale);
+		return AnimationKey::CreateSRT(keyFrames[0].animationKeys.v3Translation, keyFrames[0].animationKeys.v4RotationQuat, keyFrames[0].animationKeys.v3Scale);
 	}
 
 	auto curKeyFrame = *std::prev(curIt);
@@ -55,12 +55,12 @@ Matrix Animation::GetKeyFrameMatrix(const std::string& strChannelName, float fTi
 
 	Vector3 v3Scale0 = curKeyFrame.animationKeys.v3Scale;
 	Quaternion v4Rotation0 = curKeyFrame.animationKeys.v4RotationQuat;
-	Vector3 v3Translation0 = curKeyFrame.animationKeys.v3Position;
+	Vector3 v3Translation0 = curKeyFrame.animationKeys.v3Translation;
 	v4Rotation0.Normalize();
 
 	Vector3 v3Scale1 = nextKeyFrame.animationKeys.v3Scale;
 	Quaternion v4Rotation1 = nextKeyFrame.animationKeys.v4RotationQuat;
-	Vector3 v3Translation1 = nextKeyFrame.animationKeys.v3Position;
+	Vector3 v3Translation1 = nextKeyFrame.animationKeys.v3Translation;
 	v4Rotation1.Normalize();
 
 	Vector3 v3Scale = Vector3::Lerp(v3Scale0, v3Scale1, t);
@@ -104,7 +104,7 @@ AnimationKey Animation::GetKeyFrameSRT(const std::string& strChannelName, float 
 	}
 
 	if (keyFrames.size() == 1) {
-		return { keyFrames[0].animationKeys.v3Position, keyFrames[0].animationKeys.v4RotationQuat, keyFrames[0].animationKeys.v3Scale };
+		return { keyFrames[0].animationKeys.v3Translation, keyFrames[0].animationKeys.v4RotationQuat, keyFrames[0].animationKeys.v3Scale };
 	}
 
 	// dTime 이 마지막 키를 지나 처음으로 되돌아옴
@@ -114,12 +114,12 @@ AnimationKey Animation::GetKeyFrameSRT(const std::string& strChannelName, float 
 
 		Vector3 v3Scale0 = keyFrames.back().animationKeys.v3Scale;
 		Quaternion v4Rotation0 = keyFrames.back().animationKeys.v4RotationQuat;
-		Vector3 v3Translation0 = keyFrames.back().animationKeys.v3Position;
+		Vector3 v3Translation0 = keyFrames.back().animationKeys.v3Translation;
 		v4Rotation0.Normalize();
 
 		Vector3 v3Scale1 = keyFrames.front().animationKeys.v3Scale;
 		Quaternion v4Rotation1 = keyFrames.front().animationKeys.v4RotationQuat;
-		Vector3 v3Translation1 = keyFrames.front().animationKeys.v3Position;
+		Vector3 v3Translation1 = keyFrames.front().animationKeys.v3Translation;
 		v4Rotation1.Normalize();
 
 		Vector3 v3Scale = Vector3::Lerp(v3Scale0, v3Scale1, t);
@@ -134,7 +134,7 @@ AnimationKey Animation::GetKeyFrameSRT(const std::string& strChannelName, float 
 		});
 
 	if (curIt == keyFrames.begin()) {
-		return { keyFrames[0].animationKeys.v3Position, keyFrames[0].animationKeys.v4RotationQuat, keyFrames[0].animationKeys.v3Scale };
+		return { keyFrames[0].animationKeys.v3Translation, keyFrames[0].animationKeys.v4RotationQuat, keyFrames[0].animationKeys.v3Scale };
 	}
 
 	auto curKeyFrame = *std::prev(curIt);
@@ -145,12 +145,12 @@ AnimationKey Animation::GetKeyFrameSRT(const std::string& strChannelName, float 
 
 	Vector3 v3Scale0 = curKeyFrame.animationKeys.v3Scale;
 	Quaternion v4Rotation0 = curKeyFrame.animationKeys.v4RotationQuat;
-	Vector3 v3Translation0 = curKeyFrame.animationKeys.v3Position;
+	Vector3 v3Translation0 = curKeyFrame.animationKeys.v3Translation;
 	v4Rotation0.Normalize();
 
 	Vector3 v3Scale1 = nextKeyFrame.animationKeys.v3Scale;
 	Quaternion v4Rotation1 = nextKeyFrame.animationKeys.v4RotationQuat;
-	Vector3 v3Translation1 = nextKeyFrame.animationKeys.v3Position;
+	Vector3 v3Translation1 = nextKeyFrame.animationKeys.v3Translation;
 	v4Rotation1.Normalize();
 
 	Vector3 v3Scale = Vector3::Lerp(v3Scale0, v3Scale1, t);

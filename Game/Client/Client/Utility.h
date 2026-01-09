@@ -51,3 +51,45 @@ struct ConstantBufferSize {
 	constexpr static size_t value = (sizeof(T) + 255) & (~255);
     constexpr static size_t nDescriptors = ((sizeof(T) + 255) & (~255)) / 255;
 };
+
+
+/////////////////////////////////////////////////////////////////////////////////
+// Unit Conversion + Literals
+
+constexpr float CM(float v) noexcept { return v; }
+constexpr float M(float v) noexcept { return v * 100.0f; }
+constexpr float KM(float v) noexcept { return v * 100000.0f; }
+
+constexpr float CM(int v) noexcept { return v; }
+constexpr float M(int v) noexcept { return v * 100; }
+constexpr float KM(int v) noexcept { return v * 100000; }
+
+constexpr float operator""_cm(long double v) 
+{
+	return static_cast<float>(v);
+}
+
+constexpr float operator""_m(long double v) 
+{
+	return static_cast<float>(v * 100.0L);
+}
+
+constexpr float operator""_km(long double v) 
+{
+	return static_cast<float>(v * 100000.0L);
+}
+
+constexpr float operator""_cm(unsigned long long v) 
+{
+	return static_cast<float>(v);
+}
+
+constexpr float operator""_m(unsigned long long v)
+{
+	return static_cast<float>(v * 100ULL);
+}
+
+constexpr float operator""_km(unsigned long long v)
+{
+	return static_cast<float>(v * 100000ULL);
+}

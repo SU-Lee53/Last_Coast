@@ -41,13 +41,14 @@ void AnimationStateMachine::Update()
 	int nBones = ownerBones.size();
 	auto pAnimation = m_pCurrentState->pAnimationToPlay;
 
-	double fTime = std::fmod(m_fTotalAnimationTime, pAnimation->GetDuration());
+	float fCurrentTime = m_fTotalAnimationTime - m_fLastAnimationChangedTime;
+	float fTime = std::fmod(fCurrentTime, pAnimation->GetDuration());
 	
 	m_mtxOutputPose.resize(nBones);
-	if ((m_fTotalAnimationTime - m_fLastAnimationChangedTime) < m_fCurrentTransitionTime) {
+	if (fCurrentTime < m_fCurrentTransitionTime) {
 		auto pLastAnimation = m_pBeforeState->pAnimationToPlay;
 		float fLastTime = std::fmod(m_fLastAnimationChangedTime, pLastAnimation->GetDuration());
-		float fWeight = std::clamp((m_fTotalAnimationTime - m_fLastAnimationChangedTime) / m_fCurrentTransitionTime, 0.f, 1.f);
+		float fWeight = std::clamp(fCurrentTime / m_fCurrentTransitionTime, 0.f, 1.f);
 		fWeight = ::SmoothStep(fWeight, 0.f, 1.f);
 
 		for (const auto& bone : ownerBones) {

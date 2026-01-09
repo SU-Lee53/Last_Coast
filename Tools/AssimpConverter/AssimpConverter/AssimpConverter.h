@@ -98,7 +98,7 @@ public:
 	void SerializeAnimation(const std::string& strPath, const std::string& strName);
 
 public:
-	void SeBakeForwardOption(bool bValue) { m_bForceBakeForwardZ = bValue; }
+	void SetBakeForwardOption(bool bValue) { m_bForceBakeForwardZ = bValue; }
 
 private:
 	SceneAxis ReadSceneAxisMetaData(const aiScene* pScene);
@@ -129,6 +129,7 @@ private:
 
 	XMFLOAT4X4 ConvertMatrixToEngine(const XMFLOAT4X4& xmf4x4Matrix) const;
 	void FixNegativeScaleAfterDecompose(XMVECTOR& xmvScale, XMVECTOR& xmvRotate) const;
+	float GetFinalScale() const;
 
 private:
 	std::shared_ptr<Assimp::Importer> m_pImporter = nullptr;
@@ -150,6 +151,7 @@ private:
 	bool m_bSourceWasRH = false;
 
 	bool m_bForceBakeForwardZ = false;
+	double m_dUnitScaleCM = 1.0;
 
 private:
 	static bool IsDDS(const aiTexture* tex);
