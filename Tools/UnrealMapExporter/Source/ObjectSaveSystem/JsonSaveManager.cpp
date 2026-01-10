@@ -1,14 +1,22 @@
-#include "JsonSaveManager.h"
+ï»¿#include "JsonSaveManager.h"
 #include "HAL/PlatformFilemanager.h"
 #include "Engine\StaticMeshActor.h"
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 #include "Misc/FileHelper.h"
+#if WITH_EDITOR
+#include "Exporters/Exporter.h"
+#include "Exporters/FbxExportOption.h"
+#include "AssetExportTask.h"
+#endif
 
 bool UJsonSaveManager::SaveActorsToJson(const TArray<AActor*>& Actors, const FString& FileName)
 {
-    FString OutputString = "[\n";  // ¹è¿­ ½ÃÀÛ
+    FString OutputString = "[\n";  // ë°°ì—´ ì‹œì‘
+
+    TSet<UStaticMesh*> ExportedMeshes;
+    bool bFirstExport = true;
 
     for (int32 i = 0; i < Actors.Num(); i++)
     {
@@ -25,6 +33,31 @@ bool UJsonSaveManager::SaveActorsToJson(const TArray<AActor*>& Actors, const FSt
                     ActorJson->SetStringField(TEXT("ActorName"), Actor->GetName());
                     ActorJson->SetStringField(TEXT("MeshName"), Mesh->GetName());
                     ActorJson->SetObjectField(TEXT("Transform"), TransformToJson(Actor->GetActorTransform()));
+
+#if WITH_EDITOR
+                    // ì¤‘ë³µë˜ì§€ ì•Šì€ ë©”ì‹œë§Œ export
+                    if (!ExportedMeshes.Contains(Mesh))
+                    {
+                        FString MeshFileName = Mesh->GetName();
+                        bool bShowOptions = bFirstExport;
+                        bFirstExport = false;
+                        if (ExportMeshToFBX(Mesh, MeshFileName, bShowOptions))
+                        {
+                            ExportedMeshes.Add(Mesh);
+                            UE_LOG(LogTemp, Log, TEXT("Exported mesh: %s"), *MeshFileName);
+                        }
+                        else
+                        {
+                            UE_LOG(LogTemp, Warning, TEXT("Failed to export mesh: %s"), *MeshFileName);
+                        }
+                    }
+                    else
+                    {
+                        // ì´ë¯¸ exportëœ ë©”ì‹œëŠ” íŒŒì¼ëª…ë§Œ ì°¸ì¡°
+                        ActorJson->SetStringField(TEXT("ExportedFBX"), Mesh->GetName() + TEXT(".fbx"));
+                    }
+#endif
+
                     
                     FString ActorString;
                     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&ActorString);
@@ -32,7 +65,7 @@ bool UJsonSaveManager::SaveActorsToJson(const TArray<AActor*>& Actors, const FSt
 
                     OutputString += ActorString;
 
-                    // ¸¶Áö¸· Ç×¸ñÀÌ ¾Æ´Ï¸é ½°Ç¥ Ãß°¡
+                    // ë§ˆì§€ë§‰ í•­ëª©ì´ ì•„ë‹ˆë©´ ì‰¼í‘œ ì¶”ê°€
                     if (i < Actors.Num() - 1)
                     {
                         OutputString += TEXT(",\n");
@@ -42,7 +75,7 @@ bool UJsonSaveManager::SaveActorsToJson(const TArray<AActor*>& Actors, const FSt
         }
     }
 
-    OutputString += "\n]";  // ¹è¿­ Á¾·á
+    OutputString += "\n]";  // ë°°ì—´ ì¢…ë£Œ
 
     FString FilePath = GetSaveFilePath(FileName);
     bool bSuccess = FFileHelper::SaveStringToFile(OutputString, *FilePath);
@@ -57,73 +90,25 @@ bool UJsonSaveManager::SaveActorsToJson(const TArray<AActor*>& Actors, const FSt
 
 FString UJsonSaveManager::GetSaveFilePath(const FString& FileName)
 {
-    return FPaths::ProjectSavedDir() + TEXT("../") + FileName + TEXT(".json");
+    return FPaths::ProjectSavedDir() + TEXT("../") + TEXT("SceneJson/") + FileName + TEXT(".json");
 }
 
-//TSharedPtr<FJsonObject> UJsonSaveManager::TransformToJson(const FTransform& Transform)
-//{
-//    TSharedPtr<FJsonObject> TransformJson = MakeShareable(new FJsonObject);
-//
-//    // Location - ¾ğ¸®¾ó(X,Y,Z) -> DirectX(Y,Z,X)
-//    FVector Location = Transform.GetLocation();
-//    TArray<TSharedPtr<FJsonValue>> LocationArray;
-//    LocationArray.Add(MakeShareable(new FJsonValueNumber(Location.Y)));
-//    LocationArray.Add(MakeShareable(new FJsonValueNumber(Location.Z)));
-//    LocationArray.Add(MakeShareable(new FJsonValueNumber(Location.X)));
-//    TransformJson->SetArrayField(TEXT("Location"), LocationArray);
-//
-//    // Rotation - º¯È¯ Çà·Ä »ç¿ë
-//    FMatrix UnrealRotMatrix = Transform.GetRotation().ToMatrix();
-//
-//    // ÁÂÇ¥°è º¯È¯ Çà·Ä: ¾ğ¸®¾ó(X,Y,Z) -> DirectX(Y,Z,-X)
-//    // SimpleMath Forward°¡ -ZÀÌ¹Ç·Î ¾ğ¸®¾ó +X¸¦ DirectX -Z·Î ¸ÅÇÎ
-//    FMatrix ConversionMatrix = FMatrix(
-//        FPlane(0, 1, 0, 0),  // DirectX X = ¾ğ¸®¾ó Y
-//        FPlane(0, 0, 1, 0),  // DirectX Y = ¾ğ¸®¾ó Z
-//        FPlane(1, 0, 0, 0),  // DirectX Z = ¾ğ¸®¾ó X (ºÎÈ£ º¯°æ!)
-//        FPlane(0, 0, 0, 1)
-//    );
-//
-//    // Basis º¯È¯: C * R
-//    FMatrix DirectXRotMatrix = ConversionMatrix * UnrealRotMatrix * ConversionMatrix.GetTransposed();;
-//
-//    // Çà·ÄÀ» ÄõÅÍ´Ï¾ğÀ¸·Î º¯È¯
-//    FQuat DirectXQuat(DirectXRotMatrix);
-//    DirectXQuat.Normalize();
-//
-//    TArray<TSharedPtr<FJsonValue>> RotationArray;
-//    RotationArray.Add(MakeShareable(new FJsonValueNumber(DirectXQuat.X)));
-//    RotationArray.Add(MakeShareable(new FJsonValueNumber(DirectXQuat.Y)));
-//    RotationArray.Add(MakeShareable(new FJsonValueNumber(DirectXQuat.Z)));
-//    RotationArray.Add(MakeShareable(new FJsonValueNumber(DirectXQuat.W)));
-//    TransformJson->SetArrayField(TEXT("Rotation"), RotationArray);
-//
-//    // Scale - Ãà ¼ø¼­ º¯È¯
-//    FVector Scale = Transform.GetScale3D();
-//    TArray<TSharedPtr<FJsonValue>> ScaleArray;
-//    ScaleArray.Add(MakeShareable(new FJsonValueNumber(Scale.Y)));
-//    ScaleArray.Add(MakeShareable(new FJsonValueNumber(Scale.Z)));
-//    ScaleArray.Add(MakeShareable(new FJsonValueNumber(Scale.X)));
-//    TransformJson->SetArrayField(TEXT("Scale"), ScaleArray);
-//
-//    return TransformJson;
-//}
 
 TSharedPtr<FJsonObject> UJsonSaveManager::TransformToJson(const FTransform& Transform)
 {
     TSharedPtr<FJsonObject> TransformJson = MakeShareable(new FJsonObject);
 
-    // ¾ğ¸®¾ó ¿ùµå º¯È¯ Çà·Ä
+    // ì–¸ë¦¬ì–¼ ì›”ë“œ ë³€í™˜ í–‰ë ¬
     FMatrix UnrealWorldMatrix = Transform.ToMatrixWithScale();
 
-    // ¾ğ¸®¾ó Çà·Ä ·Î±×
+    // ì–¸ë¦¬ì–¼ í–‰ë ¬ ë¡œê·¸
     UE_LOG(LogTemp, Warning, TEXT("=== Unreal Matrix ==="));
     UE_LOG(LogTemp, Warning, TEXT("Right:   %s"), *UnrealWorldMatrix.GetUnitAxis(EAxis::Y).ToString());
     UE_LOG(LogTemp, Warning, TEXT("Up:      %s"), *UnrealWorldMatrix.GetUnitAxis(EAxis::Z).ToString());
     UE_LOG(LogTemp, Warning, TEXT("Forward: %s"), *UnrealWorldMatrix.GetUnitAxis(EAxis::X).ToString());
     UE_LOG(LogTemp, Warning, TEXT("Pos:     %s"), *UnrealWorldMatrix.GetOrigin().ToString());
 
-    // ÁÂÇ¥°è º¯È¯ Çà·Ä
+    // ì¢Œí‘œê³„ ë³€í™˜ í–‰ë ¬
     FMatrix ConversionMatrix = FMatrix(
         FPlane(0, 1, 0, 0),
         FPlane(0, 0, 1, 0),
@@ -131,10 +116,10 @@ TSharedPtr<FJsonObject> UJsonSaveManager::TransformToJson(const FTransform& Tran
         FPlane(0, 0, 0, 1)
     );
 
-    // DirectX Çà·Ä º¯È¯
+    // DirectX í–‰ë ¬ ë³€í™˜
     FMatrix DirectXWorldMatrix = ConversionMatrix * UnrealWorldMatrix * ConversionMatrix.GetTransposed();
 
-    // DirectX Çà·Ä ·Î±×
+    // DirectX í–‰ë ¬ ë¡œê·¸
     UE_LOG(LogTemp, Warning, TEXT("=== DirectX Matrix ==="));
     FVector DXRight = FVector(DirectXWorldMatrix.M[0][0], DirectXWorldMatrix.M[0][1], DirectXWorldMatrix.M[0][2]);
     FVector DXUp = FVector(DirectXWorldMatrix.M[1][0], DirectXWorldMatrix.M[1][2], DirectXWorldMatrix.M[1][2]);
@@ -146,7 +131,7 @@ TSharedPtr<FJsonObject> UJsonSaveManager::TransformToJson(const FTransform& Tran
     UE_LOG(LogTemp, Warning, TEXT("Forward(Z): %s"), *DXForward.ToString());
     UE_LOG(LogTemp, Warning, TEXT("Pos:        %s"), *DXPos.ToString());
 
-    // Çà·Ä ÀúÀå
+    // í–‰ë ¬ ì €ì¥
     TArray<TSharedPtr<FJsonValue>> MatrixArray;
     for (int32 Row = 0; Row < 4; ++Row)
     {
@@ -160,26 +145,39 @@ TSharedPtr<FJsonObject> UJsonSaveManager::TransformToJson(const FTransform& Tran
     return TransformJson;
 }
 
-//#if WITH_EDITOR
-//#include "Exporters/Exporter.h"
-//#include "AssetExportTask.h"
-//
-//bool UJsonSaveManager::ExportMeshToFBX(UStaticMesh* Mesh, const FString& FilePath)
-//{
-//    if (!Mesh) return false;
-//
-//    UAssetExportTask* ExportTask = NewObject<UAssetExportTask>();
-//    ExportTask->Object = Mesh;
-//    ExportTask->Exporter = nullptr; // Auto-detect
-//    ExportTask->Filename = FilePath;
-//    ExportTask->bSelected = false;
-//    ExportTask->bReplaceIdentical = true;
-//    ExportTask->bPrompt = false;
-//    ExportTask->bUseFileArchive = false;
-//    ExportTask->bWriteEmptyFiles = false;
-//
-//    UExporter::RunAssetExportTask(ExportTask);
-//
-//    return ExportTask->bSuccess;
-//}
-//#endif
+#if WITH_EDITOR
+bool UJsonSaveManager::ExportMeshToFBX(UStaticMesh* Mesh, const FString& FileName, bool bShowOptions)
+{
+    if (!Mesh) return false;
+
+    FString BaseDirectory = FPaths::ProjectSavedDir() + TEXT("../ExportedMeshes/");
+    FString MeshDirectory = BaseDirectory + FileName + TEXT("/");  // ë©”ì‹œ ì´ë¦„ìœ¼ë¡œ í´ë”
+    FString FullPath = MeshDirectory + FileName + TEXT(".fbx");
+
+    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+    if (!PlatformFile.DirectoryExists(*MeshDirectory))
+    {
+        PlatformFile.CreateDirectoryTree(*MeshDirectory);
+    }
+
+    UAssetExportTask* ExportTask = NewObject<UAssetExportTask>();
+    ExportTask->Object = Mesh;
+    ExportTask->Exporter = nullptr;
+    ExportTask->Filename = FullPath;
+    ExportTask->bSelected = false;
+    ExportTask->bReplaceIdentical = true;
+    ExportTask->bPrompt = bShowOptions;  // âœ… ë§¤ê°œë³€ìˆ˜ë¡œ ì œì–´
+    ExportTask->bUseFileArchive = false;
+    ExportTask->bWriteEmptyFiles = false;
+    ExportTask->bAutomated = !bShowOptions;
+
+    bool bSuccess = UExporter::RunAssetExportTask(ExportTask);
+
+    if (bSuccess)
+    {
+        UE_LOG(LogTemp, Log, TEXT("Successfully exported mesh to: %s"), *FullPath);
+    }
+
+    return bSuccess;
+}
+#endif

@@ -1,0 +1,108 @@
+[
+{
+	"ActorName": "StaticMeshActor_2",
+	"MeshName": "vintage_wooden_sniper_optimized_for_fpstps",
+	"Transform":
+	{
+		"WorldMatrix": [ 1.2167965746101572e-08, 0, -1, 0, 0, 1, 0, 0, 1, 0, 1.2167965746101572e-08, 0, 219.99999999999889, 70.000000000000327, 130.0000000000008, 1 ]
+	}
+},
+{
+	"ActorName": "StaticMeshActor_3",
+	"MeshName": "Cube",
+	"Transform":
+	{
+		"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ]
+	}
+},
+{
+	"ActorName": "StaticMeshActor_5",
+	"MeshName": "Cube",
+	"Transform":
+	{
+		"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 100, 1 ]
+	},
+	"ExportedFBX": "Cube.fbx"
+},
+{
+	"ActorName": "StaticMeshActor_7",
+	"MeshName": "Cube",
+	"Transform":
+	{
+		"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 200, 1 ]
+	},
+	"ExportedFBX": "Cube.fbx"
+},
+{
+	"ActorName": "StaticMeshActor_9",
+	"MeshName": "Cube",
+	"Transform":
+	{
+		"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -100, 1 ]
+	},
+	"ExportedFBX": "Cube.fbx"
+},
+{
+	"ActorName": "StaticMeshActor_11",
+	"MeshName": "Cube",
+	"Transform":
+	{
+		"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 100, 0, -100, 1 ]
+	},
+	"ExportedFBX": "Cube.fbx"
+},
+{
+	"ActorName": "StaticMeshActor_12",
+	"MeshName": "Cube",
+	"Transform":
+	{
+		"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 100, 0, 0, 1 ]
+	},
+	"ExportedFBX": "Cube.fbx"
+},
+{
+	"ActorName": "StaticMeshActor_13",
+	"MeshName": "Cube",
+	"Transform":
+	{
+		"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 100, 0, 100, 1 ]
+	},
+	"ExportedFBX": "Cube.fbx"
+},
+{
+	"ActorName": "StaticMeshActor_14",
+	"MeshName": "Cube",
+	"Transform":
+	{
+		"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 100, 0, 200, 1 ]
+	},
+	"ExportedFBX": "Cube.fbx"
+},
+{
+	"ActorName": "StaticMeshActor_15",
+	"MeshName": "Cube",
+	"Transform":
+	{
+		"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 200, 0, 200, 1 ]
+	},
+	"ExportedFBX": "Cube.fbx"
+},
+{
+	"ActorName": "StaticMeshActor_16",
+	"MeshName": "Cube",
+	"Transform":
+	{
+		"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 200, 0, 100, 1 ]
+	},
+	"ExportedFBX": "Cube.fbx"
+},
+{
+	"ActorName": "StaticMeshActor_17",
+	"MeshName": "Cube",
+	"Transform":
+	{
+		"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 200, 0, 0, 1 ]
+	},
+	"ExportedFBX": "Cube.fbx"
+}
+]

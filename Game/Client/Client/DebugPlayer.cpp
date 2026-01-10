@@ -84,7 +84,7 @@ void DebugPlayer::ProcessInput()
 	}
 
 	v3MoveDirection.Normalize();
-	m_Transform.Move(v3MoveDirection, 1_m * DT);
+	m_Transform.Move(v3MoveDirection, 5_m * DT);
 
 
 	10_km;

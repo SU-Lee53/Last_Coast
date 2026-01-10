@@ -20,5 +20,8 @@ public:
 private:
     // Transform을 JSON 오브젝트로 변환
     static TSharedPtr<FJsonObject> TransformToJson(const FTransform& Transform);
-    bool ExportMeshToFBX(UStaticMesh* Mesh, const FString& FilePath);
+#if WITH_EDITOR
+    UFUNCTION(BlueprintCallable, Category = "Save", meta = (DevelopmentOnly))
+    static bool ExportMeshToFBX(UStaticMesh* Mesh, const FString& FileName, bool bShowOptions = false);
+#endif
 };

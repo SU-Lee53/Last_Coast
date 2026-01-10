@@ -35,6 +35,7 @@ void Transform::SetWorldMatrix(const Matrix& mtxWorld)
 	m_bWorldSetFromOutside = true;
 }
 
+
 //void Transform::SetLocalMatrix(const Matrix& xmf4x4Local)
 //{
 //	m_mtxTransform = xmf4x4Local;

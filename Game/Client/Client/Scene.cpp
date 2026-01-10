@@ -106,23 +106,22 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 		std::shared_ptr<GameObject> pObj = std::make_shared<GameObject>();
 		pObj->SetFrameName(jObject["ActorName"].get<std::string>());
 
-		Vector3 v3Position;
-		v3Position.x = jObject["Transform"]["Location"]["X"].get<float>();
-		v3Position.y = jObject["Transform"]["Location"]["Y"].get<float>();
-		v3Position.z = jObject["Transform"]["Location"]["Z"].get<float>();
+		
+		auto matrixData = jObject["Transform"]["WorldMatrix"].get<std::vector<float>>();
+		Matrix M4x4WorldMatrix(matrixData.data());
 
-		Vector3 v3Rotation; // X : Pitch, Y : Yaw, Z : Roll
-		v3Rotation.x = jObject["Transform"]["Rotation"]["Pitch"].get<float>();
-		v3Rotation.y = jObject["Transform"]["Rotation"]["Yaw"].get<float>();
-		v3Rotation.z = jObject["Transform"]["Rotation"]["Roll"].get<float>();
+		//Vector3 v3Rotation; // X : Pitch, Y : Yaw, Z : Roll
+		//v3Rotation.x = jObject["Transform"]["Rotation"]["Pitch"].get<float>();
+		//v3Rotation.y = jObject["Transform"]["Rotation"]["Yaw"].get<float>();
+		//v3Rotation.z = jObject["Transform"]["Rotation"]["Roll"].get<float>();
 
 		//Vector3 v3Scale;
 		//v3Scale.x = jObject["Transform"]["Scale"]["X"].get<float>();
 		//v3Scale.y = jObject["Transform"]["Scale"]["Y"].get<float>();
 		//v3Scale.z = jObject["Transform"]["Scale"]["Z"].get<float>();
 
-		pObj->GetTransform().SetPosition(v3Position);
-		pObj->GetTransform().SetRotation(v3Rotation);
+		pObj->GetTransform().SetWorldMatrix(M4x4WorldMatrix);
+		//pObj->GetTransform().SetRotation(v3Rotation);
 		//pObj->GetTransform().Scale(v3Rotation);
 
 		std::string strMeshName = jObject["MeshName"].get<std::string>();
