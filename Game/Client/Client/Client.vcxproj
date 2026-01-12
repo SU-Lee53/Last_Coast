@@ -156,7 +156,9 @@
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h" />
     <ClInclude Include="Animation.h" />
     <ClInclude Include="AnimationController.h" />
+    <ClInclude Include="AnimationHelper.h" />
     <ClInclude Include="AnimationManager.h" />
+    <ClInclude Include="AnimationMontage.h" />
     <ClInclude Include="AnimationStateMachine.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="CommandListPool.h" />
@@ -256,7 +258,9 @@
     </ClCompile>
     <ClCompile Include="Animation.cpp" />
     <ClCompile Include="AnimationController.cpp" />
+    <ClCompile Include="AnimationHelper.cpp" />
     <ClCompile Include="AnimationManager.cpp" />
+    <ClCompile Include="AnimationMontage.cpp" />
     <ClCompile Include="AnimationStateMachine.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CommandListPool.cpp" />

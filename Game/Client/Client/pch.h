@@ -101,6 +101,7 @@ using namespace Microsoft::WRL;
 #include "DescriptorHeap.h"
 #include "Packets.h"
 #include "RandomGenerator.h"
+#include "AnimationHelper.h"
 
 // ImGui
 #include <ImGui/imgui.h>

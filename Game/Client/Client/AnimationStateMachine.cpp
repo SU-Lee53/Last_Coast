@@ -3,7 +3,7 @@
 
 AnimationStateMachine::AnimationStateMachine()
 {
-	m_mtxOutputPose.reserve(MAX_BONE_TRANSFORMS);
+	m_OutputPose.reserve(MAX_BONE_TRANSFORMS);
 }
 
 void AnimationStateMachine::Initialize(std::shared_ptr<GameObject> pOwner, float fInitialTime)
@@ -42,24 +42,25 @@ void AnimationStateMachine::Update()
 	auto pAnimation = m_pCurrentState->pAnimationToPlay;
 
 	float fCurrentTime = m_fTotalAnimationTime - m_fLastAnimationChangedTime;
-	float fTime = std::fmod(fCurrentTime, pAnimation->GetDuration());
+	float fTime = std::fmod(m_fTotalAnimationTime, pAnimation->GetDuration());
 	
-	m_mtxOutputPose.resize(nBones);
+	m_OutputPose.resize(nBones);
 	if (fCurrentTime < m_fCurrentTransitionTime) {
 		auto pLastAnimation = m_pBeforeState->pAnimationToPlay;
-		float fLastTime = std::fmod(m_fLastAnimationChangedTime, pLastAnimation->GetDuration());
+		float fLastTime = std::fmod(m_fLastAnimationChangedTime + fCurrentTime, pLastAnimation->GetDuration());
+
 		float fWeight = std::clamp(fCurrentTime / m_fCurrentTransitionTime, 0.f, 1.f);
 		fWeight = ::SmoothStep(fWeight, 0.f, 1.f);
 
 		for (const auto& bone : ownerBones) {
-			AnimationKey key0 = pLastAnimation->GetKeyFrameSRT(bone.strBoneName, m_fLastAnimationChangedTime + fTime, bone.mtxTransform);
+			AnimationKey key0 = pLastAnimation->GetKeyFrameSRT(bone.strBoneName, fLastTime, bone.mtxTransform);
 			AnimationKey key1 = pAnimation->GetKeyFrameSRT(bone.strBoneName, fTime, bone.mtxTransform);
-			m_mtxOutputPose[bone.nIndex] = AnimationKey::Lerp(key0, key1, fWeight);
+			m_OutputPose[bone.nIndex] = AnimationKey::Lerp(key0, key1, fWeight);
 		}
 	}
 	else {
 		for (const auto& bone : ownerBones) {
-			m_mtxOutputPose[bone.nIndex] = pAnimation->GetKeyFrameSRT(bone.strBoneName, fTime, bone.mtxTransform);
+			m_OutputPose[bone.nIndex] = pAnimation->GetKeyFrameSRT(bone.strBoneName, fTime, bone.mtxTransform);
 		}
 	}
 }
@@ -89,13 +90,13 @@ void PlayerAnimationStateMachine::InitializeStateGraph()
 	pRun->eAnimationPlayType = ANIMATION_PLAY_LOOP;
 	pRun->fnStateTransitionCallback = RunCallback;
 
-	pIdle->Connect(pWalk, 0.5);
+	pIdle->Connect(pWalk, 0.2);
 
-	pWalk->Connect(pIdle, 0.5);
-	pWalk->Connect(pRun, 0.5);
+	pWalk->Connect(pIdle, 0.2);
+	pWalk->Connect(pRun, 0.2);
 
-	pRun->Connect(pWalk, 0.5);
-	pRun->Connect(pIdle, 0.5);
+	pRun->Connect(pWalk, 0.2);
+	pRun->Connect(pIdle, 0.2);
 
 	m_pCurrentState = pIdle;
 

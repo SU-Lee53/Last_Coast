@@ -102,6 +102,9 @@
     <Filter Include="03.Engine\D3D Resource Management">
       <UniqueIdentifier>{53fc0395-bf79-4039-b616-770a3fe13367}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02.Game\GameObject\Terrain">
+      <UniqueIdentifier>{c4192897-62d1-485a-ae99-5913fdeab2a9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h">
@@ -296,8 +299,14 @@
     <ClInclude Include="Player.h">
       <Filter>02.Game\GameObject\Player</Filter>
     </ClInclude>
+    <ClInclude Include="AnimationMontage.h">
+      <Filter>02.Game\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimationHelper.h">
+      <Filter>02.Game\Animation</Filter>
+    </ClInclude>
     <ClInclude Include="CommandListPool.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>03.Engine\D3D Resource Management</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -488,7 +497,15 @@
     <ClCompile Include="Player.cpp">
       <Filter>02.Game\GameObject\Player</Filter>
     </ClCompile>
-    <ClCompile Include="CommandListPool.cpp" />
+    <ClCompile Include="AnimationMontage.cpp">
+      <Filter>02.Game\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimationHelper.cpp">
+      <Filter>02.Game\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="CommandListPool.cpp">
+      <Filter>03.Engine\D3D Resource Management</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui.ini" />

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "AnimationStateMachine.h"
+#include "AnimationMontage.h"
 
 struct LayeredBlendMachine {
 	struct LayerMask {
@@ -20,14 +21,10 @@ struct LayeredBlendMachine {
 		const std::vector<Bone>& bones, 
 		const std::vector<AnimationKey>& BasePose, 
 		const std::vector<AnimationKey>& BlendPose, 
-		std::vector<Matrix>& outmtxLocalMatrics) const;
+		std::vector<Matrix>& outmtxLocalMatrics,
+		float fBlendWeight = 1.f) const;
 
-	// 아래 헬퍼들은 나중에 어딘가로 옮기는게 좋아보임
-	static void BuildComponentSpace(
-		const std::vector<Bone>& bones,
-		const std::vector<AnimationKey>& pose,
-		std::vector<Matrix>& outComponentSpace);
-
+private:
 	static float ComputeBlendWeight(int nRelativeDepth, int maxDepth);
 };
 
@@ -41,25 +38,28 @@ public:
 	double GetElapsedTime() const { return m_fTotalTimeElapsed; }
 	double GetCurrentAnimationDuration() const;
 
-protected:
-	void ComputeFinalMatrix();
-	virtual void ComputeAnimation() {};
+	const std::unique_ptr<AnimationMontage>& GetMontage() const { return m_pAnimationMontage; }
 
-	void LayerdBlendPerBone(const std::vector<AnimationKey>& mtxPose1, const std::vector<AnimationKey>& mtxPose2,
-		const std::string& strBranchBoneName, float fBlendWeight = 1.f, int nBlendDepth = 0);
+protected:
+	virtual void ProcessInput() {}
+	virtual void ComputeAnimation() {}
+	void ComputeFinalMatrix();
 
 protected:
 	// Helper
 	const std::vector<Bone>& GetOwnerBones() const;
 
-	void CacheAnimatioKey(const std::string& strAnimationName);
+	void CacheAnimationKey(const std::string& strAnimationName);
 
 protected:
-	std::unique_ptr<AnimationStateMachine> m_pStateMachine;
-	std::weak_ptr<GameObject> m_wpOwner;
+	std::unique_ptr<AnimationStateMachine>	m_pStateMachine;
+	std::unique_ptr<AnimationMontage>		m_pAnimationMontage;
+	std::weak_ptr<GameObject>				m_wpOwner;
 	float m_fTotalTimeElapsed = 0;	// 시작부터 흐른시간
 
+	// Output cache
 	std::vector<AnimationKey> m_mtxCachedPose;
+	std::vector<Matrix> m_mtxCachedLocalBoneTransforms;
 	std::vector<Matrix> m_mtxFinalBoneTransforms;
 
 };
@@ -68,6 +68,9 @@ class PlayerAnimationController : public AnimationController {
 public:
 	virtual void Initialize(std::shared_ptr<GameObject> pOwner) override;
 	virtual void ComputeAnimation() override;
+
+protected:
+	virtual void ProcessInput() override;
 
 private:
 	std::unique_ptr<LayeredBlendMachine> m_pBlendMachine;

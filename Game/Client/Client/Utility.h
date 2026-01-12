@@ -36,14 +36,30 @@ inline std::string WStringToString(const std::wstring& wstr, UINT codePage = CP_
 
 inline float SmoothStep(float fX, float fMin, float fMax)
 {
-	fX = std::clamp(fX, fMin, fMax);
-	return fX * fX * (3.0f - 2.0f * fX);
+	if (fMin == fMax) return 0.f;
+	float t = (fX - fMin) / (fMax - fMin);
+	t = std::clamp(t, 0.f, 1.f);
+	return t * t * (3.0f - 2.0f * t);
 }
 
-inline float SmoothStep(double dX, double fMin, double fMax)
+inline float SmoothStep(double dX, double dMin, double dMax)
 {
-	dX = std::clamp(dX, fMin, fMax);
-	return dX * dX * (3.0f - 2.0f * dX);
+	if (dMin == dMax) return 0.f;
+	double t = (dX - dMin) / (dMax - dMin);
+	t = std::clamp(t, 0.0, 1.0);
+	return t * t * (3.0 - 2.0 * t);
+}
+
+inline float SmoothStep01(float fX)
+{
+	fX = std::clamp(fX, 0.0f, 1.0f);
+	return fX* fX * (3.0f - 2.0f * fX);
+}
+
+inline float SmoothStep01(double dX)
+{
+	dX = std::clamp(dX, 0.0, 1.0);
+	return dX * dX * (3.0 - 2.0 * dX);
 }
 
 template<typename T>

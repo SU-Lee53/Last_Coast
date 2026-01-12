@@ -35,7 +35,7 @@ public:
 
 	std::shared_ptr<AnimationState> GetCurrentAnimationState() const { return m_pCurrentState; }
 
-	const std::vector<AnimationKey>& GetOutputPose() const { return m_mtxOutputPose; }
+	const std::vector<AnimationKey>& GetOutputPose() const { return m_OutputPose; }
 
 private:
 	virtual void InitializeStateGraph() = 0;
@@ -50,7 +50,8 @@ protected:
 	float m_fLastAnimationChangedTime = 0;		// 마지막 애니메이션 전환 시점
 	float m_fCurrentTransitionTime = 0;			// 마지막 애니메이션 전환 시간
 
-	std::vector<AnimationKey> m_mtxOutputPose;
+	// Output cache
+	std::vector<AnimationKey> m_OutputPose;
 
 };
 

@@ -35,62 +35,38 @@ LayeredBlendMachine::LayeredBlendMachine(std::shared_ptr<GameObject> pGameObject
 	}
 }
 
-void LayeredBlendMachine::Blend(const std::vector<Bone>& bones, const std::vector<AnimationKey>& basePose, const std::vector<AnimationKey>& blendPose, std::vector<Matrix>& outmtxLocalMatrics) const
+void LayeredBlendMachine::Blend(const std::vector<Bone>& bones, const std::vector<AnimationKey>& basePose, const std::vector<AnimationKey>& blendPose, std::vector<Matrix>& outmtxLocalMatrics, float fBlendWeight) const
 {
 	int nBones = bones.size();
 	outmtxLocalMatrics.resize(nBones);
 
 	std::vector<Matrix> mtxBasePoseComponentSapce;
 	std::vector<Matrix> mtxBlendPoseComponentSapce;
-	BuildComponentSpace(bones, basePose, mtxBasePoseComponentSapce);
-	BuildComponentSpace(bones, blendPose, mtxBlendPoseComponentSapce);
+	AnimationHepler::LocalPoseToComponent(bones, basePose, mtxBasePoseComponentSapce);
+	AnimationHepler::LocalPoseToComponent(bones, blendPose, mtxBlendPoseComponentSapce);
 
-	std::vector<Matrix> mtxFinalComponentSpace(nBones);
+	std::vector<Matrix> mtxFinalCSTransform(nBones);
+	std::vector<Matrix> mtxFinalCSTransformInverse(nBones);
 	for (int i = 0; i < nBones; ++i) {
-		if (bLayerMask[i].bMask) {
-			Vector3 v3BaseScale, v3BaseTranslate;
-			Vector3 v3BlendScale, v3BlendTranslate;
-			Quaternion v4BaseRotation, v4BlendRotation;
+		if (bLayerMask[i].bMask == TRUE) {	// 상체
+			const float fWeight = bLayerMask[i].fWeight * fBlendWeight;
 
-			mtxBasePoseComponentSapce[i].Decompose(v3BaseScale, v4BaseRotation, v3BaseTranslate);
-			mtxBlendPoseComponentSapce[i].Decompose(v3BlendScale, v4BlendRotation, v3BlendTranslate);
+			AnimationKey baseKey{};
+			AnimationKey blendKey{};
 
-			AnimationKey finalKey{};
-			finalKey.v3Scale = Vector3::Lerp(v3BaseScale, v3BlendScale, bLayerMask[i].fWeight);
-			finalKey.v3Translation = Vector3::Lerp(v3BaseTranslate, v3BlendTranslate, bLayerMask[i].fWeight);
-			finalKey.v4RotationQuat = Quaternion::Slerp(v4BaseRotation, v4BlendRotation, bLayerMask[i].fWeight);
+			mtxBasePoseComponentSapce[i].Decompose(baseKey.v3Scale, baseKey.v4RotationQuat, baseKey.v3Translation);
+			mtxBlendPoseComponentSapce[i].Decompose(blendKey.v3Scale, blendKey.v4RotationQuat, blendKey.v3Translation);
 
-			mtxFinalComponentSpace[i] = finalKey.CreateSRT();
+			mtxFinalCSTransform[i] = AnimationKey::Lerp(baseKey, blendKey, fWeight).CreateSRT();
+			mtxFinalCSTransformInverse[i] = mtxFinalCSTransform[i].Invert();
 		}
 		else {
-			mtxFinalComponentSpace[i] = mtxBasePoseComponentSapce[i];
+			mtxFinalCSTransform[i] = mtxBasePoseComponentSapce[i];
+			mtxFinalCSTransformInverse[i] = mtxFinalCSTransform[i].Invert();
 		}
 	}
 
-	for (int i = 0; i < nBones; ++i) {
-		int nParentIndex = bones[i].nParentIndex;
-		if (nParentIndex >= 0) {
-			// CS * Inverse(ParentCS) = Local
-			Matrix mtxInverseParent = mtxFinalComponentSpace[nParentIndex].Invert();
-			outmtxLocalMatrics[i] = mtxFinalComponentSpace[i] * mtxInverseParent;
-		}
-		else {
-			outmtxLocalMatrics[i] = mtxFinalComponentSpace[i];
-		}
-	}
-	
-}
-
-void LayeredBlendMachine::BuildComponentSpace(const std::vector<Bone>& bones, const std::vector<AnimationKey>& pose, std::vector<Matrix>& outComponentSpace)
-{
-	int nBones = bones.size();
-	outComponentSpace.resize(nBones);
-	for (int i = 0; i < nBones; ++i) {
-		Matrix mtxLocal = pose[i].CreateSRT();
-		int nParentIndex = bones[i].nParentIndex;
-
-		outComponentSpace[i] = nParentIndex >= 0 ? (mtxLocal * outComponentSpace[nParentIndex]) : mtxLocal;
-	}
+	AnimationHepler::ComponentToLocalWithInverseHint(bones, mtxFinalCSTransform, mtxFinalCSTransformInverse, outmtxLocalMatrics);
 }
 
 float LayeredBlendMachine::ComputeBlendWeight(int nRelativeDepth, int maxDepth)
@@ -100,15 +76,22 @@ float LayeredBlendMachine::ComputeBlendWeight(int nRelativeDepth, int maxDepth)
 	}
 
 	float fValue = (float)nRelativeDepth / (float)maxDepth;
-	return ::SmoothStep(fValue, 0.f, 1.f);
+	return ::SmoothStep01(fValue);
 }
 
 void AnimationController::Update()
 {
 	m_fTotalTimeElapsed += DT;
+	ProcessInput();
+
 	if (m_pStateMachine) {
 		m_pStateMachine->Update();
 	}
+
+	if (m_pAnimationMontage) {
+		m_pAnimationMontage->Update();
+	}
+
 
 	ComputeAnimation();
 	ComputeFinalMatrix();
@@ -131,7 +114,7 @@ void AnimationController::ComputeFinalMatrix()
 	std::vector<Matrix> mtxToRootTransforms(nBones);
 	for (int i = 0; i < nBones; ++i) {
 		int nParentIndex = ownerBones[i].nParentIndex;
-		Matrix mtxToRoot = nParentIndex >= 0 ? m_mtxFinalBoneTransforms[i] * mtxToRootTransforms[nParentIndex] : m_mtxFinalBoneTransforms[i];
+		Matrix mtxToRoot = nParentIndex >= 0 ? m_mtxCachedLocalBoneTransforms[i] * mtxToRootTransforms[nParentIndex] : m_mtxCachedLocalBoneTransforms[i];
 		mtxToRootTransforms[i] = mtxToRoot;
 	}
 
@@ -147,7 +130,7 @@ const std::vector<Bone>& AnimationController::GetOwnerBones() const
 	return m_wpOwner.lock()->GetBones();
 }
 
-void AnimationController::CacheAnimatioKey(const std::string& strAnimationName)
+void AnimationController::CacheAnimationKey(const std::string& strAnimationName)
 {
 	const auto& ownerBones = GetOwnerBones();
 	m_mtxCachedPose.resize(ownerBones.size());
@@ -164,8 +147,13 @@ void PlayerAnimationController::Initialize(std::shared_ptr<GameObject> pOwner)
 	m_wpOwner = pOwner;
 	m_pStateMachine = std::make_unique<PlayerAnimationStateMachine>();
 	m_pStateMachine->Initialize(pOwner, m_fTotalTimeElapsed);
-	m_mtxFinalBoneTransforms.resize(MAX_BONE_TRANSFORMS);
-	m_mtxFinalBoneTransforms.resize(MAX_BONE_TRANSFORMS);
+
+	m_pAnimationMontage = std::make_unique<PlayerAnimationMontage>();
+	m_pAnimationMontage->Initialize(pOwner);
+
+	int nBones = pOwner->GetBones().size();
+	m_mtxCachedLocalBoneTransforms.resize(nBones);
+	m_mtxFinalBoneTransforms.resize(nBones);
 
 	m_pBlendMachine = std::make_unique<LayeredBlendMachine>(pOwner, "Spine", 3);
 }
@@ -174,19 +162,35 @@ void PlayerAnimationController::ComputeAnimation()
 {
 	const std::vector<Bone>& ownerBones = GetOwnerBones();
 	const std::vector<AnimationKey>& basePose = m_pStateMachine->GetOutputPose();
+	float fMontageBlendWeight = m_pAnimationMontage->GetBlendWeight();
 
-	if (INPUT->GetButtonPressed(VK_RBUTTON)) {
-		CacheAnimatioKey("Rifle Aiming Idle");
-		m_pBlendMachine->Blend(ownerBones, basePose, m_mtxCachedPose, m_mtxFinalBoneTransforms);
+	m_mtxCachedPose = m_pAnimationMontage->GetOutputPose();
+	m_pBlendMachine->Blend(ownerBones, basePose, m_mtxCachedPose, m_mtxCachedLocalBoneTransforms, fMontageBlendWeight);
 
-		//for (int i = 0; i < ownerBones.size(); ++i) {
-		//	m_mtxCachedBoneTransforms[i] = blendedPose[i].CreateSRT();
-		//}
+	//if (fMontageBlendWeight > 0.f) {
+	//	m_mtxCachedPose = m_pAnimationMontage->GetOutputPose();
+	//	m_pBlendMachine->Blend(ownerBones, basePose, m_mtxCachedPose, m_mtxCachedLocalBoneTransforms, fMontageBlendWeight);
+	//}
+	//else {
+	//	m_mtxCachedLocalBoneTransforms.resize(ownerBones.size());
+	//	for (int i = 0; i < basePose.size(); ++i) {
+	//		m_mtxCachedLocalBoneTransforms[i] = basePose[i].CreateSRT();
+	//	}
+	//}
+}
+
+void PlayerAnimationController::ProcessInput()
+{
+	if (INPUT->GetButtonDown(VK_RBUTTON)) {
+		m_pAnimationMontage->PlayMontage("Rifle Aiming Idle");
 	}
-	else {
-		for (int i = 0; i < ownerBones.size(); ++i) {
-			m_mtxFinalBoneTransforms[i] = basePose[i].CreateSRT();
-		}
+	if (INPUT->GetButtonUp(VK_RBUTTON)) {
+		m_pAnimationMontage->StopMontage();
 	}
+
+	if (INPUT->GetButtonPressed(VK_RBUTTON) && INPUT->GetButtonDown(VK_LBUTTON)) {
+		m_pAnimationMontage->JumpToSection("Rifle Fire");
+	}
+
 
 }
