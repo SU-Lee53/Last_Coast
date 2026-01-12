@@ -150,8 +150,7 @@ bool UJsonSaveManager::ExportMeshToFBX(UStaticMesh* Mesh, const FString& FileNam
 {
     if (!Mesh) return false;
 
-    FString BaseDirectory = FPaths::ProjectSavedDir() + TEXT("../ExportedMeshes/");
-    FString MeshDirectory = BaseDirectory + FileName + TEXT("/");  // 메시 이름으로 폴더
+    FString MeshDirectory = FPaths::ProjectSavedDir() + TEXT("../ExportedMeshes/");
     FString FullPath = MeshDirectory + FileName + TEXT(".fbx");
 
     IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
