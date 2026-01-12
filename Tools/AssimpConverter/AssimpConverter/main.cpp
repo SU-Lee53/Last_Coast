@@ -7,7 +7,7 @@
 #include <shobjidl.h>   // IFileDialog
 
 TCHAR g_str[1024] = L"";
-TCHAR g_lpstrFile[1024] = L"";
+TCHAR g_lpstrFile[8192] = L"";
 TCHAR g_lpstrFilter[256] = L"fbx File(*.fbx)\0*.fbx\0";
 TCHAR g_lpstrFileTitle[256] = L"";
 
@@ -73,7 +73,7 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			OFN.hwndOwner = hDlg;
 			OFN.lpstrFilter = g_lpstrFilter;
 			OFN.lpstrFile = g_lpstrFile;
-			OFN.nMaxFile = 256;
+			OFN.nMaxFile = _countof(g_lpstrFile);
 			OFN.lpstrFileTitle = g_lpstrFileTitle;
 			OFN.nMaxFileTitle = 256;
 			OFN.lpstrInitialDir = L".";

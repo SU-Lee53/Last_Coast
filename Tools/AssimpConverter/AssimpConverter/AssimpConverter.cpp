@@ -262,13 +262,13 @@ void AssimpConverter::BuildBoneHierarchy(aiNode* node, int parentBoneIndex)
 void AssimpConverter::SerializeModel(const std::string& strPath, const std::string& strName)
 {
 	namespace fs = std::filesystem;
-	m_strSavePath = strPath + '\\' + strName;
+	m_strSavePath = std::format("{}\\Exported", strPath); // +'\\' + strName;
 
 
 	std::string strSave = std::format("{}\\Models\\", m_strSavePath);
 	fs::path saveDirectoryPath{ strSave };
 	if (!fs::exists(saveDirectoryPath)) {
-		fs::create_directories(strSave);
+		fs::create_directories(saveDirectoryPath);
 	}
 
 	DisplayText("Serializing...\n");
@@ -320,7 +320,7 @@ void AssimpConverter::SerializeModel(const std::string& strPath, const std::stri
 	std::vector<uint8_t> bson = nlohmann::json::to_bson(hierarchyJson);
 	out.write(reinterpret_cast<const char*>(bson.data()), bson.size());
 
-	DisplayText("Successfully serialized at %s\r\n", m_strSavePath.c_str());
+	DisplayText("Successfully serialized at %s\r\n", strSave.c_str());
 
 }
 
@@ -385,8 +385,6 @@ nlohmann::ordered_json AssimpConverter::StoreMeshToJson(const aiMesh* pMesh) con
 		//	XMStoreFloat3(&xmf3Position, XMVectorScale(XMLoadFloat3(&xmf3Position), m_fScale));
 		//}
 		XMStoreFloat3(&xmf3Position, XMVectorScale(XMLoadFloat3(&xmf3Position), fScale));
-
-
 
 		XMVECTOR xmvPosition = XMLoadFloat3(&xmf3Position);
 		xmvPosition = XMVector3TransformCoord(xmvPosition, xmmtxSceneToEngine);
@@ -927,12 +925,11 @@ void AssimpConverter::SerializeAnimation(const std::string& strPath, const std::
 	}
 
 	namespace fs = std::filesystem;
-	m_strSavePath = strPath + '\\' + strName;
+	m_strSavePath = std::format("{}\\Exported", strPath); // +'\\' + strName;
 
-	// Make save path (if not exists)
 	fs::path saveDirectoryPath{ m_strSavePath };
 	if (!fs::exists(saveDirectoryPath)) {
-		fs::create_directories(m_strSavePath);
+		fs::create_directories(saveDirectoryPath);
 	}
 
 	DisplayText("Serializing...\n");
@@ -947,13 +944,13 @@ void AssimpConverter::SerializeAnimation(const std::string& strPath, const std::
 	//std::ofstream out(strSave);
 	//out << animJson.dump(2);
 
-	std::string strSave = std::format("{}/{}.bin", m_strSavePath, strName);
-	std::ofstream out{ strSave, std::ios::binary };
+	std::string strSaveName = std::format("{}/{}.bin", m_strSavePath, strName);
+	std::ofstream out{ strSaveName, std::ios::binary };
 
 	std::vector<uint8_t> bson = nlohmann::json::to_bson(animJson);
 	out.write(reinterpret_cast<const char*>(bson.data()), bson.size());
 
-	DisplayText("Successfully serialized at %s\r\n", m_strSavePath.c_str());
+	DisplayText("Successfully serialized at %s\r\n", strSaveName.c_str());
 }
 
 nlohmann::ordered_json AssimpConverter::StoreAnimationToJson(const aiAnimation* pAnimation) const
