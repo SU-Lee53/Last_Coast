@@ -57,7 +57,7 @@ void DebugPlayer::ProcessInput()
 		if (m_fPitch < XMConvertToRadians(-89.0f))
 			m_fPitch = XMConvertToRadians(-89.0f);
 
-		m_Transform.Rotate(ptDelta.y * 0.05, ptDelta.x * 0.05, 0.f);
+		m_Transform.SetRotation(m_fPitch, m_fYaw, 0.f);
 
 		::SetCursorPos(nScreenCenterX, nScreenCenterY);
 	}

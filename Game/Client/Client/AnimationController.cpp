@@ -163,19 +163,25 @@ void PlayerAnimationController::ComputeAnimation()
 	const std::vector<Bone>& ownerBones = GetOwnerBones();
 	const std::vector<AnimationKey>& basePose = m_pStateMachine->GetOutputPose();
 	float fMontageBlendWeight = m_pAnimationMontage->GetBlendWeight();
+	
+	//m_mtxCachedPose = m_pAnimationMontage->GetOutputPose();
+	//m_pBlendMachine->Blend(ownerBones, basePose, m_mtxCachedPose, m_mtxCachedLocalBoneTransforms, fMontageBlendWeight);
 
-	m_mtxCachedPose = m_pAnimationMontage->GetOutputPose();
-	m_pBlendMachine->Blend(ownerBones, basePose, m_mtxCachedPose, m_mtxCachedLocalBoneTransforms, fMontageBlendWeight);
+	if (fMontageBlendWeight > 0.f) {
+		m_mtxCachedPose = m_pAnimationMontage->GetOutputPose();
+		m_pBlendMachine->Blend(ownerBones, basePose, m_mtxCachedPose, m_mtxCachedLocalBoneTransforms, fMontageBlendWeight);
+	}
+	else {
+		m_mtxCachedLocalBoneTransforms.resize(ownerBones.size());
+		for (int i = 0; i < basePose.size(); ++i) {
+			m_mtxCachedLocalBoneTransforms[i] = basePose[i].CreateSRT();
+		}
+	}
 
-	//if (fMontageBlendWeight > 0.f) {
-	//	m_mtxCachedPose = m_pAnimationMontage->GetOutputPose();
-	//	m_pBlendMachine->Blend(ownerBones, basePose, m_mtxCachedPose, m_mtxCachedLocalBoneTransforms, fMontageBlendWeight);
-	//}
-	//else {
-	//	m_mtxCachedLocalBoneTransforms.resize(ownerBones.size());
-	//	for (int i = 0; i < basePose.size(); ++i) {
-	//		m_mtxCachedLocalBoneTransforms[i] = basePose[i].CreateSRT();
-	//	}
+	//auto pAnimation = ANIMATION->Get("Firing Rifle");
+	//float fTime = std::fmodf(m_fTotalTimeElapsed, pAnimation->GetDuration());
+	//for (int i = 0; i < ownerBones.size(); ++i) {
+	//	m_mtxCachedLocalBoneTransforms[i] = pAnimation->GetKeyFrameMatrix(ownerBones[i].strBoneName, fTime, ownerBones[i].mtxTransform);
 	//}
 }
 

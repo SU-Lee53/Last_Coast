@@ -242,20 +242,19 @@ void AnimationMontage::UpdateFallback()
 
 void PlayerAnimationMontage::BuildMontage()
 {
-	// 1. Aim Idle
+	// 1. Fire
+	MontageSection fireSection{};
+	fireSection.strName = "Rifle Fire";
+	fireSection.pAnimationToPlay = ANIMATION->Get("Firing Rifle");
+	fireSection.eEndRule = MONTAGE_SECTION_END_RULE::NEXT;
+	m_MontageSections.push_back(fireSection);
+
+	// 2. Aim Idle
 	MontageSection aimSection{};
 	aimSection.strName = "Rifle Aiming Idle";
 	aimSection.pAnimationToPlay = ANIMATION->Get("Rifle Aiming Idle");
 	aimSection.eEndRule = MONTAGE_SECTION_END_RULE::LOOP;
 	m_MontageSections.push_back(aimSection);
-
-	// 2. Fire
-	MontageSection fireSection{};
-	fireSection.strName = "Rifle Fire";
-	fireSection.pAnimationToPlay = ANIMATION->Get("Firing Rifle");
-	fireSection.eEndRule = MONTAGE_SECTION_END_RULE::JUMP;
-	fireSection.strJumpTarget = "Rifle Aiming Idle";
-	m_MontageSections.push_back(fireSection);
 
 
 }
