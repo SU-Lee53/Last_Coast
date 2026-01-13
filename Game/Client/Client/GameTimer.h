@@ -20,8 +20,8 @@ public:
 	unsigned long GetFrameRate(const std::wstring& wsvGameName, std::wstring& wstrString);
 
 private:
-	double							m_dTimeScale;
-	double							m_dTotalTimeElapsed;
+	float							m_fTimeScale;
+	float							m_fTotalTimeElapsed;
 
 	__int64							m_nBasePerformanceCounter;
 	__int64							m_nPausedPerformanceCounter;
@@ -31,12 +31,12 @@ private:
 
 	__int64							m_nPerformanceFrequencyPerSec;
 
-	double							m_dFrameTime[MAX_SAMPLE_COUNT];
+	float							m_fFrameTime[MAX_SAMPLE_COUNT];
 	ULONG							m_nSampleCount;
 
 	unsigned long					m_nCurrentFrameRate;
 	unsigned long					m_nFramesPerSecond;
-	double							m_dFPSTimeElapsed;
+	float							m_fFPSTimeElapsed;
 
 	bool							m_bStopped;
 };

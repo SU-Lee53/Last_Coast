@@ -5,7 +5,7 @@ void GameTimer::Initialize()
 {
 	::QueryPerformanceFrequency((LARGE_INTEGER*)&m_nPerformanceFrequencyPerSec);
 	::QueryPerformanceCounter((LARGE_INTEGER*)&m_nLastPerformanceCounter);
-	m_dTimeScale = 1.0 / (double)m_nPerformanceFrequencyPerSec;
+	m_fTimeScale = 1.0 / (double)m_nPerformanceFrequencyPerSec;
 
 	m_nBasePerformanceCounter = m_nLastPerformanceCounter;
 	m_nPausedPerformanceCounter = 0;
@@ -14,50 +14,50 @@ void GameTimer::Initialize()
 	m_nSampleCount = 0;
 	m_nCurrentFrameRate = 0;
 	m_nFramesPerSecond = 0;
-	m_dFPSTimeElapsed = 0.0f;
+	m_fFPSTimeElapsed = 0.0f;
 }
 void GameTimer::Tick(float fLockFPS)
 {
 	if (m_bStopped)
 	{
-		m_dTotalTimeElapsed = 0.0f;
+		m_fTotalTimeElapsed = 0.0f;
 		return;
 	}
 	float fTimeElapsed;
 
 	::QueryPerformanceCounter((LARGE_INTEGER*)&m_nCurrentPerformanceCounter);
-	fTimeElapsed = float((m_nCurrentPerformanceCounter - m_nLastPerformanceCounter) * m_dTimeScale);
+	fTimeElapsed = float((m_nCurrentPerformanceCounter - m_nLastPerformanceCounter) * m_fTimeScale);
 
 	if (fLockFPS > 0.0f)
 	{
 		while (fTimeElapsed < (1.0f / fLockFPS))
 		{
 			::QueryPerformanceCounter((LARGE_INTEGER*)&m_nCurrentPerformanceCounter);
-			fTimeElapsed = float((m_nCurrentPerformanceCounter - m_nLastPerformanceCounter) * m_dTimeScale);
+			fTimeElapsed = float((m_nCurrentPerformanceCounter - m_nLastPerformanceCounter) * m_fTimeScale);
 		}
 	}
 
 	m_nLastPerformanceCounter = m_nCurrentPerformanceCounter;
 
-	if (fabsf(fTimeElapsed - m_dTotalTimeElapsed) < 1.0f)
+	if (fabsf(fTimeElapsed - m_fTotalTimeElapsed) < 1.0f)
 	{
-		::memmove(&m_dFrameTime[1], m_dFrameTime, (MAX_SAMPLE_COUNT - 1) * sizeof(float));
-		m_dFrameTime[0] = fTimeElapsed;
+		::memmove(&m_fFrameTime[1], m_fFrameTime, (MAX_SAMPLE_COUNT - 1) * sizeof(float));
+		m_fFrameTime[0] = fTimeElapsed;
 		if (m_nSampleCount < MAX_SAMPLE_COUNT) m_nSampleCount++;
 	}
 
 	m_nFramesPerSecond++;
-	m_dFPSTimeElapsed += fTimeElapsed;
-	if (m_dFPSTimeElapsed > 1.0f)
+	m_fFPSTimeElapsed += fTimeElapsed;
+	if (m_fFPSTimeElapsed > 1.0f)
 	{
 		m_nCurrentFrameRate = m_nFramesPerSecond;
 		m_nFramesPerSecond = 0;
-		m_dFPSTimeElapsed = 0.0f;
+		m_fFPSTimeElapsed = 0.0f;
 	}
 
-	m_dTotalTimeElapsed = 0.0f;
-	for (ULONG i = 0; i < m_nSampleCount; i++) m_dTotalTimeElapsed += m_dFrameTime[i];
-	if (m_nSampleCount > 0) m_dTotalTimeElapsed /= m_nSampleCount;
+	m_fTotalTimeElapsed = 0.0f;
+	for (ULONG i = 0; i < m_nSampleCount; i++) m_fTotalTimeElapsed += m_fFrameTime[i];
+	if (m_nSampleCount > 0) m_fTotalTimeElapsed /= m_nSampleCount;
 }
 
 unsigned long GameTimer::GetFrameRate(const std::wstring& wsvGameName, std::wstring& wstrString)
@@ -69,13 +69,13 @@ unsigned long GameTimer::GetFrameRate(const std::wstring& wsvGameName, std::wstr
 
 float GameTimer::GetTimeElapsed()
 {
-	return m_dTotalTimeElapsed;
+	return m_fTotalTimeElapsed;
 }
 
 double GameTimer::GetTotalTime()
 {
-	if (m_bStopped) return(float(((m_nStopPerformanceCounter - m_nPausedPerformanceCounter) - m_nBasePerformanceCounter) * m_dTimeScale));
-	return float(((m_nCurrentPerformanceCounter - m_nPausedPerformanceCounter) - m_nBasePerformanceCounter) * m_dTimeScale);
+	if (m_bStopped) return(float(((m_nStopPerformanceCounter - m_nPausedPerformanceCounter) - m_nBasePerformanceCounter) * m_fTimeScale));
+	return float(((m_nCurrentPerformanceCounter - m_nPausedPerformanceCounter) - m_nBasePerformanceCounter) * m_fTimeScale);
 }
 
 void GameTimer::Reset()
