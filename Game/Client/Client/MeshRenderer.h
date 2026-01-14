@@ -36,6 +36,7 @@ public:
 
 	const std::vector<std::shared_ptr<Mesh>>& GetMeshes() const { return m_pMeshes; }
 	const std::vector<std::shared_ptr<Material>>& GetMaterials() const { return m_pMaterials; };
+	BoundingOrientedBox GetOBBMerged() const;
 
 	uint64_t GetID() const { return m_ui64RendererID; }
 	UINT GetRenderType() const { return m_eRenderType; }

@@ -4,15 +4,6 @@
 #include "MeshRenderer.h"
 #include "AnimationController.h"
 
-/*
-	- 10.18
-		- Script 기반의 Object 는 갖다버린다 -> 별도 로직이 필요하다면 상속받아 사용하도록 함
-
-	- 10.21
-		- MeshRenderer 를 Component 에서 그냥 일반적인 필드로 변경한다
-			- 공유해서 인스턴싱에 써먹을 물건이 Owner 를 가진 고유 객체인것이 말이 안되긴 했음
-*/
-
 struct MESHLOADINFO;
 struct MATERIALLOADINFO;
 
@@ -67,6 +58,7 @@ public:
 	int FindBoneIndex(const std::string& strBoneName) const;
 	std::shared_ptr<AnimationController> GetAnimationController() const { return m_pAnimationController; }
 
+	void MergeBoundingBox(BoundingOrientedBox* pOBB);
 
 public:
 	std::shared_ptr<GameObject> FindFrame(const std::string& strFrameName);

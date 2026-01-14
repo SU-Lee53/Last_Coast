@@ -120,6 +120,10 @@ std::shared_ptr<GameObject> ModelManager::LoadFrameHierarchyFromFile(std::shared
 		}
 	}
 	
+	if (pParent) {
+		pGameObject->SetParent(pParent);
+	}
+
 	unsigned nChildren = inJson["nChildren"].get<unsigned>();
 	pGameObject->m_pChildren.reserve(nChildren);
 	for (int i = 0; i < nChildren; ++i) {

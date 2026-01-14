@@ -413,7 +413,8 @@ CommandListPair* TextureManager::AllocateCommandListSafe()
 	if (!cmdList) {
 		while (true) {
 			UINT64 ui64CompletedValue = m_pd3dFence->GetCompletedValue();
-			m_CommandListPool.ReclaimEnded(ui64CompletedValue);
+			//m_CommandListPool.ReclaimEnded(ui64CompletedValue);
+			ReleaseCompletedUploadBuffers();
 			cmdList = m_CommandListPool.Allocate(m_nFenceValue);
 			if (cmdList) {
 				break;

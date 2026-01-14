@@ -26,14 +26,17 @@ void GameObject::Initialize()
 		if (m_pAnimationController) {
 			m_pAnimationController->Initialize(shared_from_this());
 		}
-
-		m_bInitialized = true;
 	}
-	
 
 	for (auto& pChild : m_pChildren) {
 		pChild->Initialize();
 	}
+
+	if (m_pParent.expired()) {
+		MergeBoundingBox(&m_xmOBB);
+	}
+
+	m_bInitialized = true;
 }
 
 void GameObject::Update()
@@ -148,6 +151,38 @@ int GameObject::FindBoneIndex(const std::string& strBoneName) const
 	}
 
 	return -1;
+}
+
+void GameObject::MergeBoundingBox(BoundingOrientedBox* pOBB)
+{
+	if (m_pParent.expired()) {	// if root
+		*pOBB = BoundingOrientedBox{};
+	}
+
+	if (m_pMeshRenderer) {
+		// Get corner fron OBB to merge
+		XMFLOAT3 pxmf3OBBPoints1[BoundingOrientedBox::CORNER_COUNT];
+		m_pMeshRenderer->GetOBBMerged().GetCorners(pxmf3OBBPoints1);
+		
+		XMFLOAT3 pxmf3OBBPoints2[BoundingOrientedBox::CORNER_COUNT];
+		pOBB->GetCorners(pxmf3OBBPoints2);
+
+		// Create AABB from obb points for merge
+		BoundingBox xmAABB1, xmAABB2;
+		BoundingBox::CreateFromPoints(xmAABB1, BoundingOrientedBox::CORNER_COUNT, pxmf3OBBPoints1, sizeof(XMFLOAT3));
+		BoundingBox::CreateFromPoints(xmAABB2, BoundingOrientedBox::CORNER_COUNT, pxmf3OBBPoints2, sizeof(XMFLOAT3));
+
+		// Merge OBB
+		BoundingBox xmAABBMerged;
+		BoundingBox::CreateMerged(xmAABBMerged, xmAABB1, xmAABB2);
+
+		// Set OBB
+		BoundingOrientedBox::CreateFromBoundingBox(*pOBB, xmAABBMerged);
+	}
+
+	for (auto& pChild : m_pChildren) {
+		pChild->MergeBoundingBox(pOBB);
+	}
 }
 
 std::shared_ptr<GameObject> GameObject::FindFrame(const std::string& strFrameName)

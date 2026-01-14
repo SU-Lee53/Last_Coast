@@ -47,6 +47,24 @@ bool IMeshRenderer::operator==(const IMeshRenderer& rhs) const
 	return m_ui64RendererID == rhs.m_ui64RendererID;
 }
 
+BoundingOrientedBox IMeshRenderer::GetOBBMerged() const
+{
+	BoundingBox xmAABBMerged{};
+	for (const auto& pMesh : m_pMeshes) {
+		XMFLOAT3 pxmf3OBBPoints[BoundingOrientedBox::CORNER_COUNT];
+		pMesh->GetBoundingBox().GetCorners(pxmf3OBBPoints); 
+		BoundingBox xmAABB{};
+		BoundingBox::CreateFromPoints(xmAABB, BoundingOrientedBox::CORNER_COUNT, pxmf3OBBPoints, sizeof(XMFLOAT3));
+
+		BoundingBox::CreateMerged(xmAABBMerged, xmAABBMerged, xmAABB);
+	}
+
+	BoundingOrientedBox xmOBBResult{};
+	BoundingOrientedBox::CreateFromBoundingBox(xmOBBResult, xmAABBMerged);
+
+	return xmOBBResult;
+}
+
 void IMeshRenderer::SetTexture(std::shared_ptr<Texture> pTexture, UINT nMaterialIndex, TEXTURE_TYPE eTextureType)
 {
 	assert(pTexture);

@@ -39,8 +39,9 @@ struct MESHLOADINFO {
 class Mesh {
 public:
 	Mesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
 	virtual ~Mesh() {}
+	
+	const BoundingOrientedBox& GetBoundingBox() const { return m_xmOBB; }
 
 	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, UINT nSubSet, UINT nInstanceCount = 1) const = 0;
 

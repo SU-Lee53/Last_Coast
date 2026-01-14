@@ -6,7 +6,6 @@ Camera::Camera()
 {
 	m_mtxView = Matrix::Identity;
 	m_mtxProjection = Matrix::Identity;
-	//m_mtxCameraTransform = Matrix::Identity;
 }
 
 Camera::~Camera()
