@@ -1,23 +1,34 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+ï»¿// Copyright Epic Games, Inc. All Rights Reserved.
 
 using UnrealBuildTool;
 
 public class ObjectSaveSystem : ModuleRules
 {
-	public ObjectSaveSystem(ReadOnlyTargetRules Target) : base(Target)
-	{
-		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+    public ObjectSaveSystem(ReadOnlyTargetRules Target) : base(Target)
+    {
+        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput","Json",        // JSON ¸ðµâ Ãß°¡
-            "JsonUtilities" // JSON À¯Æ¿¸®Æ¼ ¸ðµâ Ãß°¡
-		});
+        PublicDependencyModuleNames.AddRange(new string[]
+        {
+            "Core",
+            "CoreUObject",
+            "Engine",
+            "InputCore",
+            "EnhancedInput",
+            "Json",
+            "JsonUtilities",
+            "Landscape",  // âœ… Landscape ëª¨ë“ˆ ì¶”ê°€!
+            "Foliage"
+        });
+
         if (Target.bBuildEditor)
         {
             PrivateDependencyModuleNames.AddRange(new string[]
             {
                 "UnrealEd",
                 "AssetTools",
-                "FBX"  // FBX ¿É¼Ç »ç¿ëÀ» À§ÇØ Ãß°¡
+                "FBX",              // FBX export
+                "LandscapeEditor"   // âœ… Landscape Editor ëª¨ë“ˆ ì¶”ê°€!
             });
         }
     }
