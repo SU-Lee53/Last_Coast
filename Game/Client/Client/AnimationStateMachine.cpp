@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "AnimationStateMachine.h"
+#include "ThirdPersonPlayer.h"
 
 AnimationStateMachine::AnimationStateMachine()
 {
@@ -109,18 +110,26 @@ void PlayerAnimationStateMachine::InitializeStateGraph()
 bool PlayerAnimationStateMachine::IdleCallback(std::shared_ptr<GameObject> pObj)
 {
 	// TODO : 구현
-	return !INPUT->GetButtonPressed(VK_UP) && !INPUT->GetButtonPressed(VK_LSHIFT);
+	//return !INPUT->GetButtonPressed(VK_UP) && !INPUT->GetButtonPressed(VK_LSHIFT);
+	
+	auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(pObj);
+	return pPlayer->GetMoveSpeed() < std::numeric_limits<float>::epsilon();
 }
 
 bool PlayerAnimationStateMachine::WalkCallback(std::shared_ptr<GameObject> pObj)
 {
 	// TODO : 구현
-
-	return INPUT->GetButtonPressed(VK_UP) && !INPUT->GetButtonPressed(VK_LSHIFT);
+	//return INPUT->GetButtonPressed(VK_UP) && !INPUT->GetButtonPressed(VK_LSHIFT);
+	
+	auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(pObj);
+	return pPlayer->GetMoveSpeed() > std::numeric_limits<float>::epsilon() && !pPlayer->IsRunning();
 }
 
 bool PlayerAnimationStateMachine::RunCallback(std::shared_ptr<GameObject> pObj)
 {
 	// TODO : 구현
-	return INPUT->GetButtonPressed(VK_UP) && INPUT->GetButtonPressed(VK_LSHIFT);
+	// return INPUT->GetButtonPressed(VK_UP) && INPUT->GetButtonPressed(VK_LSHIFT);
+	
+	auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(pObj);
+	return pPlayer->GetMoveSpeed() > std::numeric_limits<float>::epsilon() && pPlayer->IsRunning();
 }

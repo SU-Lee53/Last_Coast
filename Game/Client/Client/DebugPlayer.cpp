@@ -20,8 +20,6 @@ void DebugPlayer::Initialize()
 		m_pCamera->GenerateViewMatrix(XMFLOAT3(0.f, 0.f, -15.f), XMFLOAT3(0.f, 0.f, 1.f), XMFLOAT3(0.f, 1.f, 0.f));
 		m_pCamera->GenerateProjectionMatrix(1.01f, 500_m, (WinCore::sm_dwClientWidth / WinCore::sm_dwClientHeight), 60.0f);
 		m_pCamera->SetOwner(shared_from_this());
-
-		m_bInitialized = true;
 	}
 
 	GameObject::Initialize();

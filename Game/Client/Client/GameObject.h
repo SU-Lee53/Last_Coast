@@ -135,18 +135,23 @@ inline 	std::shared_ptr<T> GameObject::GetComponent()
 template<typename T>
 std::shared_ptr<T> GameObject::CopyObject(std::shared_ptr<GameObject> pParent) const
 {
-	std::shared_ptr<T> pClone = std::make_shared<T>();
-	pClone->m_strFrameName = m_strFrameName;
-	pClone->m_Transform = m_Transform;
-	pClone->m_pMeshRenderer = m_pMeshRenderer;
-	pClone->m_pComponents = m_pComponents;
+	std::shared_ptr<T> pClone = std::make_shared<T>(*shared_from_this());
 	pClone->m_pParent = pParent;
-
-	pClone->m_pChildren.reserve(m_pChildren.size());
 	for (auto pChild : m_pChildren) {
 		std::shared_ptr<decltype(pChild)::element_type> pChildClone = pChild->CopyObject<decltype(pChild)::element_type>(pClone);
 		pClone->m_pChildren.push_back(pChildClone);
 	}
+	
+	//pClone->m_strFrameName = m_strFrameName;
+	//pClone->m_Transform = m_Transform;
+	//pClone->m_pMeshRenderer = m_pMeshRenderer;
+	//pClone->m_pComponents = m_pComponents;
+	//
+	//pClone->m_pChildren.reserve(m_pChildren.size());
+	//for (auto pChild : m_pChildren) {
+	//	std::shared_ptr<decltype(pChild)::element_type> pChildClone = pChild->CopyObject<decltype(pChild)::element_type>(pClone);
+	//	pClone->m_pChildren.push_back(pChildClone);
+	//}
 
 	return pClone;
 }

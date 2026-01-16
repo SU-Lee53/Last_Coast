@@ -41,4 +41,16 @@ void Player::Update()
 
 void Player::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 {
+	if (m_pAnimationController) {
+		RENDER->AddAnimatedObject(shared_from_this());
+		return;
+	}
+
+	if (m_pMeshRenderer) {
+		m_pMeshRenderer->Update(shared_from_this());
+	}
+
+	for (auto& pChild : m_pChildren) {
+		pChild->Render(pd3dCommandList);
+	}
 }

@@ -1,5 +1,7 @@
 ﻿#include "pch.h"
 #include "AnimationController.h"
+#include "ThirdPersonPlayer.h"
+#include "ThirdPersonCamera.h"
 
 LayeredBlendMachine::LayeredBlendMachine(std::shared_ptr<GameObject> pGameObject, const std::string& strBranch, int nBlendDepth)
 	: strBranchBoneName{ strBranch }
@@ -156,6 +158,10 @@ void PlayerAnimationController::Initialize(std::shared_ptr<GameObject> pOwner)
 	m_mtxFinalBoneTransforms.resize(nBones);
 
 	m_pBlendMachine = std::make_unique<LayeredBlendMachine>(pOwner, "Spine", 3);
+	m_nSpineIndex = pOwner->FindBoneIndex("Spine");
+
+	const auto& pCamera = std::static_pointer_cast<ThirdPersonPlayer>(pOwner)->GetCamera();
+	m_wpPlayerCamera = std::static_pointer_cast<ThirdPersonCamera>(pCamera);
 }
 
 void PlayerAnimationController::ComputeAnimation()
@@ -168,8 +174,19 @@ void PlayerAnimationController::ComputeAnimation()
 	//m_pBlendMachine->Blend(ownerBones, basePose, m_mtxCachedPose, m_mtxCachedLocalBoneTransforms, fMontageBlendWeight);
 
 	if (fMontageBlendWeight > 0.f) {
-		m_mtxCachedPose = m_pAnimationMontage->GetOutputPose();
-		m_pBlendMachine->Blend(ownerBones, basePose, m_mtxCachedPose, m_mtxCachedLocalBoneTransforms, fMontageBlendWeight);
+		const std::vector<AnimationKey>& blendPose = m_pAnimationMontage->GetOutputPose();
+		m_pBlendMachine->Blend(ownerBones, basePose, blendPose, m_mtxCachedLocalBoneTransforms, fMontageBlendWeight);
+
+		// 조준 허리 회전
+		float fCameraPitch = m_wpPlayerCamera.lock()->GetPitch();
+		Quaternion v4CameraPitch = Quaternion::CreateFromYawPitchRoll(0.f, 0.f, -XMConvertToRadians(fCameraPitch));
+
+		std::vector<Matrix> mtxComponentSpace;
+		AnimationHepler::LocalToComponent(ownerBones, m_mtxCachedLocalBoneTransforms, mtxComponentSpace);
+		AnimationHepler::TransformModifyBone(ownerBones, m_nSpineIndex, m_mtxCachedLocalBoneTransforms, mtxComponentSpace, v4CameraPitch, fMontageBlendWeight);
+		AnimationHepler::ComponentToLocal(ownerBones, mtxComponentSpace, m_mtxCachedLocalBoneTransforms);
+
+		OutputDebugStringA(std::format("fCameraPitch : {}\n", fCameraPitch).c_str());
 	}
 	else {
 		m_mtxCachedLocalBoneTransforms.resize(ownerBones.size());
@@ -187,16 +204,4 @@ void PlayerAnimationController::ComputeAnimation()
 
 void PlayerAnimationController::ProcessInput()
 {
-	if (INPUT->GetButtonDown(VK_RBUTTON)) {
-		m_pAnimationMontage->PlayMontage("Rifle Aiming Idle");
-	}
-	if (INPUT->GetButtonUp(VK_RBUTTON)) {
-		m_pAnimationMontage->StopMontage();
-	}
-
-	if (INPUT->GetButtonPressed(VK_RBUTTON) && INPUT->GetButtonDown(VK_LBUTTON)) {
-		m_pAnimationMontage->JumpToSection("Rifle Fire");
-	}
-
-
 }

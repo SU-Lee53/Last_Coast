@@ -302,6 +302,15 @@
     <ClInclude Include="TestScene.h">
       <Filter>02.Game\Scene</Filter>
     </ClInclude>
+    <ClInclude Include="AnimationHelper.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimationMontage.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdPersonPlayer.h">
+      <Filter>02.Game\GameObject\Player</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -494,6 +503,11 @@
     <ClCompile Include="CommandListPool.cpp" />
     <ClCompile Include="TestScene.cpp">
       <Filter>02.Game\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimationHelper.cpp" />
+    <ClCompile Include="AnimationMontage.cpp" />
+    <ClCompile Include="ThirdPersonPlayer.cpp">
+      <Filter>02.Game\GameObject\Player</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

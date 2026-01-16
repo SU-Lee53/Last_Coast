@@ -84,14 +84,39 @@ void AnimationHepler::ComponentToLocalWithInverseHint(const std::vector<Bone>& b
 	}
 }
 
-void AnimationHepler::TransformModifyBone(std::vector<Matrix>& componentTransform, int boneIndex, const Quaternion& addRotation, float alpha)
+void AnimationHepler::TransformModifyBone(const std::vector<Bone>& bones, int boneIndexToModify, const std::vector<Matrix>& localTransform, std::vector<Matrix>& componentTransform, const Quaternion& addRotation, float alpha)
 {
 	AnimationKey animKey{};
-	componentTransform[boneIndex].Decompose(animKey.v3Scale, animKey.v4RotationQuat, animKey.v3Translation);
+	componentTransform[boneIndexToModify].Decompose(animKey.v3Scale, animKey.v4RotationQuat, animKey.v3Translation);
 
 	Quaternion targetRotation = animKey.v4RotationQuat * addRotation;
 	Quaternion finalRot = Quaternion::Slerp(animKey.v4RotationQuat, targetRotation, alpha);
 	animKey.v4RotationQuat = finalRot;
 
-	componentTransform[boneIndex] = animKey.CreateSRT();
+	componentTransform[boneIndexToModify] = animKey.CreateSRT();
+
+	UpdateSubtree(bones, boneIndexToModify, localTransform, componentTransform);
 }
+
+void AnimationHepler::UpdateSubtree(const std::vector<Bone>& bones, int boneIndex, const std::vector<Matrix>& localTransform, std::vector<Matrix>& componentTransform)
+{
+	std::vector<const Bone*> DFSStack;
+	DFSStack.reserve(bones.size());
+	for (int i = 0; i < bones[boneIndex].nChildren; ++i) {
+		DFSStack.push_back(&bones[bones[boneIndex].nChilerenIndex[i]]);
+	}
+
+	while (DFSStack.size() != 0) {
+		const Bone* pCurBone = DFSStack.back();
+		DFSStack.pop_back();
+
+		int nIndex = pCurBone->nIndex;
+		int nParentIndex = pCurBone->nParentIndex;
+		componentTransform[nIndex] = localTransform[nIndex] * componentTransform[nParentIndex];
+
+		for (int i = 0; i < pCurBone->nChildren; ++i) {
+			DFSStack.push_back(&bones[pCurBone->nChilerenIndex[i]]);
+		}
+	}
+}
+

@@ -64,6 +64,8 @@ protected:
 
 };
 
+class ThirdPersonCamera;
+
 class PlayerAnimationController : public AnimationController {
 public:
 	virtual void Initialize(std::shared_ptr<GameObject> pOwner) override;
@@ -74,6 +76,7 @@ protected:
 
 private:
 	std::unique_ptr<LayeredBlendMachine> m_pBlendMachine;
-
+	int m_nSpineIndex = 0;
+	std::weak_ptr<ThirdPersonCamera> m_wpPlayerCamera;
 
 };

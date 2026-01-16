@@ -5,43 +5,126 @@
 
 ThirdPersonCamera::ThirdPersonCamera()
 {
-}
-
-ThirdPersonCamera::~ThirdPersonCamera()
-{
-}
-
-void ThirdPersonCamera::ProcessInput()
-{
+	m_eCameraMode = CAMERA_MODE::FREE;
+	m_v3Offset = m_v3FreeModeOffset;
+	m_fLookHeight = m_v3FreeModeHeight;
 }
 
 void ThirdPersonCamera::Update()
 {
-	const Transform& ownerTransform = m_wpOwner.lock()->GetTransform();
-	Vector3 v3Right = ownerTransform.GetRight();
-	Vector3 v3Up = ownerTransform.GetUp();
-	Vector3 v3Look = ownerTransform.GetLook();
+	if (m_wpOwner.expired()) {
+		return;
+	}
 
-	Matrix mtxRotate = Matrix::Identity;
-	mtxRotate._11 = v3Right.x; mtxRotate._21 = v3Up.x; mtxRotate._31 = v3Look.x;
-	mtxRotate._12 = v3Right.y; mtxRotate._22 = v3Up.y; mtxRotate._32 = v3Look.y;
-	mtxRotate._13 = v3Right.z; mtxRotate._23 = v3Up.z; mtxRotate._33 = v3Look.z;
-
-	Vector3 v3Offset = Vector3::Transform(m_v3Offset, mtxRotate);
-	Vector3 v3Position = ownerTransform.GetPosition() + v3Offset;
-	Vector3 v3Direction = v3Position - m_v3Position;
-	float fLength = v3Direction.Length();
-	v3Direction.Normalize();
-	float fTimeLagScale = (m_fTimeLag) ? (1.f / m_fTimeLag) * DT : 1.0f;
-	float fDistance = fLength * fTimeLagScale;
-	if (fDistance > fLength) fDistance = fLength;
-	if (fLength < 0.01f) fDistance = fLength;
-	if (fDistance > 0) {
-		m_v3Position = m_v3Position + (v3Direction * fDistance);
-		Vector3 v3PlayerUp = ownerTransform.GetUp();
-		v3PlayerUp.Normalize();
-		SetLookAt(ownerTransform.GetPosition() + (v3PlayerUp * 3));
+	switch (m_eCameraMode)
+	{
+	case CAMERA_MODE::FREE:
+	{
+		UpdateFreeMode();
+		break;
+	}
+	case CAMERA_MODE::AIM:
+	{
+		UpdateAimMode();
+		break;
+	}
 	}
 
 	Camera::Update();
+}
+
+void ThirdPersonCamera::UpdateFreeMode()
+{
+	const auto& ownerTransform = m_wpOwner.lock()->GetTransform();
+	Vector3 v3TargetPos = ownerTransform.GetPosition();
+
+	Matrix mtxRotation = Matrix::CreateFromYawPitchRoll(
+		XMConvertToRadians(m_fYaw),
+		XMConvertToRadians(m_fPitch),
+		0.f
+	);
+
+	Vector3 v3WorldOffset = Vector3::TransformNormal(m_v3Offset, mtxRotation);
+	Vector3 v3CameraPos = v3TargetPos + v3WorldOffset;
+
+	SetPosition(v3CameraPos);
+
+	Vector3 v3LookTarget = v3TargetPos;
+	v3LookTarget.y += m_fLookHeight;
+	SetLookAt(v3LookTarget);
+}
+
+void ThirdPersonCamera::UpdateAimMode()
+{
+	const auto& ownerTransform = m_wpOwner.lock()->GetTransform();
+	Vector3 v3TargetPos = ownerTransform.GetPosition();
+
+	// 카메라 위치
+	Matrix mtxYawRotation = Matrix::CreateRotationY(XMConvertToRadians(m_fYaw));
+	Vector3 v3ShoulderOffset = Vector3::TransformNormal(m_v3Offset, mtxYawRotation);
+	Vector3 v3CameraPos = v3TargetPos + v3ShoulderOffset;
+	SetPosition(v3CameraPos);
+
+	// 시선 방향
+	Matrix mtxLookRotation = Matrix::CreateFromYawPitchRoll(
+		XMConvertToRadians(m_fYaw),
+		XMConvertToRadians(m_fPitch),
+		0.f
+	);
+
+	Vector3 v3LookDir = Vector3::TransformNormal(Vector3::Backward, mtxLookRotation);
+	SetLookAt(v3CameraPos + (v3LookDir * 1000.f));
+}
+
+void ThirdPersonCamera::EnterAimMode()
+{
+	m_eCameraMode = CAMERA_MODE::AIM;
+	m_v3Offset = m_v3AimModeOffset;
+	m_fLookHeight = m_v3AimModeHeight;
+}
+
+void ThirdPersonCamera::LeaveAimMode()
+{
+	m_eCameraMode = CAMERA_MODE::FREE;
+	m_v3Offset = m_v3FreeModeOffset;
+	m_fLookHeight = m_v3FreeModeHeight;
+}
+
+void ThirdPersonCamera::AddYaw(float fValue)
+{
+	m_fYaw += fValue;
+}
+
+void ThirdPersonCamera::AddPitch(float fValue)
+{
+	m_fPitch += fValue;
+	m_fPitch = std::clamp(m_fPitch, m_fMinPitch, m_fMaxPitch);
+}
+
+void ThirdPersonCamera::SetOffset(const Vector3& v3Value)
+{
+	m_v3Offset = v3Value;
+}
+
+void ThirdPersonCamera::SetLookHeight(float fValue)
+{
+	m_fLookHeight = fValue;
+}
+
+Vector3 ThirdPersonCamera::GetForwardXZ() const
+{
+	Vector3 v3LookXZ = m_v3Look;
+	v3LookXZ.y = 0.f;
+	v3LookXZ.Normalize();
+
+	return v3LookXZ;
+}
+
+Vector3 ThirdPersonCamera::GetRightXZ() const
+{
+	Vector3 v3RightXZ = m_v3Right;
+	v3RightXZ.y = 0.f;
+	v3RightXZ.Normalize();
+
+	return v3RightXZ;
 }

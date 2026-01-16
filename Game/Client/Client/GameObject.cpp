@@ -110,11 +110,15 @@ void GameObject::SetChild(std::shared_ptr<GameObject> pChild)
 	}
 
 	// 현재 프레임이 Root 이고 추가될 자식이 애니메이션을 가지고 있다면 옮겨온다
-	if (m_pParent.expired() && pChild->m_pAnimationController) {
-		m_Bones = std::move(pChild->m_Bones);
-		m_pAnimationController = std::move(pChild->m_pAnimationController);
-	}
+	//if (m_pParent.expired() && pChild->m_pAnimationController) {
+	//	m_Bones = std::move(pChild->m_Bones);
+	//	m_pAnimationController = std::move(pChild->m_pAnimationController);
+	//}
 
+
+	if (m_pParent.expired() && pChild->m_Bones.size() != 0) {
+		m_Bones = std::move(pChild->m_Bones);
+	}
 }
 
 void GameObject::SetFrameName(const std::string& strFrameName)

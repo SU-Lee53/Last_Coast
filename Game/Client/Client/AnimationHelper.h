@@ -43,9 +43,17 @@ struct AnimationHepler {
 	/////////////////////////////////////////////////////////////
 	// Bone Modifier
 	static void TransformModifyBone(
+		const std::vector<Bone>& bones,
+		int boneIndexToModify,
+		const std::vector<Matrix>& localTransform,
 		std::vector<Matrix>& componentTransform,
-		int boneIndex,
 		const Quaternion& addRotation,
 		float alpha);
 
+private:
+	static void UpdateSubtree(
+		const std::vector<Bone>& bones,
+		int boneIndex,
+		const std::vector<Matrix>& localTransform,
+		std::vector<Matrix>& componentTransform);
 };
