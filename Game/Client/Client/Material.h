@@ -39,8 +39,8 @@ public:
 	std::shared_ptr<Texture> GetTexture(int nIndex);
 
 public:
-	virtual void UpdateShaderVariables(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, void* dataForBind) = 0;
-	virtual void UpdateShaderVariables(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle) = 0;
+	virtual void UpdateShaderVariables(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, void* dataForBind);
+	virtual void UpdateShaderVariables(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle);
 
 protected:
 	MaterialColors m_MaterialColors{};
@@ -58,9 +58,6 @@ public:
 	StandardMaterial(const MATERIALLOADINFO& materialLoadInfo);
 	virtual ~StandardMaterial() {}
 
-	virtual void UpdateShaderVariables(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, void* dataForBind) override;
-	virtual void UpdateShaderVariables(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle) override;
-
 };
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -70,9 +67,6 @@ class SkinnedMaterial : public Material {
 public:
 	SkinnedMaterial(const MATERIALLOADINFO& materialLoadInfo);
 	virtual ~SkinnedMaterial() {}
-
-	virtual void UpdateShaderVariables(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, void* dataForBind) override;
-	virtual void UpdateShaderVariables(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle) override;
 
 };
 

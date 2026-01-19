@@ -74,9 +74,9 @@ void TerrainObject::BuildTerrainMesh(const TERRAINLOADINFO& terrainInfo)
 	std::vector<uint32>& unIndices = meshLoadInfo.unIndices;
 	unIndices.reserve(unNumIndices);
 
-	m_pTerrainComponents.reserve(terrainInfo.ComponentInfos.size());
-
-	for (const auto& componentInfo : terrainInfo.ComponentInfos) {
+	m_pTerrainComponents.resize(terrainInfo.ComponentInfos.size());
+	for (uint32 i = 0; i < terrainInfo.ComponentInfos.size(); ++i) {// const auto& componentInfo : terrainInfo.ComponentInfos) {
+		const auto& componentInfo = terrainInfo.ComponentInfos[i];
 		TerrainIndexRange indexRange{};
 		indexRange.unStartIndex = static_cast<uint32>(unIndices.size());
 
@@ -109,24 +109,24 @@ void TerrainObject::BuildTerrainMesh(const TERRAINLOADINFO& terrainInfo)
 			}
 
 			indexRange.unIndexCount = static_cast<uint32>(unIndices.size()) - indexRange.unStartIndex;
-			m_pTerrainComponents.emplace_back(componentInfo, indexRange);
+			m_pTerrainComponents[i]->Initialize(componentInfo, indexRange);
 		}
 	}
 	std::shared_ptr<TerrainMesh> pTerrainMesh = std::make_shared<TerrainMesh>(meshLoadInfo);
 
 	// Material
 	uint32 unLayers = terrainInfo.LayerInfos.size();
-	std::vector<std::shared_ptr<TerrainMaterial>> pTerrainMaterials;
-	pTerrainMaterials.reserve(unLayers);
+	std::vector<std::shared_ptr<Material>> pMaterials;
+	pMaterials.reserve(unLayers);
 	for (uint32 i = 0; i < unLayers; ++i) {
 		MATERIALLOADINFO materialLoadInfo{};
 		const TERRAINLAYERLOADINFO& layerInfo = terrainInfo.LayerInfos[i];
 		materialLoadInfo.strAlbedoMapName = layerInfo.strAlbedoMapName;
 		materialLoadInfo.strNormalMapName= layerInfo.strNormalMapName;
-		pTerrainMaterials.emplace_back(materialLoadInfo, layerInfo.strLayerName, layerInfo.unIndex, layerInfo.fTiling);
+		pMaterials.push_back(std::make_shared<TerrainMaterial>(materialLoadInfo, layerInfo.strLayerName, layerInfo.unIndex, layerInfo.fTiling));
 	}
 
-	std::vector<std::shared_ptr<TerrainMesh>> pTerrainMeshes = { pTerrainMesh };
-	m_pMeshRenderer = std::make_shared<MeshRenderer<TerrainMesh>>(pTerrainMeshes, pTerrainMaterials);
+	std::vector<std::shared_ptr<Mesh>> pMeshes = { pTerrainMesh };
+	m_pMeshRenderer = std::make_shared<MeshRenderer<TerrainMesh>>(pMeshes, pMaterials);
 
 }

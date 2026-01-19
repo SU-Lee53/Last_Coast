@@ -66,7 +66,7 @@ public:
 public:
 	MeshRenderer() = default;
 	MeshRenderer(const std::vector<MESHLOADINFO>& meshLoadInfos, const std::vector<MATERIALLOADINFO>& materialLoadInfo);
-	MeshRenderer(const std::vector<std::shared_ptr<meshType>>& pMeshes, const std::vector<std::shared_ptr<Material>>& pMaterials);
+	MeshRenderer(const std::vector<std::shared_ptr<Mesh>>& pMeshes, const std::vector<std::shared_ptr<Material>>& pMaterials);
 	virtual ~MeshRenderer() {}
 
 public:
@@ -107,7 +107,7 @@ inline MeshRenderer<meshType, eRenderType>::MeshRenderer(const std::vector<MESHL
 }
 
 template<typename meshType, UINT eRenderType>
-inline MeshRenderer<meshType, eRenderType>::MeshRenderer(const std::vector<std::shared_ptr<meshType>>& pMeshes, const std::vector<std::shared_ptr<Material>>& pMaterials)
+inline MeshRenderer<meshType, eRenderType>::MeshRenderer(const std::vector<std::shared_ptr<Mesh>>& pMeshes, const std::vector<std::shared_ptr<Material>>& pMaterials)
 {
 	m_pMeshes = std::move(pMeshes);
 	m_pMaterials = std::move(pMaterials);
@@ -172,7 +172,7 @@ inline void MeshRenderer<meshType, eRenderType>::Render(ComPtr<ID3D12Device> pd3
 		const auto& pipelineStates = m_pMaterials[i]->GetShader()->GetPipelineStates();
 		pd3dCommandList->SetPipelineState(pipelineStates[0].Get());
 
-		m_pMeshes[i]->Render(pd3dCommandList, 0, nInstanceCount);
+		m_pMeshes[i]->Render(pd3dCommandList, nInstanceCount);
 	}
 	refnInstanceBase += nInstanceCount;
 }
