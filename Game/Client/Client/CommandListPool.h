@@ -8,7 +8,7 @@ struct CommandListPair {
 	ComPtr<ID3D12GraphicsCommandList> pd3dCommandList;
 	ComPtr<ID3D12CommandAllocator> pd3dCommandAllocator;
 	UINT64 ui64FenceValue = std::numeric_limits<UINT64>::max();
-	BOOL bInUse = FALSE;
+	bool bInUse = false;
 
 
 	HRESULT Close() {
@@ -21,7 +21,7 @@ struct CommandListPair {
 		if (FAILED(hr)) {
 			return hr;
 		}
-		hr = pd3dCommandList->Reset(pd3dCommandAllocator.Get(), NULL);
+		hr = pd3dCommandList->Reset(pd3dCommandAllocator.Get(), nullptr);
 		return hr;
 	}
 

@@ -29,8 +29,6 @@ public:
 	Vector3 GetForwardXZ() const;
 	Vector3 GetRightXZ() const;
 
-
-
 private:
 	void UpdateFreeMode();
 	void UpdateAimMode();
@@ -46,7 +44,7 @@ private:
 	float m_fMinPitch = -70.f;
 	float m_fMaxPitch = 30.f;
 
-	const Vector3 m_v3FreeModeOffset = Vector3{ 0, 1.5_m, -2.0_m };
+	const Vector3 m_v3FreeModeOffset = Vector3{ 0, 1.5_m, -3.0_m };
 	const Vector3 m_v3AimModeOffset = Vector3{ 30_cm, 1.5_m, -80_cm };
 
 	const float m_v3FreeModeHeight = 1.2_m;

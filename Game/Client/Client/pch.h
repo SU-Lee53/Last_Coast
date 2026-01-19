@@ -94,6 +94,7 @@ using namespace Microsoft::WRL;
 
 // Additional Helper Headers
 #include "CommandListPool.h"
+#include "Typedef.h"
 #include "Defines.h"
 #include "Concepts.h"
 #include "Utility.h"

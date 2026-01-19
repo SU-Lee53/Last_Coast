@@ -15,7 +15,7 @@ void AnimationTestScene::BuildObjects()
 	//std::shared_ptr<GameObject> pGameObject2 = MODEL->Get("vintage_wooden_sniper_optimized_for_fpstps");
 	//m_pGameObjects.push_back(pGameObject2);
 	//
-	//LoadFromFiles("TEST");
+	LoadFromFiles("TEST");
 
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 
@@ -64,6 +64,9 @@ void AnimationTestScene::Update()
 	ImGui::Begin("Test");
 	{
 		if (auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
+			ImGui::Text("Press ` to use mouse control");
+			ImGui::Text("Mouse : %s", pPlayer->IsMouseOn() ? "ON" : "OFF");
+
 			ImGui::Text("Move Speed : %f\n", pPlayer->GetMoveSpeed());
 
 			const Vector3& v3PlayerMoveDirection = pPlayer->GetMoveDirection();
@@ -79,8 +82,6 @@ void AnimationTestScene::Update()
 		}
 	}
 	ImGui::End();
-
-
 }
 
 void AnimationTestScene::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList)

@@ -15,9 +15,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	WinCore* pApp = nullptr;
 
 #ifdef _DEBUG
-	pApp = new WinCore(hInstance, 800, 600, TRUE, TRUE);
+	pApp = new WinCore(hInstance, 1600, 900, TRUE, TRUE);
 #else
-	pApp = new WinCore(hInstance, 800, 600, FALSE, FALSE);
+	pApp = new WinCore(hInstance, 1600, 900, FALSE, FALSE);
 #endif
 
 	pApp->Run();

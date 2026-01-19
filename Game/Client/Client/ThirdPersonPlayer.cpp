@@ -21,9 +21,8 @@ void ThirdPersonPlayer::Initialize()
 		m_pCamera->GenerateProjectionMatrix(1.01f, 500_m, (WinCore::sm_dwClientWidth / WinCore::sm_dwClientHeight), 60.0f);
 		m_pCamera->SetOwner(shared_from_this());
 
-
 		// Model
-		auto pModel = MODEL->Get("Ch33_nonPBR");
+		auto pModel = MODEL->Get("Ch33_nonPBR")->CopyObject<GameObject>();
 		pModel->GetTransform().Rotate(Vector3::Up, -90.f);
 		SetChild(pModel);
 
@@ -130,7 +129,8 @@ void ThirdPersonPlayer::ProcessInput()
 	if (bMoved) {
 		v3MoveDirection.Normalize();
 		m_fMoveSpeed += 0.5 * m_fAcceleration * m_fFriction;
-		m_fMoveSpeed = std::clamp(m_fMoveSpeed, 0.f, m_fMaxMoveSpeed);
+		float fMaxSpeed = m_bRunning ? m_fMaxMoveSpeed * 2 : m_fMaxMoveSpeed;
+		m_fMoveSpeed = std::clamp(m_fMoveSpeed, 0.f, fMaxSpeed);
 		m_Transform.Move(v3MoveDirection, m_fMoveSpeed * DT);
 
 		// 플레이어가 이동 방향을 바라보도록 돌린다

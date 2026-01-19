@@ -1,10 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="헤더 파일">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
     <Filter Include="리소스 파일">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
@@ -60,9 +56,6 @@
     <Filter Include="03.Engine\Resources\DescriptorHeap">
       <UniqueIdentifier>{cc9c43e1-d019-45fe-bc22-575b0dcd1c05}</UniqueIdentifier>
     </Filter>
-    <Filter Include="03.Engine\Resources\Texture">
-      <UniqueIdentifier>{78cae377-8b07-46f7-afc9-d8af2c4af8d7}</UniqueIdentifier>
-    </Filter>
     <Filter Include="03.Engine\Resources\Mesh">
       <UniqueIdentifier>{d81846ed-05e1-4d47-8602-aa652f28f4e7}</UniqueIdentifier>
     </Filter>
@@ -101,6 +94,12 @@
     </Filter>
     <Filter Include="03.Engine\D3D Resource Management">
       <UniqueIdentifier>{53fc0395-bf79-4039-b616-770a3fe13367}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Game\GameObject\Terrain">
+      <UniqueIdentifier>{d362afed-28ed-4e72-8c13-2f5ad5323294}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03.Engine\Resources\Texture">
+      <UniqueIdentifier>{78cae377-8b07-46f7-afc9-d8af2c4af8d7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -296,20 +295,32 @@
     <ClInclude Include="Player.h">
       <Filter>02.Game\GameObject\Player</Filter>
     </ClInclude>
-    <ClInclude Include="CommandListPool.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="TestScene.h">
       <Filter>02.Game\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="AnimationHelper.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="AnimationMontage.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="ThirdPersonPlayer.h">
       <Filter>02.Game\GameObject\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="Typedef.h">
+      <Filter>99.Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimationHelper.h">
+      <Filter>02.Game\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimationMontage.h">
+      <Filter>02.Game\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="CommandListPool.h">
+      <Filter>03.Engine\D3D Resource Management</Filter>
+    </ClInclude>
+    <ClInclude Include="HeightMapRawImage.h">
+      <Filter>02.Game\GameObject\Terrain</Filter>
+    </ClInclude>
+    <ClInclude Include="TerrainComponent.h">
+      <Filter>02.Game\GameObject\Terrain</Filter>
+    </ClInclude>
+    <ClInclude Include="TerrainObject.h">
+      <Filter>02.Game\GameObject\Terrain</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -500,19 +511,36 @@
     <ClCompile Include="Player.cpp">
       <Filter>02.Game\GameObject\Player</Filter>
     </ClCompile>
-    <ClCompile Include="CommandListPool.cpp" />
     <ClCompile Include="TestScene.cpp">
       <Filter>02.Game\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="AnimationHelper.cpp" />
-    <ClCompile Include="AnimationMontage.cpp" />
     <ClCompile Include="ThirdPersonPlayer.cpp">
       <Filter>02.Game\GameObject\Player</Filter>
     </ClCompile>
+    <ClCompile Include="AnimationHelper.cpp">
+      <Filter>02.Game\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimationMontage.cpp">
+      <Filter>03.Engine\D3D Resource Management</Filter>
+    </ClCompile>
+    <ClCompile Include="CommandListPool.cpp">
+      <Filter>03.Engine\D3D Resource Management</Filter>
+    </ClCompile>
+    <ClCompile Include="HeightMapRawImage.cpp">
+      <Filter>02.Game\GameObject\Terrain</Filter>
+    </ClCompile>
+    <ClCompile Include="TerrainComponent.cpp">
+      <Filter>02.Game\GameObject\Terrain</Filter>
+    </ClCompile>
+    <ClCompile Include="TerrainObject.cpp">
+      <Filter>02.Game\GameObject\Terrain</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="imgui.ini" />
     <None Include="SimpleMath.inl">
+      <Filter>99.Utility</Filter>
+    </None>
+    <None Include="imgui.ini">
       <Filter>99.Utility</Filter>
     </None>
   </ItemGroup>

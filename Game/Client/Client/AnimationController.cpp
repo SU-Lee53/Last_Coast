@@ -186,7 +186,7 @@ void PlayerAnimationController::ComputeAnimation()
 		AnimationHepler::TransformModifyBone(ownerBones, m_nSpineIndex, m_mtxCachedLocalBoneTransforms, mtxComponentSpace, v4CameraPitch, fMontageBlendWeight);
 		AnimationHepler::ComponentToLocal(ownerBones, mtxComponentSpace, m_mtxCachedLocalBoneTransforms);
 
-		OutputDebugStringA(std::format("fCameraPitch : {}\n", fCameraPitch).c_str());
+		//OutputDebugStringA(std::format("fCameraPitch : {}\n", fCameraPitch).c_str());
 	}
 	else {
 		m_mtxCachedLocalBoneTransforms.resize(ownerBones.size());

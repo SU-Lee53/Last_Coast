@@ -43,13 +43,13 @@ std::shared_ptr<Texture> Material::GetTexture(int nIndex)
 // StandardMaterial
 
 StandardMaterial::StandardMaterial(const MATERIALLOADINFO& materialLoadInfo)
-	:Material(materialLoadInfo)
+	: Material(materialLoadInfo)
 {
 	m_pTextures.resize(4);
 	m_pTextures[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName);		// Diffused
 	m_pTextures[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName);		// Normal
-	m_pTextures[2] = TEXTURE->LoadTexture(materialLoadInfo.strMetallicMapName);	// Metallic
-	m_pTextures[3] = TEXTURE->LoadTexture(materialLoadInfo.strSpecularMapName);	// Specular
+	m_pTextures[2] = TEXTURE->LoadTexture(materialLoadInfo.strMetallicMapName);		// Metallic
+	m_pTextures[3] = TEXTURE->LoadTexture(materialLoadInfo.strSpecularMapName);		// Specular
 	m_pShader = SHADER->Get<StandardShader>();
 }
 
@@ -79,13 +79,13 @@ void StandardMaterial::UpdateShaderVariables(ComPtr<ID3D12Device> pd3dDevice, Co
 // SkinnedMaterial
 
 SkinnedMaterial::SkinnedMaterial(const MATERIALLOADINFO& materialLoadInfo)
-	:Material(materialLoadInfo)
+	: Material(materialLoadInfo)
 {
 	m_pTextures.resize(4);
 	m_pTextures[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName);		// Diffused
 	m_pTextures[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName);		// Normal
-	m_pTextures[2] = TEXTURE->LoadTexture(materialLoadInfo.strMetallicMapName);	// Metallic
-	m_pTextures[3] = TEXTURE->LoadTexture(materialLoadInfo.strSpecularMapName);	// Specular
+	m_pTextures[2] = TEXTURE->LoadTexture(materialLoadInfo.strMetallicMapName);		// Metallic
+	m_pTextures[3] = TEXTURE->LoadTexture(materialLoadInfo.strSpecularMapName);		// Specular
 	m_pShader = SHADER->Get<AnimatedShader>();
 }
 
@@ -104,4 +104,19 @@ void SkinnedMaterial::UpdateShaderVariables(ComPtr<ID3D12Device> pd3dDevice, Com
 
 	pd3dCommandList->SetGraphicsRootDescriptorTable(ROOT_PARAMETER_OBJ_TEXTURES, descHandle.gpuHandle);
 	descHandle.gpuHandle.Offset(4, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+}
+
+TerrainMaterial::TerrainMaterial(const MATERIALLOADINFO& materialLoadInfo, const std::string& strLayerName, uint32 unIndex, float fTiling)
+	: Material(materialLoadInfo)
+{
+	m_strLayerName = strLayerName;
+	m_unIndex = unIndex;
+	m_fTiling = fTiling;
+
+	m_pTextures.resize(2);
+	m_pTextures[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName);		// Diffused
+	m_pTextures[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName);		// Normal
+
+	// TODO : 아래 코드 가능하도록 TerrainShader 구현
+	//m_pShader = SHADER->Get<TerrainShader>();
 }

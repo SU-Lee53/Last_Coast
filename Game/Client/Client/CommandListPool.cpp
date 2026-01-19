@@ -43,7 +43,7 @@ CommandListPair* CommandListPool::Allocate(UINT64 ui64CompletedFenceValue)
 
 	auto& cmdList = m_CmdListPool[nFreeID];
 	cmdList.Reset();
-	cmdList.bInUse = TRUE;
+	cmdList.bInUse = true;
 
 	return &m_CmdListPool[nFreeID];
 }
@@ -61,7 +61,7 @@ UINT64 CommandListPool::ReclaimEnded(ComPtr<ID3D12Fence> pd3dFence)
 		m_InUseCmdListID.pop_front();
 		m_FreeCmdListID.push_back(nCurrentID);
 
-		m_CmdListPool[nCurrentID].bInUse = FALSE;
+		m_CmdListPool[nCurrentID].bInUse = false;
 	}
 
 	return ui64CompletedValue;
@@ -78,7 +78,7 @@ UINT64 CommandListPool::ReclaimEnded(UINT64 ui64CompletedFenceValue)
 		m_InUseCmdListID.pop_front();
 		m_FreeCmdListID.push_back(nCurrentID);
 
-		m_CmdListPool[nCurrentID].bInUse = FALSE;
+		m_CmdListPool[nCurrentID].bInUse = false;
 	}
 
 	return ui64CompletedFenceValue;

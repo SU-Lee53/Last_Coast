@@ -12,7 +12,7 @@ enum OBJECT_RENDER_TYPE : UINT {
 	OBJECT_RENDER_TYPE_COUNT
 };
 
-class IMeshRenderer abstract : public std::enable_shared_from_this<IMeshRenderer> {
+interface IMeshRenderer abstract : public std::enable_shared_from_this<IMeshRenderer> {
 public:
 	using mesh_type = nullptr_t;
 	using material_type = nullptr_t;
@@ -66,6 +66,7 @@ public:
 public:
 	MeshRenderer() = default;
 	MeshRenderer(const std::vector<MESHLOADINFO>& meshLoadInfos, const std::vector<MATERIALLOADINFO>& materialLoadInfo);
+	MeshRenderer(const std::vector<std::shared_ptr<meshType>>& pMeshes, const std::vector<std::shared_ptr<Material>>& pMaterials);
 	virtual ~MeshRenderer() {}
 
 public:
@@ -103,6 +104,13 @@ inline MeshRenderer<meshType, eRenderType>::MeshRenderer(const std::vector<MESHL
 		}
 		m_pMaterials.push_back(pMaterial);
 	}
+}
+
+template<typename meshType, UINT eRenderType>
+inline MeshRenderer<meshType, eRenderType>::MeshRenderer(const std::vector<std::shared_ptr<meshType>>& pMeshes, const std::vector<std::shared_ptr<Material>>& pMaterials)
+{
+	m_pMeshes = std::move(pMeshes);
+	m_pMaterials = std::move(pMaterials);
 }
 
 template<typename meshType, UINT eRenderType>

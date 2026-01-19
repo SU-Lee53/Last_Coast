@@ -76,21 +76,23 @@ enum COMPONENT_TYPE : UINT8 {
 	COMPONENT_TYPE_BASE
 };
 
-enum MESH_ELEMENT_TYPE : UINT {
-	MESH_ELEMENT_TYPE_POSITION = 0x0001,
-	MESH_ELEMENT_TYPE_COLOR = 0x0002,
-	MESH_ELEMENT_TYPE_NORMAL = 0x0004,
-	MESH_ELEMENT_TYPE_TANGENT = 0x0008,
+enum class MESH_ELEMENT_TYPE : uint32 {
+	POSITION = 1,
+	COLOR = POSITION << 1,
+	NORMAL = COLOR << 1,
+	TANGENT = NORMAL << 1,
 
-	MESH_ELEMENT_TYPE_TEXCOORD0 = 0x0010,
-	MESH_ELEMENT_TYPE_TEXCOORD1 = 0x0020,
-	MESH_ELEMENT_TYPE_TEXCOORD2 = 0x0040,
-	MESH_ELEMENT_TYPE_TEXCOORD3 = 0x0080,
+	TEXCOORD0 = TANGENT << 1,
+	TEXCOORD1 = TEXCOORD0 << 1,
+	TEXCOORD2 = TEXCOORD1 << 1,
+	TEXCOORD3 = TEXCOORD2 << 1,
 
-	MESH_ELEMENT_TYPE_BLEND_INDICES = 0x0100,
-	MESH_ELEMENT_TYPE_BLEND_WEIGHTS = 0x0200,
+	BLEND_INDICES = TEXCOORD3 << 1,
+	BLEND_WEIGHTS = BLEND_INDICES << 1,
 
-	MESH_ELEMENT_TYPE_END = 0x0400,
+	END = BLEND_WEIGHTS << 1,
+
+	TERRAIN = 1,
 };
 
 enum ANIMATION_PLAY_TYPE : UINT {
@@ -160,8 +162,8 @@ struct Bone {
 	Matrix mtxOffset;
 
 	int nChildren = 0;
-	std::vector<int> nChilerenIndex;
 	int nDepth = 0;
+	std::vector<int> nChilerenIndex;
 };
 
 struct PendingUploadBuffer {
@@ -177,8 +179,7 @@ constexpr static UINT MAX_EFFECT_PER_DRAW		= 100;
 constexpr static UINT MAX_CHARACTER_PER_SPRITE	= 40;
 constexpr static UINT MAX_LIGHTS = 16;
 
-struct CB_CAMERA_DATA
-{
+struct CB_CAMERA_DATA {
 	Matrix	mtxView;
 	Matrix	mtxProjection;
 	Vector3 v3CameraPosition;
@@ -193,8 +194,7 @@ struct CB_WORLD_TRANSFORM_DATA {
 	Matrix mtxTransforms;
 };
 
-struct CB_BONE_TRANSFORM_DATA
-{
+struct CB_BONE_TRANSFORM_DATA {
 	Matrix mtxBoneTransforms[MAX_BONE_TRANSFORMS];
 };
 
@@ -202,8 +202,7 @@ struct CB_PARTICLE_DATA {
 	EffectParameter parameters[MAX_EFFECT_PER_DRAW];
 };
 
-struct CB_LIGHT_DATA
-{
+struct CB_LIGHT_DATA {
 	LightData gLights[MAX_LIGHTS];
 	Vector4 gcGlobalAmbientLight;
 	int gnLights;

@@ -177,6 +177,7 @@
     <ClInclude Include="GameObject.h" />
     <ClInclude Include="GameTimer.h" />
     <ClInclude Include="GuiManager.h" />
+    <ClInclude Include="HeightMapRawImage.h" />
     <ClInclude Include="InputManager.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="Material.h" />
@@ -203,12 +204,15 @@
     <ClInclude Include="StructuredBuffer.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="AnimationTestScene.h" />
+    <ClInclude Include="TerrainComponent.h" />
+    <ClInclude Include="TerrainObject.h" />
     <ClInclude Include="TestScene.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TextureManager.h" />
     <ClInclude Include="ThirdPersonCamera.h" />
     <ClInclude Include="ThirdPersonPlayer.h" />
     <ClInclude Include="Transform.h" />
+    <ClInclude Include="Typedef.h" />
     <ClInclude Include="UIManager.h" />
     <ClInclude Include="Utility.h" />
     <ClInclude Include="WinCore.h" />
@@ -280,6 +284,7 @@
     <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="GameTimer.cpp" />
     <ClCompile Include="GuiManager.cpp" />
+    <ClCompile Include="HeightMapRawImage.cpp" />
     <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Material.cpp" />
@@ -306,6 +311,8 @@
     <ClCompile Include="Sprite.cpp" />
     <ClCompile Include="StructuredBuffer.cpp" />
     <ClCompile Include="AnimationTestScene.cpp" />
+    <ClCompile Include="TerrainComponent.cpp" />
+    <ClCompile Include="TerrainObject.cpp" />
     <ClCompile Include="TestScene.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="TextureManager.cpp" />

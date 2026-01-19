@@ -187,8 +187,8 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 	if (meshLoadInfo.bIsSkinned) {
 		// BlendIndices
 		std::vector<int> blendIndices = inJson["BlendIndices"].get<std::vector<int>>();
-		meshLoadInfo.xmui4BlendIndices.reserve(nVertices);
-		std::transform(loadIndices.begin(), loadIndices.end(), std::back_inserter(meshLoadInfo.xmui4BlendIndices), [&](size_t i) {
+		meshLoadInfo.xmun4BlendIndices.reserve(nVertices);
+		std::transform(loadIndices.begin(), loadIndices.end(), std::back_inserter(meshLoadInfo.xmun4BlendIndices), [&](size_t i) {
 			size_t base = i * 4;
 			return XMUINT4{ (UINT)blendIndices[base], (UINT)blendIndices[base + 1], (UINT)blendIndices[base + 2], (UINT)blendIndices[base + 3] };
 		});
@@ -202,12 +202,12 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 		});
 	}
 	else {
-		meshLoadInfo.xmui4BlendIndices.resize(nVertices);
+		meshLoadInfo.xmun4BlendIndices.resize(nVertices);
 		meshLoadInfo.v4BlendWeights.resize(nVertices);
 	}
 
 	// Indices
-	meshLoadInfo.uiIndices = inJson["Indices"].get<std::vector<UINT>>();
+	meshLoadInfo.unIndices = inJson["Indices"].get<std::vector<UINT>>();
 
 	// Bounds (AABB)
 	const nlohmann::json& aabbData = inJson["Bounds"];

@@ -16,6 +16,7 @@ public:
 
 	bool IsAiming() const { return m_bAiming; }
 	bool IsRunning() const { return m_bRunning; }
+	bool IsMouseOn() const { return m_bMouseInUse; }
 
 private:
 	Vector3 m_v3MoveDirection;
@@ -23,7 +24,7 @@ private:
 	float m_fMaxMoveSpeed = 1.4_m;
 	float m_fAcceleration = 10.0_cm;
 	float m_fFriction = 10.f;
-	float m_fGraviry = 9.8_km;
+	float m_fGravity = 9.8_km;
 
 	bool m_bAiming = false;
 	bool m_bRunning = false;

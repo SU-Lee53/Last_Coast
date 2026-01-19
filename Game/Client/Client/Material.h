@@ -76,3 +76,17 @@ public:
 
 };
 
+//////////////////////////////////////////////////////////////////////////////////
+// TerrainMaterial
+
+class TerrainMaterial : public Material {
+public:
+	TerrainMaterial(const MATERIALLOADINFO& materialLoadInfo, const std::string& strLayerName, uint32 unIndex, float fTiling);
+	virtual ~TerrainMaterial() {}
+
+private:
+	std::string m_strLayerName;
+	uint32 m_unIndex;
+	float m_fTiling;
+};
+

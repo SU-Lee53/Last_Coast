@@ -14,7 +14,6 @@ enum class SECTION_TRANSITION {
 	STOPPED
 };
 
-
 struct MontageSection {
 	std::string strName;
 	std::shared_ptr<Animation> pAnimationToPlay;

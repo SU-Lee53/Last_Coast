@@ -13,7 +13,7 @@
 struct MESHLOADINFO {
 	std::string				strMeshName;
 
-	UINT					nType;			// MESH_ELEMENT_TYPE
+	uint32					eType;			// MESH_ELEMENT_TYPE
 
 	Vector3					v3AABBCenter = Vector3(0.0f, 0.0f, 0.0f);
 	Vector3					v3AABBExtents = Vector3(1.0f, 1.0, 1.0f);
@@ -28,10 +28,10 @@ struct MESHLOADINFO {
 	std::vector<Vector2>	v2TexCoord2;
 	std::vector<Vector2>	v2TexCoord3;
 
-	std::vector<XMUINT4>	xmui4BlendIndices;
+	std::vector<XMUINT4>	xmun4BlendIndices;
 	std::vector<Vector4>	v4BlendWeights;
 
-	std::vector<UINT>		uiIndices;
+	std::vector<uint32>		unIndices;
 
 	bool bIsSkinned = false;
 };
@@ -43,19 +43,20 @@ public:
 	
 	const BoundingOrientedBox& GetBoundingBox() const { return m_xmOBB; }
 
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, UINT nSubSet, UINT nInstanceCount = 1) const = 0;
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount = 1) const = 0;
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 unStartIndex, uint32 unIndexCount, uint32 nInstanceCount = 1) const = 0;
 
 protected:
 	VertexBuffer					m_Positions;
-	IndexBuffer						m_IndexBuffer;	
+	IndexBuffer						m_IndexBuffer;
 
 protected:
 	D3D12_PRIMITIVE_TOPOLOGY		m_d3dPrimitiveTopology;
-	UINT							m_nSlot = 0;
-	UINT							m_nVertices = 0;
-	UINT							m_nOffset = 0;
+	uint32							m_nSlot = 0;
+	uint32							m_nVertices = 0;
+	uint32							m_nOffset = 0;
 
-	UINT							m_nType = 0;
+	uint32							m_nType = 0;
 
 protected:
 	// Bounding Volume
@@ -63,8 +64,6 @@ protected:
 
 public:
 	static std::shared_ptr<Mesh> LoadMeshFromFile(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const nlohmann::json& inJson);
-	
-
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -74,7 +73,8 @@ class FullScreenMesh : public Mesh {
 public:
 	FullScreenMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, UINT nSubSet, UINT nInstanceCount = 1) const override;
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount = 1) const override;
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 unStartIndex, uint32 unIndexCount, uint32 nInstanceCount = 1) const override {}
 
 };
 
@@ -85,7 +85,8 @@ class StandardMesh : public Mesh {
 public:
 	StandardMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, UINT nSubSet, UINT nInstanceCount = 1) const override;
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount = 1) const override;
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 unStartIndex, uint32 unIndexCount, uint32 nInstanceCount = 1) const override {}
 
 protected:
 	VertexBuffer m_Normals;
@@ -95,16 +96,32 @@ protected:
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SkinnedMesh
-// TODO : 구현
-// 구현 완료 후 위에 잡다한거 날릴것
 
 class SkinnedMesh : public StandardMesh {
 public:
 	SkinnedMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, UINT nSubSet, UINT nInstanceCount = 1) const override;
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount = 1) const override;
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 unStartIndex, uint32 unIndexCount, uint32 nInstanceCount = 1) const override {}
 
 protected:
 	VertexBuffer m_BlendIndices;
 	VertexBuffer m_BlendWeights;
 };
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// TerrainMesh
+
+class TerrainMesh : public Mesh {
+public:
+	TerrainMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount = 1) const override {}
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 unStartIndex, uint32 unIndexCount, uint32 nInstanceCount = 1) const override;
+
+protected:
+	VertexBuffer m_Normals;
+	VertexBuffer m_Tangents;
+
+};
+
