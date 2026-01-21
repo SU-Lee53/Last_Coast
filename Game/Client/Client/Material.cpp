@@ -52,7 +52,7 @@ void Material::UpdateShaderVariables(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3
 		descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 	}
 
-	pd3dCommandList->SetGraphicsRootDescriptorTable(ROOT_PARAMETER_OBJ_TEXTURES, descHandle.gpuHandle);
+	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::OBJ_TEXTURES), descHandle.gpuHandle);
 	descHandle.gpuHandle.Offset(4, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 }
 
@@ -84,18 +84,17 @@ SkinnedMaterial::SkinnedMaterial(const MATERIALLOADINFO& materialLoadInfo)
 	m_pShader = SHADER->Get<AnimatedShader>();
 }
 
-TerrainMaterial::TerrainMaterial(const MATERIALLOADINFO& materialLoadInfo, const std::string& strLayerName, uint32 unIndex, float fTiling)
+TerrainMaterial::TerrainMaterial(const MATERIALLOADINFO& materialLoadInfo)
 	: Material(materialLoadInfo)
 {
-	m_strLayerName = strLayerName;
-	m_unIndex = unIndex;
-	m_fTiling = fTiling;
+	m_strLayerName = materialLoadInfo.strTerrainLayerName;
+	m_unIndex = materialLoadInfo.unTerrainLayerIndex;
+	m_fTiling = materialLoadInfo.fUVTiling;
 
 	m_pTextures.resize(2);
 	m_pTextures[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName);		// Diffused
 	m_pTextures[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName);		// Normal
 
-	// TODO : 아래 코드 가능하도록 TerrainShader 구현
-	//m_pShader = SHADER->Get<TerrainShader>();
+	m_pShader = SHADER->Get<TerrainShader>();
 }
 

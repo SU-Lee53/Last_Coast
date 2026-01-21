@@ -3,29 +3,18 @@
 #include "RenderPass.h"
 #include "MeshRenderer.h"
 
-/*
-	2025.10.08
-	- 대대적인 개편 필요
-		- RenderManager -> RenderPass -> Pipeline 의 구조는 매우 복잡
-		- RenderManager 에 Object 를 모아두고 MeshRenderer를 이용하여 렌더링
-		- RenderPass 는 남겨놓고, 렌더링 단위를 변경하는 의미로 넘어가야 할듯
+// 2월에 전부 갈아엎을 예정
 
-		+ Global 로 사용할 Root Signature RenderManager 에서 관리하도록 하는것도 괜찮아보임
-*/
-
-// TODO : RenderManager에서 Animation을 재생할 방법을 찾아야 함 (01.02)
-// Shader 등은 준비되었고, 분류 및 bone Transform 바인딩이 문제
-// 특성상 어차피 인스턴싱은 어려울것 같음
-
-
-enum ROOT_PARAMETER {
-	ROOT_PARAMETER_SCENE_CAM_DATA			= 0,
-	ROOT_PARAMETER_SCENE_LIGHT_DATA			= 1,
-	ROOT_PARAMETER_SCENE_SKYBOX				= 2,
-	ROOT_PARAMETER_PASS_INSTANCE_DATA		= 3,
-	ROOT_PARAMETER_OBJ_MATERIAL_DATA		= 4,
-	ROOT_PARAMETER_OBJ_BONE_TRANSFORM_DATA	= 5,
-	ROOT_PARAMETER_OBJ_TEXTURES				= 6,
+enum class ROOT_PARAMETER : uint32 {
+	SCENE_CAM_DATA					= 0,
+	SCENE_LIGHT_DATA				= 1,
+	SCENE_SKYBOX					= 2,
+	SCENE_TERRAIN_DATA				= 3,
+	SCENE_TERRAIN_COMPONENT_DATA	= 4,
+	PASS_INSTANCE_DATA				= 5,
+	OBJ_MATERIAL_DATA				= 6,
+	OBJ_BONE_TRANSFORM_DATA			= 7,
+	OBJ_TEXTURES					= 8,
 };
 
 constexpr UINT DESCRIPTOR_PER_DRAW = 1000000;
@@ -74,7 +63,6 @@ public:
 	static ComPtr<ID3D12RootSignature> g_pd3dGlobalRootSignature;
 	DescriptorHeap m_DescriptorHeapForDraw;
 	
-
 	// Skybox
 	ComPtr<ID3D12PipelineState> m_pd3dSkyboxPipelineState;
 

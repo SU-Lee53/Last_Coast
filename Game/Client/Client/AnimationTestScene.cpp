@@ -15,7 +15,7 @@ void AnimationTestScene::BuildObjects()
 	//std::shared_ptr<GameObject> pGameObject2 = MODEL->Get("vintage_wooden_sniper_optimized_for_fpstps");
 	//m_pGameObjects.push_back(pGameObject2);
 	//
-	LoadFromFiles("TEST");
+	//LoadFromFiles("TEST");
 
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 

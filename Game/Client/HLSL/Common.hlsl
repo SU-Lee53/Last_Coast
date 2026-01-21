@@ -42,6 +42,21 @@ struct VS_SKINNED_OUTPUT
     float2 uv : TEXCOORD0;
 };
 
+struct VS_TERRAIN_INPUT
+{
+    float3 position : POSITION;
+    float3 normal : NORMAL;
+    float3 tangent : TANGENT;
+};
+
+struct VS_TERRAIN_OUTPUT
+{
+    float4 position : SV_POSITION;
+	float3 positionW : POSITION;
+    float3 normalW : NORMAL;
+    float3 tangentW : TANGENT;
+};
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scene
 
@@ -90,11 +105,27 @@ cbuffer cbLights : register(b1)
 Texture2DArray gtxtSkyboxTextures : register(t0);
 SamplerState gSkyboxSamplerState : register(s0);
 
+cbuffer cbTerrainLayerData : register(b2)
+{
+	float4 gvLayerTiling;
+}
+
+Texture2D gtxtTerrainAlbedo[4] : register(t1); // t1, t2, t3, t4
+Texture2D gtxtTerrainNormal[4] : register(t5); // t5, t6, t7, t8
+
+cbuffer cbTerrainComponentData : register(b3)
+{
+	float2	gvComponentOriginXZ;
+	float2	gvComponentSizeXZ;
+	int4	gLayerIndex;
+}
+
+Texture2D gtxtComponentWeightMap : register(t9);
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pass
-
-StructuredBuffer<matrix> gsbInstanceDatas : register(t1);
+StructuredBuffer<matrix> gsbInstanceDatas : register(t10);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Object
@@ -113,28 +144,28 @@ struct MATERIAL
     float fGlossyReflection;
 };
 
-cbuffer cbGameObjectInfo : register(b2)
+cbuffer cbGameObjectInfo : register(b4)
 {
     MATERIAL gMaterial;
     int gnInstanceBase;
 };
 
-cbuffer cbWorldTransformData : register(b3)
+cbuffer cbWorldTransformData : register(b5)
 {
     matrix gmtxWorld;
 }
 
 #define MAX_BONES 150
 
-cbuffer cbBoneTransformData : register(b4)
+cbuffer cbBoneTransformData : register(b6)
 {
 	matrix boneTransforms[MAX_BONES];
 }
 
-Texture2D gtxtDiffuseTexture : register(t2);
-Texture2D gtxtNormalTexture : register(t3);
-Texture2D gtxtMetaillicTexture : register(t4);
-Texture2D gtxtEmissionTexture : register(t5);
+Texture2D gtxtDiffuseTexture : register(t11);
+Texture2D gtxtNormalTexture : register(t12);
+Texture2D gtxtMetaillicTexture : register(t13);
+Texture2D gtxtEmissionTexture : register(t14);
 
 SamplerState gSamplerState : register(s1);
 

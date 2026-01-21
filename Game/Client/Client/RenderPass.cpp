@@ -27,7 +27,7 @@ void ForwardPass::Run(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsComm
 	descHandleFromPassStart.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 
 	// 3
-	pd3dCommandList->SetGraphicsRootDescriptorTable(ROOT_PARAMETER_PASS_INSTANCE_DATA, descHandleFromPassStart.gpuHandle);
+	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::PASS_INSTANCE_DATA), descHandleFromPassStart.gpuHandle);
 	descHandleFromPassStart.gpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 	
 	int nInstanceBase = 0;

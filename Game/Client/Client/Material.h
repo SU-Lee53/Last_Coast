@@ -23,6 +23,11 @@ struct MATERIALLOADINFO {
 	std::string		strEmissionMapName;
 	std::string		strDetailAlbedoMapName;
 	std::string		strDetailNormalMapName;
+
+	// Terrain material data
+	std::string strTerrainLayerName;
+	uint32 unTerrainLayerIndex;
+	float fUVTiling;
 }; 
 
 class Material {
@@ -75,8 +80,10 @@ public:
 
 class TerrainMaterial : public Material {
 public:
-	TerrainMaterial(const MATERIALLOADINFO& materialLoadInfo, const std::string& strLayerName, uint32 unIndex, float fTiling);
+	TerrainMaterial(const MATERIALLOADINFO& materialLoadInfo);
 	virtual ~TerrainMaterial() {}
+
+	float GetTiling() const { return m_fTiling; }
 
 private:
 	std::string m_strLayerName;

@@ -75,7 +75,7 @@ void GameObject::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 	}
 }
 
-void GameObject::RenderDirectly(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle)
+void GameObject::RenderImmediate(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle)
 {
 	if (m_pMeshRenderer) {
 		int nInstanceBase = -1;
@@ -84,7 +84,7 @@ void GameObject::RenderDirectly(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Gr
 	}
 
 	for (auto& pChild : m_pChildren) {
-		pChild->RenderDirectly(pd3dDevice, pd3dCommandList, descHandle);
+		pChild->RenderImmediate(pd3dDevice, pd3dCommandList, descHandle);
 	}
 }
 

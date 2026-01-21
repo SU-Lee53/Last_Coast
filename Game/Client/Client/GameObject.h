@@ -20,7 +20,7 @@ public:
 	virtual void Update();
 
 	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
-	void RenderDirectly(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle);
+	virtual void RenderImmediate(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle);
 
 public:
 

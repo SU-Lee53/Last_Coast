@@ -62,6 +62,18 @@ protected:
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// TerrainShader
+
+class TerrainShader : public Shader {
+public:
+	virtual void Initialize(ComPtr<ID3D12Device> pd3dDevice,
+		ComPtr<ID3D12RootSignature> pd3dRootSignature = nullptr) override;
+
+protected:
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout() override;
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FullScreenShader
 
 class FullScreenShader : public Shader {

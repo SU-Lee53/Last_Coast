@@ -57,6 +57,11 @@ void ShaderManager::CompileShaders()
 	m_pCompiledShaderByteCodeMap.insert({ "AnimatedPS", Shader::CompileShader(L"../HLSL/Shaders.hlsl", "PSAnimated", "ps_5_1", m_pd3dGSBlob.GetAddressOf()) });
 	m_pd3dBlobs.push_back(m_pd3dVSBlob);
 	m_pd3dBlobs.push_back(m_pd3dPSBlob);
+	
+	m_pCompiledShaderByteCodeMap.insert({ "TerrainVS", Shader::CompileShader(L"../HLSL/Shaders.hlsl", "VSTerrain", "vs_5_1", m_pd3dVSBlob.GetAddressOf()) });
+	m_pCompiledShaderByteCodeMap.insert({ "TerrainPS", Shader::CompileShader(L"../HLSL/Shaders.hlsl", "PSTerrain", "ps_5_1", m_pd3dGSBlob.GetAddressOf()) });
+	m_pd3dBlobs.push_back(m_pd3dVSBlob);
+	m_pd3dBlobs.push_back(m_pd3dPSBlob);
 
 	m_pCompiledShaderByteCodeMap.insert({ "FullScreenVS", Shader::CompileShader(L"../HLSL/FullScreenShader.hlsl", "VSFullScreen", "vs_5_1", m_pd3dVSBlob.GetAddressOf()) });
 	m_pCompiledShaderByteCodeMap.insert({ "FullScreenPS", Shader::CompileShader(L"../HLSL/FullScreenShader.hlsl", "PSFullScreen", "ps_5_1", m_pd3dGSBlob.GetAddressOf()) });

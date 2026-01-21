@@ -66,7 +66,6 @@ public:
 public:
 	MeshRenderer() = default;
 	MeshRenderer(const std::vector<MESHLOADINFO>& meshLoadInfos, const std::vector<MATERIALLOADINFO>& materialLoadInfo);
-	MeshRenderer(const std::vector<std::shared_ptr<Mesh>>& pMeshes, const std::vector<std::shared_ptr<Material>>& pMaterials);
 	virtual ~MeshRenderer() {}
 
 public:
@@ -99,18 +98,14 @@ inline MeshRenderer<meshType, eRenderType>::MeshRenderer(const std::vector<MESHL
 		if constexpr (std::same_as<meshType, StandardMesh>) {
 			pMaterial = std::make_shared<StandardMaterial>(materialInfo);
 		}
-		else {
+		else if constexpr (std::same_as<meshType, TerrainMesh>) {
+			pMaterial = std::make_shared<TerrainMaterial>(materialInfo);
+		}
+		else {	// SkinnedMesh
 			pMaterial = std::make_shared<SkinnedMaterial>(materialInfo);
 		}
 		m_pMaterials.push_back(pMaterial);
 	}
-}
-
-template<typename meshType, UINT eRenderType>
-inline MeshRenderer<meshType, eRenderType>::MeshRenderer(const std::vector<std::shared_ptr<Mesh>>& pMeshes, const std::vector<std::shared_ptr<Material>>& pMaterials)
-{
-	m_pMeshes = std::move(pMeshes);
-	m_pMaterials = std::move(pMaterials);
 }
 
 template<typename meshType, UINT eRenderType>
@@ -154,13 +149,13 @@ inline void MeshRenderer<meshType, eRenderType>::Render(ComPtr<ID3D12Device> pd3
 			pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, worldCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			descHandle.cpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 
-			pd3dCommandList->SetGraphicsRootDescriptorTable(ROOT_PARAMETER_OBJ_MATERIAL_DATA, descHandle.gpuHandle);
+			pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::OBJ_MATERIAL_DATA), descHandle.gpuHandle);
 			descHandle.gpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 		}
 		else {
 			// 4
 			pd3dDevice->CopyDescriptorsSimple(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, descHandle.cpuHandle, cbuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			pd3dCommandList->SetGraphicsRootDescriptorTable(ROOT_PARAMETER_OBJ_MATERIAL_DATA, descHandle.gpuHandle);
+			pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::OBJ_MATERIAL_DATA), descHandle.gpuHandle);
 			descHandle.cpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 			descHandle.gpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 		}

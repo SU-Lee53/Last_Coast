@@ -23,6 +23,11 @@ struct TERRAINLOADINFO {
 
 class TerrainObject : public GameObject {
 public:
+	virtual void RenderImmediate(ComPtr<ID3D12Device> pd3dDevice,
+		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
+		DescriptorHandle& descHandle) override;
+
+public:
 	HRESULT LoadFromFiles(const std::string& strFilename);
 
 private:
@@ -31,6 +36,7 @@ private:
 private:
 	std::unique_ptr<HeightMapRawImage> m_pHeightMapRawImage;
 	std::vector<std::unique_ptr<TerrainComponent>> m_pTerrainComponents;
+	Vector3 m_v3TerrainScale;
 
 	const static std::string g_strTerrainPath;
 };
