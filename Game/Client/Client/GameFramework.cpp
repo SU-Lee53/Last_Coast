@@ -16,7 +16,7 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV)
 	TIMER->Initialize();
 	MODEL->Initialize();
 	GUI->Initialize(g_pD3DCore->GetDevice());
-	NETWORK->Initialize(g_pD3DCore->GetDevice());
+	NETWORK->Initialize();
 	TIME->Initialize();
 	TEXTURE->Initialize(g_pD3DCore->GetDevice());
 	EFFECT->Initialize(g_pD3DCore->GetDevice(), g_pD3DCore->GetCommandList());
@@ -29,10 +29,9 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV)
 
 	SCENE->Initialize();
 
+	//SOUND->Initialize();
+
 	SHADER->ReleaseBlobs();
-
-	SOUND->Initialize();
-
 	TIMER->Start();
 
 	// Init Scene

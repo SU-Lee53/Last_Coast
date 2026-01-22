@@ -15,7 +15,7 @@ void AnimationTestScene::BuildObjects()
 	//std::shared_ptr<GameObject> pGameObject2 = MODEL->Get("vintage_wooden_sniper_optimized_for_fpstps");
 	//m_pGameObjects.push_back(pGameObject2);
 	//
-	//LoadFromFiles("TEST");
+	LoadFromFiles("TEST");
 
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 
@@ -73,7 +73,7 @@ void AnimationTestScene::Update()
 			ImGui::Text("Move Direction : (%f, %f, %f)", v3PlayerMoveDirection.x, v3PlayerMoveDirection.y, v3PlayerMoveDirection.z);
 
 			const auto& transform = pPlayer->GetTransform();
-			Vector3 v3PlayerPos = transform.GetPosition();
+			Vector3 v3PlayerPos = transform->GetPosition();
 			ImGui::Text("Player Position : (%f, %f, %f)", v3PlayerPos.x, v3PlayerPos.y, v3PlayerPos.z);
 
 		}

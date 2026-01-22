@@ -100,7 +100,7 @@ std::shared_ptr<GameObject> ModelManager::LoadFrameHierarchyFromFile(std::shared
 
 	unsigned nMeshes = inJson["nMeshes"].get<unsigned>();
 	pGameObject->m_strFrameName = inJson["Name"].get<std::string>();
-	pGameObject->GetTransform().SetFrameMatrix(XMFLOAT4X4(inJson["Transform"].get<std::vector<float>>().data()));
+	pGameObject->GetTransform()->SetFrameMatrix(XMFLOAT4X4(inJson["Transform"].get<std::vector<float>>().data()));
 
 
 	std::vector<MESHLOADINFO> meshLoadInfos;

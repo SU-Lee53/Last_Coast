@@ -13,6 +13,12 @@ GameObject::~GameObject()
 void GameObject::Initialize()
 {
 	if (!m_bInitialized) {
+		// 필수 Component(Transform) 우선 생성
+		if (!GetComponent<Transform>()) {
+			AddComponent<Transform>();
+		}
+
+		// 목표 : 아래 for 만 남기고 다른 Initialize 문은 다 날린다
 		for (auto& component : m_pComponents) {
 			if (component) {
 				component->Initialize();
@@ -26,6 +32,9 @@ void GameObject::Initialize()
 		if (m_pAnimationController) {
 			m_pAnimationController->Initialize(shared_from_this());
 		}
+
+		m_pComponents[std::to_underlying(COMPONENT_TYPE::TRANSFORM)]->Update();
+		m_bInitialized = true;
 	}
 
 	for (auto& pChild : m_pChildren) {
@@ -35,8 +44,6 @@ void GameObject::Initialize()
 	if (m_pParent.expired()) {
 		MergeBoundingBox(&m_xmOBB);
 	}
-
-	m_bInitialized = true;
 }
 
 void GameObject::Update()
@@ -47,7 +54,7 @@ void GameObject::Update()
 		}
 	}
 
-	m_Transform.Update(m_pParent.lock());
+	m_pComponents[std::to_underlying(COMPONENT_TYPE::TRANSFORM)]->Update();
 
 	if (m_pAnimationController) {
 		m_pAnimationController->Update();
@@ -79,7 +86,7 @@ void GameObject::RenderImmediate(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12G
 {
 	if (m_pMeshRenderer) {
 		int nInstanceBase = -1;
-		Matrix mtxWorld = m_Transform.GetWorldMatrix();
+		Matrix mtxWorld = GetTransform()->GetWorldMatrix();
 		m_pMeshRenderer->Render(pd3dDevice, pd3dCommandList, descHandle, 1, nInstanceBase, mtxWorld);
 	}
 
@@ -126,6 +133,15 @@ void GameObject::SetFrameName(const std::string& strFrameName)
 	m_strFrameName = strFrameName;
 }
 
+std::shared_ptr<Transform> GameObject::GetTransform()
+{
+	if (!m_pComponents[std::to_underlying(COMPONENT_TYPE::TRANSFORM)]) {
+		AddComponent<Transform>();
+	}
+
+	return std::static_pointer_cast<Transform>(m_pComponents[std::to_underlying(COMPONENT_TYPE::TRANSFORM)]);
+}
+
 int GameObject::FindBoneIndex(const std::string& strBoneName) const
 {
 	if (m_Bones.size() == 0) {
@@ -166,8 +182,10 @@ void GameObject::MergeBoundingBox(BoundingOrientedBox* pOBB)
 	if (m_pMeshRenderer) {
 		// Get corner fron OBB to merge
 		XMFLOAT3 pxmf3OBBPoints1[BoundingOrientedBox::CORNER_COUNT];
-		m_pMeshRenderer->GetOBBMerged().GetCorners(pxmf3OBBPoints1);
-		
+		BoundingOrientedBox xmOBBMesh;
+		m_pMeshRenderer->GetOBBMerged().Transform(xmOBBMesh, GetTransform()->GetWorldMatrix());
+		xmOBBMesh.GetCorners(pxmf3OBBPoints1);
+
 		XMFLOAT3 pxmf3OBBPoints2[BoundingOrientedBox::CORNER_COUNT];
 		pOBB->GetCorners(pxmf3OBBPoints2);
 

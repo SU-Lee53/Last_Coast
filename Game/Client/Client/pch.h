@@ -129,3 +129,4 @@ using namespace Microsoft::WRL;
 #include "SoundManager.h"
 #include "UIManager.h"
 #include "AnimationManager.h"
+#include "CollisionManager.h"

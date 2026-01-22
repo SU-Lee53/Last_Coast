@@ -101,6 +101,12 @@
     <Filter Include="03.Engine\Resources\Texture">
       <UniqueIdentifier>{78cae377-8b07-46f7-afc9-d8af2c4af8d7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02.Game\Scene\Test">
+      <UniqueIdentifier>{27e05f8b-2340-4bfb-8cb8-f2ea2d033088}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Game\Components\Components">
+      <UniqueIdentifier>{4e62abeb-2967-466d-9d54-574ff24f91d8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h">
@@ -172,9 +178,6 @@
     <ClInclude Include="ThirdPersonCamera.h">
       <Filter>02.Game\Camera</Filter>
     </ClInclude>
-    <ClInclude Include="Transform.h">
-      <Filter>02.Game\Components</Filter>
-    </ClInclude>
     <ClInclude Include="Utility.h">
       <Filter>99.Utility</Filter>
     </ClInclude>
@@ -201,9 +204,6 @@
     </ClInclude>
     <ClInclude Include="Light.h">
       <Filter>03.Engine\Graphic Components</Filter>
-    </ClInclude>
-    <ClInclude Include="MeshRenderer.h">
-      <Filter>03.Engine\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="RenderPass.h">
       <Filter>03.Engine\Rendering</Filter>
@@ -280,12 +280,6 @@
     <ClInclude Include="Animation.h">
       <Filter>02.Game\Animation</Filter>
     </ClInclude>
-    <ClInclude Include="AnimationController.h">
-      <Filter>02.Game\Animation</Filter>
-    </ClInclude>
-    <ClInclude Include="AnimationTestScene.h">
-      <Filter>02.Game\Scene</Filter>
-    </ClInclude>
     <ClInclude Include="FirstPersonCamera.h">
       <Filter>02.Game\Camera</Filter>
     </ClInclude>
@@ -321,6 +315,24 @@
     </ClInclude>
     <ClInclude Include="TerrainObject.h">
       <Filter>02.Game\GameObject\Terrain</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimationTestScene.h">
+      <Filter>02.Game\Scene\Test</Filter>
+    </ClInclude>
+    <ClInclude Include="CollisionManager.h">
+      <Filter>04.Managers\Game Management</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkTestScene.h">
+      <Filter>02.Game\Scene\Test</Filter>
+    </ClInclude>
+    <ClInclude Include="Transform.h">
+      <Filter>02.Game\Components\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimationController.h">
+      <Filter>02.Game\Components\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshRenderer.h">
+      <Filter>02.Game\Components\Components</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -397,9 +409,6 @@
     <ClCompile Include="ThirdPersonCamera.cpp">
       <Filter>02.Game\Camera</Filter>
     </ClCompile>
-    <ClCompile Include="Transform.cpp">
-      <Filter>02.Game\Components</Filter>
-    </ClCompile>
     <ClCompile Include="Utility.cpp">
       <Filter>99.Utility</Filter>
     </ClCompile>
@@ -423,9 +432,6 @@
     </ClCompile>
     <ClCompile Include="Light.cpp">
       <Filter>03.Engine\Graphic Components</Filter>
-    </ClCompile>
-    <ClCompile Include="MeshRenderer.cpp">
-      <Filter>03.Engine\Rendering</Filter>
     </ClCompile>
     <ClCompile Include="RenderPass.cpp">
       <Filter>03.Engine\Rendering</Filter>
@@ -493,14 +499,8 @@
     <ClCompile Include="Animation.cpp">
       <Filter>02.Game\Animation</Filter>
     </ClCompile>
-    <ClCompile Include="AnimationController.cpp">
-      <Filter>02.Game\Animation</Filter>
-    </ClCompile>
     <ClCompile Include="AnimationStateMachine.cpp">
       <Filter>02.Game\Animation</Filter>
-    </ClCompile>
-    <ClCompile Include="AnimationTestScene.cpp">
-      <Filter>02.Game\Scene</Filter>
     </ClCompile>
     <ClCompile Include="FirstPersonCamera.cpp">
       <Filter>02.Game\Camera</Filter>
@@ -534,6 +534,24 @@
     </ClCompile>
     <ClCompile Include="TerrainObject.cpp">
       <Filter>02.Game\GameObject\Terrain</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimationTestScene.cpp">
+      <Filter>02.Game\Scene\Test</Filter>
+    </ClCompile>
+    <ClCompile Include="CollisionManager.cpp">
+      <Filter>04.Managers\Game Management</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkTestScene.cpp">
+      <Filter>02.Game\Scene\Test</Filter>
+    </ClCompile>
+    <ClCompile Include="Transform.cpp">
+      <Filter>02.Game\Components\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimationController.cpp">
+      <Filter>02.Game\Components\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshRenderer.cpp">
+      <Filter>02.Game\Components\Components</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

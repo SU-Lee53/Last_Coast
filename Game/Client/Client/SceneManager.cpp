@@ -1,12 +1,14 @@
 ﻿#include "pch.h"
 #include "SceneManager.h"
 #include "AnimationTestScene.h"
+#include "NetworkTestScene.h"
 #include "TestScene.h"
 
 void SceneManager::Initialize()
 {
 	m_upCurrentScene = std::make_unique<AnimationTestScene>();
 	m_upCurrentScene->BuildObjects();
+	m_upCurrentScene->InitializeObjects();
 	
 	//m_upCurrentScene = std::make_unique<TestScene>();
 	//m_upCurrentScene->BuildObjects();

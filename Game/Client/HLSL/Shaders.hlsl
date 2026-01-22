@@ -92,30 +92,30 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 
 float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_Target
 {
-	float2 vWeightUV;
-	vWeightUV.x = input.positionW.x / gvComponentSizeXZ.x;
-	vWeightUV.y = input.positionW.z / gvComponentSizeXZ.y;
+	//float4 cAlbedoColor[4];
+	//[unroll(4)]
+	//for (int i = 0; i < 4; ++i)
+	//{
+	//	float2 vTileUV;
+	//	vTileUV.x = (input.positionW.x - gvComponentOriginXZ.x) * gvLayerTiling[gLayerIndex[i]];
+	//	vTileUV.y = (input.positionW.z - gvComponentOriginXZ.y) * gvLayerTiling[gLayerIndex[i]];
+	//
+	//	cAlbedoColor[i] = gtxtTerrainAlbedo[gLayerIndex[i]].Sample(gSamplerState, vTileUV);
+	//}
+	//
+	//float2 vWeightUV;
+	//vWeightUV.x = input.positionW.x / gvComponentSizeXZ.x;
+	//vWeightUV.y = input.positionW.z / gvComponentSizeXZ.y;
+	//
+	//float4 vWeight = gtxtComponentWeightMap.Sample(gSamplerState, vWeightUV);
+	//float4 cFinalColor = (cAlbedoColor[0] * vWeight.r) + (cAlbedoColor[1] * vWeight.g) + (cAlbedoColor[2] * vWeight.b) + (cAlbedoColor[3] * vWeight.a);
+	//
+	//// Normalize
+	//float fSum = vWeight.r + vWeight.g + vWeight.b + vWeight.a;
+	//if (fSum < 1e-6f)
+	//{
+	//	cFinalColor /= fSum;
+	//}
 	
-	float4 cAlbedoColor[4];
-	[unroll(4)]
-	for (int i = 0; i < 4; ++i)
-	{
-		float2 vTileUV;
-		vTileUV.x = (input.positionW.x - gvComponentOriginXZ.x) * gvLayerTiling[gLayerIndex[i]];
-		vTileUV.y = (input.positionW.z - gvComponentOriginXZ.y) * gvLayerTiling[gLayerIndex[i]];
-	
-		cAlbedoColor[i] = gtxtTerrainAlbedo[gLayerIndex[i]].Sample(gSamplerState, vTileUV);
-	}
-	
-	float4 vWeight = gtxtComponentWeightMap.Sample(gSamplerState, vWeightUV);
-	float4 cFinalColor = (cAlbedoColor[0] * vWeight.r) + (cAlbedoColor[1] * vWeight.g) + (cAlbedoColor[2] * vWeight.b) + (cAlbedoColor[3] * vWeight.a);
-	
-	// Normalize
-	float fSum = vWeight.r + vWeight.g + vWeight.b + vWeight.a;
-	if (fSum < 1e-6f)
-	{
-		cFinalColor /= fSum;
-	}
-	
-	return cFinalColor;
+	return float4(input.normalW, 1.f);
 }

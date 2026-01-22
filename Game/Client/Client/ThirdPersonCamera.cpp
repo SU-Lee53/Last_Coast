@@ -36,7 +36,7 @@ void ThirdPersonCamera::Update()
 void ThirdPersonCamera::UpdateFreeMode()
 {
 	const auto& ownerTransform = m_wpOwner.lock()->GetTransform();
-	Vector3 v3TargetPos = ownerTransform.GetPosition();
+	Vector3 v3TargetPos = ownerTransform->GetPosition();
 
 	Matrix mtxRotation = Matrix::CreateFromYawPitchRoll(
 		XMConvertToRadians(m_fYaw),
@@ -57,7 +57,7 @@ void ThirdPersonCamera::UpdateFreeMode()
 void ThirdPersonCamera::UpdateAimMode()
 {
 	const auto& ownerTransform = m_wpOwner.lock()->GetTransform();
-	Vector3 v3TargetPos = ownerTransform.GetPosition();
+	Vector3 v3TargetPos = ownerTransform->GetPosition();
 
 	// 카메라 위치
 	Matrix mtxYawRotation = Matrix::CreateRotationY(XMConvertToRadians(m_fYaw));

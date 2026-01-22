@@ -1,17 +1,20 @@
 ﻿#pragma once
+#include "Component.h"
 
 class GameObject;
 
-class Transform {
+class Transform : public IComponent{
 public:
-	Transform();
+	Transform(std::shared_ptr<GameObject> pOwner);
 
-	void Update(std::shared_ptr<GameObject> pParent = nullptr);
+	// IComponent을(를) 통해 상속됨
+	virtual void Initialize() override;
+	virtual void Update() override;
+	virtual std::shared_ptr<IComponent> Copy() override;
 
 public:
 	void SetFrameMatrix(const Matrix& mtxFrame);
 
-	// 11.15
 	// 아래 함수는 이번 프로젝트에서 사용
 	// 특별한 경우가 아니라면 직접 월드 행렬을 Set하는 일은 없는것이 좋음
 	void SetWorldMatrix(const Matrix& mtxWorld);
@@ -61,8 +64,18 @@ private:
 	Matrix m_mtxTransform		= {};
 	Matrix m_mtxWorld			= {};
 
-	// 11.15 이승욱
 	// 외부에서 World 를 Set 한 경우 Update 를 막도록 함
 	bool m_bWorldSetFromOutside = false;
 
+
+};
+
+template <>
+struct ComponentIndex<Transform> {
+	constexpr static COMPONENT_TYPE componentType = COMPONENT_TYPE::TRANSFORM;
+};
+
+template <>
+struct ComponentIndexToType<COMPONENT_TYPE::TRANSFORM> {
+	using type = Transform;
 };

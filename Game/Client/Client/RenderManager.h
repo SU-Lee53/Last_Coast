@@ -68,20 +68,20 @@ public:
 
 	// Pass 별 분리 필요 ( Forward / Differed )
 	// 방법은 더 연구할 것
-	std::array<std::unordered_map<uint64_t, UINT>, OBJECT_RENDER_TYPE_COUNT> m_InstanceIndexMap;
+	std::array<std::unordered_map<uint64, uint32>, OBJECT_RENDER_TYPE_COUNT> m_InstanceIndexMap;
 	std::array<std::vector<InstancePair>, 2> m_InstanceDatas;
 
 	// 키프레임 애니메이션 GameObjects (인스턴싱 불가)
 	std::vector<std::shared_ptr<GameObject>> m_pAnimatedObjects;
 
-	UINT m_nInstanceIndex[2] = {0, 0};
+	uint32 m_nInstanceIndex[2] = {0, 0};
 };
 
 template<typename T> requires std::derived_from<T, IMeshRenderer>
 inline void RenderManager::Add(std::shared_ptr<T> pRenderItem, MeshRenderParameters renderParam)
 {
 	const uint64_t& key = pRenderItem->GetID();
-	UINT nRenderType = pRenderItem->GetRenderType();
+	uint32 nRenderType = pRenderItem->GetRenderType();
 
 	auto it = m_InstanceIndexMap[nRenderType].find(key);
 	if (it == m_InstanceIndexMap[nRenderType].end()) {

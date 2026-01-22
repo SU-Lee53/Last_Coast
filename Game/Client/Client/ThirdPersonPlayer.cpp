@@ -23,7 +23,7 @@ void ThirdPersonPlayer::Initialize()
 
 		// Model
 		auto pModel = MODEL->Get("Ch33_nonPBR")->CopyObject<GameObject>();
-		pModel->GetTransform().Rotate(Vector3::Up, -90.f);
+		pModel->GetTransform()->Rotate(Vector3::Up, -90.f);
 		SetChild(pModel);
 
 		// AnimationController
@@ -36,6 +36,7 @@ void ThirdPersonPlayer::Initialize()
 void ThirdPersonPlayer::ProcessInput()
 {
 	auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
+	auto pTransform = GetTransform();
 
 	// 디버그용 마우스 사용/헤제
 	if (INPUT->GetButtonDown(VK_OEM_3)) {	// " ` " -> 물결표 그 버튼임
@@ -110,11 +111,11 @@ void ThirdPersonPlayer::ProcessInput()
 
 	// 테스트용 나중에 떼버릴것
 	if (INPUT->GetButtonPressed('E')) {
-		v3MoveDirection += m_Transform.GetUp();
+		v3MoveDirection += pTransform->GetUp();
 		bMoved = true;
 	}
 	if (INPUT->GetButtonPressed('Q')) {
-		v3MoveDirection += -m_Transform.GetUp();
+		v3MoveDirection += -pTransform->GetUp();
 		bMoved = true;
 	}
 
@@ -131,11 +132,11 @@ void ThirdPersonPlayer::ProcessInput()
 		m_fMoveSpeed += 0.5 * m_fAcceleration * m_fFriction;
 		float fMaxSpeed = m_bRunning ? m_fMaxMoveSpeed * 2 : m_fMaxMoveSpeed;
 		m_fMoveSpeed = std::clamp(m_fMoveSpeed, 0.f, fMaxSpeed);
-		m_Transform.Move(v3MoveDirection, m_fMoveSpeed * DT);
+		pTransform->Move(v3MoveDirection, m_fMoveSpeed * DT);
 
 		// 플레이어가 이동 방향을 바라보도록 돌린다
 		float fYaw = std::atan2f(v3MoveDirection.x, v3MoveDirection.z);
-		m_Transform.SetRotation(0.f, fYaw, 0.f);
+		pTransform->SetRotation(0.f, fYaw, 0.f);
 	}
 	else {
 		m_fMoveSpeed -= 0.5 * m_fAcceleration * m_fFriction;
@@ -149,7 +150,7 @@ void ThirdPersonPlayer::Update()
 		auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
 		Vector3 v3LookDirection = pThirdPersonCamera->GetForwardXZ();
 		float fYaw = std::atan2f(v3LookDirection.x, v3LookDirection.z);
-		m_Transform.SetRotation(0.f, fYaw, 0.f);
+		GetTransform()->SetRotation(0.f, fYaw, 0.f);
 	}
 
 	Player::Update();

@@ -120,9 +120,9 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 		//v3Scale.y = jObject["Transform"]["Scale"]["Y"].get<float>();
 		//v3Scale.z = jObject["Transform"]["Scale"]["Z"].get<float>();
 
-		pObj->GetTransform().SetWorldMatrix(M4x4WorldMatrix);
-		//pObj->GetTransform().SetRotation(v3Rotation);
-		//pObj->GetTransform().Scale(v3Rotation);
+		pObj->GetTransform()->SetWorldMatrix(M4x4WorldMatrix);
+		//pObj->GetTransform()->SetRotation(v3Rotation);
+		//pObj->GetTransform()->Scale(v3Rotation);
 
 		std::string strMeshName = jObject["MeshName"].get<std::string>();
 		auto pMeshObject = MODEL->LoadOrGet(strMeshName)->CopyObject<GameObject>();

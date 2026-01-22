@@ -10,7 +10,7 @@ public:
 	RenderPass() {}
 	virtual ~RenderPass() {}
 
-	virtual void Run(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, std::span<InstancePair> instances, DescriptorHandle& descHandleFromPassStart) = 0;
+	virtual void Run(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<InstancePair>& instances, DescriptorHandle& descHandleFromPassStart) = 0;
 
 protected:
 	std::vector<RenderTargetTexture> m_pRTVs;			// for MRT
@@ -22,7 +22,7 @@ public:
 	ForwardPass(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommmandList);
 	virtual ~ForwardPass() {}
 
-	virtual void Run(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, std::span<InstancePair> instances, DescriptorHandle& descHandleFromPassStart) override;
+	virtual void Run(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<InstancePair>& instances, DescriptorHandle& descHandleFromPassStart) override;
 
 protected:
 	StructuredBuffer m_InstanceSBuffer;

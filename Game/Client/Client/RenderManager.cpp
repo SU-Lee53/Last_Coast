@@ -11,7 +11,6 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Gra
 
 	m_pForwardPass = std::make_shared<ForwardPass>(pd3dDevice, pd3dCommandList);
 
-
 	// DescriptorHandle Heap For Draw
 	D3D12_DESCRIPTOR_HEAP_DESC d3dHeapDesc;
 	{

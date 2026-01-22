@@ -5,9 +5,7 @@
 #include "Light.h"
 
 class Scene {
-public:
-	~Scene() {}
-
+	friend class SceneManager;
 
 public:
 	virtual void BuildObjects() = 0;

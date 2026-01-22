@@ -30,7 +30,9 @@ public:
 	virtual void Initialize() = 0;
 	virtual void Update(std::shared_ptr<GameObject> pOwner) = 0;
 	virtual void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
-		DescriptorHandle& descHandle, int nInstanceCount, int& refnInstanceBase, const Matrix& mtxWorld = Matrix::Identity) const = 0;
+		DescriptorHandle& descHandle, int32 nInstanceCount, OUT int32& outnInstanceBase, const Matrix& mtxWorld = Matrix::Identity) const = 0;
+	virtual void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
+		DescriptorHandle& descHandle, int32 unStartIndex, int32 unIndexCount, int32 nInstanceCount, OUT int32& outnInstanceBase, const Matrix& mtxWorld = Matrix::Identity) const = 0;
 
 	bool operator==(const IMeshRenderer& rhs) const;
 
@@ -72,7 +74,9 @@ public:
 	virtual void Initialize() override;
 	virtual void Update(std::shared_ptr<GameObject> pOwner)override;
 	virtual void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
-		DescriptorHandle& descHandle, int nInstanceCount, int& refnInstanceBase, const Matrix& mtxWorld = Matrix::Identity) const override;
+		DescriptorHandle& descHandle, int32 nInstanceCount, OUT int32& outnInstanceBase, const Matrix& mtxWorld = Matrix::Identity) const override;
+	virtual void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
+		DescriptorHandle& descHandle, int32 unStartIndex, int32 unIndexCount, int32 nInstanceCount, OUT int32& outnInstanceBase, const Matrix& mtxWorld = Matrix::Identity) const override;
 };
 
 template<>
@@ -131,11 +135,53 @@ inline void MeshRenderer<meshType, eRenderType>::Update(std::shared_ptr<GameObje
 
 template<typename meshType, UINT eRenderType>
 inline void MeshRenderer<meshType, eRenderType>::Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
-	DescriptorHandle& descHandle, int nInstanceCount, int& refnInstanceBase, const Matrix& mtxWorld) const
+	DescriptorHandle& descHandle, int32 nInstanceCount, OUT int32& outnInstanceBase, const Matrix& mtxWorld) const
 {
 	for (int i = 0; i < m_pMeshes.size(); ++i) {
 		// Per Object CB
-		CB_PER_OBJECT_DATA cbData = { m_pMaterials[i]->GetMaterialColors(), refnInstanceBase };
+		CB_PER_OBJECT_DATA cbData = { m_pMaterials[i]->GetMaterialColors(), outnInstanceBase };
+		ConstantBuffer cbuffer = RESOURCE->AllocCBuffer<CB_PER_OBJECT_DATA>();
+		cbuffer.WriteData(&cbData);
+
+		if constexpr (std::disjunction<std::is_same<meshType, SkinnedMesh>, std::is_same<meshType, TerrainMesh>>::value) {
+			Matrix mtxWorldTransposed = mtxWorld.Transpose();
+			ConstantBuffer worldCBuffer = RESOURCE->AllocCBuffer<CB_WORLD_TRANSFORM_DATA>();
+			worldCBuffer.WriteData(&mtxWorldTransposed);
+
+			pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, cbuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			descHandle.cpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+			pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, worldCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			descHandle.cpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+
+			pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::OBJ_MATERIAL_DATA), descHandle.gpuHandle);
+			descHandle.gpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+		}
+		else {
+			// 4
+			pd3dDevice->CopyDescriptorsSimple(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, descHandle.cpuHandle, cbuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::OBJ_MATERIAL_DATA), descHandle.gpuHandle);
+			descHandle.cpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+			descHandle.gpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+		}
+
+		// Texture (있다면)
+		m_pMaterials[i]->UpdateShaderVariables(pd3dDevice, pd3dCommandList, descHandle);	// Texture 가 있다면 Descriptor 가 복사될 것이고 아니면 안될것
+
+		const auto& pipelineStates = m_pMaterials[i]->GetShader()->GetPipelineStates();
+		pd3dCommandList->SetPipelineState(pipelineStates[0].Get());
+
+		m_pMeshes[i]->Render(pd3dCommandList, nInstanceCount);
+	}
+	outnInstanceBase += nInstanceCount;
+}
+
+template<typename meshType, UINT eRenderType>
+inline void MeshRenderer<meshType, eRenderType>::Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
+	DescriptorHandle& descHandle, int32 unStartIndex, int32 unIndexCount, int32 nInstanceCount, OUT int32& outnInstanceBase, const Matrix& mtxWorld) const
+{
+	for (int i = 0; i < m_pMeshes.size(); ++i) {
+		// Per Object CB
+		CB_PER_OBJECT_DATA cbData = { m_pMaterials[i]->GetMaterialColors(), outnInstanceBase };
 		ConstantBuffer cbuffer = RESOURCE->AllocCBuffer<CB_PER_OBJECT_DATA>();
 		cbuffer.WriteData(&cbData);
 
@@ -160,14 +206,13 @@ inline void MeshRenderer<meshType, eRenderType>::Render(ComPtr<ID3D12Device> pd3
 			descHandle.gpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 		}
 
-
 		// Texture (있다면)
 		m_pMaterials[i]->UpdateShaderVariables(pd3dDevice, pd3dCommandList, descHandle);	// Texture 가 있다면 Descriptor 가 복사될 것이고 아니면 안될것
 
 		const auto& pipelineStates = m_pMaterials[i]->GetShader()->GetPipelineStates();
 		pd3dCommandList->SetPipelineState(pipelineStates[0].Get());
 
-		m_pMeshes[i]->Render(pd3dCommandList, nInstanceCount);
+		m_pMeshes[i]->Render(pd3dCommandList, unStartIndex, unIndexCount, nInstanceCount);
 	}
-	refnInstanceBase += nInstanceCount;
+	outnInstanceBase += nInstanceCount;
 }

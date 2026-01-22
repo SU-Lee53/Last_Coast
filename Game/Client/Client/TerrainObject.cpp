@@ -3,63 +3,6 @@
 
 const std::string TerrainObject::g_strTerrainPath = "../Models/Terrain";
 
-void TerrainObject::RenderImmediate(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle)
-{
-	const auto& materials = m_pMeshRenderer->GetMaterials();
-	float pfTiling[4] = { 0.f, 0.f, 0.f, 0.f };
-
-	for (int i = 0; i < 4; ++i) {
-		if (materials[i]) {
-			const std::shared_ptr<TerrainMaterial> pTerrainMaterial = std::static_pointer_cast<TerrainMaterial>(materials[i]);
-			pfTiling[i] = pTerrainMaterial->GetTiling();
-		}
-	}
-
-	Vector4 v4Tiling = Vector4(pfTiling);
-	ConstantBuffer& layerCBuffer = RESOURCE->AllocCBuffer<CB_TERRAIN_LAYER_DATA>();
-	layerCBuffer.WriteData(&v4Tiling);
-
-	pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, layerCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-	for (int i = 0; i < 4; ++i) {
-		if (materials[i]) {
-			const std::shared_ptr<TerrainMaterial> pTerrainMaterial = std::static_pointer_cast<TerrainMaterial>(materials[i]);
-			CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle = descHandle.cpuHandle;
-
-			pd3dDevice->CopyDescriptorsSimple(1, cpuHandle, pTerrainMaterial->GetTexture(0)->GetHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			cpuHandle.Offset(4, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-			pd3dDevice->CopyDescriptorsSimple(1, cpuHandle, pTerrainMaterial->GetTexture(1)->GetHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-			descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-		}
-		else {
-			descHandle.cpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-		}
-	}
-	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::SCENE_TERRAIN_DATA), descHandle.gpuHandle);
-	descHandle.gpuHandle.Offset(8, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-
-	const auto& pMesh = m_pMeshRenderer->GetMeshes()[0];
-	for (uint32 i = 0; i < m_pTerrainComponents.size(); ++i) {
-		ConstantBuffer& cbuffer = RESOURCE->AllocCBuffer<CB_TERRAIN_COMPONENT_DATA>();
-		CB_TERRAIN_COMPONENT_DATA terrainData = m_pTerrainComponents[i]->MakeCBData();
-		cbuffer.WriteData(&terrainData);
-		pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, cbuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-		pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, m_pTerrainComponents[i]->GetWeightMap()->GetHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-		pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::SCENE_TERRAIN_COMPONENT_DATA), descHandle.gpuHandle);
-		descHandle.gpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-		const auto& indexRange = m_pTerrainComponents[i]->GetIndexRange();
-		pMesh->Render(pd3dCommandList, indexRange.unStartIndex, indexRange.unIndexCount);
-	}
-}
-
 HRESULT TerrainObject::LoadFromFiles(const std::string& strFilename)
 {
 	HRESULT hr{};
@@ -199,4 +142,63 @@ void TerrainObject::BuildTerrainMesh(const TERRAINLOADINFO& terrainInfo)
 	std::vector<MESHLOADINFO> meshLoadInfos = { meshLoadInfo };
 	m_pMeshRenderer = std::make_shared<MeshRenderer<TerrainMesh>>(meshLoadInfos, materialLoadInfos);
 
+}
+
+void TerrainObject::RenderImmediate(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle)
+{
+	const auto& materials = m_pMeshRenderer->GetMaterials();
+	float pfTiling[4] = { 0.f, 0.f, 0.f, 0.f };
+
+	for (int i = 0; i < 4; ++i) {
+		if (materials[i]) {
+			const std::shared_ptr<TerrainMaterial> pTerrainMaterial = std::static_pointer_cast<TerrainMaterial>(materials[i]);
+			pfTiling[i] = pTerrainMaterial->GetTiling();
+		}
+	}
+
+	Vector4 v4Tiling = Vector4(pfTiling);
+	ConstantBuffer& layerCBuffer = RESOURCE->AllocCBuffer<CB_TERRAIN_LAYER_DATA>();
+	layerCBuffer.WriteData(&v4Tiling);
+
+	pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, layerCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+
+	for (int i = 0; i < 4; ++i) {
+		if (materials[i]) {
+			const std::shared_ptr<TerrainMaterial> pTerrainMaterial = std::static_pointer_cast<TerrainMaterial>(materials[i]);
+			CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle = descHandle.cpuHandle;
+
+			pd3dDevice->CopyDescriptorsSimple(1, cpuHandle, pTerrainMaterial->GetTexture(0)->GetHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			cpuHandle.Offset(4, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+			pd3dDevice->CopyDescriptorsSimple(1, cpuHandle, pTerrainMaterial->GetTexture(1)->GetHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+			descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+		}
+		else {
+			descHandle.cpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+		}
+	}
+	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::SCENE_TERRAIN_DATA), descHandle.gpuHandle);
+	descHandle.gpuHandle.Offset(8, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+
+
+	const auto& pMesh = m_pMeshRenderer->GetMeshes()[0];
+	for (uint32 i = 0; i < m_pTerrainComponents.size(); ++i) {
+		ConstantBuffer& cbuffer = RESOURCE->AllocCBuffer<CB_TERRAIN_COMPONENT_DATA>();
+		CB_TERRAIN_COMPONENT_DATA terrainData = m_pTerrainComponents[i]->MakeCBData();
+		cbuffer.WriteData(&terrainData);
+		pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, cbuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+
+		pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, m_pTerrainComponents[i]->GetWeightMap()->GetHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+
+		pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::SCENE_TERRAIN_COMPONENT_DATA), descHandle.gpuHandle);
+		descHandle.gpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+
+		const auto& indexRange = m_pTerrainComponents[i]->GetIndexRange();
+		int nInstanceBase = -1;
+		Matrix mtxWorld = GetTransform()->GetWorldMatrix();
+		m_pMeshRenderer->Render(pd3dDevice, pd3dCommandList, descHandle, indexRange.unStartIndex, indexRange.unIndexCount, 1, nInstanceBase, mtxWorld);
+	}
 }

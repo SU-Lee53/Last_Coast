@@ -27,6 +27,8 @@ void DebugPlayer::Initialize()
 
 void DebugPlayer::ProcessInput()
 {
+	auto pTransform = GetTransform();
+
 	if (INPUT->GetButtonPressed(VK_RBUTTON)) {
 		HWND hWnd = ::GetActiveWindow();
 
@@ -55,7 +57,7 @@ void DebugPlayer::ProcessInput()
 		if (m_fPitch < XMConvertToRadians(-89.0f))
 			m_fPitch = XMConvertToRadians(-89.0f);
 
-		m_Transform.SetRotation(m_fPitch, m_fYaw, 0.f);
+		pTransform->SetRotation(m_fPitch, m_fYaw, 0.f);
 
 		::SetCursorPos(nScreenCenterX, nScreenCenterY);
 	}
@@ -63,28 +65,26 @@ void DebugPlayer::ProcessInput()
 	Vector3 v3MoveDirection{};
 
 	if (INPUT->GetButtonPressed('W')) {
-		v3MoveDirection += m_Transform.GetLook();
+		v3MoveDirection += pTransform->GetLook();
 	}
 	if (INPUT->GetButtonPressed('S')) {
-		v3MoveDirection += -m_Transform.GetLook();
+		v3MoveDirection += -pTransform->GetLook();
 	}
 	if (INPUT->GetButtonPressed('A')) {
-		v3MoveDirection += -m_Transform.GetRight();
+		v3MoveDirection += -pTransform->GetRight();
 	}
 	if (INPUT->GetButtonPressed('D')) {
-		v3MoveDirection += m_Transform.GetRight();
+		v3MoveDirection += pTransform->GetRight();
 	}
 	if (INPUT->GetButtonPressed('E')) {
-		v3MoveDirection += m_Transform.GetUp();
+		v3MoveDirection += pTransform->GetUp();
 	}
 	if (INPUT->GetButtonPressed('Q')) {
-		v3MoveDirection += -m_Transform.GetUp();
+		v3MoveDirection += -pTransform->GetUp();
 	}
 
 	v3MoveDirection.Normalize();
-	m_Transform.Move(v3MoveDirection, 10_m * DT);
+	pTransform->Move(v3MoveDirection, 10_m * DT);
 
-
-	10_km;
 }
 

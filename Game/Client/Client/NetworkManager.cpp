@@ -23,7 +23,7 @@ NetworkManager::~NetworkManager()
 	Disconnect();
 }
 
-void NetworkManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
+void NetworkManager::Initialize()
 {
 	WSADATA wsa;
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
@@ -114,7 +114,6 @@ void NetworkManager::ConnectToServer()
 //
 // 11.19
 // 인자 제거, m_PacketToSend 의 데이터 전송
-
 
 bool NetworkManager::SendData()
 {
@@ -214,6 +213,7 @@ ServertoClientRockPacket NetworkManager::GetReceivedRockPacketData()
 {
 	return m_PacketRocksReceived;
 }
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 2025.11.16
 // ProcessNetwork By 이승욱
@@ -263,7 +263,7 @@ DWORD WINAPI NetworkManager::ProcessNetwork(LPVOID arg)
 //void NetworkManager::MakePacketToSend(ClientToServerPacket& packet , std::shared_ptr<Player> Player)
 //{
 //	packet.id = 999;
-//	packet.transformData.mtxPlayerTransform = Player->GetTransform().GetWorldMatrix();
+//	packet.transformData.mtxPlayerTransform = Player->GetTransform()->GetWorldMatrix();
 //	packet.shotData.v3RayDirection = static_pointer_cast<SpaceshipPlayer>(Player)->GetRayDirection();
 //	packet.shotData.v3RayPosition = static_pointer_cast<SpaceshipPlayer>(Player)->GetRayPos();
 //}

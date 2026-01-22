@@ -10,7 +10,7 @@ class NetworkManager {
 	~NetworkManager();
 
 public:
-	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
+	void Initialize();
 	void ConnectToServer();
 
 private:

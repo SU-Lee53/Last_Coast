@@ -7,13 +7,20 @@
 //		- SimpleMath 가 RHS 좌표계 사용중이라 Forward(Look) 방향은 Matrix::Backward() 로 가져와야 함
 //
 
-Transform::Transform()
+Transform::Transform(std::shared_ptr<GameObject> pOwner)
+	: IComponent{ pOwner }
 {
+	m_mtxFrameRelative = Matrix::Identity;
 	m_mtxTransform = Matrix::Identity;
 	m_mtxWorld = Matrix::Identity;
 }
 
-void Transform::Update(std::shared_ptr<GameObject> pParent)
+void Transform::Initialize()
+{
+	bInitialized = true;
+}
+
+void Transform::Update()
 {
 	// 11.15 수정
 	// 외부 수정 flag 를 내리고 업데이트 없이 리턴함
@@ -21,7 +28,19 @@ void Transform::Update(std::shared_ptr<GameObject> pParent)
 		m_bWorldSetFromOutside = false;
 		return;
 	}
-	m_mtxWorld = (pParent) ? ((m_mtxTransform * m_mtxFrameRelative) * pParent->GetTransform().m_mtxWorld) : (m_mtxTransform * m_mtxFrameRelative);
+	auto pParent = m_wpOwner.lock()->GetParent();
+	m_mtxWorld = (pParent) ? ((m_mtxTransform * m_mtxFrameRelative) * pParent->GetTransform()->m_mtxWorld) : (m_mtxTransform * m_mtxFrameRelative);
+}
+
+std::shared_ptr<IComponent> Transform::Copy()
+{
+	std::shared_ptr<Transform> pClone = std::make_shared<Transform>(m_wpOwner.lock());
+	pClone->m_mtxFrameRelative = m_mtxFrameRelative;
+	pClone->m_mtxTransform = m_mtxTransform;
+	pClone->m_mtxWorld = m_mtxWorld;
+	pClone->bInitialized = bInitialized;
+
+	return pClone;
 }
 
 void Transform::SetFrameMatrix(const Matrix& mtxFrame)
@@ -34,12 +53,6 @@ void Transform::SetWorldMatrix(const Matrix& mtxWorld)
 	m_mtxTransform = mtxWorld;
 	m_bWorldSetFromOutside = true;
 }
-
-
-//void Transform::SetLocalMatrix(const Matrix& xmf4x4Local)
-//{
-//	m_mtxTransform = xmf4x4Local;
-//}
 
 // =========
 // Translate

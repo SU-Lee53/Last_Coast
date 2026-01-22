@@ -9,7 +9,7 @@ ForwardPass::ForwardPass(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsC
 	m_InstanceSBuffer.Create(pd3dDevice, pd3dCommmandList, 100000, sizeof(Matrix), true);
 }
 
-void ForwardPass::Run(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, std::span<InstancePair> instances, DescriptorHandle& descHandleFromPassStart)
+void ForwardPass::Run(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<InstancePair>& instances, DescriptorHandle& descHandleFromPassStart)
 {
 	UINT uiSBufferOffset = 0;
 	for (const auto& [k, v] : instances) {

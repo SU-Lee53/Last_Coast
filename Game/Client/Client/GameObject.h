@@ -6,6 +6,7 @@
 
 struct MESHLOADINFO;
 struct MATERIALLOADINFO;
+struct CollisionResult;
 
 class GameObject : public std::enable_shared_from_this<GameObject> {
 	friend class ModelManager;
@@ -33,7 +34,6 @@ public:
 	template<ComponentType T, typename... Args>
 	void AddComponent(std::shared_ptr<T> pComponent);
 
-
 	// Create New
 	template<typename T, typename... Args> requires std::derived_from<T, IMeshRenderer>
 	void SetMeshRenderer(Args&&... args);
@@ -48,17 +48,24 @@ public:
 	void SetAnimationController(std::shared_ptr<AnimationController> pController) { m_pAnimationController = pController; }
 
 	template<ComponentType T>
-	std::shared_ptr<T> GetComponent();
+	std::shared_ptr<T> GetComponent() const;
+	std::shared_ptr<Transform> GetTransform();
+	const Matrix& GetWorldMatrix() const { return GetComponent<Transform>()->GetWorldMatrix(); }
 	std::shared_ptr<GameObject> GetParent() const { return m_pParent.lock(); }
+
 	std::shared_ptr<IMeshRenderer> GetMeshRenderer() const { return m_pMeshRenderer; }
-	Transform& GetTransform() { return m_Transform; }
-	const Matrix& GetWorldMatrix() const { return m_Transform.GetWorldMatrix(); }
+	
 	const std::vector<Bone>& GetBones() const { return m_Bones; }
 	size_t GetRootBoneIndex() const { return m_nRootBoneIndex; }
 	int FindBoneIndex(const std::string& strBoneName) const;
 	std::shared_ptr<AnimationController> GetAnimationController() const { return m_pAnimationController; }
 
 	void MergeBoundingBox(BoundingOrientedBox* pOBB);
+
+public:
+	virtual void OnBeginCollision(const CollisionResult& collisionResult) {};
+	virtual void OnWhileCollision(const CollisionResult& collisionResult) {};
+	virtual void OnEndCollision(const CollisionResult& collisionResult) {};
 
 public:
 	std::shared_ptr<GameObject> FindFrame(const std::string& strFrameName);
@@ -70,7 +77,8 @@ public:
 protected:
 	bool m_bInitialized = false;
 	std::string m_strFrameName;
-	Transform m_Transform{};
+
+	// 아래부터 AnimationController 는 나중에 Component로 통합되어 array로 갖다 박힐 예정
 	std::shared_ptr<IMeshRenderer> m_pMeshRenderer = nullptr;
 
 	// 아래 2가지 애니메이션과 관련된 것들은 반드시 Root에 보관되어야 함
@@ -78,7 +86,7 @@ protected:
 	size_t m_nRootBoneIndex = 0;
 	std::shared_ptr<AnimationController> m_pAnimationController = nullptr;
 
-	std::array<std::shared_ptr<Component>, COMPONENT_TYPE_COUNT> m_pComponents = {};
+	std::array<std::shared_ptr<IComponent>, std::to_underlying(COMPONENT_TYPE::COUNT)> m_pComponents = {};
 
 protected:
 	// Frame Hierarchy
@@ -107,13 +115,13 @@ inline void GameObject::SetMeshRenderer(Args&&... args)
 template<ComponentType T>
 inline void GameObject::AddComponent()
 {
-	m_pComponents[ComponentIndex<T>::componentType] = std::make_shared<T>(shared_from_this());
+	m_pComponents[std::to_underlying(ComponentIndex<T>::componentType)] = std::make_shared<T>(shared_from_this());
 }
 
 template<ComponentType T, typename... Args>
 inline void GameObject::AddComponent(Args&&... args)
 {
-	m_pComponents[ComponentIndex<T>::componentType] = std::make_shared<T>(std::forward<Args>(args)...);
+	m_pComponents[std::to_underlying(ComponentIndex<T>::componentType)] = std::make_shared<T>(std::forward<Args>(args)...);
 }
 
 template<ComponentType T, typename ...Args>
@@ -127,9 +135,9 @@ inline void GameObject::AddComponent(std::shared_ptr<T> pComponent)
 }
 
 template<ComponentType T>
-inline 	std::shared_ptr<T> GameObject::GetComponent()
+inline 	std::shared_ptr<T> GameObject::GetComponent() const
 {
-	return static_pointer_cast<T>(m_pComponents[ComponentIndex<T>::componentType]);
+	return static_pointer_cast<T>(m_pComponents[std::to_underlying(ComponentIndex<T>::componentType)]);
 }
 
 template<typename T>
@@ -137,11 +145,12 @@ std::shared_ptr<T> GameObject::CopyObject(std::shared_ptr<GameObject> pParent) c
 {
 	std::shared_ptr<T> pClone = std::make_shared<T>();
 	pClone->m_strFrameName = m_strFrameName;
-	pClone->m_Transform = m_Transform;
 
-	for (int i = 0; i < COMPONENT_TYPE_COUNT; ++i) {
-		pClone->m_pComponents[i] = m_pComponents[i];
-		pClone->m_pComponents[i]->SetOwner(pClone);
+	for (int32 i = 0; i < std::to_underlying(COMPONENT_TYPE::COUNT); ++i) {
+		if (m_pComponents[i]) {
+			pClone->m_pComponents[i] = m_pComponents[i]->Copy();
+			pClone->m_pComponents[i]->SetOwner(pClone);
+		}
 	}
 
 	pClone->m_pMeshRenderer = m_pMeshRenderer;
@@ -164,7 +173,6 @@ inline std::shared_ptr<T> GameObject::CopyObject(std::shared_ptr<T> srcObject, s
 {
 	std::shared_ptr<T> pClone = std::make_shared<T>();
 	pClone->m_strFrameName = srcObject->m_strFrameName;
-	pClone->m_Transform = srcObject->m_Transform;
 
 	// 수정필요 (10.21)
 	// 독립된 객체이되 내부 내용물은 같아야 하고, Owner 는 새로 지정되어야 함
@@ -173,8 +181,10 @@ inline std::shared_ptr<T> GameObject::CopyObject(std::shared_ptr<T> srcObject, s
 	// Component 가 얼마나 늘어날지 아직 모르는 상황에서 전부다 Copy 를 구현하는것은 매우 무리가 있을듯
 	// 애시당초 Mesh 를 공유하는게 "인스턴싱"인 상황에 Owner 개념을 부여하여 고유하게 만드는게 과연 옳은지?
 	for (int i = 0; i < COMPONENT_TYPE_COUNT; ++i) {
-		pClone->m_pComponents[i] = srcObject->m_pComponents[i];
-		pClone->m_pComponents[i]->SetOwner(pClone);
+		if (m_pComponents[i]) {
+			pClone->m_pComponents[i] = m_pComponents[i];
+			pClone->m_pComponents[i]->SetOwner(pClone);
+		}
 	}
 	
 	// 수정완 (10.21)
