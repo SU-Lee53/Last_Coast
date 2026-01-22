@@ -12,7 +12,7 @@ enum class COMPONENT_TYPE : uint8 {
 	BASE = std::numeric_limits<uint8>::max()
 };
 
-interface IComponent abstract {
+interface IComponent abstract : std::enable_shared_from_this<IComponent> {
 public:
 	IComponent(std::shared_ptr<GameObject> pOwner) : m_wpOwner {pOwner} {}
 
@@ -31,11 +31,11 @@ public:
 		return m_wpOwner.expired();
 	}
 
-	virtual std::shared_ptr<IComponent> Copy() = 0;
+	virtual std::shared_ptr<IComponent> Copy(std::shared_ptr<GameObject> pNewOwner) = 0;
 
 protected:
 	std::weak_ptr<GameObject> m_wpOwner;
-	bool bInitialized = false;
+	bool m_bInitialized = false;
 
 };
 

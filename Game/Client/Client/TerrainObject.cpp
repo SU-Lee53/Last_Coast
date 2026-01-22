@@ -37,6 +37,8 @@ HRESULT TerrainObject::LoadFromFiles(const std::string& strFilename)
 void TerrainObject::BuildTerrainMesh(const TERRAINLOADINFO& terrainInfo)
 {
 	MESHLOADINFO meshLoadInfo{};
+	meshLoadInfo.eMeshType = MESH_TYPE::TERRAIN;
+
 	float fHeightMapWidth = terrainInfo.v2HeightMapResolutionXZ.x;
 	float fHeightMapHeight = terrainInfo.v2HeightMapResolutionXZ.y;
 	uint32 unHeightMapWidth = static_cast<uint32>(fHeightMapWidth);
@@ -140,13 +142,14 @@ void TerrainObject::BuildTerrainMesh(const TERRAINLOADINFO& terrainInfo)
 	}
 
 	std::vector<MESHLOADINFO> meshLoadInfos = { meshLoadInfo };
-	m_pMeshRenderer = std::make_shared<MeshRenderer<TerrainMesh>>(meshLoadInfos, materialLoadInfos);
-
+	AddComponent<MeshRenderer>(meshLoadInfos, materialLoadInfos);
 }
 
 void TerrainObject::RenderImmediate(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle)
 {
-	const auto& materials = m_pMeshRenderer->GetMaterials();
+	auto pMeshRenderer = GetComponent<MeshRenderer>();
+
+	const auto& materials = pMeshRenderer->GetMaterials();
 	float pfTiling[4] = { 0.f, 0.f, 0.f, 0.f };
 
 	for (int i = 0; i < 4; ++i) {
@@ -182,7 +185,6 @@ void TerrainObject::RenderImmediate(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D
 	descHandle.gpuHandle.Offset(8, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 
 
-	const auto& pMesh = m_pMeshRenderer->GetMeshes()[0];
 	for (uint32 i = 0; i < m_pTerrainComponents.size(); ++i) {
 		ConstantBuffer& cbuffer = RESOURCE->AllocCBuffer<CB_TERRAIN_COMPONENT_DATA>();
 		CB_TERRAIN_COMPONENT_DATA terrainData = m_pTerrainComponents[i]->MakeCBData();
@@ -199,6 +201,6 @@ void TerrainObject::RenderImmediate(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D
 		const auto& indexRange = m_pTerrainComponents[i]->GetIndexRange();
 		int nInstanceBase = -1;
 		Matrix mtxWorld = GetTransform()->GetWorldMatrix();
-		m_pMeshRenderer->Render(pd3dDevice, pd3dCommandList, descHandle, indexRange.unStartIndex, indexRange.unIndexCount, 1, nInstanceBase, mtxWorld);
+		pMeshRenderer->Render(pd3dDevice, pd3dCommandList, descHandle, indexRange.unStartIndex, indexRange.unIndexCount, 1, nInstanceBase, mtxWorld);
 	}
 }

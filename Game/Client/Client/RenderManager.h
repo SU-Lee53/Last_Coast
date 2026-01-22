@@ -24,7 +24,7 @@ struct MeshRenderParameters {
 };
 
 struct InstancePair {
-	std::shared_ptr<IMeshRenderer> meshRenderer;
+	std::shared_ptr<MeshRenderer> meshRenderer;
 	std::vector<MeshRenderParameters> InstanceDatas;
 };
 
@@ -43,8 +43,7 @@ private:
 	void RenderSkybox(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descriptorHandleFromPassStart);
 
 public:
-	template<typename T> requires std::derived_from<T, IMeshRenderer>
-	void Add(std::shared_ptr<T> pRenderItem, MeshRenderParameters renderParam);
+	void Add(std::shared_ptr<MeshRenderer> pRenderItem, MeshRenderParameters renderParam);
 	void AddAnimatedObject(std::shared_ptr<GameObject> pObj);
 	void Clear();
 
@@ -66,31 +65,14 @@ public:
 	// Skybox
 	ComPtr<ID3D12PipelineState> m_pd3dSkyboxPipelineState;
 
-	// Pass 별 분리 필요 ( Forward / Differed )
-	// 방법은 더 연구할 것
-	std::array<std::unordered_map<uint64, uint32>, OBJECT_RENDER_TYPE_COUNT> m_InstanceIndexMap;
-	std::array<std::vector<InstancePair>, 2> m_InstanceDatas;
+	// Pass 별 분리 필요 ( Forward / Differed ) -> 그냥 분리 안한다 이제
+	// 나중에 GameObject를 직접 담아 그자리에서 분류를 수행하도록 수정할 예정
+	std::unordered_map<uint64, uint32> m_InstanceIndexMap;
+	std::vector<InstancePair> m_InstanceDatas;
 
 	// 키프레임 애니메이션 GameObjects (인스턴싱 불가)
 	std::vector<std::shared_ptr<GameObject>> m_pAnimatedObjects;
 
-	uint32 m_nInstanceIndex[2] = {0, 0};
+	uint32 m_nInstanceIndex = 0;
 };
 
-template<typename T> requires std::derived_from<T, IMeshRenderer>
-inline void RenderManager::Add(std::shared_ptr<T> pRenderItem, MeshRenderParameters renderParam)
-{
-	const uint64_t& key = pRenderItem->GetID();
-	uint32 nRenderType = pRenderItem->GetRenderType();
-
-	auto it = m_InstanceIndexMap[nRenderType].find(key);
-	if (it == m_InstanceIndexMap[nRenderType].end()) {
-		InstancePair instancePair{ pRenderItem, std::vector<MeshRenderParameters>{ renderParam } };
-
-		m_InstanceIndexMap[nRenderType][key] = m_nInstanceIndex[nRenderType]++;
-		m_InstanceDatas[nRenderType].push_back(instancePair);
-	}
-	else {
-		m_InstanceDatas[nRenderType][it->second].InstanceDatas.emplace_back(renderParam);
-	}
-}

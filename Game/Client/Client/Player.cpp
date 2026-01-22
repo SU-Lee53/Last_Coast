@@ -46,8 +46,8 @@ void Player::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 		return;
 	}
 
-	if (m_pMeshRenderer) {
-		m_pMeshRenderer->Update(shared_from_this());
+	if (GetComponent<MeshRenderer>()) {
+		GetComponent<MeshRenderer>()->Update();
 	}
 
 	for (auto& pChild : m_pChildren) {

@@ -17,7 +17,7 @@ Transform::Transform(std::shared_ptr<GameObject> pOwner)
 
 void Transform::Initialize()
 {
-	bInitialized = true;
+	m_bInitialized = true;
 }
 
 void Transform::Update()
@@ -32,13 +32,13 @@ void Transform::Update()
 	m_mtxWorld = (pParent) ? ((m_mtxTransform * m_mtxFrameRelative) * pParent->GetTransform()->m_mtxWorld) : (m_mtxTransform * m_mtxFrameRelative);
 }
 
-std::shared_ptr<IComponent> Transform::Copy()
+std::shared_ptr<IComponent> Transform::Copy(std::shared_ptr<GameObject> pNewOwner)
 {
-	std::shared_ptr<Transform> pClone = std::make_shared<Transform>(m_wpOwner.lock());
+	std::shared_ptr<Transform> pClone = std::make_shared<Transform>(pNewOwner);
 	pClone->m_mtxFrameRelative = m_mtxFrameRelative;
 	pClone->m_mtxTransform = m_mtxTransform;
 	pClone->m_mtxWorld = m_mtxWorld;
-	pClone->bInitialized = bInitialized;
+	pClone->m_bInitialized = m_bInitialized;
 
 	return pClone;
 }

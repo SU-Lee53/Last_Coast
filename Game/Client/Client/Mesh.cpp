@@ -10,7 +10,6 @@ Mesh::Mesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopolog
 	m_nSlot = 0;
 	m_nVertices = meshLoadInfo.v3Positions.size();
 	m_nOffset = 0;
-	m_nType = meshLoadInfo.eType;
 
 	m_Positions = RESOURCE->CreateVertexBuffer(meshLoadInfo.v3Positions, std::to_underlying(MESH_ELEMENT_TYPE::POSITION));
 
@@ -46,9 +45,9 @@ void FullScreenMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, u
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// StandardMesh
+// StaticMesh
 
-StandardMesh::StandardMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology)
+StaticMesh::StaticMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology)
 	: Mesh(meshLoadInfo, d3dTopology)
 {
 	m_Normals = RESOURCE->CreateVertexBuffer(meshLoadInfo.v3Tangents, std::to_underlying(MESH_ELEMENT_TYPE::NORMAL));
@@ -56,7 +55,7 @@ StandardMesh::StandardMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOP
 	m_TexCoords = RESOURCE->CreateVertexBuffer(meshLoadInfo.v2TexCoord0, std::to_underlying(MESH_ELEMENT_TYPE::TEXCOORD0));
 }
 
-void StandardMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount) const
+void StaticMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount) const
 {
 	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
 
@@ -81,7 +80,7 @@ void StandardMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uin
 // SkinnedMesh
 
 SkinnedMesh::SkinnedMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology)
-	: StandardMesh(meshLoadInfo, d3dTopology)
+	: StaticMesh(meshLoadInfo, d3dTopology)
 {
 	m_BlendIndices = RESOURCE->CreateVertexBuffer(meshLoadInfo.xmun4BlendIndices, std::to_underlying(MESH_ELEMENT_TYPE::TANGENT));
 	m_BlendWeights = RESOURCE->CreateVertexBuffer(meshLoadInfo.v4BlendWeights, std::to_underlying(MESH_ELEMENT_TYPE::TEXCOORD0));

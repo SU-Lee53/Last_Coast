@@ -2,8 +2,11 @@
 #include "GameObject.h"
 #include "Transform.h"
 
+uint64 GameObject::g_GameObjectIDBase = 0;
+
 GameObject::GameObject()
 {
+	m_unGameObjectRuntimeID = g_GameObjectIDBase++;
 }
 
 GameObject::~GameObject()
@@ -23,10 +26,6 @@ void GameObject::Initialize()
 			if (component) {
 				component->Initialize();
 			}
-		}
-
-		if (m_pMeshRenderer) {
-			m_pMeshRenderer->Initialize();
 		}
 
 		if (m_pAnimationController) {
@@ -54,8 +53,6 @@ void GameObject::Update()
 		}
 	}
 
-	m_pComponents[std::to_underlying(COMPONENT_TYPE::TRANSFORM)]->Update();
-
 	if (m_pAnimationController) {
 		m_pAnimationController->Update();
 	}
@@ -73,10 +70,6 @@ void GameObject::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 		return;
 	}
 
-	if (m_pMeshRenderer) {
-		m_pMeshRenderer->Update(shared_from_this());
-	}
-
 	for (auto& pChild : m_pChildren) {
 		pChild->Render(pd3dCommandList);
 	}
@@ -84,10 +77,11 @@ void GameObject::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 
 void GameObject::RenderImmediate(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle)
 {
-	if (m_pMeshRenderer) {
+	auto pMeshRenderer = GetComponent<MeshRenderer>();
+	if (pMeshRenderer) {
 		int nInstanceBase = -1;
 		Matrix mtxWorld = GetTransform()->GetWorldMatrix();
-		m_pMeshRenderer->Render(pd3dDevice, pd3dCommandList, descHandle, 1, nInstanceBase, mtxWorld);
+		pMeshRenderer->Render(pd3dDevice, pd3dCommandList, descHandle, 1, nInstanceBase, mtxWorld);
 	}
 
 	for (auto& pChild : m_pChildren) {
@@ -179,11 +173,12 @@ void GameObject::MergeBoundingBox(BoundingOrientedBox* pOBB)
 		*pOBB = BoundingOrientedBox{};
 	}
 
-	if (m_pMeshRenderer) {
+	auto pMeshRenderer = GetComponent<MeshRenderer>();
+	if (pMeshRenderer) {
 		// Get corner fron OBB to merge
 		XMFLOAT3 pxmf3OBBPoints1[BoundingOrientedBox::CORNER_COUNT];
 		BoundingOrientedBox xmOBBMesh;
-		m_pMeshRenderer->GetOBBMerged().Transform(xmOBBMesh, GetTransform()->GetWorldMatrix());
+		pMeshRenderer->GetOBBMerged().Transform(xmOBBMesh, GetTransform()->GetWorldMatrix());
 		xmOBBMesh.GetCorners(pxmf3OBBPoints1);
 
 		XMFLOAT3 pxmf3OBBPoints2[BoundingOrientedBox::CORNER_COUNT];
@@ -226,7 +221,7 @@ std::shared_ptr<GameObject> GameObject::FindFrame(const std::string& strFrameNam
 std::shared_ptr<GameObject> GameObject::FindMeshedFrame(const std::string& strFrameName)
 {
 	std::shared_ptr<GameObject> pFrameObject;
-	if (strFrameName == m_strFrameName && m_pMeshRenderer) {
+	if (strFrameName == m_strFrameName && GetComponent<MeshRenderer>()) {
 		return shared_from_this();
 	}
 

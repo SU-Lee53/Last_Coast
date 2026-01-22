@@ -183,7 +183,7 @@ void RenderManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 
 	// Pass 수행
 	// Run 안에서 descHandle 의 offset 이 사용된만큼 움직임
-	m_pForwardPass->Run(m_pd3dDevice, pd3dCommandList, m_InstanceDatas[OBJECT_RENDER_FORWARD], descHandle);
+	m_pForwardPass->Run(m_pd3dDevice, pd3dCommandList, m_InstanceDatas, descHandle);
 	RenderAnimated(pd3dCommandList, descHandle);
 
 	RenderSkybox(pd3dCommandList, descHandle);
@@ -230,6 +230,23 @@ void RenderManager::RenderSkybox(ComPtr<ID3D12GraphicsCommandList> pd3dCommandLi
 	pd3dCommandList->DrawInstanced(1, 1, 0, 0);
 }
 
+void RenderManager::Add(std::shared_ptr<MeshRenderer> pMeshRenderer, MeshRenderParameters renderParams)
+{
+	const uint64_t& itemKey = pMeshRenderer->GetID();
+
+	auto it = m_InstanceIndexMap.find(itemKey);
+	if (it == m_InstanceIndexMap.end()) {
+		InstancePair instancePair{ pMeshRenderer, std::vector<MeshRenderParameters>{ renderParams } };
+
+		m_InstanceIndexMap[itemKey] = m_nInstanceIndex++;
+		m_InstanceDatas.push_back(instancePair);
+	}
+	else {
+		m_InstanceDatas[it->second].InstanceDatas.push_back(renderParams);
+	}
+}
+
+
 void RenderManager::AddAnimatedObject(std::shared_ptr<GameObject> pObj)
 {
 	m_pAnimatedObjects.push_back(pObj);
@@ -237,10 +254,9 @@ void RenderManager::AddAnimatedObject(std::shared_ptr<GameObject> pObj)
 
 void RenderManager::Clear()
 {
-	for (int i = 0; i < 2; ++i) {
-		m_InstanceIndexMap[i].clear();
-		m_InstanceDatas[i].clear();
-		m_nInstanceIndex[i] = 0;
-	}
+	m_InstanceIndexMap.clear();
+	m_InstanceDatas.clear();
+	m_nInstanceIndex = 0;
+
 	m_pAnimatedObjects.clear();
 }

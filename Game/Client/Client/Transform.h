@@ -10,7 +10,7 @@ public:
 	// IComponent을(를) 통해 상속됨
 	virtual void Initialize() override;
 	virtual void Update() override;
-	virtual std::shared_ptr<IComponent> Copy() override;
+	virtual std::shared_ptr<IComponent> Copy(std::shared_ptr<GameObject> pNewOwner) override;
 
 public:
 	void SetFrameMatrix(const Matrix& mtxFrame);

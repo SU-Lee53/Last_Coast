@@ -10,10 +10,19 @@
 		- 기존 방식도 일단 유지
 */
 
+enum class MESH_TYPE {
+	STATIC = 0,
+	SKINNED,
+	TERRAIN,
+
+
+	COUNT,
+
+	UNDEFINED
+};
+
 struct MESHLOADINFO {
 	std::string				strMeshName;
-
-	uint32					eType;			// MESH_ELEMENT_TYPE
 
 	Vector3					v3AABBCenter = Vector3(0.0f, 0.0f, 0.0f);
 	Vector3					v3AABBExtents = Vector3(1.0f, 1.0, 1.0f);
@@ -32,6 +41,8 @@ struct MESHLOADINFO {
 	std::vector<Vector4>	v4BlendWeights;
 
 	std::vector<uint32>		unIndices;
+
+	MESH_TYPE				eMeshType;
 
 	bool bIsSkinned = false;
 };
@@ -56,8 +67,6 @@ protected:
 	uint32							m_nVertices = 0;
 	uint32							m_nOffset = 0;
 
-	uint32							m_nType = 0;
-
 protected:
 	// Bounding Volume
 	BoundingOrientedBox m_xmOBB;
@@ -79,11 +88,11 @@ public:
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// StandardMesh
+// StaticMesh
 
-class StandardMesh : public Mesh {
+class StaticMesh : public Mesh {
 public:
-	StandardMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	StaticMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	
 	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount = 1) const override;
 	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 unStartIndex, uint32 unIndexCount, uint32 nInstanceCount = 1) const override {}
@@ -97,7 +106,7 @@ protected:
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SkinnedMesh
 
-class SkinnedMesh : public StandardMesh {
+class SkinnedMesh : public StaticMesh {
 public:
 	SkinnedMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	

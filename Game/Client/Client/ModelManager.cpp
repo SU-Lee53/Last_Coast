@@ -112,12 +112,7 @@ std::shared_ptr<GameObject> ModelManager::LoadFrameHierarchyFromFile(std::shared
 	}
 
 	for (int i = 0; i < nMeshes; ++i) {
-		if (meshLoadInfos[0].bIsSkinned) {
-			pGameObject->SetMeshRenderer<MeshRenderer<SkinnedMesh>>(meshLoadInfos, materialLoadInfos);
-		}
-		else {
-			pGameObject->SetMeshRenderer<MeshRenderer<StandardMesh>>(meshLoadInfos, materialLoadInfos);
-		}
+		pGameObject->AddComponent<MeshRenderer>(meshLoadInfos, materialLoadInfos);
 	}
 	
 	if (pParent) {
@@ -200,10 +195,14 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 			size_t base = i * 4;
 			return Vector4{ blendWeights[base], blendWeights[base + 1], blendWeights[base + 2], blendWeights[base + 3] };
 		});
+
+		meshLoadInfo.eMeshType = MESH_TYPE::SKINNED;
 	}
 	else {
 		meshLoadInfo.xmun4BlendIndices.resize(nVertices);
 		meshLoadInfo.v4BlendWeights.resize(nVertices);
+
+		meshLoadInfo.eMeshType = MESH_TYPE::STATIC;
 	}
 
 	// Indices
