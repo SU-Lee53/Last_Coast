@@ -21,15 +21,10 @@ void GameObject::Initialize()
 			AddComponent<Transform>();
 		}
 
-		// 목표 : 아래 for 만 남기고 다른 Initialize 문은 다 날린다
 		for (auto& component : m_pComponents) {
 			if (component) {
 				component->Initialize();
 			}
-		}
-
-		if (m_pAnimationController) {
-			m_pAnimationController->Initialize(shared_from_this());
 		}
 
 		m_pComponents[std::to_underlying(COMPONENT_TYPE::TRANSFORM)]->Update();
@@ -53,10 +48,6 @@ void GameObject::Update()
 		}
 	}
 
-	if (m_pAnimationController) {
-		m_pAnimationController->Update();
-	}
-
 	for (auto& pChild : m_pChildren) {
 		pChild->Update();
 	}
@@ -65,7 +56,7 @@ void GameObject::Update()
 void GameObject::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 {
 	// TODO : Render Logic Here
-	if (m_pAnimationController) {
+	if (GetComponent<AnimationController>()) {
 		RENDER->AddAnimatedObject(shared_from_this());
 		return;
 	}
@@ -109,13 +100,6 @@ void GameObject::SetChild(std::shared_ptr<GameObject> pChild)
 		pChild->m_pParent = shared_from_this();
 		m_pChildren.push_back(pChild);
 	}
-
-	// 현재 프레임이 Root 이고 추가될 자식이 애니메이션을 가지고 있다면 옮겨온다
-	//if (m_pParent.expired() && pChild->m_pAnimationController) {
-	//	m_Bones = std::move(pChild->m_Bones);
-	//	m_pAnimationController = std::move(pChild->m_pAnimationController);
-	//}
-
 
 	if (m_pParent.expired() && pChild->m_Bones.size() != 0) {
 		m_Bones = std::move(pChild->m_Bones);

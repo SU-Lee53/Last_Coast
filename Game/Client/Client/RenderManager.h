@@ -66,7 +66,7 @@ public:
 	ComPtr<ID3D12PipelineState> m_pd3dSkyboxPipelineState;
 
 	// Pass 별 분리 필요 ( Forward / Differed ) -> 그냥 분리 안한다 이제
-	// 나중에 GameObject를 직접 담아 그자리에서 분류를 수행하도록 수정할 예정
+	// 나중에 GameObject를 직접 담아 그자리에서 컬링 + 분류를 수행하도록 수정할 예정
 	std::unordered_map<uint64, uint32> m_InstanceIndexMap;
 	std::vector<InstancePair> m_InstanceDatas;
 

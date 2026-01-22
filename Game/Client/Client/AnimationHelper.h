@@ -1,5 +1,33 @@
 ﻿#pragma once
 
+class GameObject;
+
+struct LayeredBlendMachine {
+	struct LayerMask {
+		BOOL bMask = FALSE;
+		float fWeight = 0.f;
+	};
+
+	std::vector<LayerMask> bLayerMask;	// TRUE -> 상체 / FALSE -> 하체
+	std::string strBranchBoneName;
+	bool bInitialized = false;
+
+	LayeredBlendMachine(
+		std::shared_ptr<GameObject> pGameObject,
+		const std::string& strBranch,
+		int nBlendDepth);
+
+	void Blend(
+		const std::vector<Bone>& bones,
+		const std::vector<AnimationKey>& BasePose,
+		const std::vector<AnimationKey>& BlendPose,
+		std::vector<Matrix>& outmtxLocalMatrics,
+		float fBlendWeight = 1.f) const;
+
+private:
+	static float ComputeBlendWeight(int nRelativeDepth, int maxDepth);
+};
+
 
 struct AnimationHepler {
 	/////////////////////////////////////////////////////////////

@@ -193,7 +193,7 @@ void RenderManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 void RenderManager::RenderAnimated(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle)
 {
 	for (const auto& pObj : m_pAnimatedObjects) {
-		const auto& boneTransforms = pObj->GetAnimationController()->GetFinalOutput();
+		const auto& boneTransforms = pObj->GetComponent<AnimationController>()->GetFinalOutput();
 		ConstantBuffer& boneCBuffer = RESOURCE->AllocCBuffer<CB_BONE_TRANSFORM_DATA>();
 		boneCBuffer.WriteData(boneTransforms);
 

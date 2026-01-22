@@ -37,7 +37,6 @@ public:
 	void SetParent(std::shared_ptr<GameObject> pParent);
 	void SetChild(std::shared_ptr<GameObject> pChild);
 	void SetFrameName(const std::string& strFrameName);
-	void SetAnimationController(std::shared_ptr<AnimationController> pController) { m_pAnimationController = pController; }
 
 	template<ComponentType T>
 	std::shared_ptr<T> GetComponent() const;
@@ -48,7 +47,6 @@ public:
 	const std::vector<Bone>& GetBones() const { return m_Bones; }
 	size_t GetRootBoneIndex() const { return m_nRootBoneIndex; }
 	int FindBoneIndex(const std::string& strBoneName) const;
-	std::shared_ptr<AnimationController> GetAnimationController() const { return m_pAnimationController; }
 
 	void MergeBoundingBox(BoundingOrientedBox* pOBB);
 
@@ -71,7 +69,6 @@ protected:
 	// 아래 2가지 애니메이션과 관련된 것들은 반드시 Root에 보관되어야 함
 	std::vector<Bone> m_Bones;
 	size_t m_nRootBoneIndex = 0;
-	std::shared_ptr<AnimationController> m_pAnimationController = nullptr;
 	std::array<std::shared_ptr<IComponent>, std::to_underlying(COMPONENT_TYPE::COUNT)> m_pComponents = {};
 
 	uint64 m_unGameObjectRuntimeID;
@@ -133,7 +130,6 @@ std::shared_ptr<T> GameObject::CopyObject(std::shared_ptr<GameObject> pParent) c
 	}
 
 	pClone->m_Bones = m_Bones;
-	pClone->m_pAnimationController = m_pAnimationController;
 	pClone->m_pParent = pParent;
 	pClone->m_bInitialized = m_bInitialized;
 	
@@ -157,10 +153,8 @@ inline std::shared_ptr<T> GameObject::CopyObject(std::shared_ptr<T> srcObject, s
 			pClone->m_pComponents[i] = m_pComponents[i]->Copy(pClone);
 		}
 	}
-	
-	// 수정완 (10.21)
-	pClone->m_pMeshRenderer = srcObject->m_pMeshRenderer;
-	pClone->m_pComponents = srcObject->m_pComponents;
+
+	pClone->m_Bones = srcObject->m_Bones;
 	pClone->m_pParent = pParent;
 	pClone->m_bInitialized = srcObject->m_bInitialized;
 

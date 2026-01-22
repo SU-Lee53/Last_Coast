@@ -3,82 +3,9 @@
 #include "ThirdPersonPlayer.h"
 #include "ThirdPersonCamera.h"
 
-LayeredBlendMachine::LayeredBlendMachine(std::shared_ptr<GameObject> pGameObject, const std::string& strBranch, int nBlendDepth)
-	: strBranchBoneName{ strBranch }
+AnimationController::AnimationController(std::shared_ptr<GameObject> pOwner)
+	: IComponent{ pOwner }
 {
-	const auto& ownerBones = pGameObject->GetBones();
-	int nBranchIndex = pGameObject->FindBoneIndex(strBranch);
-	int nBones = ownerBones.size();
-	bLayerMask.assign(nBones, LayerMask{});
-
-	// 상하체 Mask 생성
-	std::vector<const Bone*> DFSStack;
-	DFSStack.reserve(ownerBones.size());
-	DFSStack.push_back(&ownerBones[nBranchIndex]);
-
-	int nBlendRootDepth = ownerBones[nBranchIndex].nDepth;
-	const Bone* pCurBone = nullptr;
-	while (true) {
-		if (DFSStack.size() == 0) {
-			break;
-		}
-
-		pCurBone = DFSStack.back();
-		DFSStack.pop_back();
-
-		int nRelativeDepth = pCurBone->nDepth - nBlendRootDepth;
-
-		bLayerMask[pCurBone->nIndex].bMask = TRUE;
-		bLayerMask[pCurBone->nIndex].fWeight = ComputeBlendWeight(nRelativeDepth, nBlendDepth);
-
-		for (int i = 0; i < pCurBone->nChildren; ++i) {
-			DFSStack.push_back(&ownerBones[pCurBone->nChilerenIndex[i]]);
-		}
-	}
-}
-
-void LayeredBlendMachine::Blend(const std::vector<Bone>& bones, const std::vector<AnimationKey>& basePose, const std::vector<AnimationKey>& blendPose, std::vector<Matrix>& outmtxLocalMatrics, float fBlendWeight) const
-{
-	int nBones = bones.size();
-	outmtxLocalMatrics.resize(nBones);
-
-	std::vector<Matrix> mtxBasePoseComponentSapce;
-	std::vector<Matrix> mtxBlendPoseComponentSapce;
-	AnimationHepler::LocalPoseToComponent(bones, basePose, mtxBasePoseComponentSapce);
-	AnimationHepler::LocalPoseToComponent(bones, blendPose, mtxBlendPoseComponentSapce);
-
-	std::vector<Matrix> mtxFinalCSTransform(nBones);
-	std::vector<Matrix> mtxFinalCSTransformInverse(nBones);
-	for (int i = 0; i < nBones; ++i) {
-		if (bLayerMask[i].bMask == TRUE) {	// 상체
-			const float fWeight = bLayerMask[i].fWeight * fBlendWeight;
-
-			AnimationKey baseKey{};
-			AnimationKey blendKey{};
-
-			mtxBasePoseComponentSapce[i].Decompose(baseKey.v3Scale, baseKey.v4RotationQuat, baseKey.v3Translation);
-			mtxBlendPoseComponentSapce[i].Decompose(blendKey.v3Scale, blendKey.v4RotationQuat, blendKey.v3Translation);
-
-			mtxFinalCSTransform[i] = AnimationKey::Lerp(baseKey, blendKey, fWeight).CreateSRT();
-			mtxFinalCSTransformInverse[i] = mtxFinalCSTransform[i].Invert();
-		}
-		else {
-			mtxFinalCSTransform[i] = mtxBasePoseComponentSapce[i];
-			mtxFinalCSTransformInverse[i] = mtxFinalCSTransform[i].Invert();
-		}
-	}
-
-	AnimationHepler::ComponentToLocalWithInverseHint(bones, mtxFinalCSTransform, mtxFinalCSTransformInverse, outmtxLocalMatrics);
-}
-
-float LayeredBlendMachine::ComputeBlendWeight(int nRelativeDepth, int maxDepth)
-{
-	if (maxDepth <= 0) {
-		return 1.0f;
-	}
-
-	float fValue = (float)nRelativeDepth / (float)maxDepth;
-	return ::SmoothStep01(fValue);
 }
 
 void AnimationController::Update()
@@ -93,7 +20,6 @@ void AnimationController::Update()
 	if (m_pAnimationMontage) {
 		m_pAnimationMontage->Update();
 	}
-
 
 	ComputeAnimation();
 	ComputeFinalMatrix();
@@ -144,23 +70,27 @@ void AnimationController::CacheAnimationKey(const std::string& strAnimationName)
 	}
 }
 
-void PlayerAnimationController::Initialize(std::shared_ptr<GameObject> pOwner)
+PlayerAnimationController::PlayerAnimationController(std::shared_ptr<GameObject> pOwner)
+	: AnimationController{ pOwner }
 {
-	m_wpOwner = pOwner;
+}
+
+void PlayerAnimationController::Initialize()
+{
 	m_pStateMachine = std::make_unique<PlayerAnimationStateMachine>();
-	m_pStateMachine->Initialize(pOwner, m_fTotalTimeElapsed);
+	m_pStateMachine->Initialize(m_wpOwner.lock(), m_fTotalTimeElapsed);
 
 	m_pAnimationMontage = std::make_unique<PlayerAnimationMontage>();
-	m_pAnimationMontage->Initialize(pOwner);
+	m_pAnimationMontage->Initialize(m_wpOwner.lock());
 
-	int nBones = pOwner->GetBones().size();
+	int nBones = m_wpOwner.lock()->GetBones().size();
 	m_mtxCachedLocalBoneTransforms.resize(nBones);
 	m_mtxFinalBoneTransforms.resize(nBones);
 
-	m_pBlendMachine = std::make_unique<LayeredBlendMachine>(pOwner, "Spine", 3);
-	m_nSpineIndex = pOwner->FindBoneIndex("Spine");
+	m_pBlendMachine = std::make_unique<LayeredBlendMachine>(m_wpOwner.lock(), "Spine", 3);
+	m_nSpineIndex = m_wpOwner.lock()->FindBoneIndex("Spine");
 
-	const auto& pCamera = std::static_pointer_cast<ThirdPersonPlayer>(pOwner)->GetCamera();
+	const auto& pCamera = std::static_pointer_cast<ThirdPersonPlayer>(m_wpOwner.lock())->GetCamera();
 	m_wpPlayerCamera = std::static_pointer_cast<ThirdPersonCamera>(pCamera);
 }
 
@@ -170,9 +100,6 @@ void PlayerAnimationController::ComputeAnimation()
 	const std::vector<AnimationKey>& basePose = m_pStateMachine->GetOutputPose();
 	float fMontageBlendWeight = m_pAnimationMontage->GetBlendWeight();
 	
-	//m_mtxCachedPose = m_pAnimationMontage->GetOutputPose();
-	//m_pBlendMachine->Blend(ownerBones, basePose, m_mtxCachedPose, m_mtxCachedLocalBoneTransforms, fMontageBlendWeight);
-
 	if (fMontageBlendWeight > 0.f) {
 		const std::vector<AnimationKey>& blendPose = m_pAnimationMontage->GetOutputPose();
 		m_pBlendMachine->Blend(ownerBones, basePose, blendPose, m_mtxCachedLocalBoneTransforms, fMontageBlendWeight);
@@ -185,8 +112,6 @@ void PlayerAnimationController::ComputeAnimation()
 		AnimationHepler::LocalToComponent(ownerBones, m_mtxCachedLocalBoneTransforms, mtxComponentSpace);
 		AnimationHepler::TransformModifyBone(ownerBones, m_nSpineIndex, m_mtxCachedLocalBoneTransforms, mtxComponentSpace, v4CameraPitch, fMontageBlendWeight);
 		AnimationHepler::ComponentToLocal(ownerBones, mtxComponentSpace, m_mtxCachedLocalBoneTransforms);
-
-		//OutputDebugStringA(std::format("fCameraPitch : {}\n", fCameraPitch).c_str());
 	}
 	else {
 		m_mtxCachedLocalBoneTransforms.resize(ownerBones.size());
@@ -194,14 +119,12 @@ void PlayerAnimationController::ComputeAnimation()
 			m_mtxCachedLocalBoneTransforms[i] = basePose[i].CreateSRT();
 		}
 	}
-
-	//auto pAnimation = ANIMATION->Get("Firing Rifle");
-	//float fTime = std::fmodf(m_fTotalTimeElapsed, pAnimation->GetDuration());
-	//for (int i = 0; i < ownerBones.size(); ++i) {
-	//	m_mtxCachedLocalBoneTransforms[i] = pAnimation->GetKeyFrameMatrix(ownerBones[i].strBoneName, fTime, ownerBones[i].mtxTransform);
-	//}
 }
 
-void PlayerAnimationController::ProcessInput()
+std::shared_ptr<IComponent> PlayerAnimationController::Copy(std::shared_ptr<GameObject> pNewOwner)
 {
+	std::shared_ptr<PlayerAnimationController> pClone = std::make_shared<PlayerAnimationController>(pNewOwner);
+	pClone->Initialize();
+
+	return pClone;
 }

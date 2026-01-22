@@ -27,7 +27,7 @@ void ThirdPersonPlayer::Initialize()
 		SetChild(pModel);
 
 		// AnimationController
-		m_pAnimationController = std::make_shared<PlayerAnimationController>();
+		AddComponent<PlayerAnimationController>();
 	}
 
 	GameObject::Initialize();
@@ -37,6 +37,7 @@ void ThirdPersonPlayer::ProcessInput()
 {
 	auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
 	auto pTransform = GetTransform();
+	auto pAnimationCtrl = static_pointer_cast<PlayerAnimationController>(GetComponent<AnimationController>());
 
 	// 디버그용 마우스 사용/헤제
 	if (INPUT->GetButtonDown(VK_OEM_3)) {	// " ` " -> 물결표 그 버튼임
@@ -74,17 +75,17 @@ void ThirdPersonPlayer::ProcessInput()
 		if (INPUT->GetButtonDown(VK_RBUTTON)) {
 			m_bAiming = true;
 			pThirdPersonCamera->EnterAimMode();
-			m_pAnimationController->GetMontage()->PlayMontage("Rifle Aiming Idle");
+			pAnimationCtrl->GetMontage()->PlayMontage("Rifle Aiming Idle");
 		}
 		if (INPUT->GetButtonUp(VK_RBUTTON)) {
 			m_bAiming = false;
 			pThirdPersonCamera->LeaveAimMode();
-			m_pAnimationController->GetMontage()->StopMontage();
+			pAnimationCtrl->GetMontage()->StopMontage();
 		}
 
 		// Fire
 		if (INPUT->GetButtonPressed(VK_LBUTTON) && m_bAiming) {
-			m_pAnimationController->GetMontage()->JumpToSection("Rifle Fire");
+			pAnimationCtrl->GetMontage()->JumpToSection("Rifle Fire");
 		}
 	}
 
