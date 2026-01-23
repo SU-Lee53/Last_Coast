@@ -12,7 +12,6 @@
 			"X": 505,
 			"Y": 505
 		},
-		"HeightZScale": 0.0078125,
 		"HeightMap":
 		{
 			"Path": "height.raw",
