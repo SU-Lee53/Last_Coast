@@ -1,6 +1,6 @@
 ﻿#include "JsonSaveManager.h"
 
-// ✅ 가장 먼저 이것들 추가
+// ✅ 가장 먼저 이것들 추가 (순서 중요!)
 #include "Misc/Optional.h"
 #include "Templates/SharedPointer.h"
 #include "Containers/Array.h"
@@ -23,9 +23,20 @@
 #include "ImageUtils.h"
 #include "Exporters/Exporter.h"
 #include "AssetExportTask.h"
+
+// Material 관련 헤더
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceConstant.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialExpression.h"
+#include "Materials/MaterialExpressionTextureSample.h"
+#include "Materials/MaterialExpressionLandscapeLayerBlend.h"
+#include "Materials/MaterialExpressionMultiply.h"
+#include "Materials/MaterialExpressionAdd.h"
+#include "Materials/MaterialExpressionLinearInterpolate.h"
+
+// StaticMesh 관련
 #include "Engine/StaticMeshActor.h"
 #include "Engine/StaticMesh.h"
 #endif
@@ -510,7 +521,7 @@ TSharedPtr<FJsonObject> UJsonSaveManager::LandscapeToJson(ALandscape* Landscape)
     LandscapeJson->SetObjectField(TEXT("HeightMapResolution"), HeightMapResJson);
 
     // HeightZScale
-    //LandscapeJson->SetNumberField(TEXT("HeightZScale"), LANDSCAPE_ZSCALE);
+    LandscapeJson->SetNumberField(TEXT("HeightZScale"), LANDSCAPE_ZSCALE);
 
     // HeightMap 파일 정보
     TSharedPtr<FJsonObject> HeightMapJson = MakeShareable(new FJsonObject);
@@ -525,12 +536,21 @@ TSharedPtr<FJsonObject> UJsonSaveManager::LandscapeToJson(ALandscape* Landscape)
     // 2. Layers 정보 (전역 레이어 목록)
     // ========================================
     TMap<FName, int32> LayerIndexMap;
-    TArray<TSharedPtr<FJsonValue>> LayersArray = GetLayersInfoJson(Landscape, LayerIndexMap);
-    RootJson->SetArrayField(TEXT("Layers"), LayersArray);
+#if WITH_EDITOR
+    // ✅ 먼저 텍스처 export하고 결과 받기
+    TMap<FName, FExportedLayerTextures> ExportedTextures =
+        ExportLayerTextures(Landscape, LayerIndexMap);
 
-//#if WITH_EDITOR
-//    ExportLayerTextures(Landscape, LayerIndexMap);
-//#endif
+    // ✅ Export된 텍스처 정보를 포함하여 JSON 생성
+    TArray<TSharedPtr<FJsonValue>> LayersArray =
+        GetLayersInfoJson(Landscape, LayerIndexMap, ExportedTextures);
+#else
+    TMap<FName, FExportedLayerTextures> ExportedTextures;
+    TArray<TSharedPtr<FJsonValue>> LayersArray =
+        GetLayersInfoJson(Landscape, LayerIndexMap, ExportedTextures);
+#endif
+
+    RootJson->SetArrayField(TEXT("Layers"), LayersArray);
 
     // ========================================
     // 3. Components 정보
@@ -593,7 +613,10 @@ TSharedPtr<FJsonObject> UJsonSaveManager::LandscapeComponentToJson(
 }
 
 
-TArray<TSharedPtr<FJsonValue>> UJsonSaveManager::GetLayersInfoJson(ALandscape* Landscape, TMap<FName, int32>& OutLayerIndexMap)
+TArray<TSharedPtr<FJsonValue>> UJsonSaveManager::GetLayersInfoJson(
+    ALandscape* Landscape,
+    TMap<FName, int32>& OutLayerIndexMap,
+    const TMap<FName, FExportedLayerTextures>& ExportedTextures)
 {
     TArray<TSharedPtr<FJsonValue>> LayersArray;
     const TArray<ULandscapeComponent*>& Components = Landscape->LandscapeComponents;
@@ -608,24 +631,60 @@ TArray<TSharedPtr<FJsonValue>> UJsonSaveManager::GetLayersInfoJson(ALandscape* L
 
         for (const FWeightmapLayerAllocationInfo& AllocInfo : AllocInfos)
         {
-            if (AllocInfo.LayerInfo && !OutLayerIndexMap.Contains(AllocInfo.LayerInfo->LayerName))
+            if (!AllocInfo.LayerInfo) continue;
+
+            FName LayerFName = AllocInfo.LayerInfo->LayerName;
+
+            // Visibility 레이어 제외
+            if (LayerFName.ToString().Equals(TEXT("Visibility"), ESearchCase::IgnoreCase))
+            {
+                continue;
+            }
+
+            if (!OutLayerIndexMap.Contains(LayerFName))
             {
                 int32 Index = OutLayerIndexMap.Num();
-                OutLayerIndexMap.Add(AllocInfo.LayerInfo->LayerName, Index);
+                OutLayerIndexMap.Add(LayerFName, Index);
 
                 TSharedPtr<FJsonObject> LayerJson = MakeShareable(new FJsonObject);
                 LayerJson->SetNumberField(TEXT("Index"), Index);
-                LayerJson->SetStringField(TEXT("Name"), AllocInfo.LayerInfo->LayerName.ToString());
+                LayerJson->SetStringField(TEXT("Name"), LayerFName.ToString());
 
-                // 텍스처 경로 (예시)
-                FString LayerName = AllocInfo.LayerInfo->LayerName.ToString().ToLower();
-                LayerJson->SetStringField(TEXT("Albedo"),
-                    FString::Printf(TEXT("%s_albedo.dds"), *LayerName));
-                LayerJson->SetStringField(TEXT("Normal"),
-                    FString::Printf(TEXT("%s_normal.dds"), *LayerName));
+                // ✅ 실제로 export된 텍스처만 포함
+                const FExportedLayerTextures* ExportedLayer = ExportedTextures.Find(LayerFName);
 
-                // Tiling 값 (Material에서 추출 가능하면 실제 값 사용)
-                LayerJson->SetNumberField(TEXT("Tiling"), 0.01);
+                if (ExportedLayer)
+                {
+                    TSharedPtr<FJsonObject> TexturesJson = MakeShareable(new FJsonObject);
+
+                    // 실제로 export된 텍스처만 JSON에 추가
+                    for (const auto& TexturePair : ExportedLayer->TextureFiles)
+                    {
+                        FString TextureType = TexturePair.Key;
+                        FString FileName = TexturePair.Value;
+
+                        // Type의 첫 글자를 대문자로 (albedo -> Albedo)
+                        if (TextureType.Len() > 0)
+                        {
+                            TextureType[0] = FChar::ToUpper(TextureType[0]);
+                        }
+
+                        TexturesJson->SetStringField(TextureType, FileName);
+                    }
+
+                    LayerJson->SetObjectField(TEXT("Textures"), TexturesJson);
+                    LayerJson->SetNumberField(TEXT("Tiling"), ExportedLayer->Tiling);
+                }
+                else
+                {
+                    // Export된 텍스처가 없는 경우 빈 객체
+                    TSharedPtr<FJsonObject> TexturesJson = MakeShareable(new FJsonObject);
+                    LayerJson->SetObjectField(TEXT("Textures"), TexturesJson);
+                    LayerJson->SetNumberField(TEXT("Tiling"), 0.01f);
+
+                    UE_LOG(LogTemp, Warning, TEXT("No exported textures found for layer: %s"),
+                        *LayerFName.ToString());
+                }
 
                 LayersArray.Add(MakeShareable(new FJsonValueObject(LayerJson)));
             }
@@ -980,313 +1039,481 @@ bool UJsonSaveManager::ExportWeightMapTextureToPNG(
 
     return bSuccess;
 }
+
+TMap<FName, FExportedLayerTextures> UJsonSaveManager::ExportLayerTextures(
+    ALandscape* Landscape,
+    const TMap<FName, int32>& LayerIndexMap)
+{
+    TMap<FName, FExportedLayerTextures> ExportedLayersMap;
+
+    if (!Landscape)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Landscape is null"));
+        return ExportedLayersMap;
+    }
+
+    UMaterialInterface* LandscapeMaterial = Landscape->GetLandscapeMaterial();
+    if (!LandscapeMaterial)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No landscape material found"));
+        return ExportedLayersMap;
+    }
+
+    UMaterial* BaseMaterial = LandscapeMaterial->GetMaterial();
+    if (!BaseMaterial)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No base material found"));
+        return ExportedLayersMap;
+    }
+
+    FString TextureDirectory = FPaths::ProjectSavedDir() + TEXT("../ExportedLayerTextures/");
+
+    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+    if (!PlatformFile.DirectoryExists(*TextureDirectory))
+    {
+        PlatformFile.CreateDirectoryTree(*TextureDirectory);
+    }
+
+    // Material의 모든 Expression 순회하여 LandscapeLayerBlend 노드 찾기
+    TArray<UMaterialExpressionLandscapeLayerBlend*> LayerBlendNodes;
+
+    for (UMaterialExpression* Expression : BaseMaterial->GetExpressions())
+    {
+        if (UMaterialExpressionLandscapeLayerBlend* LayerBlend =
+            Cast<UMaterialExpressionLandscapeLayerBlend>(Expression))
+        {
+            LayerBlendNodes.Add(LayerBlend);
+        }
+    }
+
+    if (LayerBlendNodes.Num() == 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No LandscapeLayerBlend nodes found in material"));
+        return ExportedLayersMap;
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("Found %d LandscapeLayerBlend node(s)"), LayerBlendNodes.Num());
+
+    // 각 LandscapeLayerBlend 노드 처리
+    int32 BlendNodeIndex = 0;
+    for (UMaterialExpressionLandscapeLayerBlend* LayerBlend : LayerBlendNodes)
+    {
+        UE_LOG(LogTemp, Log, TEXT("=== Processing LayerBlend Node %d ==="), BlendNodeIndex);
+
+        // 각 레이어별로 연결된 텍스처 찾기
+        for (int32 LayerIdx = 0; LayerIdx < LayerBlend->Layers.Num(); LayerIdx++)
+        {
+            const FLayerBlendInput& Layer = LayerBlend->Layers[LayerIdx];
+            FName LayerFName = Layer.LayerName;
+            FString LayerNameStr = LayerFName.ToString().ToLower();
+
+            // Visibility 레이어 제외
+            if (LayerNameStr.Equals(TEXT("visibility"), ESearchCase::IgnoreCase))
+            {
+                continue;
+            }
+
+            UE_LOG(LogTemp, Log, TEXT("  Layer[%d]: %s"), LayerIdx, *LayerNameStr);
+
+            if (!Layer.LayerInput.Expression)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("    No input expression"));
+                continue;
+            }
+
+            // ✅ 레이어 정보 초기화
+            FExportedLayerTextures& LayerTextures = ExportedLayersMap.FindOrAdd(LayerFName);
+            LayerTextures.LayerName = LayerFName.ToString();
+            LayerTextures.Tiling = 0.01f; // 기본값
+
+            // Tiling 값 추출
+            if (LandscapeMaterial)
+            {
+                TArray<FName> PossibleTilingNames = {
+                    FName(*(LayerNameStr + TEXT("_Tiling"))),
+                    FName(*(LayerNameStr + TEXT("_Scale"))),
+                    FName(*LayerNameStr)
+                };
+
+                for (const FName& ParamName : PossibleTilingNames)
+                {
+                    float ExtractedValue = 0.0f;
+                    if (LandscapeMaterial->GetScalarParameterValue(ParamName, ExtractedValue))
+                    {
+                        if (ExtractedValue > 0.0f)
+                        {
+                            LayerTextures.Tiling = ExtractedValue;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // 이 레이어에 직접 연결된 텍스처들 수집
+            TArray<UTexture2D*> LayerTexturesList;
+            TSet<UMaterialExpression*> VisitedExpressions;
+            CollectTexturesFromExpression(Layer.LayerInput.Expression, LayerTexturesList, VisitedExpressions);
+
+            UE_LOG(LogTemp, Log, TEXT("    Found %d texture(s)"), LayerTexturesList.Num());
+
+            // ✅ 텍스처들을 연결 정보로 분류하여 export
+            for (UTexture2D* Texture : LayerTexturesList)
+            {
+                if (!Texture) continue;
+
+                FString TextureName = Texture->GetName();
+                UE_LOG(LogTemp, Log, TEXT("      Texture: %s"), *TextureName);
+
+                // 텍스처가 속한 TextureSample 노드 찾기
+                UMaterialExpressionTextureSample* TextureSampleNode = nullptr;
+                for (UMaterialExpression* Expression : BaseMaterial->GetExpressions())
+                {
+                    if (UMaterialExpressionTextureSample* TS = Cast<UMaterialExpressionTextureSample>(Expression))
+                    {
+                        if (TS->Texture == Texture)
+                        {
+                            TextureSampleNode = TS;
+                            break;
+                        }
+                    }
+                }
+
+                // 연결 정보 기반으로 타입 결정
+                FString TextureType = DetermineTextureTypeFromConnection(
+                    TextureSampleNode, LayerBlend, LayerIdx);
+
+                FString FileName = LayerNameStr + TEXT("_") + TextureType + TEXT(".png");
+                FString OutputPath = TextureDirectory + FileName;
+
+                // ✅ Export 성공 시에만 맵에 추가
+                if (ExportTextureToPNG(Texture, OutputPath))
+                {
+                    LayerTextures.TextureFiles.Add(TextureType, FileName);
+                    UE_LOG(LogTemp, Log, TEXT("        ✅ Exported as %s: %s"), *TextureType, *FileName);
+                }
+                else
+                {
+                    UE_LOG(LogTemp, Warning, TEXT("        ❌ Failed to export: %s"), *FileName);
+                }
+            }
+        }
+
+        BlendNodeIndex++;
+    }
+
+    return ExportedLayersMap;
+}
+
+bool UJsonSaveManager::ExportTextureToPNG(UTexture2D* Texture, const FString& FilePath)
+{
+    if (!Texture)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Texture is null"));
+        return false;
+    }
+
+    if (!Texture->Source.IsValid())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Texture source is not valid: %s"), *Texture->GetName());
+        return false;
+    }
+
+    // Source 데이터 가져오기
+    TArray64<uint8> RawData;
+    if (!Texture->Source.GetMipData(RawData, 0))
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to get mip data from texture: %s"), *Texture->GetName());
+        return false;
+    }
+
+    int32 Width = Texture->Source.GetSizeX();
+    int32 Height = Texture->Source.GetSizeY();
+    ETextureSourceFormat SourceFormat = Texture->Source.GetFormat();
+
+    UE_LOG(LogTemp, Log, TEXT("Exporting texture: %s (%dx%d, Format=%d)"),
+        *Texture->GetName(), Width, Height, (int32)SourceFormat);
+
+    // FColor 배열로 변환
+    TArray<FColor> ColorData;
+    ColorData.Reserve(Width * Height);
+
+    int32 BytesPerPixel = 4;
+    bool bIsBGRA = false;
+
+    // 포맷에 따른 처리
+    switch (SourceFormat)
+    {
+    case TSF_G8:
+        BytesPerPixel = 1;
+        for (int32 i = 0; i < Width * Height; i++)
+        {
+            uint8 Gray = RawData[i];
+            ColorData.Add(FColor(Gray, Gray, Gray, 255));
+        }
+        break;
+
+    case TSF_BGRA8:
+    case TSF_BGRE8:
+        bIsBGRA = true;
+        BytesPerPixel = 4;
+        for (int32 i = 0; i < Width * Height; i++)
+        {
+            int32 Index = i * 4;
+            uint8 B = RawData[Index + 0];
+            uint8 G = RawData[Index + 1];
+            uint8 R = RawData[Index + 2];
+            uint8 A = RawData[Index + 3];
+            ColorData.Add(FColor(R, G, B, A));
+        }
+        break;
+
+    case TSF_RGBA16:
+        BytesPerPixel = 8;
+        for (int32 i = 0; i < Width * Height; i++)
+        {
+            int32 Index = i * 8;
+            // 16비트를 8비트로 변환 (상위 바이트 사용)
+            uint8 R = RawData[Index + 1];
+            uint8 G = RawData[Index + 3];
+            uint8 B = RawData[Index + 5];
+            uint8 A = RawData[Index + 7];
+            ColorData.Add(FColor(R, G, B, A));
+        }
+        break;
+
+    default:
+        // 기본적으로 RGBA로 처리
+        for (int32 i = 0; i < Width * Height; i++)
+        {
+            int32 Index = i * 4;
+            if (Index + 3 < RawData.Num())
+            {
+                uint8 R = RawData[Index + 0];
+                uint8 G = RawData[Index + 1];
+                uint8 B = RawData[Index + 2];
+                uint8 A = RawData[Index + 3];
+                ColorData.Add(FColor(R, G, B, A));
+            }
+        }
+        break;
+    }
+
+    // PNG로 압축
+    TArray<uint8> CompressedData;
+    FImageUtils::CompressImageArray(Width, Height, ColorData, CompressedData);
+
+    // 파일 저장
+    bool bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *FilePath);
+
+    if (bSuccess)
+    {
+        UE_LOG(LogTemp, Log, TEXT("✅ Texture exported: %s"), *FilePath);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to save texture: %s"), *FilePath);
+    }
+
+    return bSuccess;
+}
+
+void UJsonSaveManager::CollectTexturesFromExpression(
+    UMaterialExpression* Expression,
+    TArray<UTexture2D*>& OutTextures,
+    TSet<UMaterialExpression*>& VisitedExpressions)
+{
+    if (!Expression || VisitedExpressions.Contains(Expression))
+        return;
+
+    VisitedExpressions.Add(Expression);
+
+    // TextureSample 노드인 경우
+    if (UMaterialExpressionTextureSample* TextureSample =
+        Cast<UMaterialExpressionTextureSample>(Expression))
+    {
+        if (UTexture2D* Texture = Cast<UTexture2D>(TextureSample->Texture))
+        {
+            OutTextures.AddUnique(Texture);
+        }
+        return;
+    }
+
+    // 입력 순회 (안전한 방법)
+    int32 InputIndex = 0;
+    while (true)
+    {
+        FExpressionInput* Input = Expression->GetInput(InputIndex);
+        if (!Input) break;
+
+        if (Input->Expression)
+        {
+            CollectTexturesFromExpression(Input->Expression, OutTextures, VisitedExpressions);
+        }
+
+        InputIndex++;
+        if (InputIndex > 100) break; // 안전장치
+    }
+}
+
+FString UJsonSaveManager::DetermineTextureTypeFromConnection(
+    UMaterialExpression* TextureExpression,
+    UMaterialExpressionLandscapeLayerBlend* LayerBlendNode,
+    int32 LayerIndex)
+{
+    if (!TextureExpression || !LayerBlendNode)
+        return TEXT("unknown");
+
+    // TextureSample 노드인지 확인
+    UMaterialExpressionTextureSample* TextureSample =
+        Cast<UMaterialExpressionTextureSample>(TextureExpression);
+
+    if (!TextureSample || !TextureSample->Texture)
+        return TEXT("unknown");
+
+    UTexture2D* Texture = Cast<UTexture2D>(TextureSample->Texture);
+    if (!Texture)
+        return TEXT("unknown");
+
+    // ✅ 1단계: LayerBlend의 출력을 추적하여 Material의 어느 입력에 연결되었는지 확인
+    UMaterial* Material = LayerBlendNode->Material;
+    if (Material)
+    {
+        // BaseColor에 연결되었는지 확인
+        if (IsConnectedToMaterialInput(LayerBlendNode, Material, MP_BaseColor))
+        {
+            return TEXT("albedo");
+        }
+        // Normal에 연결되었는지 확인
+        if (IsConnectedToMaterialInput(LayerBlendNode, Material, MP_Normal))
+        {
+            return TEXT("normal");
+        }
+        // Roughness에 연결되었는지 확인
+        if (IsConnectedToMaterialInput(LayerBlendNode, Material, MP_Roughness))
+        {
+            return TEXT("roughness");
+        }
+        // Metallic에 연결되었는지 확인
+        if (IsConnectedToMaterialInput(LayerBlendNode, Material, MP_Metallic))
+        {
+            return TEXT("metallic");
+        }
+        // Specular에 연결되었는지 확인
+        if (IsConnectedToMaterialInput(LayerBlendNode, Material, MP_Specular))
+        {
+            return TEXT("specular");
+        }
+    }
+
+    // ✅ 2단계: 텍스처 속성으로 추론
+    TextureCompressionSettings CompressionSettings = Texture->CompressionSettings;
+
+    if (CompressionSettings == TC_Normalmap)
+    {
+        return TEXT("normal");
+    }
+
+    // sRGB이면 일반적으로 Color Map
+    if (Texture->SRGB)
+    {
+        return TEXT("albedo");
+    }
+
+    // Linear이고 Grayscale이면 Data Map
+    if (CompressionSettings == TC_Grayscale || CompressionSettings == TC_Alpha)
+    {
+        return TEXT("roughness");
+    }
+
+    // ✅ 3단계: 텍스처 이름으로 추론 (마지막 수단)
+    FString TextureName = Texture->GetName().ToLower();
+
+    // Normal 확인
+    if (TextureName.Contains(TEXT("normal")) || TextureName.Contains(TEXT("_n_")))
+    {
+        return TEXT("normal");
+    }
+
+    // Roughness 확인 (rock과 혼동 방지)
+    if (TextureName.Contains(TEXT("roughness")) || TextureName.Contains(TEXT("_r_")) ||
+        (TextureName.Contains(TEXT("rough")) && !TextureName.Contains(TEXT("rock"))))
+    {
+        return TEXT("roughness");
+    }
+
+    // Metallic 확인
+    if (TextureName.Contains(TEXT("metallic")) || TextureName.Contains(TEXT("_m_")))
+    {
+        return TEXT("metallic");
+    }
+
+    // Albedo/BaseColor 확인
+    if (TextureName.Contains(TEXT("albedo")) || TextureName.Contains(TEXT("basecolor")) ||
+        TextureName.Contains(TEXT("diffuse")) || TextureName.Contains(TEXT("_d_")) ||
+        TextureName.Contains(TEXT("color")))
+    {
+        return TEXT("albedo");
+    }
+
+    // 기본값: sRGB이면 albedo, 아니면 data
+    return Texture->SRGB ? TEXT("albedo") : TEXT("data");
+}
+
+
+// ✅ LayerBlend 노드가 Material의 특정 입력에 연결되었는지 확인하는 헬퍼 함수
+bool UJsonSaveManager::IsConnectedToMaterialInput(
+    UMaterialExpression* Expression,
+    UMaterial* Material,
+    EMaterialProperty PropertyType)
+{
+    if (!Expression || !Material)
+        return false;
+
+    // Material의 해당 속성 입력 가져오기
+    FExpressionInput* MaterialInput = Material->GetExpressionInputForProperty(PropertyType);
+    if (!MaterialInput || !MaterialInput->Expression)
+        return false;
+
+    // 직접 연결 확인
+    if (MaterialInput->Expression == Expression)
+        return true;
+
+    // 간접 연결 확인 (재귀적으로 추적)
+    TSet<UMaterialExpression*> VisitedNodes;
+    return IsExpressionConnectedToInput(Expression, MaterialInput->Expression, VisitedNodes);
+}
+
+// ✅ 재귀적으로 연결 추적
+bool UJsonSaveManager::IsExpressionConnectedToInput(
+    UMaterialExpression* TargetExpression,
+    UMaterialExpression* CurrentExpression,
+    TSet<UMaterialExpression*>& VisitedNodes)
+{
+    if (!CurrentExpression || VisitedNodes.Contains(CurrentExpression))
+        return false;
+
+    VisitedNodes.Add(CurrentExpression);
+
+    if (CurrentExpression == TargetExpression)
+        return true;
+
+    // 현재 노드의 모든 입력을 확인
+    int32 InputIndex = 0;
+    while (true)
+    {
+        FExpressionInput* Input = CurrentExpression->GetInput(InputIndex);
+        if (!Input) break;
+
+        if (Input->Expression)
+        {
+            if (IsExpressionConnectedToInput(TargetExpression, Input->Expression, VisitedNodes))
+                return true;
+        }
+
+        InputIndex++;
+        if (InputIndex > 100) break;
+    }
+
+    return false;
+}
 #endif
-
-
-
-//#if WITH_EDITOR
-//
-//bool UJsonSaveManager::ExportTextureToDDS(UTexture2D* Texture, const FString& FilePath)
-//{
-//    if (!Texture)
-//    {
-//        UE_LOG(LogTemp, Error, TEXT("Texture is null"));
-//        return false;
-//    }
-//
-//    // 디렉토리 생성
-//    FString Directory = FPaths::GetPath(FilePath);
-//    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-//    if (!PlatformFile.DirectoryExists(*Directory))
-//    {
-//        PlatformFile.CreateDirectoryTree(*Directory);
-//    }
-//
-//    UE_LOG(LogTemp, Log, TEXT("Exporting texture '%s' to: %s"), *Texture->GetName(), *FilePath);
-//
-//    // UExporter::ExportToFile 사용
-//    bool bSuccess = UExporter::ExportToFile(
-//        Texture,
-//        nullptr,      // Exporter (nullptr = 자동 선택)
-//        *FilePath,
-//        false,        // bSelected
-//        false,        // bReplaceIdentical
-//        false         // bPrompt (true로 하면 대화상자 뜸)
-//    );
-//
-//    if (bSuccess)
-//    {
-//        UE_LOG(LogTemp, Log, TEXT("✅ Texture exported to DDS: %s"), *FilePath);
-//    }
-//    else
-//    {
-//        UE_LOG(LogTemp, Warning, TEXT("ExportToFile failed, trying AssetExportTask..."));
-//
-//        // 대체 방법: AssetExportTask 사용
-//        UAssetExportTask* ExportTask = NewObject<UAssetExportTask>();
-//        ExportTask->Object = Texture;
-//        ExportTask->Filename = FilePath;
-//        ExportTask->bSelected = false;
-//        ExportTask->bReplaceIdentical = true;
-//        ExportTask->bPrompt = false;
-//        ExportTask->bAutomated = true;
-//
-//        bSuccess = UExporter::RunAssetExportTask(ExportTask);
-//
-//        if (bSuccess)
-//        {
-//            UE_LOG(LogTemp, Log, TEXT("✅ Texture exported via AssetExportTask: %s"), *FilePath);
-//        }
-//        else
-//        {
-//            UE_LOG(LogTemp, Error, TEXT("❌ Both methods failed to export: %s"), *FilePath);
-//        }
-//    }
-//
-//    return bSuccess;
-//}
-//
-//bool UJsonSaveManager::ExportLayerTextures(ALandscape* Landscape, const TMap<FName, int32>& LayerIndexMap)
-//{
-//    FString TextureDirectory = FPaths::ProjectSavedDir() + TEXT("../ExportedTextures/");
-//
-//    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-//    if (!PlatformFile.DirectoryExists(*TextureDirectory))
-//    {
-//        PlatformFile.CreateDirectoryTree(*TextureDirectory);
-//    }
-//
-//    // Material에서 텍스처 추출
-//    TArray<FLayerTextureInfo> LayerTextures = ExtractLayerTexturesFromMaterial(Landscape);
-//
-//    if (LayerTextures.Num() == 0)
-//    {
-//        UE_LOG(LogTemp, Warning, TEXT("No layer textures found in material"));
-//        return false;
-//    }
-//
-//    UE_LOG(LogTemp, Log, TEXT("===== Exporting Layer Textures ====="));
-//    UE_LOG(LogTemp, Log, TEXT("Exporting textures for %d layers to: %s"),
-//        LayerTextures.Num(), *TextureDirectory);
-//
-//    int32 ExportCount = 0;
-//    int32 TotalAttempts = 0;
-//
-//    for (const FLayerTextureInfo& LayerInfo : LayerTextures)
-//    {
-//        FString LayerNameLower = LayerInfo.LayerName.ToLower();
-//
-//        // Albedo 텍스처
-//        if (LayerInfo.AlbedoTexture)
-//        {
-//            TotalAttempts++;
-//            FString FilePath = TextureDirectory + LayerNameLower + TEXT("_albedo.dds");
-//            if (ExportTextureToDDS(LayerInfo.AlbedoTexture, FilePath))
-//            {
-//                ExportCount++;
-//            }
-//        }
-//
-//        // Normal 텍스처
-//        if (LayerInfo.NormalTexture)
-//        {
-//            TotalAttempts++;
-//            FString FilePath = TextureDirectory + LayerNameLower + TEXT("_normal.dds");
-//            if (ExportTextureToDDS(LayerInfo.NormalTexture, FilePath))
-//            {
-//                ExportCount++;
-//            }
-//        }
-//
-//        // Roughness 텍스처
-//        if (LayerInfo.RoughnessTexture)
-//        {
-//            TotalAttempts++;
-//            FString FilePath = TextureDirectory + LayerNameLower + TEXT("_roughness.dds");
-//            if (ExportTextureToDDS(LayerInfo.RoughnessTexture, FilePath))
-//            {
-//                ExportCount++;
-//            }
-//        }
-//
-//        // Metallic 텍스처
-//        if (LayerInfo.MetallicTexture)
-//        {
-//            TotalAttempts++;
-//            FString FilePath = TextureDirectory + LayerNameLower + TEXT("_metallic.dds");
-//            if (ExportTextureToDDS(LayerInfo.MetallicTexture, FilePath))
-//            {
-//                ExportCount++;
-//            }
-//        }
-//    }
-//
-//    UE_LOG(LogTemp, Log, TEXT("===== Export Complete ====="));
-//    UE_LOG(LogTemp, Log, TEXT("Successfully exported %d/%d textures"), ExportCount, TotalAttempts);
-//
-//    return ExportCount > 0;
-//}
-//
-//TArray<UJsonSaveManager::FLayerTextureInfo> UJsonSaveManager::ExtractLayerTexturesFromMaterial(ALandscape* Landscape)
-//{
-//    TArray<FLayerTextureInfo> LayerTextures;
-//
-//    UMaterialInterface* LandscapeMaterial = Landscape->GetLandscapeMaterial();
-//    if (!LandscapeMaterial)
-//    {
-//        UE_LOG(LogTemp, Error, TEXT("No landscape material found"));
-//        return LayerTextures;
-//    }
-//
-//    // Material Instance 가져오기
-//    UMaterialInstanceConstant* MaterialInstance = Cast<UMaterialInstanceConstant>(LandscapeMaterial);
-//    if (!MaterialInstance)
-//    {
-//        UMaterialInstanceDynamic* DynamicMaterial = Cast<UMaterialInstanceDynamic>(LandscapeMaterial);
-//        if (DynamicMaterial)
-//        {
-//            MaterialInstance = Cast<UMaterialInstanceConstant>(DynamicMaterial->Parent);
-//        }
-//    }
-//
-//    if (!MaterialInstance)
-//    {
-//        UE_LOG(LogTemp, Error, TEXT("Material is not a Material Instance"));
-//        return LayerTextures;
-//    }
-//
-//    UE_LOG(LogTemp, Log, TEXT("===== Extracting Layer Textures ====="));
-//    UE_LOG(LogTemp, Log, TEXT("Material: %s"), *LandscapeMaterial->GetName());
-//
-//    // 모든 Texture Parameter 가져오기
-//    TArray<FMaterialParameterInfo> TextureParameterInfos;
-//    TArray<FGuid> TextureParameterGuids;
-//    MaterialInstance->GetAllTextureParameterInfo(TextureParameterInfos, TextureParameterGuids);
-//
-//    UE_LOG(LogTemp, Log, TEXT("Found %d texture parameters in material"), TextureParameterInfos.Num());
-//
-//    // 레이어별로 텍스처 그룹화
-//    TMap<FString, FLayerTextureInfo> LayerTextureMap;
-//
-//    for (const FMaterialParameterInfo& ParamInfo : TextureParameterInfos)
-//    {
-//        FString ParamName = ParamInfo.Name.ToString();
-//        UTexture* Texture = nullptr;
-//
-//        if (!MaterialInstance->GetTextureParameterValue(ParamInfo, Texture))
-//        {
-//            continue;
-//        }
-//
-//        UTexture2D* Texture2D = Cast<UTexture2D>(Texture);
-//        if (!Texture2D)
-//        {
-//            continue;
-//        }
-//
-//        UE_LOG(LogTemp, Log, TEXT("  Parameter: %s -> %s"), *ParamName, *Texture2D->GetName());
-//
-//        // 파라미터 이름 파싱
-//        FString LayerName;
-//        FString TextureType;
-//
-//        if (!ParamName.Contains(TEXT("_")))
-//        {
-//            // 언더스코어가 없는 경우 - 다른 패턴 시도
-//            if (ParamName.EndsWith(TEXT("Albedo")))
-//            {
-//                LayerName = ParamName.Left(ParamName.Len() - 6);
-//                TextureType = TEXT("Albedo");
-//            }
-//            else if (ParamName.EndsWith(TEXT("Normal")))
-//            {
-//                LayerName = ParamName.Left(ParamName.Len() - 6);
-//                TextureType = TEXT("Normal");
-//            }
-//            else if (ParamName.EndsWith(TEXT("Roughness")))
-//            {
-//                LayerName = ParamName.Left(ParamName.Len() - 9);
-//                TextureType = TEXT("Roughness");
-//            }
-//            else if (ParamName.EndsWith(TEXT("Metallic")))
-//            {
-//                LayerName = ParamName.Left(ParamName.Len() - 8);
-//                TextureType = TEXT("Metallic");
-//            }
-//            else
-//            {
-//                UE_LOG(LogTemp, Warning, TEXT("    -> Skipped (unrecognized pattern)"));
-//                continue;
-//            }
-//        }
-//        else
-//        {
-//            // 언더스코어로 분리
-//            ParamName.Split(TEXT("_"), &LayerName, &TextureType);
-//        }
-//
-//        if (LayerName.IsEmpty() || TextureType.IsEmpty())
-//        {
-//            UE_LOG(LogTemp, Warning, TEXT("    -> Skipped (empty layer or type)"));
-//            continue;
-//        }
-//
-//        // 레이어 정보 가져오기 또는 생성
-//        if (!LayerTextureMap.Contains(LayerName))
-//        {
-//            FLayerTextureInfo Info;
-//            Info.LayerName = LayerName;
-//            Info.AlbedoTexture = nullptr;
-//            Info.NormalTexture = nullptr;
-//            Info.RoughnessTexture = nullptr;
-//            Info.MetallicTexture = nullptr;
-//            LayerTextureMap.Add(LayerName, Info);
-//        }
-//
-//        FLayerTextureInfo& Info = LayerTextureMap[LayerName];
-//
-//        // 텍스처 타입별로 할당
-//        if (TextureType.Contains(TEXT("Albedo")) || TextureType.Contains(TEXT("BaseColor")) ||
-//            TextureType.Contains(TEXT("Diffuse")) || TextureType.Contains(TEXT("Color")))
-//        {
-//            Info.AlbedoTexture = Texture2D;
-//            UE_LOG(LogTemp, Log, TEXT("    -> %s: Albedo"), *LayerName);
-//        }
-//        else if (TextureType.Contains(TEXT("Normal")))
-//        {
-//            Info.NormalTexture = Texture2D;
-//            UE_LOG(LogTemp, Log, TEXT("    -> %s: Normal"), *LayerName);
-//        }
-//        else if (TextureType.Contains(TEXT("Roughness")) || TextureType.Contains(TEXT("Rough")))
-//        {
-//            Info.RoughnessTexture = Texture2D;
-//            UE_LOG(LogTemp, Log, TEXT("    -> %s: Roughness"), *LayerName);
-//        }
-//        else if (TextureType.Contains(TEXT("Metallic")) || TextureType.Contains(TEXT("Metal")))
-//        {
-//            Info.MetallicTexture = Texture2D;
-//            UE_LOG(LogTemp, Log, TEXT("    -> %s: Metallic"), *LayerName);
-//        }
-//        else
-//        {
-//            UE_LOG(LogTemp, Warning, TEXT("    -> Unknown texture type: %s"), *TextureType);
-//        }
-//    }
-//
-//    // Map을 Array로 변환
-//    UE_LOG(LogTemp, Log, TEXT("===== Layer Summary ====="));
-//    for (auto& Pair : LayerTextureMap)
-//    {
-//        LayerTextures.Add(Pair.Value);
-//        UE_LOG(LogTemp, Log, TEXT("Layer '%s': Albedo=%s, Normal=%s, Roughness=%s, Metallic=%s"),
-//            *Pair.Value.LayerName,
-//            Pair.Value.AlbedoTexture ? *Pair.Value.AlbedoTexture->GetName() : TEXT("None"),
-//            Pair.Value.NormalTexture ? *Pair.Value.NormalTexture->GetName() : TEXT("None"),
-//            Pair.Value.RoughnessTexture ? *Pair.Value.RoughnessTexture->GetName() : TEXT("None"),
-//            Pair.Value.MetallicTexture ? *Pair.Value.MetallicTexture->GetName() : TEXT("None"));
-//    }
-//
-//    return LayerTextures;
-//}
-//
-//#endif

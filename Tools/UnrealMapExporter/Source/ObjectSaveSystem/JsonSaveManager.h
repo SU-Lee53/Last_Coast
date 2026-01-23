@@ -5,15 +5,14 @@
 class ALandscape;
 class ULandscapeComponent;
 class UTexture2D;
+class UMaterialExpressionLandscapeLayerBlend;
 struct FWeightmapLayerAllocationInfo;
 
-struct FLayerTextureInfo
+struct FExportedLayerTextures
 {
     FString LayerName;
-    UTexture2D* AlbedoTexture;
-    UTexture2D* NormalTexture;
-    UTexture2D* RoughnessTexture;
-    UTexture2D* MetallicTexture;
+    TMap<FString, FString> TextureFiles; // Type -> FileName
+    float Tiling;
 };
 
 
@@ -46,9 +45,13 @@ private:
     static bool ExportMeshToFBX(UStaticMesh* Mesh, const FString& FileName, bool bShowOptions = false);
 
     static TSharedPtr<FJsonObject> LandscapeToJson(ALandscape* Landscape);
+
     static void CalculateLandscapeSize(ALandscape* Landscape, int32& OutNumX, int32& OutNumY);
 
-    static TArray<TSharedPtr<FJsonValue>> GetLayersInfoJson(ALandscape* Landscape,TMap<FName, int32>& OutLayerIndexMap);
+    static TArray<TSharedPtr<FJsonValue>> GetLayersInfoJson(
+        ALandscape* Landscape,
+        TMap<FName, int32>& OutLayerIndexMap,
+        const TMap<FName, FExportedLayerTextures>& ExportedTextures);
 
     static TArray<TSharedPtr<FJsonValue>> GetComponentWeightMapsJson(ULandscapeComponent* Component,int32 ComponentIndex,const TMap<FName, int32>& LayerIndexMap);
 
@@ -58,16 +61,40 @@ private:
         const FString& FileName,
         const TArray<FWeightmapLayerAllocationInfo>& AllocInfos);
 
-   //static bool ExportTextureToDDS(UTexture2D* Texture, const FString& FilePath);
-   //
-   //static bool ExportLayerTextures(ALandscape* Landscape, const TMap<FName, int32>& LayerIndexMap);
-   //
-   //
-   //static TArray<FLayerTextureInfo> ExtractLayerTexturesFromMaterial(ALandscape* Landscape);
 
     static TSharedPtr<FJsonObject> LandscapeComponentToJson(ULandscapeComponent* Component,int32 ComponentIndex,const TMap<FName, int32>& LayerIndexMap);
 
     static bool ExportHeightmapAsPNG(const TArray<uint16>& HeightData, int32 Width, int32 Height, const FString& FileName);
+
+    static TMap<FName, FExportedLayerTextures> ExportLayerTextures(
+        ALandscape* Landscape,
+        const TMap<FName, int32>& LayerIndexMap);
+
+    static bool ExportTextureToPNG(
+        UTexture2D* Texture,
+        const FString& FilePath);
+
+
+    static void CollectTexturesFromExpression(
+        UMaterialExpression* Expression,
+        TArray<UTexture2D*>& OutTextures,
+        TSet<UMaterialExpression*>& VisitedExpressions);
+
+
+    static FString DetermineTextureTypeFromConnection(
+        UMaterialExpression* TextureExpression,
+        UMaterialExpressionLandscapeLayerBlend* LayerBlendNode,
+        int32 LayerIndex);
+
+    static bool IsConnectedToMaterialInput(
+        UMaterialExpression* Expression,
+        UMaterial* Material,
+        EMaterialProperty PropertyType);
+
+    static bool IsExpressionConnectedToInput(
+        UMaterialExpression* TargetExpression,
+        UMaterialExpression* CurrentExpression,
+        TSet<UMaterialExpression*>& VisitedNodes);
 };
 
 

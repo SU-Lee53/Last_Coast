@@ -11,14 +11,12 @@ public class ObjectSaveSystem : ModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-            "InputCore",
-            "EnhancedInput",
+            "InputCore",           // ✅ 추가
+            "EnhancedInput",       // ✅ 추가 (Enhanced Input용)
             "Json",
             "JsonUtilities",
             "Landscape",
-            "Foliage",
             "ImageWrapper",
-            "ImageWriteQueue",
             "RenderCore",
             "RHI"
         });
@@ -28,9 +26,11 @@ public class ObjectSaveSystem : ModuleRules
             PrivateDependencyModuleNames.AddRange(new string[]
             {
                 "UnrealEd",
+                "LandscapeEditor",
                 "AssetTools",
-                "FBX",
-                "LandscapeEditor"
+                "MaterialEditor",
+                "Slate",
+                "SlateCore"
             });
         }
     }
