@@ -51,7 +51,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c0_0.png",
+					"Path": "weight_c0_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -71,7 +71,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c1_0.png",
+					"Path": "weight_c1_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -91,7 +91,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c2_0.png",
+					"Path": "weight_c2_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -111,7 +111,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c3_0.png",
+					"Path": "weight_c3_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -131,7 +131,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c4_0.png",
+					"Path": "weight_c4_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -151,7 +151,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c5_0.png",
+					"Path": "weight_c5_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -171,7 +171,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c6_0.png",
+					"Path": "weight_c6_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -191,7 +191,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c7_0.png",
+					"Path": "weight_c7_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -211,7 +211,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c8_0.png",
+					"Path": "weight_c8_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -231,7 +231,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c9_0.png",
+					"Path": "weight_c9_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 1, -1 ]
 				}
@@ -251,7 +251,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c10_0.png",
+					"Path": "weight_c10_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -271,7 +271,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c11_0.png",
+					"Path": "weight_c11_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -291,7 +291,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c12_0.png",
+					"Path": "weight_c12_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -311,7 +311,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c13_0.png",
+					"Path": "weight_c13_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -331,7 +331,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c14_0.png",
+					"Path": "weight_c14_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -351,7 +351,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c15_0.png",
+					"Path": "weight_c15_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -371,7 +371,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c16_0.png",
+					"Path": "weight_c16_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -391,7 +391,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c17_0.png",
+					"Path": "weight_c17_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -411,7 +411,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c18_0.png",
+					"Path": "weight_c18_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -431,7 +431,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c19_0.png",
+					"Path": "weight_c19_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -451,7 +451,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c20_0.png",
+					"Path": "weight_c20_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -471,7 +471,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c21_0.png",
+					"Path": "weight_c21_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -491,7 +491,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c22_0.png",
+					"Path": "weight_c22_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -511,7 +511,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c23_0.png",
+					"Path": "weight_c23_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -531,7 +531,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c24_0.png",
+					"Path": "weight_c24_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -551,7 +551,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c25_0.png",
+					"Path": "weight_c25_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -571,7 +571,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c26_0.png",
+					"Path": "weight_c26_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -591,7 +591,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c27_0.png",
+					"Path": "weight_c27_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -611,7 +611,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c28_0.png",
+					"Path": "weight_c28_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -631,7 +631,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c29_0.png",
+					"Path": "weight_c29_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -651,7 +651,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c30_0.png",
+					"Path": "weight_c30_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -671,7 +671,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c31_0.png",
+					"Path": "weight_c31_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -691,7 +691,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c32_0.png",
+					"Path": "weight_c32_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -711,7 +711,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c33_0.png",
+					"Path": "weight_c33_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -731,7 +731,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c34_0.png",
+					"Path": "weight_c34_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -751,7 +751,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c35_0.png",
+					"Path": "weight_c35_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -771,7 +771,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c36_0.png",
+					"Path": "weight_c36_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -791,7 +791,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c37_0.png",
+					"Path": "weight_c37_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -811,7 +811,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c38_0.png",
+					"Path": "weight_c38_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -831,7 +831,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c39_0.png",
+					"Path": "weight_c39_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -851,7 +851,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c40_0.png",
+					"Path": "weight_c40_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -871,7 +871,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c41_0.png",
+					"Path": "weight_c41_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -891,7 +891,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c42_0.png",
+					"Path": "weight_c42_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -911,7 +911,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c43_0.png",
+					"Path": "weight_c43_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -931,7 +931,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c44_0.png",
+					"Path": "weight_c44_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -951,7 +951,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c45_0.png",
+					"Path": "weight_c45_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -971,7 +971,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c46_0.png",
+					"Path": "weight_c46_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -991,7 +991,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c47_0.png",
+					"Path": "weight_c47_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -1011,7 +1011,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c48_0.png",
+					"Path": "weight_c48_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -1031,7 +1031,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c49_0.png",
+					"Path": "weight_c49_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -1051,7 +1051,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c50_0.png",
+					"Path": "weight_c50_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -1071,7 +1071,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c51_0.png",
+					"Path": "weight_c51_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -1091,7 +1091,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c52_0.png",
+					"Path": "weight_c52_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -1111,7 +1111,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c53_0.png",
+					"Path": "weight_c53_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -1131,7 +1131,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c54_0.png",
+					"Path": "weight_c54_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -1151,7 +1151,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c55_0.png",
+					"Path": "weight_c55_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -1171,7 +1171,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c56_0.png",
+					"Path": "weight_c56_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
@@ -1191,7 +1191,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c57_0.png",
+					"Path": "weight_c57_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -1211,7 +1211,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c58_0.png",
+					"Path": "weight_c58_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -1231,7 +1231,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c59_0.png",
+					"Path": "weight_c59_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -1251,7 +1251,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c60_0.png",
+					"Path": "weight_c60_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -1271,7 +1271,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c61_0.png",
+					"Path": "weight_c61_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ 0, 1, -1, -1 ]
 				}
@@ -1291,7 +1291,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c62_0.png",
+					"Path": "weight_c62_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
@@ -1311,7 +1311,7 @@
 			},
 			"WeightMaps": [
 				{
-					"Path": "weight_c63_0.png",
+					"Path": "weight_c63_0",
 					"Format": "RGBA8",
 					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
