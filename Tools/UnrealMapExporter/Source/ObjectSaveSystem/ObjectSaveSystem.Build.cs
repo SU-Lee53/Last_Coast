@@ -1,6 +1,4 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
-
-using UnrealBuildTool;
+﻿using UnrealBuildTool;
 
 public class ObjectSaveSystem : ModuleRules
 {
@@ -17,8 +15,12 @@ public class ObjectSaveSystem : ModuleRules
             "EnhancedInput",
             "Json",
             "JsonUtilities",
-            "Landscape",  // ✅ Landscape 모듈 추가!
-            "Foliage"
+            "Landscape",
+            "Foliage",
+            "ImageWrapper",
+            "ImageWriteQueue",
+            "RenderCore",
+            "RHI"
         });
 
         if (Target.bBuildEditor)
@@ -27,8 +29,8 @@ public class ObjectSaveSystem : ModuleRules
             {
                 "UnrealEd",
                 "AssetTools",
-                "FBX",              // FBX export
-                "LandscapeEditor"   // ✅ Landscape Editor 모듈 추가!
+                "FBX",
+                "LandscapeEditor"
             });
         }
     }
