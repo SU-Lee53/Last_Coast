@@ -510,7 +510,7 @@ TSharedPtr<FJsonObject> UJsonSaveManager::LandscapeToJson(ALandscape* Landscape)
     LandscapeJson->SetObjectField(TEXT("HeightMapResolution"), HeightMapResJson);
 
     // HeightZScale
-    LandscapeJson->SetNumberField(TEXT("HeightZScale"), LANDSCAPE_ZSCALE);
+    //LandscapeJson->SetNumberField(TEXT("HeightZScale"), LANDSCAPE_ZSCALE);
 
     // HeightMap 파일 정보
     TSharedPtr<FJsonObject> HeightMapJson = MakeShareable(new FJsonObject);
