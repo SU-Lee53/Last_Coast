@@ -23,16 +23,22 @@
 		{
 			"Index": 0,
 			"Name": "Grass",
-			"Albedo": "grass_albedo.dds",
-			"Normal": "grass_normal.dds",
-			"Tiling": 0.01
+			"Textures":
+			{
+				"Albedo": "grass_albedo.png",
+				"Normal": "grass_normal.png"
+			},
+			"Tiling": 0.0099999997764825821
 		},
 		{
 			"Index": 1,
 			"Name": "Rock",
-			"Albedo": "rock_albedo.dds",
-			"Normal": "rock_normal.dds",
-			"Tiling": 0.01
+			"Textures":
+			{
+				"Albedo": "rock_albedo.png",
+				"Normal": "rock_normal.png"
+			},
+			"Tiling": 0.0099999997764825821
 		}
 	],
 	"Components": [
@@ -72,7 +78,7 @@
 				{
 					"Path": "weight_c1_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 0, 1 ]
+					"LayerIndex": [ -1, -1, 1, -1 ]
 				}
 			]
 		},
@@ -92,7 +98,7 @@
 				{
 					"Path": "weight_c2_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ 1, -1, -1, -1 ]
 				}
 			]
 		},
@@ -112,7 +118,7 @@
 				{
 					"Path": "weight_c3_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ 1, -1, -1, -1 ]
 				}
 			]
 		},
@@ -132,7 +138,7 @@
 				{
 					"Path": "weight_c4_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ 1, -1, -1, -1 ]
 				}
 			]
 		},
@@ -152,7 +158,7 @@
 				{
 					"Path": "weight_c5_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ 1, -1, -1, -1 ]
 				}
 			]
 		},
@@ -172,7 +178,7 @@
 				{
 					"Path": "weight_c6_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ 1, -1, -1, -1 ]
 				}
 			]
 		},
@@ -192,7 +198,7 @@
 				{
 					"Path": "weight_c7_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 0, 1 ]
+					"LayerIndex": [ -1, 0, 1, -1 ]
 				}
 			]
 		},
@@ -212,7 +218,7 @@
 				{
 					"Path": "weight_c8_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 0, 1 ]
+					"LayerIndex": [ -1, 0, 1, -1 ]
 				}
 			]
 		},
@@ -232,7 +238,7 @@
 				{
 					"Path": "weight_c9_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 1, -1 ]
+					"LayerIndex": [ -1, 1, -1, -1 ]
 				}
 			]
 		},
@@ -252,7 +258,7 @@
 				{
 					"Path": "weight_c10_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 0, 1 ]
+					"LayerIndex": [ -1, 0, 1, -1 ]
 				}
 			]
 		},
@@ -272,7 +278,7 @@
 				{
 					"Path": "weight_c11_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 0, 1 ]
+					"LayerIndex": [ -1, 0, 1, -1 ]
 				}
 			]
 		},
@@ -312,7 +318,7 @@
 				{
 					"Path": "weight_c13_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ 1, -1, -1, -1 ]
 				}
 			]
 		},
@@ -332,7 +338,7 @@
 				{
 					"Path": "weight_c14_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 0, 1 ]
+					"LayerIndex": [ -1, 1, -1, -1 ]
 				}
 			]
 		},
@@ -872,7 +878,7 @@
 				{
 					"Path": "weight_c41_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ 1, -1, -1, -1 ]
 				}
 			]
 		},
@@ -892,7 +898,7 @@
 				{
 					"Path": "weight_c42_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 0, 1 ]
+					"LayerIndex": [ -1, 0, 1, -1 ]
 				}
 			]
 		},
@@ -972,7 +978,7 @@
 				{
 					"Path": "weight_c46_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ 1, -1, -1, -1 ]
 				}
 			]
 		},
@@ -1012,7 +1018,7 @@
 				{
 					"Path": "weight_c48_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 0, 1 ]
+					"LayerIndex": [ -1, 1, -1, -1 ]
 				}
 			]
 		},
@@ -1032,7 +1038,7 @@
 				{
 					"Path": "weight_c49_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ 1, -1, -1, -1 ]
 				}
 			]
 		},
@@ -1052,7 +1058,7 @@
 				{
 					"Path": "weight_c50_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 0, 1 ]
+					"LayerIndex": [ -1, 0, 1, -1 ]
 				}
 			]
 		},
@@ -1112,7 +1118,7 @@
 				{
 					"Path": "weight_c53_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ 1, -1, -1, -1 ]
 				}
 			]
 		},
@@ -1132,7 +1138,7 @@
 				{
 					"Path": "weight_c54_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ 1, -1, -1, -1 ]
 				}
 			]
 		},
@@ -1172,7 +1178,7 @@
 				{
 					"Path": "weight_c56_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 0, -1 ]
+					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
 			]
 		},
@@ -1192,7 +1198,7 @@
 				{
 					"Path": "weight_c57_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 0, 1 ]
+					"LayerIndex": [ -1, 0, 1, -1 ]
 				}
 			]
 		},
@@ -1232,7 +1238,7 @@
 				{
 					"Path": "weight_c59_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 0, 1 ]
+					"LayerIndex": [ -1, 0, 1, -1 ]
 				}
 			]
 		},
@@ -1312,7 +1318,7 @@
 				{
 					"Path": "weight_c63_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 0, -1 ]
+					"LayerIndex": [ -1, -1, 0, 1 ]
 				}
 			]
 		}
