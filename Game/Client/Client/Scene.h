@@ -4,6 +4,8 @@
 #include "Camera.h"
 #include "Light.h"
 
+class TerrainObject;
+
 class Scene {
 	friend class SceneManager;
 
@@ -43,6 +45,7 @@ public:
 
 public:
 	const std::shared_ptr<Player>& GetPlayer() const { return m_pPlayer; }
+	const std::shared_ptr<TerrainObject>& GetTerrain() const { return m_pTerrain; }
 	const std::shared_ptr<Camera>& GetCamera() const { return m_pPlayer->GetCamera(); }
 	std::vector<std::shared_ptr<GameObject>>& GetObjectsInScene() { return m_pGameObjects; }
 
@@ -60,6 +63,7 @@ protected:
 	std::vector<std::shared_ptr<Light>> m_pLights = {};
 	
 	std::shared_ptr<Player> m_pPlayer = nullptr;
+	std::shared_ptr<TerrainObject> m_pTerrain = nullptr;
 	//std::shared_ptr<Camera> m_pMainCamera = nullptr;
 
 	Vector4 m_v4GlobalAmbient;

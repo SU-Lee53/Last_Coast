@@ -3,6 +3,7 @@
 #include "Transform.h"
 #include "MeshRenderer.h"
 #include "AnimationController.h"
+#include "Collider.h"
 
 struct MESHLOADINFO;
 struct MATERIALLOADINFO;
@@ -42,13 +43,13 @@ public:
 	std::shared_ptr<T> GetComponent() const;
 	std::shared_ptr<Transform> GetTransform();
 	const Matrix& GetWorldMatrix() const { return GetComponent<Transform>()->GetWorldMatrix(); }
+
 	std::shared_ptr<GameObject> GetParent() const { return m_pParent.lock(); }
+	const std::vector<std::shared_ptr<GameObject>>& GetChildren() { return m_pChildren; }
 
 	const std::vector<Bone>& GetBones() const { return m_Bones; }
 	size_t GetRootBoneIndex() const { return m_nRootBoneIndex; }
 	int FindBoneIndex(const std::string& strBoneName) const;
-
-	void MergeBoundingBox(BoundingOrientedBox* pOBB);
 
 public:
 	virtual void OnBeginCollision(const CollisionResult& collisionResult) {};
@@ -63,12 +64,11 @@ public:
 	std::shared_ptr<T> CopyObject(std::shared_ptr<GameObject> pParent = nullptr) const;
 
 protected:
-	bool m_bInitialized = false;
 	std::string m_strFrameName;
 
-	// 아래 2가지 애니메이션과 관련된 것들은 반드시 Root에 보관되어야 함
 	std::vector<Bone> m_Bones;
 	size_t m_nRootBoneIndex = 0;
+
 	std::array<std::shared_ptr<IComponent>, std::to_underlying(COMPONENT_TYPE::COUNT)> m_pComponents = {};
 
 	uint64 m_unGameObjectRuntimeID;
@@ -78,8 +78,7 @@ protected:
 	std::vector<std::shared_ptr<GameObject>> m_pChildren = {};
 	
 protected:
-	// Bounding Volume
-	BoundingOrientedBox m_xmOBB;
+	bool m_bInitialized = false;
 
 public:
 	template<typename T> requires std::derived_from<T, GameObject>

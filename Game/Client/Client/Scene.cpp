@@ -1,10 +1,16 @@
 ﻿#include "pch.h"
 #include "Scene.h"
+#include "TerrainObject.h"
 
 void Scene::InitializeObjects()
 {
-	if (m_pPlayer)
+	if (m_pPlayer) {
 		m_pPlayer->Initialize();
+	}
+
+	if (m_pTerrain) {
+		m_pTerrain->Initialize();
+	}
 
 	for (auto& obj : m_pGameObjects) {
 		obj->Initialize();
@@ -18,6 +24,10 @@ void Scene::UpdateObjects()
 	if (m_pPlayer) {
 		m_pPlayer->ProcessInput();
 		m_pPlayer->Update();
+	}
+
+	if (m_pTerrain) {
+		m_pTerrain->Update();
 	}
 
 	for (auto& obj : m_pGameObjects) {
@@ -51,6 +61,10 @@ void Scene::OnPostProcessInput()
 {
 	if (m_pPlayer) {
 		m_pPlayer->ProcessInput();
+	}
+
+	if (m_pTerrain) {
+		m_pTerrain->Update();
 	}
 
 	for (auto& obj : m_pGameObjects) {

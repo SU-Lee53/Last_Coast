@@ -30,7 +30,18 @@ void ThirdPersonPlayer::Initialize()
 		AddComponent<PlayerAnimationController>();
 	}
 
-	GameObject::Initialize();
+	for (auto& component : m_pComponents) {
+		if (component) {
+			component->Initialize();
+		}
+	}
+
+	for (auto& pChild : m_pChildren) {
+		pChild->Initialize();
+	}
+
+	AddComponent<DynamicCollider>();
+	GetComponent<DynamicCollider>()->Initialize();
 }
 
 void ThirdPersonPlayer::ProcessInput()

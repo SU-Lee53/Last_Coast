@@ -33,6 +33,11 @@ public:
 private:
 	void BuildTerrainMesh(const TERRAINLOADINFO& terrainInfo);
 
+	void ReadTerrainData(const nlohmann::json& j, OUT TERRAINLOADINFO& outTerrainInfo);
+	TERRAINCOMPONENTLOADINFO ReadTerrainComponentData(const nlohmann::json& j);
+	TERRAINLAYERLOADINFO ReadTerrainLayerData(const nlohmann::json& j);
+
+
 private:
 	std::unique_ptr<HeightMapRawImage> m_pHeightMapRawImage;
 	std::vector<std::unique_ptr<TerrainComponent>> m_pTerrainComponents;

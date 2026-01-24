@@ -13,7 +13,6 @@ MeshRenderer::MeshRenderer(std::shared_ptr<GameObject> pOwner, const std::vector
 	: IComponent{ pOwner }
 {
 	m_pMeshes.reserve(meshLoadInfos.size());
-	m_eMeshTypes.reserve(meshLoadInfos.size());
 
 	for (const auto& meshLoadInfo : meshLoadInfos) {
 		std::shared_ptr<Mesh> pMesh;
@@ -38,13 +37,13 @@ MeshRenderer::MeshRenderer(std::shared_ptr<GameObject> pOwner, const std::vector
 			std::unreachable();
 		}
 
+		m_eMeshType = meshLoadInfo.eMeshType;
 		m_pMeshes.push_back(pMesh);
-		m_eMeshTypes.push_back(meshLoadInfo.eMeshType);
 	}
 
-	for (const auto& [materialInfo, eMeshType] : std::views::zip(materialLoadInfo, m_eMeshTypes)) {
+	for (const auto& materialInfo : materialLoadInfo) {
 		std::shared_ptr<Material> pMaterial;
-		switch (eMeshType)
+		switch (m_eMeshType)
 		{
 		case MESH_TYPE::STATIC:
 		{
@@ -78,6 +77,10 @@ void MeshRenderer::Initialize()
 
 void MeshRenderer::Update()
 {
+	if (m_eMeshType == MESH_TYPE::TERRAIN) {
+		return;
+	}
+
 	MeshRenderParameters meshParam{
 		.mtxWorld = m_wpOwner.lock()->GetWorldMatrix().Transpose()
 	};
@@ -97,7 +100,6 @@ std::shared_ptr<IComponent> MeshRenderer::Copy(std::shared_ptr<GameObject> pNewO
 	pClone->m_pMaterials = m_pMaterials;
 	pClone->m_ui64RendererID = m_ui64RendererID;
 	pClone->m_eRenderType = m_eRenderType;
-	pClone->m_eMeshTypes = m_eMeshTypes;
 	pClone->SetOwner(pNewOwner);
 
 	return pClone;
@@ -112,11 +114,11 @@ void MeshRenderer::Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Graphics
 		ConstantBuffer cbuffer = RESOURCE->AllocCBuffer<CB_PER_OBJECT_DATA>();
 		cbuffer.WriteData(&cbData);
 
-		if (m_eMeshTypes[i] == MESH_TYPE::STATIC) {
+		if (m_eMeshType == MESH_TYPE::STATIC) {
 			pd3dDevice->CopyDescriptorsSimple(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, descHandle.cpuHandle, cbuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::OBJ_MATERIAL_DATA), descHandle.gpuHandle);
-			descHandle.cpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-			descHandle.gpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+			descHandle.cpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+			descHandle.gpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 		}
 		else {
 			Matrix mtxWorldTransposed = mtxWorld.Transpose();
@@ -124,9 +126,9 @@ void MeshRenderer::Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Graphics
 			worldCBuffer.WriteData(&mtxWorldTransposed);
 
 			pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, cbuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			descHandle.cpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+			descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 			pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, worldCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			descHandle.cpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+			descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 
 			pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::OBJ_MATERIAL_DATA), descHandle.gpuHandle);
 			descHandle.gpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
@@ -152,11 +154,11 @@ void MeshRenderer::Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Graphics
 		ConstantBuffer cbuffer = RESOURCE->AllocCBuffer<CB_PER_OBJECT_DATA>();
 		cbuffer.WriteData(&cbData);
 
-		if (m_eMeshTypes[i] == MESH_TYPE::STATIC) {
+		if (m_eMeshType == MESH_TYPE::STATIC) {
 			pd3dDevice->CopyDescriptorsSimple(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, descHandle.cpuHandle, cbuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::OBJ_MATERIAL_DATA), descHandle.gpuHandle);
-			descHandle.cpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-			descHandle.gpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+			descHandle.cpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+			descHandle.gpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 		}
 		else {
 			Matrix mtxWorldTransposed = mtxWorld.Transpose();
@@ -164,9 +166,10 @@ void MeshRenderer::Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Graphics
 			worldCBuffer.WriteData(&mtxWorldTransposed);
 
 			pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, cbuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			descHandle.cpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+			descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+
 			pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, worldCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			descHandle.cpuHandle.Offset(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+			descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 
 			pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::OBJ_MATERIAL_DATA), descHandle.gpuHandle);
 			descHandle.gpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);

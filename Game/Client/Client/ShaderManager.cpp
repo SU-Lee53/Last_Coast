@@ -19,6 +19,7 @@ void ShaderManager::Initialize(ComPtr<ID3D12Device> pDevice)
 	Load<FullScreenShader>();
 	Load<StandardShader>();
 	Load<AnimatedShader>();
+	Load<TerrainShader>();
 }
 
 D3D12_SHADER_BYTECODE ShaderManager::GetShaderByteCode(const std::string& strShaderName)

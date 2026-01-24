@@ -15,8 +15,9 @@ CB_TERRAIN_COMPONENT_DATA TerrainComponent::MakeCBData() const
 {
 	CB_TERRAIN_COMPONENT_DATA data{};
 	data.v2ComponentOriginXZ = m_v2ComponentOriginXZ;
-	data.v2ComponentSizeXZ = Vector2{ m_xmi2NumQuadsXZ.x * m_v3TerrainScale.x, m_xmi2NumQuadsXZ.y * m_v3TerrainScale.z };
+	data.v2ComponentSizeXZ = Vector2{ (m_xmi2NumQuadsXZ.x) * m_v3TerrainScale.x, (m_xmi2NumQuadsXZ.y) * m_v3TerrainScale.z };
 	data.xmi4LayerIndex = m_xmi4LayerIndices;
+	data.xmi2NumQuadsXZ = m_xmi2NumQuadsXZ;
 
 	return data;
 }

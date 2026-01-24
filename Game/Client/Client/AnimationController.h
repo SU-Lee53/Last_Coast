@@ -42,6 +42,7 @@ protected:
 template <>
 struct ComponentIndex<AnimationController> {
 	constexpr static COMPONENT_TYPE componentType = COMPONENT_TYPE::ANIMATION_CONTROLLER;
+	constexpr static std::underlying_type_t<COMPONENT_TYPE> index = std::to_underlying(COMPONENT_TYPE::ANIMATION_CONTROLLER);
 };
 
 class ThirdPersonCamera;
@@ -67,4 +68,5 @@ private:
 template <>
 struct ComponentIndex<PlayerAnimationController> {
 	constexpr static COMPONENT_TYPE componentType = COMPONENT_TYPE::ANIMATION_CONTROLLER;
+	constexpr static std::underlying_type_t<COMPONENT_TYPE> index = std::to_underlying(COMPONENT_TYPE::ANIMATION_CONTROLLER);
 };

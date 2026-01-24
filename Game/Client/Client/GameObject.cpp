@@ -27,7 +27,8 @@ void GameObject::Initialize()
 			}
 		}
 
-		m_pComponents[std::to_underlying(COMPONENT_TYPE::TRANSFORM)]->Update();
+		GetTransform()->Update();
+
 		m_bInitialized = true;
 	}
 
@@ -35,8 +36,11 @@ void GameObject::Initialize()
 		pChild->Initialize();
 	}
 
-	if (m_pParent.expired()) {
-		MergeBoundingBox(&m_xmOBB);
+	if (m_pParent.expired() && !GetComponent<Collider>()) {
+		// Collider 의 경우 계층 변환의 자식 전파가 우선 필요하므로 마지막에 추가하고 Initialize
+		// 기본은 StaticCollider
+		AddComponent<StaticCollider>();
+		GetComponent<StaticCollider>()->Initialize();
 	}
 }
 
@@ -78,12 +82,6 @@ void GameObject::RenderImmediate(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12G
 	for (auto& pChild : m_pChildren) {
 		pChild->RenderImmediate(pd3dDevice, pd3dCommandList, descHandle);
 	}
-}
-
-void GameObject::SetBound(const Vector3& v3Center, const Vector3& v3Extents)
-{
-	m_xmOBB.Center = v3Center;
-	m_xmOBB.Extents = v3Extents;
 }
 
 void GameObject::SetParent(std::shared_ptr<GameObject> pParent)
@@ -149,41 +147,6 @@ int GameObject::FindBoneIndex(const std::string& strBoneName) const
 	}
 
 	return -1;
-}
-
-void GameObject::MergeBoundingBox(BoundingOrientedBox* pOBB)
-{
-	if (m_pParent.expired()) {	// if root
-		*pOBB = BoundingOrientedBox{};
-	}
-
-	auto pMeshRenderer = GetComponent<MeshRenderer>();
-	if (pMeshRenderer) {
-		// Get corner fron OBB to merge
-		XMFLOAT3 pxmf3OBBPoints1[BoundingOrientedBox::CORNER_COUNT];
-		BoundingOrientedBox xmOBBMesh;
-		pMeshRenderer->GetOBBMerged().Transform(xmOBBMesh, GetTransform()->GetWorldMatrix());
-		xmOBBMesh.GetCorners(pxmf3OBBPoints1);
-
-		XMFLOAT3 pxmf3OBBPoints2[BoundingOrientedBox::CORNER_COUNT];
-		pOBB->GetCorners(pxmf3OBBPoints2);
-
-		// Create AABB from obb points for merge
-		BoundingBox xmAABB1, xmAABB2;
-		BoundingBox::CreateFromPoints(xmAABB1, BoundingOrientedBox::CORNER_COUNT, pxmf3OBBPoints1, sizeof(XMFLOAT3));
-		BoundingBox::CreateFromPoints(xmAABB2, BoundingOrientedBox::CORNER_COUNT, pxmf3OBBPoints2, sizeof(XMFLOAT3));
-
-		// Merge OBB
-		BoundingBox xmAABBMerged;
-		BoundingBox::CreateMerged(xmAABBMerged, xmAABB1, xmAABB2);
-
-		// Set OBB
-		BoundingOrientedBox::CreateFromBoundingBox(*pOBB, xmAABBMerged);
-	}
-
-	for (auto& pChild : m_pChildren) {
-		pChild->MergeBoundingBox(pOBB);
-	}
 }
 
 std::shared_ptr<GameObject> GameObject::FindFrame(const std::string& strFrameName)

@@ -125,6 +125,7 @@ float HeightMapRawImage::SampleHeight(uint32 x, uint32 z) const
 {
 	uint16 un16Raw = m_HeightMapRawData[z * m_unWidth + x];
 	const float fHeightRaw = static_cast<float>(un16Raw) / static_cast<float>(std::numeric_limits<uint16>::max());
-	return fHeightRaw * m_v3Scale.y;
+	return fHeightRaw * ::M(m_v3Scale.y);
+	//return fHeightRaw * 1000.f;
 }
 

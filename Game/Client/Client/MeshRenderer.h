@@ -35,7 +35,7 @@ public:
 
 	uint64_t GetID() const { return m_ui64RendererID; }
 	OBJECT_RENDER_TYPE GetRenderType() const { return m_eRenderType; }
-	MESH_TYPE GetMeshType(uint32 unMeshIndex) { return m_eMeshTypes[unMeshIndex]; }
+	MESH_TYPE GetMeshType() { return m_eMeshType; }
 
 	void SetTexture(std::shared_ptr<Texture> pTexture, UINT nMaterialIndex, TEXTURE_TYPE eTextureType);
 
@@ -45,7 +45,7 @@ protected:
 
 	uint64_t m_ui64RendererID = 0;	// ID 가 같다 -> 인스턴싱이 가능하다
 	OBJECT_RENDER_TYPE m_eRenderType = OBJECT_RENDER_TYPE::FORWARD;
-	std::vector<MESH_TYPE> m_eMeshTypes;
+	MESH_TYPE m_eMeshType = MESH_TYPE::UNDEFINED;
 
 protected:
 	static uint64 g_ui64RendererIDBase;
@@ -56,4 +56,5 @@ protected:
 template <>
 struct ComponentIndex<MeshRenderer> {
 	constexpr static COMPONENT_TYPE componentType = COMPONENT_TYPE::MESH_RENDERER;
+	constexpr static std::underlying_type_t<COMPONENT_TYPE> index = std::to_underlying(COMPONENT_TYPE::MESH_RENDERER);
 };

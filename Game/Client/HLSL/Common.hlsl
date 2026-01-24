@@ -55,6 +55,8 @@ struct VS_TERRAIN_OUTPUT
 	float3 positionW : POSITION;
     float3 normalW : NORMAL;
     float3 tangentW : TANGENT;
+	
+	float2 positionLocalXZ : TEXCOORD;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -108,20 +110,24 @@ SamplerState gSkyboxSamplerState : register(s0);
 cbuffer cbTerrainLayerData : register(b2)
 {
 	float4 gvLayerTiling;
+	int gnLayers;
 }
 
-Texture2D gtxtTerrainAlbedo[4] : register(t1); // t1, t2, t3, t4
-Texture2D gtxtTerrainNormal[4] : register(t5); // t5, t6, t7, t8
+#define MAX_LAYER 4
+Texture2D gtxtTerrainAlbedo[MAX_LAYER] : register(t1); // t1, t2, t3, t4
+Texture2D gtxtTerrainNormal[MAX_LAYER] : register(t5); // t5, t6, t7, t8
 
 cbuffer cbTerrainComponentData : register(b3)
 {
 	float2	gvComponentOriginXZ;
 	float2	gvComponentSizeXZ;
 	int4	gLayerIndex;
+	int2	gvNumQuadsXZ;
 }
 
 Texture2D gtxtComponentWeightMap : register(t9);
 
+SamplerState gWeightMapSamplerState : register(s2);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pass

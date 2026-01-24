@@ -77,7 +77,14 @@ std::shared_ptr<Texture> TextureManager::CreateTextureFromFile(const std::wstrin
 {
 	namespace fs = std::filesystem;
 	
-	std::wstring wstrTexturePath = std::format(L"{}/{}.dds", g_wstrTextureBasePath, wstrTextureName);
+	std::wstring wstrTexturePath;
+	if (fs::path(wstrTextureName).has_extension()) {
+		wstrTexturePath = wstrTextureName;
+	}
+	else {
+		wstrTexturePath = std::format(L"{}/{}.dds", g_wstrTextureBasePath, wstrTextureName);
+	}
+
 
 	fs::path texPath{ wstrTexturePath };
 	if (!fs::exists(texPath)) {

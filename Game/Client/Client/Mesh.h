@@ -131,6 +131,5 @@ public:
 protected:
 	VertexBuffer m_Normals;
 	VertexBuffer m_Tangents;
-
 };
 

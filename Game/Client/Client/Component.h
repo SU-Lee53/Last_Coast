@@ -6,6 +6,7 @@ enum class COMPONENT_TYPE : uint8 {
 	TRANSFORM = 0,
 	MESH_RENDERER,
 	ANIMATION_CONTROLLER,
+	COLLIDER,
 
 	COUNT,
 
@@ -45,14 +46,6 @@ concept ComponentType = std::derived_from<C, IComponent>;
 template <ComponentType T>
 struct ComponentIndex {
 	constexpr static COMPONENT_TYPE componentType = COMPONENT_TYPE::BASE;
+	constexpr static std::underlying_type_t<COMPONENT_TYPE> index = std::to_underlying(COMPONENT_TYPE::BASE);
 };
 
-template <COMPONENT_TYPE eComponentType>
-struct ComponentIndexToType {
-	using type = void;
-};
-
-template <>
-struct ComponentIndexToType<COMPONENT_TYPE::BASE> {
-	using type = IComponent;
-};

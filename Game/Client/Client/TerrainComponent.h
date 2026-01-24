@@ -17,12 +17,14 @@ struct TerrainIndexRange {
 
 struct CB_TERRAIN_LAYER_DATA {
 	Vector4 v4LayerTiling;
+	int32 nLayers;
 };
 
 struct CB_TERRAIN_COMPONENT_DATA {
 	Vector2	v2ComponentOriginXZ;
 	Vector2	v2ComponentSizeXZ;	// 까지 c0
 	XMINT4	xmi4LayerIndex;		// c1
+	XMINT2	xmi2NumQuadsXZ;		// c2.xy
 };
 
 class TerrainComponent {

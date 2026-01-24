@@ -86,36 +86,93 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 	
 	output.normalW = mul(float4(input.normal, 0.f), gmtxWorld).xyz;
 	output.tangentW = mul(float4(input.tangent, 0.f), gmtxWorld).xyz;
-    
+	
+	output.positionLocalXZ = input.position.zx;
 	return output;
 }
 
 float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_Target
 {
-	//float4 cAlbedoColor[4];
-	//[unroll(4)]
-	//for (int i = 0; i < 4; ++i)
-	//{
-	//	float2 vTileUV;
-	//	vTileUV.x = (input.positionW.x - gvComponentOriginXZ.x) * gvLayerTiling[gLayerIndex[i]];
-	//	vTileUV.y = (input.positionW.z - gvComponentOriginXZ.y) * gvLayerTiling[gLayerIndex[i]];
-	//
-	//	cAlbedoColor[i] = gtxtTerrainAlbedo[gLayerIndex[i]].Sample(gSamplerState, vTileUV);
-	//}
-	//
-	//float2 vWeightUV;
-	//vWeightUV.x = input.positionW.x / gvComponentSizeXZ.x;
-	//vWeightUV.y = input.positionW.z / gvComponentSizeXZ.y;
-	//
-	//float4 vWeight = gtxtComponentWeightMap.Sample(gSamplerState, vWeightUV);
-	//float4 cFinalColor = (cAlbedoColor[0] * vWeight.r) + (cAlbedoColor[1] * vWeight.g) + (cAlbedoColor[2] * vWeight.b) + (cAlbedoColor[3] * vWeight.a);
-	//
-	//// Normalize
-	//float fSum = vWeight.r + vWeight.g + vWeight.b + vWeight.a;
-	//if (fSum < 1e-6f)
-	//{
-	//	cFinalColor /= fSum;
-	//}
+	float2 vWeightUV = (input.positionLocalXZ - gvComponentOriginXZ) / gvComponentSizeXZ;
+	vWeightUV = saturate(vWeightUV);
 	
-	return float4(input.normalW, 1.f);
+	// Half tiling
+	// 안맞추면 경계면 이상함
+	// 조건 : gvNumQuadsXZ + 1.0f 가 WeightMap의 해상도와 일치해야 함
+	float2 vWeightMapSize = float2(gvNumQuadsXZ) + 1.0f;
+	vWeightUV += 0.5f / vWeightMapSize;
+	
+	float4 vWeight = gtxtComponentWeightMap.Sample(gWeightMapSamplerState, vWeightUV);
+	
+	// Layer Remapping
+	float layerWeights[MAX_LAYER] = { 0.f, 0.f, 0.f, 0.f };
+	[unroll(MAX_LAYER)]
+	for (int channel = 0; channel < MAX_LAYER; ++channel)
+	{
+		int nLayer = gLayerIndex[channel];
+		if (nLayer >= 0)
+		{
+			layerWeights[nLayer] += vWeight[channel];
+		}
+	}
+	
+	// Albedo sample + blend
+	float4 cFinalColor = 0;
+	[unroll(MAX_LAYER)]
+	for (int layer = 0; layer < gnLayers; ++layer)
+	{
+		float fWeight = layerWeights[layer];
+		if (fWeight > 1e-6f)
+		{
+			float2 vTileUV = input.positionLocalXZ * gvLayerTiling[layer];
+			float4 cAlbedo = gtxtTerrainAlbedo[layer].Sample(gSamplerState, vTileUV);
+			cFinalColor += cAlbedo * fWeight;
+		}
+	}
+	
+	float fSum = vWeight.r + vWeight.g + vWeight.b + vWeight.a;
+	if (fSum > 1e-6f)
+	{
+		cFinalColor /= fSum;
+	}
+	
+	return cFinalColor;
 }
+
+//	float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_Target
+//	{
+//		float4 cAlbedoColor[4] = { float4(0, 0, 0, 0), float4(0, 0, 0, 0), float4(0, 0, 0, 0), float4(0, 0, 0, 0) };
+//		[unroll(4)]
+//		for (int channel = 0; channel < 4; ++channel)
+//		{
+//			int nLayer = gLayerIndex[channel];
+//			if (nLayer >= 0)
+//			{
+//				float fTiling = gvLayerTiling[nLayer];
+//				float2 vTileUV = (input.positionLocalXZ - gvComponentOriginXZ) * fTiling;
+//				cAlbedoColor[channel] = gtxtTerrainAlbedo[nLayer].Sample(gSamplerState, vTileUV);
+//			}
+//			else
+//			{
+//				cAlbedoColor[channel] = 0;
+//			}
+//		}
+//		
+//		float2 vWeightUV = (input.positionLocalXZ - gvComponentOriginXZ) / gvComponentSizeXZ;
+//		vWeightUV = saturate(vWeightUV);
+//		
+//		float2 vWeightMapSize = float2(gvNumQuadsXZ) + 1.0f;
+//		vWeightUV += 0.5f / vWeightMapSize;
+//		
+//		float4 vWeight = gtxtComponentWeightMap.Sample(gWeightMapSamplerState, vWeightUV);
+//		float4 cFinalColor = (cAlbedoColor[0] * vWeight.r) + (cAlbedoColor[1] * vWeight.g) + (cAlbedoColor[2] * vWeight.b) + (cAlbedoColor[3] * vWeight.a);
+//		
+//		// Normalize
+//		float fSum = vWeight.r + vWeight.g + vWeight.b + vWeight.a;
+//		if (fSum > 1e-6f)
+//		{
+//			cFinalColor /= fSum;
+//		}
+//		
+//		return cFinalColor;
+//	}

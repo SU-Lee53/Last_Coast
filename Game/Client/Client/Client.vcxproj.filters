@@ -334,6 +334,7 @@
     <ClInclude Include="MeshRenderer.h">
       <Filter>02.Game\Components\Components</Filter>
     </ClInclude>
+    <ClInclude Include="Collider.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -553,6 +554,7 @@
     <ClCompile Include="MeshRenderer.cpp">
       <Filter>02.Game\Components\Components</Filter>
     </ClCompile>
+    <ClCompile Include="Collider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">

@@ -8,5 +8,9 @@ public:
 	void ProcessInput() override;
 	void Update() override;
 	void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList) override;
+
+private:
+	Vector3 v3TerrainPos;
+	Vector3 v3TerrainRotation = Vector3{ 0,0,0 };
 };
 

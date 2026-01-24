@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "RenderManager.h"
 #include "MeshRenderer.h"
+#include "TerrainObject.h"
 
 ComPtr<ID3D12RootSignature> RenderManager::g_pd3dGlobalRootSignature = nullptr;
 
@@ -31,10 +32,12 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice, C
 	CD3DX12_DESCRIPTOR_RANGE d3dDescriptorRanges[10];
 	d3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, 0);	// Per Scene (Camera)			-> b0
 	d3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, 0);	// Per Scene (Cubemap)			-> t0
+
 	d3dDescriptorRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 0, 0);	// Per Scene (Terrain Layer)	-> b2
 	d3dDescriptorRanges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 8, 1, 0, 1);	// Per Scene (Terrain Texture)	-> 4 Albedo + 4 Normal -> t1 ~ t8
+
 	d3dDescriptorRanges[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 3, 0, 0);	// Per Scene (Terrain data)		-> b3	(b1 : CBV light data)
-	d3dDescriptorRanges[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 9, 0, 1);	// Per Scene (Terrain Texture)	-> 1 Weightmap -> t9
+	d3dDescriptorRanges[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 9, 0, 0);	// Per Scene (Weightmap)		-> 1 Weightmap -> t9
 
 	d3dDescriptorRanges[6].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 10, 0, 0);	// Per Pass	 (World 변환)		-> t10
 
@@ -42,21 +45,22 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice, C
 	d3dDescriptorRanges[8].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 6, 0, 0);	// Bone Transform				-> b6
 	d3dDescriptorRanges[9].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 11, 0, 0);	// Diffuse, Normal/Height		-> t11 ~ t14
 
-	CD3DX12_ROOT_PARAMETER d3dRootParameters[9];
+	CD3DX12_ROOT_PARAMETER d3dRootParameters[10];
 	d3dRootParameters[0].InitAsDescriptorTable(1, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);	// Scene (Camera)
 	d3dRootParameters[1].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL);						// Scene (Light)
 	d3dRootParameters[2].InitAsDescriptorTable(1, &d3dDescriptorRanges[1], D3D12_SHADER_VISIBILITY_ALL);	// Scene (Cubemap(Skybox))
-	d3dRootParameters[3].InitAsDescriptorTable(2, &d3dDescriptorRanges[2], D3D12_SHADER_VISIBILITY_ALL);	// Scele (Terrain Textures)
-	d3dRootParameters[4].InitAsDescriptorTable(2, &d3dDescriptorRanges[4], D3D12_SHADER_VISIBILITY_ALL);	// Scele (Terrain Component)
+	d3dRootParameters[3].InitAsDescriptorTable(2, &d3dDescriptorRanges[2], D3D12_SHADER_VISIBILITY_ALL);	// Scene (Terrain Textures)		RP 2, 3
+	d3dRootParameters[4].InitAsDescriptorTable(1, &d3dDescriptorRanges[4], D3D12_SHADER_VISIBILITY_ALL);	// Scene (Terrain data)			RP 4
+	d3dRootParameters[5].InitAsDescriptorTable(1, &d3dDescriptorRanges[5], D3D12_SHADER_VISIBILITY_ALL);	// Scene (Weightmap)			RP 5
 
-	d3dRootParameters[5].InitAsDescriptorTable(1, &d3dDescriptorRanges[6], D3D12_SHADER_VISIBILITY_ALL);	// Pass (World)
+	d3dRootParameters[6].InitAsDescriptorTable(1, &d3dDescriptorRanges[6], D3D12_SHADER_VISIBILITY_ALL);	// Pass (World)
 
-	d3dRootParameters[6].InitAsDescriptorTable(1, &d3dDescriptorRanges[7], D3D12_SHADER_VISIBILITY_ALL);	// Material
-	d3dRootParameters[7].InitAsDescriptorTable(1, &d3dDescriptorRanges[8], D3D12_SHADER_VISIBILITY_ALL);	// Bone Transform
-	d3dRootParameters[8].InitAsDescriptorTable(1, &d3dDescriptorRanges[9], D3D12_SHADER_VISIBILITY_ALL);	// Texture(Diffused, Normal/Height)
+	d3dRootParameters[7].InitAsDescriptorTable(1, &d3dDescriptorRanges[7], D3D12_SHADER_VISIBILITY_ALL);	// Material
+	d3dRootParameters[8].InitAsDescriptorTable(1, &d3dDescriptorRanges[8], D3D12_SHADER_VISIBILITY_ALL);	// Bone Transform
+	d3dRootParameters[9].InitAsDescriptorTable(1, &d3dDescriptorRanges[9], D3D12_SHADER_VISIBILITY_ALL);	// Texture(Diffused, Normal/Height)
 
 	// s0 : SkyboxSampler
-	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[2];
+	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[3];
 	d3dSamplerDesc[0].Init(0);
 	d3dSamplerDesc[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 	d3dSamplerDesc[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
@@ -74,6 +78,17 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice, C
 	d3dSamplerDesc[1].MinLOD = 0;
 	d3dSamplerDesc[1].MaxLOD = D3D12_FLOAT32_MAX;
 	d3dSamplerDesc[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	// s2 : WeightMap Sampler
+	d3dSamplerDesc[2].Init(2);
+	d3dSamplerDesc[2].Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+	d3dSamplerDesc[2].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	d3dSamplerDesc[2].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	d3dSamplerDesc[2].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	d3dSamplerDesc[2].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	d3dSamplerDesc[2].MinLOD = 0;
+	d3dSamplerDesc[2].MaxLOD = D3D12_FLOAT32_MAX;
+	d3dSamplerDesc[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 		| D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS
@@ -186,8 +201,11 @@ void RenderManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 	m_pForwardPass->Run(m_pd3dDevice, pd3dCommandList, m_InstanceDatas, descHandle);
 	RenderAnimated(pd3dCommandList, descHandle);
 
-	RenderSkybox(pd3dCommandList, descHandle);
+	if (const auto& pTerrain =  CUR_SCENE->GetTerrain()) {
+		pTerrain->RenderImmediate(m_pd3dDevice, pd3dCommandList, descHandle);
+	}
 
+	RenderSkybox(pd3dCommandList, descHandle);
 }
 
 void RenderManager::RenderAnimated(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle)

@@ -73,9 +73,6 @@ private:
 template <>
 struct ComponentIndex<Transform> {
 	constexpr static COMPONENT_TYPE componentType = COMPONENT_TYPE::TRANSFORM;
+	constexpr static std::underlying_type_t<COMPONENT_TYPE> index = std::to_underlying(COMPONENT_TYPE::TRANSFORM);
 };
 
-template <>
-struct ComponentIndexToType<COMPONENT_TYPE::TRANSFORM> {
-	using type = Transform;
-};
