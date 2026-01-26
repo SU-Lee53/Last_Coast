@@ -3,9 +3,9 @@
 	{
 		"Scale":
 		{
-			"X": 10,
-			"Y": 10,
-			"Z": 10
+			"X": 790.16999999999996,
+			"Y": 790.16999999999996,
+			"Z": 110.38
 		},
 		"HeightMapResolution":
 		{
@@ -30,26 +30,6 @@
 				"Normal": "grass_normal.png"
 			},
 			"Tiling": 0.0099999997764825821
-		},
-		{
-			"Index": 1,
-			"Name": "Rock",
-			"Textures":
-			{
-				"Albedo": "rock_albedo.png",
-				"Normal": "rock_normal.png"
-			},
-			"Tiling": 0.0099999997764825821
-		},
-		{
-			"Index": 2,
-			"Name": "Brick",
-			"Textures":
-			{
-				"Albedo": "brick_albedo.png",
-				"Normal": "brick_normal.png"
-			},
-			"Tiling": 0.0099999997764825821
 		}
 	],
 	"Components": [
@@ -69,7 +49,7 @@
 				{
 					"Path": "weight_c0_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ 0, -1, -1, -1 ]
 				}
 			]
 		},
@@ -77,7 +57,7 @@
 			"ComponentIndex": 1,
 			"Origin":
 			{
-				"X": 630,
+				"X": 49780.709999999999,
 				"Y": 0
 			},
 			"NumQuads":
@@ -89,7 +69,7 @@
 				{
 					"Path": "weight_c1_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, 2, -1, -1 ]
+					"LayerIndex": [ -1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -97,7 +77,7 @@
 			"ComponentIndex": 2,
 			"Origin":
 			{
-				"X": 1260,
+				"X": 99561.419999999998,
 				"Y": 0
 			},
 			"NumQuads":
@@ -109,7 +89,7 @@
 				{
 					"Path": "weight_c2_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 1, 2 ]
+					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
 			]
 		},
@@ -117,7 +97,7 @@
 			"ComponentIndex": 3,
 			"Origin":
 			{
-				"X": 1890,
+				"X": 149342.13,
 				"Y": 0
 			},
 			"NumQuads":
@@ -129,7 +109,7 @@
 				{
 					"Path": "weight_c3_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, 2, -1, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -137,7 +117,7 @@
 			"ComponentIndex": 4,
 			"Origin":
 			{
-				"X": 2520,
+				"X": 199122.84,
 				"Y": 0
 			},
 			"NumQuads":
@@ -149,7 +129,7 @@
 				{
 					"Path": "weight_c4_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, -1, -1, -1 ]
+					"LayerIndex": [ 0, -1, -1, -1 ]
 				}
 			]
 		},
@@ -157,7 +137,7 @@
 			"ComponentIndex": 5,
 			"Origin":
 			{
-				"X": 3150,
+				"X": 248903.54999999999,
 				"Y": 0
 			},
 			"NumQuads":
@@ -169,7 +149,7 @@
 				{
 					"Path": "weight_c5_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, -1, -1, -1 ]
+					"LayerIndex": [ -1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -177,7 +157,7 @@
 			"ComponentIndex": 6,
 			"Origin":
 			{
-				"X": 3780,
+				"X": 298684.26000000001,
 				"Y": 0
 			},
 			"NumQuads":
@@ -189,7 +169,7 @@
 				{
 					"Path": "weight_c6_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, -1, -1, -1 ]
+					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
 			]
 		},
@@ -197,7 +177,7 @@
 			"ComponentIndex": 7,
 			"Origin":
 			{
-				"X": 4410,
+				"X": 348464.96999999997,
 				"Y": 0
 			},
 			"NumQuads":
@@ -209,7 +189,7 @@
 				{
 					"Path": "weight_c7_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, 0, 1, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -218,7 +198,7 @@
 			"Origin":
 			{
 				"X": 0,
-				"Y": 630
+				"Y": 49780.709999999999
 			},
 			"NumQuads":
 			{
@@ -229,7 +209,7 @@
 				{
 					"Path": "weight_c8_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ 0, -1, -1, -1 ]
 				}
 			]
 		},
@@ -237,8 +217,8 @@
 			"ComponentIndex": 9,
 			"Origin":
 			{
-				"X": 630,
-				"Y": 630
+				"X": 49780.709999999999,
+				"Y": 49780.709999999999
 			},
 			"NumQuads":
 			{
@@ -249,7 +229,7 @@
 				{
 					"Path": "weight_c9_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 1, 2 ]
+					"LayerIndex": [ -1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -257,8 +237,8 @@
 			"ComponentIndex": 10,
 			"Origin":
 			{
-				"X": 1260,
-				"Y": 630
+				"X": 99561.419999999998,
+				"Y": 49780.709999999999
 			},
 			"NumQuads":
 			{
@@ -269,7 +249,7 @@
 				{
 					"Path": "weight_c10_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, 0, 1, 2 ]
+					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
 			]
 		},
@@ -277,8 +257,8 @@
 			"ComponentIndex": 11,
 			"Origin":
 			{
-				"X": 1890,
-				"Y": 630
+				"X": 149342.13,
+				"Y": 49780.709999999999
 			},
 			"NumQuads":
 			{
@@ -289,7 +269,7 @@
 				{
 					"Path": "weight_c11_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, 0, 1, 2 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -297,8 +277,8 @@
 			"ComponentIndex": 12,
 			"Origin":
 			{
-				"X": 2520,
-				"Y": 630
+				"X": 199122.84,
+				"Y": 49780.709999999999
 			},
 			"NumQuads":
 			{
@@ -309,7 +289,7 @@
 				{
 					"Path": "weight_c12_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ 0, -1, -1, -1 ]
 				}
 			]
 		},
@@ -317,8 +297,8 @@
 			"ComponentIndex": 13,
 			"Origin":
 			{
-				"X": 3150,
-				"Y": 630
+				"X": 248903.54999999999,
+				"Y": 49780.709999999999
 			},
 			"NumQuads":
 			{
@@ -329,7 +309,7 @@
 				{
 					"Path": "weight_c13_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, -1, -1, -1 ]
+					"LayerIndex": [ -1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -337,8 +317,8 @@
 			"ComponentIndex": 14,
 			"Origin":
 			{
-				"X": 3780,
-				"Y": 630
+				"X": 298684.26000000001,
+				"Y": 49780.709999999999
 			},
 			"NumQuads":
 			{
@@ -349,7 +329,7 @@
 				{
 					"Path": "weight_c14_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, 1, -1, -1 ]
+					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
 			]
 		},
@@ -357,8 +337,8 @@
 			"ComponentIndex": 15,
 			"Origin":
 			{
-				"X": 4410,
-				"Y": 630
+				"X": 348464.96999999997,
+				"Y": 49780.709999999999
 			},
 			"NumQuads":
 			{
@@ -369,7 +349,7 @@
 				{
 					"Path": "weight_c15_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -378,7 +358,7 @@
 			"Origin":
 			{
 				"X": 0,
-				"Y": 1260
+				"Y": 99561.419999999998
 			},
 			"NumQuads":
 			{
@@ -389,7 +369,7 @@
 				{
 					"Path": "weight_c16_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ 0, -1, -1, -1 ]
 				}
 			]
 		},
@@ -397,8 +377,8 @@
 			"ComponentIndex": 17,
 			"Origin":
 			{
-				"X": 630,
-				"Y": 1260
+				"X": 49780.709999999999,
+				"Y": 99561.419999999998
 			},
 			"NumQuads":
 			{
@@ -409,7 +389,7 @@
 				{
 					"Path": "weight_c17_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ -1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -417,8 +397,8 @@
 			"ComponentIndex": 18,
 			"Origin":
 			{
-				"X": 1260,
-				"Y": 1260
+				"X": 99561.419999999998,
+				"Y": 99561.419999999998
 			},
 			"NumQuads":
 			{
@@ -429,7 +409,7 @@
 				{
 					"Path": "weight_c18_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 2, -1, -1, -1 ]
+					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
 			]
 		},
@@ -437,8 +417,8 @@
 			"ComponentIndex": 19,
 			"Origin":
 			{
-				"X": 1890,
-				"Y": 1260
+				"X": 149342.13,
+				"Y": 99561.419999999998
 			},
 			"NumQuads":
 			{
@@ -449,7 +429,7 @@
 				{
 					"Path": "weight_c19_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -457,8 +437,8 @@
 			"ComponentIndex": 20,
 			"Origin":
 			{
-				"X": 2520,
-				"Y": 1260
+				"X": 199122.84,
+				"Y": 99561.419999999998
 			},
 			"NumQuads":
 			{
@@ -469,7 +449,7 @@
 				{
 					"Path": "weight_c20_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ 0, -1, -1, -1 ]
 				}
 			]
 		},
@@ -477,8 +457,8 @@
 			"ComponentIndex": 21,
 			"Origin":
 			{
-				"X": 3150,
-				"Y": 1260
+				"X": 248903.54999999999,
+				"Y": 99561.419999999998
 			},
 			"NumQuads":
 			{
@@ -489,7 +469,7 @@
 				{
 					"Path": "weight_c21_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 0, 1 ]
+					"LayerIndex": [ -1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -497,8 +477,8 @@
 			"ComponentIndex": 22,
 			"Origin":
 			{
-				"X": 3780,
-				"Y": 1260
+				"X": 298684.26000000001,
+				"Y": 99561.419999999998
 			},
 			"NumQuads":
 			{
@@ -509,7 +489,7 @@
 				{
 					"Path": "weight_c22_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
 			]
 		},
@@ -517,8 +497,8 @@
 			"ComponentIndex": 23,
 			"Origin":
 			{
-				"X": 4410,
-				"Y": 1260
+				"X": 348464.96999999997,
+				"Y": 99561.419999999998
 			},
 			"NumQuads":
 			{
@@ -529,7 +509,7 @@
 				{
 					"Path": "weight_c23_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -538,7 +518,7 @@
 			"Origin":
 			{
 				"X": 0,
-				"Y": 1890
+				"Y": 149342.13
 			},
 			"NumQuads":
 			{
@@ -549,7 +529,7 @@
 				{
 					"Path": "weight_c24_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ 0, -1, -1, -1 ]
 				}
 			]
 		},
@@ -557,8 +537,8 @@
 			"ComponentIndex": 25,
 			"Origin":
 			{
-				"X": 630,
-				"Y": 1890
+				"X": 49780.709999999999,
+				"Y": 149342.13
 			},
 			"NumQuads":
 			{
@@ -569,7 +549,7 @@
 				{
 					"Path": "weight_c25_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ -1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -577,8 +557,8 @@
 			"ComponentIndex": 26,
 			"Origin":
 			{
-				"X": 1260,
-				"Y": 1890
+				"X": 99561.419999999998,
+				"Y": 149342.13
 			},
 			"NumQuads":
 			{
@@ -589,7 +569,7 @@
 				{
 					"Path": "weight_c26_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 2, -1, -1, -1 ]
+					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
 			]
 		},
@@ -597,8 +577,8 @@
 			"ComponentIndex": 27,
 			"Origin":
 			{
-				"X": 1890,
-				"Y": 1890
+				"X": 149342.13,
+				"Y": 149342.13
 			},
 			"NumQuads":
 			{
@@ -609,7 +589,7 @@
 				{
 					"Path": "weight_c27_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, 2, -1, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -617,8 +597,8 @@
 			"ComponentIndex": 28,
 			"Origin":
 			{
-				"X": 2520,
-				"Y": 1890
+				"X": 199122.84,
+				"Y": 149342.13
 			},
 			"NumQuads":
 			{
@@ -629,7 +609,7 @@
 				{
 					"Path": "weight_c28_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ 0, -1, -1, -1 ]
 				}
 			]
 		},
@@ -637,8 +617,8 @@
 			"ComponentIndex": 29,
 			"Origin":
 			{
-				"X": 3150,
-				"Y": 1890
+				"X": 248903.54999999999,
+				"Y": 149342.13
 			},
 			"NumQuads":
 			{
@@ -649,7 +629,7 @@
 				{
 					"Path": "weight_c29_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ -1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -657,8 +637,8 @@
 			"ComponentIndex": 30,
 			"Origin":
 			{
-				"X": 3780,
-				"Y": 1890
+				"X": 298684.26000000001,
+				"Y": 149342.13
 			},
 			"NumQuads":
 			{
@@ -669,7 +649,7 @@
 				{
 					"Path": "weight_c30_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
 			]
 		},
@@ -677,8 +657,8 @@
 			"ComponentIndex": 31,
 			"Origin":
 			{
-				"X": 4410,
-				"Y": 1890
+				"X": 348464.96999999997,
+				"Y": 149342.13
 			},
 			"NumQuads":
 			{
@@ -689,7 +669,7 @@
 				{
 					"Path": "weight_c31_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 0, 1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -698,7 +678,7 @@
 			"Origin":
 			{
 				"X": 0,
-				"Y": 2520
+				"Y": 199122.84
 			},
 			"NumQuads":
 			{
@@ -709,7 +689,7 @@
 				{
 					"Path": "weight_c32_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ 0, -1, -1, -1 ]
 				}
 			]
 		},
@@ -717,8 +697,8 @@
 			"ComponentIndex": 33,
 			"Origin":
 			{
-				"X": 630,
-				"Y": 2520
+				"X": 49780.709999999999,
+				"Y": 199122.84
 			},
 			"NumQuads":
 			{
@@ -729,7 +709,7 @@
 				{
 					"Path": "weight_c33_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ -1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -737,8 +717,8 @@
 			"ComponentIndex": 34,
 			"Origin":
 			{
-				"X": 1260,
-				"Y": 2520
+				"X": 99561.419999999998,
+				"Y": 199122.84
 			},
 			"NumQuads":
 			{
@@ -749,7 +729,7 @@
 				{
 					"Path": "weight_c34_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
 			]
 		},
@@ -757,8 +737,8 @@
 			"ComponentIndex": 35,
 			"Origin":
 			{
-				"X": 1890,
-				"Y": 2520
+				"X": 149342.13,
+				"Y": 199122.84
 			},
 			"NumQuads":
 			{
@@ -769,7 +749,7 @@
 				{
 					"Path": "weight_c35_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, 2, -1, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -777,8 +757,8 @@
 			"ComponentIndex": 36,
 			"Origin":
 			{
-				"X": 2520,
-				"Y": 2520
+				"X": 199122.84,
+				"Y": 199122.84
 			},
 			"NumQuads":
 			{
@@ -789,7 +769,7 @@
 				{
 					"Path": "weight_c36_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ 0, -1, -1, -1 ]
 				}
 			]
 		},
@@ -797,8 +777,8 @@
 			"ComponentIndex": 37,
 			"Origin":
 			{
-				"X": 3150,
-				"Y": 2520
+				"X": 248903.54999999999,
+				"Y": 199122.84
 			},
 			"NumQuads":
 			{
@@ -809,7 +789,7 @@
 				{
 					"Path": "weight_c37_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ -1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -817,8 +797,8 @@
 			"ComponentIndex": 38,
 			"Origin":
 			{
-				"X": 3780,
-				"Y": 2520
+				"X": 298684.26000000001,
+				"Y": 199122.84
 			},
 			"NumQuads":
 			{
@@ -829,7 +809,7 @@
 				{
 					"Path": "weight_c38_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
 			]
 		},
@@ -837,8 +817,8 @@
 			"ComponentIndex": 39,
 			"Origin":
 			{
-				"X": 4410,
-				"Y": 2520
+				"X": 348464.96999999997,
+				"Y": 199122.84
 			},
 			"NumQuads":
 			{
@@ -849,7 +829,7 @@
 				{
 					"Path": "weight_c39_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 0, 1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -858,7 +838,7 @@
 			"Origin":
 			{
 				"X": 0,
-				"Y": 3150
+				"Y": 248903.54999999999
 			},
 			"NumQuads":
 			{
@@ -869,7 +849,7 @@
 				{
 					"Path": "weight_c40_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ 0, -1, -1, -1 ]
 				}
 			]
 		},
@@ -877,8 +857,8 @@
 			"ComponentIndex": 41,
 			"Origin":
 			{
-				"X": 630,
-				"Y": 3150
+				"X": 49780.709999999999,
+				"Y": 248903.54999999999
 			},
 			"NumQuads":
 			{
@@ -889,7 +869,7 @@
 				{
 					"Path": "weight_c41_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, 2, -1, -1 ]
+					"LayerIndex": [ -1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -897,8 +877,8 @@
 			"ComponentIndex": 42,
 			"Origin":
 			{
-				"X": 1260,
-				"Y": 3150
+				"X": 99561.419999999998,
+				"Y": 248903.54999999999
 			},
 			"NumQuads":
 			{
@@ -909,7 +889,7 @@
 				{
 					"Path": "weight_c42_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
 			]
 		},
@@ -917,8 +897,8 @@
 			"ComponentIndex": 43,
 			"Origin":
 			{
-				"X": 1890,
-				"Y": 3150
+				"X": 149342.13,
+				"Y": 248903.54999999999
 			},
 			"NumQuads":
 			{
@@ -929,7 +909,7 @@
 				{
 					"Path": "weight_c43_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -937,8 +917,8 @@
 			"ComponentIndex": 44,
 			"Origin":
 			{
-				"X": 2520,
-				"Y": 3150
+				"X": 199122.84,
+				"Y": 248903.54999999999
 			},
 			"NumQuads":
 			{
@@ -949,7 +929,7 @@
 				{
 					"Path": "weight_c44_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, 2, -1, -1 ]
+					"LayerIndex": [ 0, -1, -1, -1 ]
 				}
 			]
 		},
@@ -957,8 +937,8 @@
 			"ComponentIndex": 45,
 			"Origin":
 			{
-				"X": 3150,
-				"Y": 3150
+				"X": 248903.54999999999,
+				"Y": 248903.54999999999
 			},
 			"NumQuads":
 			{
@@ -969,7 +949,7 @@
 				{
 					"Path": "weight_c45_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ -1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -977,8 +957,8 @@
 			"ComponentIndex": 46,
 			"Origin":
 			{
-				"X": 3780,
-				"Y": 3150
+				"X": 298684.26000000001,
+				"Y": 248903.54999999999
 			},
 			"NumQuads":
 			{
@@ -989,7 +969,7 @@
 				{
 					"Path": "weight_c46_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 1, 2 ]
+					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
 			]
 		},
@@ -997,8 +977,8 @@
 			"ComponentIndex": 47,
 			"Origin":
 			{
-				"X": 4410,
-				"Y": 3150
+				"X": 348464.96999999997,
+				"Y": 248903.54999999999
 			},
 			"NumQuads":
 			{
@@ -1009,7 +989,7 @@
 				{
 					"Path": "weight_c47_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -1018,7 +998,7 @@
 			"Origin":
 			{
 				"X": 0,
-				"Y": 3780
+				"Y": 298684.26000000001
 			},
 			"NumQuads":
 			{
@@ -1029,7 +1009,7 @@
 				{
 					"Path": "weight_c48_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, -1, -1, -1 ]
+					"LayerIndex": [ 0, -1, -1, -1 ]
 				}
 			]
 		},
@@ -1037,8 +1017,8 @@
 			"ComponentIndex": 49,
 			"Origin":
 			{
-				"X": 630,
-				"Y": 3780
+				"X": 49780.709999999999,
+				"Y": 298684.26000000001
 			},
 			"NumQuads":
 			{
@@ -1049,7 +1029,7 @@
 				{
 					"Path": "weight_c49_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, 1, 2, -1 ]
+					"LayerIndex": [ -1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -1057,8 +1037,8 @@
 			"ComponentIndex": 50,
 			"Origin":
 			{
-				"X": 1260,
-				"Y": 3780
+				"X": 99561.419999999998,
+				"Y": 298684.26000000001
 			},
 			"NumQuads":
 			{
@@ -1069,7 +1049,7 @@
 				{
 					"Path": "weight_c50_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
 			]
 		},
@@ -1077,8 +1057,8 @@
 			"ComponentIndex": 51,
 			"Origin":
 			{
-				"X": 1890,
-				"Y": 3780
+				"X": 149342.13,
+				"Y": 298684.26000000001
 			},
 			"NumQuads":
 			{
@@ -1089,7 +1069,7 @@
 				{
 					"Path": "weight_c51_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -1097,8 +1077,8 @@
 			"ComponentIndex": 52,
 			"Origin":
 			{
-				"X": 2520,
-				"Y": 3780
+				"X": 199122.84,
+				"Y": 298684.26000000001
 			},
 			"NumQuads":
 			{
@@ -1109,7 +1089,7 @@
 				{
 					"Path": "weight_c52_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ 0, -1, -1, -1 ]
 				}
 			]
 		},
@@ -1117,8 +1097,8 @@
 			"ComponentIndex": 53,
 			"Origin":
 			{
-				"X": 3150,
-				"Y": 3780
+				"X": 248903.54999999999,
+				"Y": 298684.26000000001
 			},
 			"NumQuads":
 			{
@@ -1129,7 +1109,7 @@
 				{
 					"Path": "weight_c53_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 2, -1 ]
+					"LayerIndex": [ -1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -1137,8 +1117,8 @@
 			"ComponentIndex": 54,
 			"Origin":
 			{
-				"X": 3780,
-				"Y": 3780
+				"X": 298684.26000000001,
+				"Y": 298684.26000000001
 			},
 			"NumQuads":
 			{
@@ -1149,7 +1129,7 @@
 				{
 					"Path": "weight_c54_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, 2, -1, -1 ]
+					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
 			]
 		},
@@ -1157,8 +1137,8 @@
 			"ComponentIndex": 55,
 			"Origin":
 			{
-				"X": 4410,
-				"Y": 3780
+				"X": 348464.96999999997,
+				"Y": 298684.26000000001
 			},
 			"NumQuads":
 			{
@@ -1169,7 +1149,7 @@
 				{
 					"Path": "weight_c55_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -1178,7 +1158,7 @@
 			"Origin":
 			{
 				"X": 0,
-				"Y": 4410
+				"Y": 348464.96999999997
 			},
 			"NumQuads":
 			{
@@ -1189,7 +1169,7 @@
 				{
 					"Path": "weight_c56_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ 0, -1, -1, -1 ]
 				}
 			]
 		},
@@ -1197,8 +1177,8 @@
 			"ComponentIndex": 57,
 			"Origin":
 			{
-				"X": 630,
-				"Y": 4410
+				"X": 49780.709999999999,
+				"Y": 348464.96999999997
 			},
 			"NumQuads":
 			{
@@ -1209,7 +1189,7 @@
 				{
 					"Path": "weight_c57_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ -1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -1217,8 +1197,8 @@
 			"ComponentIndex": 58,
 			"Origin":
 			{
-				"X": 1260,
-				"Y": 4410
+				"X": 99561.419999999998,
+				"Y": 348464.96999999997
 			},
 			"NumQuads":
 			{
@@ -1229,7 +1209,7 @@
 				{
 					"Path": "weight_c58_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, -1, -1 ]
+					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
 			]
 		},
@@ -1237,8 +1217,8 @@
 			"ComponentIndex": 59,
 			"Origin":
 			{
-				"X": 1890,
-				"Y": 4410
+				"X": 149342.13,
+				"Y": 348464.96999999997
 			},
 			"NumQuads":
 			{
@@ -1249,7 +1229,7 @@
 				{
 					"Path": "weight_c59_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -1257,8 +1237,8 @@
 			"ComponentIndex": 60,
 			"Origin":
 			{
-				"X": 2520,
-				"Y": 4410
+				"X": 199122.84,
+				"Y": 348464.96999999997
 			},
 			"NumQuads":
 			{
@@ -1269,7 +1249,7 @@
 				{
 					"Path": "weight_c60_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ 0, -1, -1, -1 ]
 				}
 			]
 		},
@@ -1277,8 +1257,8 @@
 			"ComponentIndex": 61,
 			"Origin":
 			{
-				"X": 3150,
-				"Y": 4410
+				"X": 248903.54999999999,
+				"Y": 348464.96999999997
 			},
 			"NumQuads":
 			{
@@ -1289,7 +1269,7 @@
 				{
 					"Path": "weight_c61_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ -1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -1297,8 +1277,8 @@
 			"ComponentIndex": 62,
 			"Origin":
 			{
-				"X": 3780,
-				"Y": 4410
+				"X": 298684.26000000001,
+				"Y": 348464.96999999997
 			},
 			"NumQuads":
 			{
@@ -1309,7 +1289,7 @@
 				{
 					"Path": "weight_c62_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
 			]
 		},
@@ -1317,8 +1297,8 @@
 			"ComponentIndex": 63,
 			"Origin":
 			{
-				"X": 4410,
-				"Y": 4410
+				"X": 348464.96999999997,
+				"Y": 348464.96999999997
 			},
 			"NumQuads":
 			{
@@ -1329,7 +1309,7 @@
 				{
 					"Path": "weight_c63_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, 1, 2, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		}
