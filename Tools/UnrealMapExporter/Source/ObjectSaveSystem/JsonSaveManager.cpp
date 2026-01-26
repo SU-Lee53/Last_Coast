@@ -23,6 +23,9 @@
 #include "ImageUtils.h"
 #include "Exporters/Exporter.h"
 #include "AssetExportTask.h"
+#include "IImageWrapper.h"
+#include "IImageWrapperModule.h"
+#include "Modules/ModuleManager.h"
 
 // Material 관련 헤더
 #include "Materials/MaterialInterface.h"
@@ -372,7 +375,11 @@ bool UJsonSaveManager::ExportLandscapeHeightmap(ALandscape* Landscape, const FSt
     return bSuccess;
 }
 
-bool UJsonSaveManager::ExportHeightmapAsPNG(const TArray<uint16>& HeightData, int32 Width, int32 Height, const FString& FileName)
+bool UJsonSaveManager::ExportHeightmapAsPNG(
+    const TArray<uint16>& HeightData,
+    int32 Width,
+    int32 Height,
+    const FString& FileName)
 {
     FString Directory = FPaths::ProjectSavedDir() + TEXT("../ExportedHeightmaps/");
     FString FullPath = Directory + FileName + TEXT(".png");
@@ -391,10 +398,10 @@ bool UJsonSaveManager::ExportHeightmapAsPNG(const TArray<uint16>& HeightData, in
     uint16 MaxHeight = 0;
 
     // Min/Max 찾기
-    for (uint16 Height : HeightData)
+    for (uint16 HeightValue : HeightData)
     {
-        MinHeight = FMath::Min(MinHeight, Height);
-        MaxHeight = FMath::Max(MaxHeight, Height);
+        MinHeight = FMath::Min(MinHeight, HeightValue);
+        MaxHeight = FMath::Max(MaxHeight, HeightValue);
     }
 
     UE_LOG(LogTemp, Log, TEXT("Height range: %d - %d"), MinHeight, MaxHeight);
@@ -404,7 +411,6 @@ bool UJsonSaveManager::ExportHeightmapAsPNG(const TArray<uint16>& HeightData, in
     {
         uint16 HeightValue = HeightData[i];
 
-        // 정규화: 0-65535 → 0-255
         uint8 GrayValue = 0;
         if (MaxHeight > MinHeight)
         {
@@ -416,18 +422,43 @@ bool UJsonSaveManager::ExportHeightmapAsPNG(const TArray<uint16>& HeightData, in
         ColorData.Add(Color);
     }
 
-    // PNG 저장
-    TArray<uint8> CompressedData;
-    FImageUtils::CompressImageArray(Width, Height, ColorData, CompressedData);
+    // ✅ IImageWrapper를 사용한 무손실 PNG 저장
+    IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+    TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
 
-    bool bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *FullPath);
-
-    if (bSuccess)
+    if (!ImageWrapper.IsValid())
     {
-        UE_LOG(LogTemp, Log, TEXT("Heightmap PNG saved: %s"), *FullPath);
+        UE_LOG(LogTemp, Error, TEXT("Failed to create image wrapper"));
+        return false;
     }
 
-    return bSuccess;
+    // Raw RGBA 데이터 준비
+    TArray<uint8> RawRGBA;
+    RawRGBA.Reserve(Width * Height * 4);
+
+    for (const FColor& Color : ColorData)
+    {
+        RawRGBA.Add(Color.R);
+        RawRGBA.Add(Color.G);
+        RawRGBA.Add(Color.B);
+        RawRGBA.Add(Color.A);
+    }
+
+    if (ImageWrapper->SetRaw(RawRGBA.GetData(), RawRGBA.Num(), Width, Height, ERGBFormat::RGBA, 8))
+    {
+        const TArray64<uint8>& CompressedData = ImageWrapper->GetCompressed(100);
+
+        bool bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *FullPath);
+
+        if (bSuccess)
+        {
+            UE_LOG(LogTemp, Log, TEXT("✅ Lossless heightmap PNG saved: %s"), *FullPath);
+        }
+
+        return bSuccess;
+    }
+
+    return false;
 }
 #endif
 
@@ -779,8 +810,7 @@ bool UJsonSaveManager::ExportWeightMapTextureToPNG(
     }
 
     FString Directory = FPaths::ProjectSavedDir() + TEXT("../ExportedWeightmaps/");
-    FString FullPath = Directory + FileName + TEXT(".png"); // ✅ 추가
-
+    FString FullPath = Directory + FileName + TEXT(".png");
 
     IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
     if (!PlatformFile.DirectoryExists(*Directory))
@@ -793,31 +823,6 @@ bool UJsonSaveManager::ExportWeightMapTextureToPNG(
 
     UE_LOG(LogTemp, Warning, TEXT("===== Exporting %s ====="), *FileName);
     UE_LOG(LogTemp, Warning, TEXT("WeightmapTextureIndex: %d"), WeightmapTextureIndex);
-
-    // 이 텍스처 인덱스를 사용하는 레이어들 출력
-    int32 LayerCount = 0;
-    for (const FWeightmapLayerAllocationInfo& AllocInfo : AllocInfos)
-    {
-        if (AllocInfo.WeightmapTextureIndex == WeightmapTextureIndex && AllocInfo.LayerInfo)
-        {
-            FString LayerName = AllocInfo.LayerInfo->LayerName.ToString();
-
-            // Visibility 제외
-            if (LayerName.Equals(TEXT("Visibility"), ESearchCase::IgnoreCase) ||
-                AllocInfo.LayerInfo->bNoWeightBlend)
-            {
-                continue;
-            }
-
-            LayerCount++;
-            UE_LOG(LogTemp, Warning, TEXT("  Layer %d: %s (Channel %d)"),
-                LayerCount,
-                *LayerName,
-                AllocInfo.WeightmapTextureChannel);
-        }
-    }
-
-    UE_LOG(LogTemp, Warning, TEXT("Total layers in this texture: %d"), LayerCount);
 
     // Weightmap 텍스처 가져오기
     const TArray<UTexture2D*>& WeightmapTextures = Component->GetWeightmapTextures();
@@ -843,8 +848,6 @@ bool UJsonSaveManager::ExportWeightMapTextureToPNG(
     int32 TextureWidth = WeightmapTexture->Source.GetSizeX();
     int32 TextureHeight = WeightmapTexture->Source.GetSizeY();
 
-    UE_LOG(LogTemp, Warning, TEXT("Texture size: %dx%d"), TextureWidth, TextureHeight);
-
     // Source 데이터 추출
     TArray64<uint8> RawData;
     if (!WeightmapTexture->Source.GetMipData(RawData, 0))
@@ -859,54 +862,35 @@ bool UJsonSaveManager::ExportWeightMapTextureToPNG(
         return false;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("Raw data size: %lld bytes"), RawData.Num());
-
-    // ✅ 포맷 확인
+    // 포맷 확인
     ETextureSourceFormat SourceFormat = WeightmapTexture->Source.GetFormat();
     UE_LOG(LogTemp, Warning, TEXT("Source format: %d"), (int32)SourceFormat);
 
-    // ✅ 포맷에 따라 BytesPerPixel 결정
-    int32 BytesPerPixel = 4; // 기본값
+    // 포맷에 따라 BytesPerPixel 결정
+    int32 BytesPerPixel = 4;
     bool bIsBGRA = false;
-
-    // ETextureSourceFormat enum 값들:
-    // TSF_G8 = 0
-    // TSF_BGRA8 = 1
-    // TSF_BGRE8 = 2
-    // TSF_RGBA16 = 3
-    // TSF_RGBA16F = 4
-    // ...
 
     if (SourceFormat == ETextureSourceFormat::TSF_G8)
     {
         BytesPerPixel = 1;
-        UE_LOG(LogTemp, Warning, TEXT("Format is G8 (grayscale)"));
     }
     else if (SourceFormat == ETextureSourceFormat::TSF_BGRA8)
     {
         BytesPerPixel = 4;
         bIsBGRA = true;
-        UE_LOG(LogTemp, Warning, TEXT("Format is BGRA8"));
     }
     else if (SourceFormat == ETextureSourceFormat::TSF_BGRE8)
     {
         BytesPerPixel = 4;
         bIsBGRA = true;
-        UE_LOG(LogTemp, Warning, TEXT("Format is BGRE8"));
     }
     else if (SourceFormat == ETextureSourceFormat::TSF_RGBA16)
     {
         BytesPerPixel = 8;
-        UE_LOG(LogTemp, Warning, TEXT("Format is RGBA16"));
-    }
-    else
-    {
-        // 기타 포맷은 4바이트로 가정
-        UE_LOG(LogTemp, Warning, TEXT("Unknown format, assuming 4 bytes per pixel"));
     }
 
-    // ✅ 채널별로 데이터를 분리해서 저장
-    TMap<int32, TArray<uint8>> ChannelData; // Channel → Weight 배열
+    // 채널별로 데이터를 분리해서 저장
+    TMap<int32, TArray<uint8>> ChannelData;
 
     for (const FWeightmapLayerAllocationInfo& AllocInfo : AllocInfos)
     {
@@ -925,7 +909,7 @@ bool UJsonSaveManager::ExportWeightMapTextureToPNG(
             TArray<uint8> Weights;
             Weights.Reserve(TextureWidth * TextureHeight);
 
-            // ✅ 해당 채널의 데이터만 추출
+            // 해당 채널의 데이터만 추출
             for (int32 Y = 0; Y < TextureHeight; Y++)
             {
                 for (int32 X = 0; X < TextureWidth; X++)
@@ -935,7 +919,6 @@ bool UJsonSaveManager::ExportWeightMapTextureToPNG(
 
                     if (BytesPerPixel == 1)
                     {
-                        // Grayscale: 모든 채널이 같은 값
                         if (PixelIndex < RawData.Num())
                         {
                             Weight = RawData[PixelIndex];
@@ -943,30 +926,24 @@ bool UJsonSaveManager::ExportWeightMapTextureToPNG(
                     }
                     else if (BytesPerPixel == 4)
                     {
-                        // BGRA 또는 RGBA
                         if (PixelIndex + 3 < RawData.Num())
                         {
                             if (bIsBGRA)
                             {
-                                // BGRA 순서: B=0, G=1, R=2, A=3
-                                // Channel 매핑: R(0)→2, G(1)→1, B(2)→0, A(3)→3
                                 int32 BGRAMap[4] = { 2, 1, 0, 3 };
                                 Weight = RawData[PixelIndex + BGRAMap[Channel]];
                             }
                             else
                             {
-                                // RGBA 순서
                                 Weight = RawData[PixelIndex + Channel];
                             }
                         }
                     }
                     else if (BytesPerPixel == 8)
                     {
-                        // RGBA16: 각 채널이 2바이트, 상위 바이트 사용
                         int32 ChannelOffset = Channel * 2;
                         if (PixelIndex + ChannelOffset + 1 < RawData.Num())
                         {
-                            // 16비트를 8비트로 변환 (상위 바이트 사용)
                             Weight = RawData[PixelIndex + ChannelOffset + 1];
                         }
                     }
@@ -976,12 +953,10 @@ bool UJsonSaveManager::ExportWeightMapTextureToPNG(
             }
 
             ChannelData.Add(Channel, Weights);
-            UE_LOG(LogTemp, Warning, TEXT("  Extracted %d weights for channel %d"),
-                Weights.Num(), Channel);
         }
     }
 
-    // ✅ ColorData 생성
+    // ColorData 생성
     TArray<FColor> ColorData;
     ColorData.Reserve(ComponentSizeVerts * ComponentSizeVerts);
 
@@ -992,7 +967,6 @@ bool UJsonSaveManager::ExportWeightMapTextureToPNG(
             int32 Index = Y * TextureWidth + X;
             FColor Color(0, 0, 0, 0);
 
-            // 각 채널 데이터 할당
             if (ChannelData.Contains(0) && Index < ChannelData[0].Num())
             {
                 Color.R = ChannelData[0][Index];
@@ -1010,10 +984,10 @@ bool UJsonSaveManager::ExportWeightMapTextureToPNG(
                 Color.A = ChannelData[3][Index];
             }
 
-            if (X < 5 && Y == 0)
+            if (ColorData.Num() < 5)
             {
-                UE_LOG(LogTemp, Warning, TEXT("  Pixel[%d,0]: RGBA=(%d,%d,%d,%d) Sum=%d"),
-                    X, Color.R, Color.G, Color.B, Color.A,
+                UE_LOG(LogTemp, Warning, TEXT("  Pixel[%d]: RGBA=(%d,%d,%d,%d) Sum=%d"),
+                    ColorData.Num(), Color.R, Color.G, Color.B, Color.A,
                     Color.R + Color.G + Color.B + Color.A);
             }
 
@@ -1021,23 +995,49 @@ bool UJsonSaveManager::ExportWeightMapTextureToPNG(
         }
     }
 
-    // PNG 저장
-    TArray<uint8> CompressedData;
-    FImageUtils::CompressImageArray(ComponentSizeVerts, ComponentSizeVerts, ColorData, CompressedData);
+    // ✅ IImageWrapper를 사용한 무손실 PNG 저장
+    IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+    TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
 
-    bool bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *FullPath);
-
-    if (bSuccess)
+    if (!ImageWrapper.IsValid())
     {
-        UE_LOG(LogTemp, Log, TEXT("✅ Weight map exported: %s (%dx%d)"),
-            *FullPath, ComponentSizeVerts, ComponentSizeVerts);
-    }
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("Failed to save weight map: %s"), *FullPath);
+        UE_LOG(LogTemp, Error, TEXT("Failed to create image wrapper"));
+        return false;
     }
 
-    return bSuccess;
+    // Raw RGBA 데이터 준비
+    TArray<uint8> RawRGBA;
+    RawRGBA.Reserve(ComponentSizeVerts * ComponentSizeVerts * 4);
+
+    for (const FColor& Color : ColorData)
+    {
+        RawRGBA.Add(Color.R);
+        RawRGBA.Add(Color.G);
+        RawRGBA.Add(Color.B);
+        RawRGBA.Add(Color.A);
+    }
+
+    if (ImageWrapper->SetRaw(RawRGBA.GetData(), RawRGBA.Num(),
+        ComponentSizeVerts, ComponentSizeVerts, ERGBFormat::RGBA, 8))
+    {
+        const TArray64<uint8>& CompressedData = ImageWrapper->GetCompressed(100);
+
+        bool bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *FullPath);
+
+        if (bSuccess)
+        {
+            UE_LOG(LogTemp, Log, TEXT("✅ Lossless weight map exported: %s (%dx%d)"),
+                *FullPath, ComponentSizeVerts, ComponentSizeVerts);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("Failed to save weight map: %s"), *FullPath);
+        }
+
+        return bSuccess;
+    }
+
+    return false;
 }
 
 TMap<FName, FExportedLayerTextures> UJsonSaveManager::ExportLayerTextures(
@@ -1298,23 +1298,54 @@ bool UJsonSaveManager::ExportTextureToPNG(UTexture2D* Texture, const FString& Fi
         break;
     }
 
-    // PNG로 압축
-    TArray<uint8> CompressedData;
-    FImageUtils::CompressImageArray(Width, Height, ColorData, CompressedData);
+    // ✅ IImageWrapper를 사용한 무손실 PNG 저장
+    IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+    TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
 
-    // 파일 저장
-    bool bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *FilePath);
-
-    if (bSuccess)
+    if (!ImageWrapper.IsValid())
     {
-        UE_LOG(LogTemp, Log, TEXT("✅ Texture exported: %s"), *FilePath);
+        UE_LOG(LogTemp, Error, TEXT("Failed to create image wrapper"));
+        return false;
+    }
+
+    // Raw RGBA 데이터로 설정 (8비트)
+    TArray<uint8> RawRGBA;
+    RawRGBA.Reserve(Width * Height * 4);
+
+    for (const FColor& Color : ColorData)
+    {
+        RawRGBA.Add(Color.R);
+        RawRGBA.Add(Color.G);
+        RawRGBA.Add(Color.B);
+        RawRGBA.Add(Color.A);
+    }
+
+    // PNG 설정
+    if (ImageWrapper->SetRaw(RawRGBA.GetData(), RawRGBA.Num(), Width, Height, ERGBFormat::RGBA, 8))
+    {
+        // PNG 압축 (100 = 최고 품질, 무손실)
+        const TArray64<uint8>& CompressedData = ImageWrapper->GetCompressed(100);
+
+        // 파일 저장
+        bool bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *FilePath);
+
+        if (bSuccess)
+        {
+            UE_LOG(LogTemp, Log, TEXT("✅ Lossless PNG exported: %s (%dx%d, %lld bytes)"),
+                *FilePath, Width, Height, CompressedData.Num());
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("Failed to save PNG file: %s"), *FilePath);
+        }
+
+        return bSuccess;
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("Failed to save texture: %s"), *FilePath);
+        UE_LOG(LogTemp, Error, TEXT("Failed to set raw data for PNG encoding"));
+        return false;
     }
-
-    return bSuccess;
 }
 
 void UJsonSaveManager::CollectTexturesFromExpression(
