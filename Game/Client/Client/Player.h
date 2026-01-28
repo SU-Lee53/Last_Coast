@@ -1,9 +1,9 @@
 ﻿#pragma once
-#include "GameObject.h"
+#include "DynamicObject.h"
 
 class Camera;
 
-class Player : public GameObject {
+class Player : public DynamicObject {
 public:
 	Player();
 	virtual ~Player();

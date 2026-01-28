@@ -34,6 +34,8 @@ public:
 	const TerrainIndexRange& GetIndexRange() const { return m_IndexRange; };
 	std::shared_ptr<Texture> GetWeightMap() const { return m_pWeightMap; }
 
+	Vector2 GetComponentSize() const { return Vector2{ (m_xmi2NumQuadsXZ.x) * m_v3TerrainScale.x, (m_xmi2NumQuadsXZ.y) * m_v3TerrainScale.z }; }
+
 private:
 	Vector2 m_v2ComponentOriginXZ = Vector2{ 0.f, 0.f };
 	XMINT2 m_xmi2NumQuadsXZ = XMINT2{ 0,0 };

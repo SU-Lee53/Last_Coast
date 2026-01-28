@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "ThirdPersonPlayer.h"
 #include "ThirdPersonCamera.h"
+#include "NodeObject.h"
 
 ThirdPersonPlayer::ThirdPersonPlayer()
 {
@@ -22,7 +23,7 @@ void ThirdPersonPlayer::Initialize()
 		m_pCamera->SetOwner(shared_from_this());
 
 		// Model
-		auto pModel = MODEL->Get("Ch33_nonPBR")->CopyObject<GameObject>();
+		auto pModel = MODEL->Get("Ch33_nonPBR")->CopyObject<NodeObject>();
 		pModel->GetTransform()->Rotate(Vector3::Up, -90.f);
 		SetChild(pModel);
 

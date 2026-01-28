@@ -20,8 +20,23 @@
 */
 
 struct CollisionResult {
-	std::shared_ptr<GameObject> pSelf;
-	std::shared_ptr<GameObject> pOther;
+	std::shared_ptr<IGameObject> pSelf;
+	std::shared_ptr<IGameObject> pOther;
+
+	bool operator==(const CollisionResult& other) const noexcept {
+		return (pSelf == other.pSelf) && (pOther == other.pOther);
+	}
+};
+
+template<>
+struct std::hash<CollisionResult> {
+	size_t operator()(const CollisionResult& result) const {
+		// hash combine
+		size_t h1 = std::hash<std::shared_ptr<IGameObject>>{}(result.pSelf);
+		size_t h2 = std::hash<std::shared_ptr<IGameObject>>{}(result.pOther);
+
+		return h1 ^ (h2 + 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
+	}
 };
 
 class CollisionManager {
@@ -29,19 +44,25 @@ class CollisionManager {
 	DECLARE_SINGLE(CollisionManager);
 
 public:
-	template<typename T> requires std::derived_from<T, GameObject>
-	void RegisterObject(std::shared_ptr<GameObject> pObj);
+	template<typename T> requires std::derived_from<T, ICollider>
+	void RegisterCollider(std::shared_ptr<T> pObj);
 	void CheckCollision();
 
 private:
-	std::vector<std::shared_ptr<GameObject>> m_pRegisteredStaticObjects;
-	std::vector<std::shared_ptr<GameObject>> m_pRegisteredDynamicObjects;
+	std::vector<std::shared_ptr<ICollider>> m_pRegisteredStatic;
+	std::vector<std::shared_ptr<ICollider>> m_pRegisteredDynamic;
 
+	std::unordered_set<CollisionResult> m_ResultsInCollision;
 
 };
 
-template<typename T> requires std::derived_from<T, GameObject>
-inline void CollisionManager::RegisterObject(std::shared_ptr<GameObject> pObj)
+template<typename T> requires std::derived_from<T, ICollider>
+inline void CollisionManager::RegisterCollider(std::shared_ptr<T> pCollider)
 {
-
+	if constexpr (std::same_as<T, StaticCollider>) {
+		m_pRegisteredStatic.push_back(pCollider);
+	}
+	else {
+		m_pRegisteredDynamic.push_back(pCollider);
+	}
 }

@@ -7,7 +7,7 @@ AnimationStateMachine::AnimationStateMachine()
 	m_OutputPose.reserve(MAX_BONE_TRANSFORMS);
 }
 
-void AnimationStateMachine::Initialize(std::shared_ptr<GameObject> pOwner, float fInitialTime)
+void AnimationStateMachine::Initialize(std::shared_ptr<IGameObject> pOwner, float fInitialTime)
 {
 	m_wpOwner = pOwner;
 	m_fTotalAnimationTime = fInitialTime;
@@ -38,7 +38,7 @@ void AnimationStateMachine::Update()
 		m_fLastAnimationChangedTime = m_fTotalAnimationTime;
 	}
 
-	const std::vector<Bone>& ownerBones = m_wpOwner.lock()->GetBones();
+	const std::vector<Bone>& ownerBones = m_wpOwner.lock()->GetComponent<Skeleton>()->GetBones();
 	int nBones = ownerBones.size();
 	auto pAnimation = m_pCurrentState->pAnimationToPlay;
 
@@ -107,7 +107,7 @@ void PlayerAnimationStateMachine::InitializeStateGraph()
 
 }
 
-bool PlayerAnimationStateMachine::IdleCallback(std::shared_ptr<GameObject> pObj)
+bool PlayerAnimationStateMachine::IdleCallback(std::shared_ptr<IGameObject> pObj)
 {
 	// TODO : 구현
 	//return !INPUT->GetButtonPressed(VK_UP) && !INPUT->GetButtonPressed(VK_LSHIFT);
@@ -116,7 +116,7 @@ bool PlayerAnimationStateMachine::IdleCallback(std::shared_ptr<GameObject> pObj)
 	return pPlayer->GetMoveSpeed() < std::numeric_limits<float>::epsilon();
 }
 
-bool PlayerAnimationStateMachine::WalkCallback(std::shared_ptr<GameObject> pObj)
+bool PlayerAnimationStateMachine::WalkCallback(std::shared_ptr<IGameObject> pObj)
 {
 	// TODO : 구현
 	//return INPUT->GetButtonPressed(VK_UP) && !INPUT->GetButtonPressed(VK_LSHIFT);
@@ -125,7 +125,7 @@ bool PlayerAnimationStateMachine::WalkCallback(std::shared_ptr<GameObject> pObj)
 	return pPlayer->GetMoveSpeed() > std::numeric_limits<float>::epsilon() && !pPlayer->IsRunning();
 }
 
-bool PlayerAnimationStateMachine::RunCallback(std::shared_ptr<GameObject> pObj)
+bool PlayerAnimationStateMachine::RunCallback(std::shared_ptr<IGameObject> pObj)
 {
 	// TODO : 구현
 	// return INPUT->GetButtonPressed(VK_UP) && INPUT->GetButtonPressed(VK_LSHIFT);

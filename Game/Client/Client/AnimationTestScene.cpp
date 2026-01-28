@@ -6,27 +6,17 @@
 
 void AnimationTestScene::BuildObjects()
 {
-	//m_pPlayer = std::make_shared<DebugPlayer>();
-	//
-	//std::shared_ptr<GameObject> pGameObject1 = MODEL->Get("Ch33_nonPBR");
-	//std::shared_ptr<AnimationController> pAnimationCtrl = std::make_shared<PlayerAnimationController>();
-	//pGameObject1->SetAnimationController(pAnimationCtrl);
-	//m_pGameObjects.push_back(pGameObject1);
+	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	LoadFromFiles("TEST");
 
-	//std::shared_ptr<GameObject> pGameObject2 = MODEL->Get("vintage_wooden_sniper_optimized_for_fpstps");
-	//m_pGameObjects.push_back(pGameObject2);
-	//
-	//LoadFromFiles("TEST");
-
-	//m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	/*
 	m_pPlayer = std::make_shared<DebugPlayer>();
 
 	m_pTerrain = std::make_shared<TerrainObject>();
 	m_pTerrain->LoadFromFiles("TEST");
 
 	v3TerrainPos = m_pTerrain->GetTransform()->GetPosition();
-
-	Scene::InitializeObjects();
+	*/
 }
 
 void AnimationTestScene::OnEnterScene()
@@ -68,7 +58,7 @@ void AnimationTestScene::Update()
 	//}
 	//ImGui::End();
 	
-	/*ImGui::Begin("Test");
+	ImGui::Begin("Test");
 	{
 		if (auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
 			ImGui::Text("Press ` to use mouse control");
@@ -88,18 +78,17 @@ void AnimationTestScene::Update()
 			ImGui::Text("No Animation");
 		}
 	}
-	ImGui::End();*/
-
-	ImGui::Begin("Test");
-	{
-		ImGui::DragFloat3("Terrain Position", (float*)&v3TerrainPos);
-		ImGui::DragFloat3("Terrain Rotation", (float*)&v3TerrainRotation);
-
-
-		m_pTerrain->GetTransform()->SetPosition(v3TerrainPos);
-		m_pTerrain->GetTransform()->SetRotation(v3TerrainRotation);
-	}
 	ImGui::End();
+
+	//ImGui::Begin("Test");
+	//{
+	//	ImGui::DragFloat3("Terrain Position", (float*)&v3TerrainPos);
+	//	ImGui::DragFloat3("Terrain Rotation", (float*)&v3TerrainRotation);
+	//
+	//	m_pTerrain->GetTransform()->SetPosition(v3TerrainPos);
+	//	m_pTerrain->GetTransform()->SetRotation(v3TerrainRotation);
+	//}
+	//ImGui::End();
 
 }
 

@@ -1,6 +1,8 @@
 ﻿#include "pch.h"
 #include "ModelManager.h"
 #include "AnimationManager.h"
+#include "Skeleton.h"
+#include "NodeObject.h"
 
 void ModelManager::Initialize()
 {
@@ -13,14 +15,14 @@ void ModelManager::LoadGameModels()
 	LoadModelFromFile("Cube");
 }
 
-void ModelManager::Add(const std::string& strModelName, std::shared_ptr<GameObject> pObj)
+void ModelManager::Add(const std::string& strModelName, std::shared_ptr<IGameObject> pObj)
 {
 	if (!m_pModelPool.contains(strModelName)) {
 		m_pModelPool.insert({ strModelName, pObj });
 	}
 }
 
-std::shared_ptr<GameObject> ModelManager::Get(const std::string& strObjName)
+std::shared_ptr<IGameObject> ModelManager::Get(const std::string& strObjName)
 {
 	auto it = m_pModelPool.find(strObjName);
 	if (it == m_pModelPool.end()) {
@@ -30,7 +32,7 @@ std::shared_ptr<GameObject> ModelManager::Get(const std::string& strObjName)
 	return it->second;
 }
 
-std::shared_ptr<GameObject> ModelManager::LoadOrGet(const std::string& strFileName)
+std::shared_ptr<IGameObject> ModelManager::LoadOrGet(const std::string& strFileName)
 {
 	auto it = m_pModelPool.find(strFileName);
 	if (it == m_pModelPool.end()) {
@@ -40,7 +42,7 @@ std::shared_ptr<GameObject> ModelManager::LoadOrGet(const std::string& strFileNa
 	return it->second;
 }
 
-std::shared_ptr<GameObject> ModelManager::LoadModelFromFile(const std::string& strFileName)
+std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& strFileName)
 {
 	std::string strFilePath = std::format("{}/{}.bin", g_strModelBasePath, strFileName);
 
@@ -57,7 +59,7 @@ std::shared_ptr<GameObject> ModelManager::LoadModelFromFile(const std::string& s
 	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {}); 
 	nlohmann::json j = nlohmann::json::from_bson(bson);;
 
-	std::shared_ptr<GameObject> pGameObject;
+	std::shared_ptr<IGameObject> pGameObject;
 	pGameObject = LoadFrameHierarchyFromFile(nullptr, j["Hierarchy"]);
 
 	size_t nBones = j["nBones"].get<size_t>();
@@ -80,11 +82,8 @@ std::shared_ptr<GameObject> ModelManager::LoadModelFromFile(const std::string& s
 			bones[nBoneIndex].mtxTransform = Matrix(jBone["localBind"].get<std::vector<float>>().data());
 			bones[nBoneIndex].mtxOffset = Matrix(jBone["inverseBind"].get<std::vector<float>>().data());
 
-			if (bones[nBoneIndex].nParentIndex == -1) {
-				pGameObject->m_nRootBoneIndex = bones[nBoneIndex].nIndex;
-			}
 		}
-		pGameObject->m_Bones = bones;
+		pGameObject->AddComponent<Skeleton>(bones);
 	}
 
 	if (pGameObject) {
@@ -94,9 +93,9 @@ std::shared_ptr<GameObject> ModelManager::LoadModelFromFile(const std::string& s
 	return pGameObject;
 }
 
-std::shared_ptr<GameObject> ModelManager::LoadFrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, const nlohmann::json& inJson)
+std::shared_ptr<IGameObject> ModelManager::LoadFrameHierarchyFromFile(std::shared_ptr<IGameObject> pParent, const nlohmann::json& inJson)
 {
-	std::shared_ptr<GameObject> pGameObject = std::make_shared<GameObject>();
+	std::shared_ptr<IGameObject> pGameObject = std::make_shared<NodeObject>();
 
 	unsigned nMeshes = inJson["nMeshes"].get<unsigned>();
 	pGameObject->m_strFrameName = inJson["Name"].get<std::string>();

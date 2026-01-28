@@ -3,7 +3,7 @@
 #include "Material.h"
 #include "MeshRenderer.h"
 
-class GameObject;
+class IGameObject;
 
 enum class OBJECT_RENDER_TYPE : uint8 {
 	FORWARD = 0,
@@ -14,14 +14,14 @@ enum class OBJECT_RENDER_TYPE : uint8 {
 
 class MeshRenderer : public IComponent {
 public:
-	MeshRenderer(std::shared_ptr<GameObject> pOwner);
-	MeshRenderer(std::shared_ptr<GameObject> pOwner, const std::vector<MESHLOADINFO>& meshLoadInfos, const std::vector<MATERIALLOADINFO>& materialLoadInfo);
+	MeshRenderer(std::shared_ptr<IGameObject> pOwner);
+	MeshRenderer(std::shared_ptr<IGameObject> pOwner, const std::vector<MESHLOADINFO>& meshLoadInfos, const std::vector<MATERIALLOADINFO>& materialLoadInfo);
 	virtual ~MeshRenderer() {}
 
 public:
 	virtual void Initialize() override;
 	virtual void Update() override;
-	virtual std::shared_ptr<IComponent> Copy(std::shared_ptr<GameObject> pNewOwner) override;
+	virtual std::shared_ptr<IComponent> Copy(std::shared_ptr<IGameObject> pNewOwner) const override;
 
 	void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
 		DescriptorHandle& descHandle, int32 nInstanceCount, OUT int32& outnInstanceBase, const Matrix& mtxWorld = Matrix::Identity) const;

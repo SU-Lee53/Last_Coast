@@ -1,11 +1,11 @@
 ﻿#include "pch.h"
 #include "AnimationMontage.h"
 
-void AnimationMontage::Initialize(std::shared_ptr<GameObject> pOwner)
+void AnimationMontage::Initialize(std::shared_ptr<IGameObject> pOwner)
 {
 	m_wpOwner = pOwner;
 
-	const auto& bones = pOwner->GetBones();
+	const auto& bones = pOwner->GetComponent<Skeleton>()->GetBones();
 	m_OutputPose.resize(bones.size());
 	//std::transform(bones.begin(), bones.end(), std::back_inserter(m_OutputPose), [](const Bone& b) { return b.mtxTransform; });
 
@@ -104,7 +104,7 @@ void AnimationMontage::Update()
 	// 최종 Pose 계산
 	const auto& currentSection = m_MontageSections[m_nCurrentSection];
 	float fTimeToPlay = m_fSectionPlayTime + currentSection.fStartTime;
-	const auto& bones = m_wpOwner.lock()->GetBones();
+	const auto& bones = m_wpOwner.lock()->GetComponent<Skeleton>()->GetBones();
 	for (const auto& bone : bones) {
 		m_OutputPose[bone.nIndex] = currentSection.pAnimationToPlay->GetKeyFrameSRT(bone.strBoneName, fTimeToPlay, bone.mtxTransform);
 	}
@@ -234,7 +234,7 @@ void AnimationMontage::HandleNotifies(float fPrevTime, float fCurrentTime, int n
 void AnimationMontage::UpdateFallback()
 {
 	if (auto pOwner = m_wpOwner.lock()) {
-		const auto& bones = pOwner->GetBones();
+		const auto& bones = m_wpOwner.lock()->GetComponent<Skeleton>()->GetBones();
 		m_OutputPose.clear();	// Capacity 는 유지됨
 		//std::transform(bones.begin(), bones.end(), std::back_inserter(m_OutputPose), [](const Bone& b) { return b.mtxTransform; });
 	}

@@ -104,6 +104,7 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_Target
 	
 	float4 vWeight = gtxtComponentWeightMap.Sample(gWeightMapSamplerState, vWeightUV);
 	
+	float fGrassWeight = 0.f;
 	// Layer Remapping
 	float layerWeights[MAX_LAYER] = { 0.f, 0.f, 0.f, 0.f };
 	[unroll(MAX_LAYER)]
@@ -112,7 +113,15 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_Target
 		int nLayer = gLayerIndex[channel];
 		if (nLayer >= 0)
 		{
+			if (nLayer == 1)
+			{
+				fGrassWeight = vWeight[channel];
+			}
 			layerWeights[nLayer] += vWeight[channel];
+		}
+		else
+		{
+			vWeight[channel] = 0;
 		}
 	}
 	
@@ -137,6 +146,7 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_Target
 	}
 	
 	return cFinalColor;
+	//return float4(fGrassWeight, fGrassWeight, fGrassWeight, 1.0);
 }
 
 //	float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_Target

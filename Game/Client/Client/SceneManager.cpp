@@ -8,10 +8,11 @@ void SceneManager::Initialize()
 {
 	m_upCurrentScene = std::make_unique<AnimationTestScene>();
 	m_upCurrentScene->BuildObjects();
-	m_upCurrentScene->InitializeObjects();
 	
 	//m_upCurrentScene = std::make_unique<TestScene>();
 	//m_upCurrentScene->BuildObjects();
+
+	m_upCurrentScene->PostInitialize();
 
 	//RESOURCE->WaitForCopyComplete();
 	//TEXTURE->WaitForCopyComplete();
@@ -19,16 +20,16 @@ void SceneManager::Initialize()
 
 void SceneManager::ProcessInput() 
 {
-	m_upCurrentScene->OnPreProcessInput();
+	m_upCurrentScene->PreProcessInput();
 	m_upCurrentScene->ProcessInput();
-	m_upCurrentScene->OnPostProcessInput();
+	m_upCurrentScene->PostProcessInput();
 }
 
 void SceneManager::Update()
 {
-	m_upCurrentScene->OnPreUpdate();
+	m_upCurrentScene->PreUpdate();
 	m_upCurrentScene->Update();
-	m_upCurrentScene->OnPostUpdate();
+	m_upCurrentScene->PostUpdate();
 }
 
 void SceneManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList)

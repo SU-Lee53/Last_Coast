@@ -107,6 +107,9 @@
     <Filter Include="02.Game\Components\Components">
       <UniqueIdentifier>{4e62abeb-2967-466d-9d54-574ff24f91d8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02.Game\GameObject\GameObjects">
+      <UniqueIdentifier>{bf0745fd-7c0f-4232-8a53-13a737f7c144}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h">
@@ -335,6 +338,16 @@
       <Filter>02.Game\Components\Components</Filter>
     </ClInclude>
     <ClInclude Include="Collider.h" />
+    <ClInclude Include="DynamicObject.h">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="NodeObject.h">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="StaticObject.h">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="Skeleton.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -555,6 +568,16 @@
       <Filter>02.Game\Components\Components</Filter>
     </ClCompile>
     <ClCompile Include="Collider.cpp" />
+    <ClCompile Include="DynamicObject.cpp">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="NodeObject.cpp">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="StaticObject.cpp">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="Skeleton.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">

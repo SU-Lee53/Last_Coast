@@ -7,7 +7,7 @@
 //		- SimpleMath 가 RHS 좌표계 사용중이라 Forward(Look) 방향은 Matrix::Backward() 로 가져와야 함
 //
 
-Transform::Transform(std::shared_ptr<GameObject> pOwner)
+Transform::Transform(std::shared_ptr<IGameObject> pOwner)
 	: IComponent{ pOwner }
 {
 	m_mtxFrameRelative = Matrix::Identity;
@@ -24,15 +24,15 @@ void Transform::Update()
 {
 	// 11.15 수정
 	// 외부 수정 flag 를 내리고 업데이트 없이 리턴함
-	if (m_bWorldSetFromOutside) {
-		m_bWorldSetFromOutside = false;
-		return;
-	}
+	//if (m_bWorldSetFromOutside) {
+	//	m_bWorldSetFromOutside = false;
+	//	return;
+	//}
 	auto pParent = m_wpOwner.lock()->GetParent();
 	m_mtxWorld = (pParent) ? ((m_mtxTransform * m_mtxFrameRelative) * pParent->GetTransform()->m_mtxWorld) : (m_mtxTransform * m_mtxFrameRelative);
 }
 
-std::shared_ptr<IComponent> Transform::Copy(std::shared_ptr<GameObject> pNewOwner)
+std::shared_ptr<IComponent> Transform::Copy(std::shared_ptr<IGameObject> pNewOwner) const
 {
 	std::shared_ptr<Transform> pClone = std::make_shared<Transform>(pNewOwner);
 	pClone->m_mtxFrameRelative = m_mtxFrameRelative;

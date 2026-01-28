@@ -6,7 +6,7 @@ public:
 	virtual ~DebugPlayer();
 
 private:
-	void Initialize() override;
+	virtual void Initialize() override;
 	virtual void ProcessInput() override;
 
 private:

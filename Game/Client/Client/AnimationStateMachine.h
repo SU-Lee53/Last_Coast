@@ -13,7 +13,7 @@ struct AnimationState {
 	std::shared_ptr<Animation> pAnimationToPlay;
 	UINT eAnimationPlayType;
 
-	std::function<bool(std::shared_ptr<GameObject>)> fnStateTransitionCallback;
+	std::function<bool(std::shared_ptr<IGameObject>)> fnStateTransitionCallback;
 	std::vector<TransitionEdges> pConnectedEdges;
 
 	void Connect(std::shared_ptr<AnimationState> pState, double dTransitionTime) {
@@ -30,7 +30,7 @@ class AnimationStateMachine {
 public:
 	AnimationStateMachine();
 
-	void Initialize(std::shared_ptr<GameObject> pOwner, float fInitialTime);
+	void Initialize(std::shared_ptr<IGameObject> pOwner, float fInitialTime);
 	void Update();
 
 	std::shared_ptr<AnimationState> GetCurrentAnimationState() const { return m_pCurrentState; }
@@ -44,7 +44,7 @@ protected:
 	std::vector<std::shared_ptr<AnimationState>> m_pStates;
 	std::shared_ptr<AnimationState> m_pBeforeState = nullptr;
 	std::shared_ptr<AnimationState> m_pCurrentState = nullptr;
-	std::weak_ptr<GameObject> m_wpOwner;
+	std::weak_ptr<IGameObject> m_wpOwner;
 
 	float m_fTotalAnimationTime = 0;			// 초기화부터 총 흐른시간
 	float m_fLastAnimationChangedTime = 0;		// 마지막 애니메이션 전환 시점
@@ -62,9 +62,9 @@ class PlayerAnimationStateMachine : public AnimationStateMachine {
 public:
 	virtual void InitializeStateGraph() override;
 
-	static bool IdleCallback(std::shared_ptr<GameObject> pObj);
-	static bool WalkCallback(std::shared_ptr<GameObject> pObj);
-	static bool RunCallback(std::shared_ptr<GameObject> pObj);
+	static bool IdleCallback(std::shared_ptr<IGameObject> pObj);
+	static bool WalkCallback(std::shared_ptr<IGameObject> pObj);
+	static bool RunCallback(std::shared_ptr<IGameObject> pObj);
 
 
 };

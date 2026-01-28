@@ -22,8 +22,6 @@ void Player::Initialize()
 		m_pCamera->SetOwner(shared_from_this());
 		m_bInitialized = true;
 	}
-
-	GameObject::Initialize();
 }
 
 void Player::ProcessInput()
@@ -36,5 +34,5 @@ void Player::Update()
 		m_pCamera->Update();
 	}
 
-	GameObject::Update();
+	DynamicObject::Update();
 }

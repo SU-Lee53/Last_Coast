@@ -21,22 +21,23 @@ struct TERRAINLOADINFO {
 	std::vector<TERRAINCOMPONENTLOADINFO> ComponentInfos;
 };
 
-class TerrainObject : public GameObject {
+class TerrainObject : public IGameObject {
 public:
 	virtual void RenderImmediate(ComPtr<ID3D12Device> pd3dDevice,
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
 		DescriptorHandle& descHandle) override;
+
+
+	const auto& GetTerrainComponents() const { return m_pTerrainComponents; }
 
 public:
 	HRESULT LoadFromFiles(const std::string& strFilename);
 
 private:
 	void BuildTerrainMesh(const TERRAINLOADINFO& terrainInfo);
-
 	void ReadTerrainData(const nlohmann::json& j, OUT TERRAINLOADINFO& outTerrainInfo);
 	TERRAINCOMPONENTLOADINFO ReadTerrainComponentData(const nlohmann::json& j);
 	TERRAINLAYERLOADINFO ReadTerrainLayerData(const nlohmann::json& j);
-
 
 private:
 	std::unique_ptr<HeightMapRawImage> m_pHeightMapRawImage;

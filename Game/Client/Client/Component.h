@@ -1,10 +1,11 @@
 ﻿#pragma once
 
-class GameObject;
+class IGameObject;
 
 enum class COMPONENT_TYPE : uint8 {
 	TRANSFORM = 0,
 	MESH_RENDERER,
+	SKELETON,
 	ANIMATION_CONTROLLER,
 	COLLIDER,
 
@@ -15,16 +16,16 @@ enum class COMPONENT_TYPE : uint8 {
 
 interface IComponent abstract : std::enable_shared_from_this<IComponent> {
 public:
-	IComponent(std::shared_ptr<GameObject> pOwner) : m_wpOwner {pOwner} {}
+	IComponent(std::shared_ptr<IGameObject> pOwner) : m_wpOwner {pOwner} {}
 
 	virtual void Initialize () = 0;
 	virtual void Update() = 0;
 
-	std::shared_ptr<GameObject> GetOwner() {
+	std::shared_ptr<IGameObject> GetOwner() {
 		return m_wpOwner.lock();
 	}
 
-	void SetOwner(std::shared_ptr<GameObject> pOwner) {
+	void SetOwner(std::shared_ptr<IGameObject> pOwner) {
 		m_wpOwner = pOwner;
 	}
 
@@ -32,10 +33,10 @@ public:
 		return m_wpOwner.expired();
 	}
 
-	virtual std::shared_ptr<IComponent> Copy(std::shared_ptr<GameObject> pNewOwner) = 0;
+	virtual std::shared_ptr<IComponent> Copy(std::shared_ptr<IGameObject> pNewOwner) const = 0;
 
 protected:
-	std::weak_ptr<GameObject> m_wpOwner;
+	std::weak_ptr<IGameObject> m_wpOwner;
 	bool m_bInitialized = false;
 
 };

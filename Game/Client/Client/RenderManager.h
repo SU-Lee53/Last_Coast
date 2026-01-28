@@ -45,7 +45,7 @@ private:
 
 public:
 	void Add(std::shared_ptr<MeshRenderer> pRenderItem, MeshRenderParameters renderParam);
-	void AddAnimatedObject(std::shared_ptr<GameObject> pObj);
+	void AddAnimatedObject(std::shared_ptr<IGameObject> pObj);
 	void Clear();
 
 public:
@@ -72,7 +72,7 @@ public:
 	std::vector<InstancePair> m_InstanceDatas;
 
 	// 키프레임 애니메이션 GameObjects (인스턴싱 불가)
-	std::vector<std::shared_ptr<GameObject>> m_pAnimatedObjects;
+	std::vector<std::shared_ptr<IGameObject>> m_pAnimatedObjects;
 
 	uint32 m_nInstanceIndex = 0;
 };

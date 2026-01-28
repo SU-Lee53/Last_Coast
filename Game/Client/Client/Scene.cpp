@@ -1,6 +1,9 @@
 ﻿#include "pch.h"
 #include "Scene.h"
 #include "TerrainObject.h"
+#include "StaticObject.h"
+#include "NodeObject.h"
+#include "Collider.h"
 
 void Scene::InitializeObjects()
 {
@@ -17,26 +20,6 @@ void Scene::InitializeObjects()
 	}
 }
 
-void Scene::UpdateObjects()
-{
-	ProcessInput();
-
-	if (m_pPlayer) {
-		m_pPlayer->ProcessInput();
-		m_pPlayer->Update();
-	}
-
-	if (m_pTerrain) {
-		m_pTerrain->Update();
-	}
-
-	for (auto& obj : m_pGameObjects) {
-		obj->ProcessInput();
-		obj->Update();
-	}
-
-}
-
 void Scene::RenderObjects(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 {
 	if (m_pPlayer)
@@ -51,20 +34,31 @@ void Scene::RenderObjects(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 	}
 }
 
-void Scene::OnPreProcessInput()
+void Scene::PostInitialize()
+{
+	InitializeObjects();
+	GenerateSceneBound();
+	if (m_pTerrain) {
+		Vector3 v3TerrainPos = m_pTerrain->GetComponent<Transform>()->GetPosition();
+		uint32 unComponents = std::sqrt(m_pTerrain->GetTerrainComponents().size());
+		Vector2 v2CellSize = m_pTerrain->GetTerrainComponents()[0]->GetComponentSize();
+		CellPartition(Vector2{v3TerrainPos.x, v3TerrainPos.z}, v2CellSize, unComponents, unComponents);
+	}
+	else {
+		CellPartition(Vector2{ g_fWorldMinX, g_fWorldMinZ }, Vector2{100_m, 100_m}, 10, 10);
+	}
+}
+
+void Scene::PreProcessInput()
 {
 	// TODO : Cache last frame world transform
 	// Reason : to generate motion vector
 }
 
-void Scene::OnPostProcessInput()
+void Scene::PostProcessInput()
 {
 	if (m_pPlayer) {
 		m_pPlayer->ProcessInput();
-	}
-
-	if (m_pTerrain) {
-		m_pTerrain->Update();
 	}
 
 	for (auto& obj : m_pGameObjects) {
@@ -72,18 +66,70 @@ void Scene::OnPostProcessInput()
 	}
 }
 
-void Scene::OnPreUpdate()
+void Scene::PreUpdate()
 {
+	if (m_pPlayer) {
+		m_pPlayer->PreUpdate();
+	}
+
+	for (auto& obj : m_pGameObjects) {
+		obj->PreUpdate();
+	}
 }
 
-void Scene::OnPostUpdate()
+void Scene::PostUpdate()
 {
+	// Update
 	if (m_pPlayer) {
 		m_pPlayer->Update();
 	}
 
+	if (m_pTerrain) {
+		m_pTerrain->Update();
+	}
+
 	for (auto& obj : m_pGameObjects) {
 		obj->Update();
+	}
+
+	// Post Update
+	if (m_pPlayer) {
+		m_pPlayer->PostUpdate();
+	}
+
+	if (m_pTerrain) {
+		m_pTerrain->PostUpdate();
+	}
+
+	for (auto& obj : m_pGameObjects) {
+		obj->PostUpdate();
+	}
+}
+
+void Scene::GenerateSceneBound()
+{
+	for (const auto& pObj : m_pGameObjects) {
+		const auto& pCollider = pObj->GetComponent<ICollider>();
+		if (!pCollider) {
+			continue;
+		}
+
+		const auto& xmAABB = pCollider->GetAABBFromOBBWorld();
+		BoundingBox::CreateMerged(m_xmSceneBound, m_xmSceneBound, xmAABB);
+	}
+}
+
+void Scene::CellPartition(const Vector2& v2OriginXZ, const Vector2& v2SizePerCellXZ, uint32 unCellsX, uint32 unCellsZ)
+{
+	// 1. Generate cells (2.5D)
+	m_SpacePartition.v2SceneOriginXZ = v2OriginXZ;
+	m_SpacePartition.v2CellSizeXZ = v2SizePerCellXZ;
+	m_SpacePartition.xmui2NumCellsXZ = XMUINT2{ unCellsX, unCellsZ };
+	m_SpacePartition.Cells.resize(unCellsX * unCellsZ);
+
+	// 2. Check objects in cells
+	for (const auto& pObj : m_pGameObjects) {
+		m_SpacePartition.Insert(pObj);
 	}
 }
 
@@ -117,8 +163,8 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 	nlohmann::json jScene = nlohmann::json::parse(inFile);
 
 	for (const auto& jObject : jScene) {
-		std::shared_ptr<GameObject> pObj = std::make_shared<GameObject>();
-		pObj->SetFrameName(jObject["ActorName"].get<std::string>());
+		std::shared_ptr<IGameObject> pObj = std::make_shared<StaticObject>();
+		pObj->SetName(jObject["ActorName"].get<std::string>());
 
 		
 		auto matrixData = jObject["Transform"]["WorldMatrix"].get<std::vector<float>>();
@@ -139,7 +185,7 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 		//pObj->GetTransform()->Scale(v3Rotation);
 
 		std::string strMeshName = jObject["MeshName"].get<std::string>();
-		auto pMeshObject = MODEL->LoadOrGet(strMeshName)->CopyObject<GameObject>();
+		auto pMeshObject = MODEL->LoadOrGet(strMeshName)->CopyObject<NodeObject>();
 		pObj->SetChild(pMeshObject);
 
 		m_pGameObjects.push_back(pObj);

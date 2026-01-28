@@ -11,7 +11,7 @@ public:
 	virtual void Update();
 
 public:
-	void SetOwner(std::shared_ptr<GameObject> pOwner) { m_wpOwner = pOwner; }
+	void SetOwner(std::shared_ptr<IGameObject> pOwner) { m_wpOwner = pOwner; }
 
 public:
 	Matrix GetViewProjectMatrix() const;
@@ -81,7 +81,7 @@ protected:
 
 	ComPtr<ID3D12GraphicsCommandList> m_pd3dViewportScissorrectBindingBundleCommand = nullptr;
 
-	std::weak_ptr<GameObject> m_wpOwner;
+	std::weak_ptr<IGameObject> m_wpOwner;
 
 };
 

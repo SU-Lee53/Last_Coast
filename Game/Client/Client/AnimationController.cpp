@@ -2,9 +2,15 @@
 #include "AnimationController.h"
 #include "ThirdPersonPlayer.h"
 #include "ThirdPersonCamera.h"
+#include "Skeleton.h"
 
-AnimationController::AnimationController(std::shared_ptr<GameObject> pOwner)
+AnimationController::AnimationController(std::shared_ptr<IGameObject> pOwner)
 	: IComponent{ pOwner }
+{
+	m_wpOwnerSkeleton = m_wpOwner.lock()->GetComponent<Skeleton>();
+}
+
+void AnimationController::Initialize()
 {
 }
 
@@ -37,7 +43,7 @@ double AnimationController::GetCurrentAnimationDuration() const
 
 void AnimationController::ComputeFinalMatrix()
 {
-	const std::vector<Bone>& ownerBones = m_wpOwner.lock()->GetBones();
+	const auto& ownerBones = GetOwnerBones();
 	int nBones = ownerBones.size();
 	std::vector<Matrix> mtxToRootTransforms(nBones);
 	for (int i = 0; i < nBones; ++i) {
@@ -53,11 +59,6 @@ void AnimationController::ComputeFinalMatrix()
 	}
 }
 
-const std::vector<Bone>& AnimationController::GetOwnerBones() const
-{
-	return m_wpOwner.lock()->GetBones();
-}
-
 void AnimationController::CacheAnimationKey(const std::string& strAnimationName)
 {
 	const auto& ownerBones = GetOwnerBones();
@@ -70,7 +71,12 @@ void AnimationController::CacheAnimationKey(const std::string& strAnimationName)
 	}
 }
 
-PlayerAnimationController::PlayerAnimationController(std::shared_ptr<GameObject> pOwner)
+const std::vector<Bone>& AnimationController::GetOwnerBones() const
+{
+	return m_wpOwnerSkeleton.lock()->GetBones();
+}
+
+PlayerAnimationController::PlayerAnimationController(std::shared_ptr<IGameObject> pOwner)
 	: AnimationController{ pOwner }
 {
 }
@@ -83,12 +89,12 @@ void PlayerAnimationController::Initialize()
 	m_pAnimationMontage = std::make_unique<PlayerAnimationMontage>();
 	m_pAnimationMontage->Initialize(m_wpOwner.lock());
 
-	int nBones = m_wpOwner.lock()->GetBones().size();
+	int nBones = GetOwnerBones().size();
 	m_mtxCachedLocalBoneTransforms.resize(nBones);
 	m_mtxFinalBoneTransforms.resize(nBones);
 
 	m_pBlendMachine = std::make_unique<LayeredBlendMachine>(m_wpOwner.lock(), "Spine", 3);
-	m_nSpineIndex = m_wpOwner.lock()->FindBoneIndex("Spine");
+	m_nSpineIndex = m_wpOwnerSkeleton.lock()->FindBoneIndex("Spine");
 
 	const auto& pCamera = std::static_pointer_cast<ThirdPersonPlayer>(m_wpOwner.lock())->GetCamera();
 	m_wpPlayerCamera = std::static_pointer_cast<ThirdPersonCamera>(pCamera);
@@ -121,7 +127,7 @@ void PlayerAnimationController::ComputeAnimation()
 	}
 }
 
-std::shared_ptr<IComponent> PlayerAnimationController::Copy(std::shared_ptr<GameObject> pNewOwner)
+std::shared_ptr<IComponent> PlayerAnimationController::Copy(std::shared_ptr<IGameObject> pNewOwner)const
 {
 	std::shared_ptr<PlayerAnimationController> pClone = std::make_shared<PlayerAnimationController>(pNewOwner);
 	pClone->Initialize();

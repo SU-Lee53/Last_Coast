@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-class GameObject;
+class IGameObject;
 
 struct LayeredBlendMachine {
 	struct LayerMask {
@@ -13,7 +13,7 @@ struct LayeredBlendMachine {
 	bool bInitialized = false;
 
 	LayeredBlendMachine(
-		std::shared_ptr<GameObject> pGameObject,
+		std::shared_ptr<IGameObject> pGameObject,
 		const std::string& strBranch,
 		int nBlendDepth);
 

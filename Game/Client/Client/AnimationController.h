@@ -3,10 +3,13 @@
 #include "AnimationStateMachine.h"
 #include "AnimationMontage.h"
 
+class Skeleton;
+
 class AnimationController : public IComponent {
 public:
-	AnimationController(std::shared_ptr<GameObject> pOwner);
+	AnimationController(std::shared_ptr<IGameObject> pOwner);
 
+	virtual void Initialize() override;
 	virtual void Update() override;
 
 public:
@@ -23,9 +26,8 @@ protected:
 
 protected:
 	// Helper
-	const std::vector<Bone>& GetOwnerBones() const;
-
 	void CacheAnimationKey(const std::string& strAnimationName);
+	const std::vector<Bone>& GetOwnerBones() const;
 
 protected:
 	std::unique_ptr<AnimationStateMachine>	m_pStateMachine;
@@ -37,6 +39,8 @@ protected:
 	std::vector<Matrix> m_mtxCachedLocalBoneTransforms;
 	std::vector<Matrix> m_mtxFinalBoneTransforms;
 
+	// Bone Ref
+	std::weak_ptr<Skeleton> m_wpOwnerSkeleton;
 };
 
 template <>
@@ -49,11 +53,11 @@ class ThirdPersonCamera;
 
 class PlayerAnimationController : public AnimationController {
 public:
-	PlayerAnimationController(std::shared_ptr<GameObject> pOwner);
+	PlayerAnimationController(std::shared_ptr<IGameObject> pOwner);
 
 	// From IComponent
 	void Initialize() override;
-	virtual std::shared_ptr<IComponent> Copy(std::shared_ptr<GameObject> pNewOwner) override;
+	virtual std::shared_ptr<IComponent> Copy(std::shared_ptr<IGameObject> pNewOwner)const override;
 
 	// From AnimationController
 	virtual void ComputeAnimation() override;

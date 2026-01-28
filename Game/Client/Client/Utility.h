@@ -68,6 +68,22 @@ struct ConstantBufferSize {
     constexpr static size_t nDescriptors = ((sizeof(T) + 255) & (~255)) / 255;
 };
 
+inline std::pair<Vector3, Vector3> GetMinMaxFromAABB(const BoundingBox& xmAABB) 
+{
+	return {
+		Vector3{xmAABB.Center - xmAABB.Extents},
+		Vector3{xmAABB.Center + xmAABB.Extents}
+	};
+}
+
+inline std::pair<Vector3, Vector3> GetMinMaxFromOBB(const BoundingOrientedBox& xmOBB)
+{
+	XMFLOAT3 pxmf3Corners[BoundingOrientedBox::CORNER_COUNT];
+	xmOBB.GetCorners(pxmf3Corners);
+	BoundingBox xmAABB;
+	BoundingBox::CreateFromPoints(xmAABB, BoundingOrientedBox::CORNER_COUNT, pxmf3Corners, sizeof(XMFLOAT3));
+	return GetMinMaxFromAABB(xmAABB);
+}
 
 /////////////////////////////////////////////////////////////////////////////////
 // Unit Conversion + Literals

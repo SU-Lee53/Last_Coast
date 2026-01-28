@@ -1,16 +1,19 @@
 ﻿#pragma once
 #include "Component.h"
 
-class Collider : public IComponent {
+interface ICollider abstract : public IComponent {
 public:
-	Collider(std::shared_ptr<GameObject> pOwner);
+	ICollider(std::shared_ptr<IGameObject> pOwner);
 
 	virtual void Initialize() override;
+	bool IsInFrustum(const BoundingFrustum& xmFrustumInWorld) const;
+	bool CheckCollision(std::shared_ptr<ICollider> pOther) const;
 
-	bool IsInFrustum(const BoundingFrustum& xmFrustumInWorld);
+	const BoundingOrientedBox& GetOBBWorld() const { return m_xmOBBWorld; }
+	const BoundingBox GetAABBFromOBBWorld() const;
 
 private:
-	void MergeOBB(std::shared_ptr<GameObject> pObj);
+	void MergeOBB(std::shared_ptr<IGameObject> pObj);
 
 protected:
 	BoundingOrientedBox m_xmOBBOrigin;
@@ -21,25 +24,28 @@ protected:
 //////////////////////////////////////////////////////////////////////////////////////
 // StaticCollider
 
-class StaticCollider : public Collider {
+class StaticCollider : public ICollider {
 public:
-	StaticCollider(std::shared_ptr<GameObject> pOwner);
+	StaticCollider(std::shared_ptr<IGameObject> pOwner);
 	virtual void Update() override;
-	virtual std::shared_ptr<IComponent> Copy(std::shared_ptr<GameObject> pNewOwner) override;
+	virtual std::shared_ptr<IComponent> Copy(std::shared_ptr<IGameObject> pNewOwner)const override;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////
 // DynamicCollider
 
-class DynamicCollider : public Collider {
+class DynamicCollider : public ICollider {
 public:
-	DynamicCollider(std::shared_ptr<GameObject> pOwner);
+	DynamicCollider(std::shared_ptr<IGameObject> pOwner);
 	virtual void Update() override;
-	virtual std::shared_ptr<IComponent> Copy(std::shared_ptr<GameObject> pNewOwner) override;
+	virtual std::shared_ptr<IComponent> Copy(std::shared_ptr<IGameObject> pNewOwner)const override;
 };
 
+//////////////////////////////////////////////////////////////////////////////////////
+// Component Templates
+
 template <>
-struct ComponentIndex<Collider> {
+struct ComponentIndex<ICollider> {
 	constexpr static COMPONENT_TYPE componentType = COMPONENT_TYPE::COLLIDER;
 	constexpr static std::underlying_type_t<COMPONENT_TYPE> index = std::to_underlying(COMPONENT_TYPE::COLLIDER);
 };

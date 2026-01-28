@@ -6,7 +6,6 @@ const std::string TerrainObject::g_strTerrainPath = "../Resources/Terrain/";
 HRESULT TerrainObject::LoadFromFiles(const std::string& strFilename)
 {
 	// TODO : Height 조절 필요
-
 	HRESULT hr{};
 	TERRAINLOADINFO terrainInfo{};
 	// 1. Load from Json file
@@ -18,8 +17,9 @@ HRESULT TerrainObject::LoadFromFiles(const std::string& strFilename)
 	// 2. Heightmap
 	m_pHeightMapRawImage = std::make_unique<HeightMapRawImage>();
 	hr = m_pHeightMapRawImage->LoadFromFile(
-		//terrainInfo.strHeightMapName,
-		"../Resources/Terrain/Images/TEST2.raw",
+		terrainInfo.strHeightMapName,
+		//"../Resources/Terrain/Images/TEST2.raw",
+		//"../Resources/Terrain/Images/Terrain.raw",
 		terrainInfo.v2HeightMapResolutionXZ.x,
 		terrainInfo.v2HeightMapResolutionXZ.y,
 		0.f,
@@ -72,23 +72,11 @@ void TerrainObject::BuildTerrainMesh(const TERRAINLOADINFO& terrainInfo)
 	*/
 
 	auto ConvertUEToD3D = [](const Vector3& v) {
-			return Vector3(v.y, v.z, v.x);
+		return Vector3(v.y, v.z, v.x);
 	};
 
 	for (uint32 z = 0; z < unHeightMapHeight; ++z) {
 		for (uint32 x = 0; x < unHeightMapWidth; ++x) {
-			//const float fLocalX = static_cast<float>(x) * terrainInfo.v3TerrainScale.x;
-			//const float fLocalZ = static_cast<float>(z) * terrainInfo.v3TerrainScale.z;
-			//
-			//Vector3 v3Position = { fLocalX, m_pHeightMapRawImage->GetHeightLocal(fLocalX, fLocalZ), fLocalZ };
-			//Vector3 v3Normal = m_pHeightMapRawImage->GetNormalLocal(fLocalX, fLocalZ);
-			//Vector3 v3Tangent = m_pHeightMapRawImage->GetTangentLocal(fLocalX, fLocalZ);
-			//
-			//size_t unIndex = (z * unHeightMapWidth) + x;
-			//meshLoadInfo.v3Positions[unIndex] = v3Position;
-			//meshLoadInfo.v3Normals[unIndex] = v3Normal;
-			//meshLoadInfo.v3Tangents[unIndex] = v3Tangent;
-
 			const float fUELocalX = static_cast<float>(x) * terrainInfo.v3TerrainScale.x;
 			const float fUELocalY = static_cast<float>(z) * terrainInfo.v3TerrainScale.z;
 			const float fUELocalZ = m_pHeightMapRawImage->GetHeightLocal(fUELocalX, fUELocalY);

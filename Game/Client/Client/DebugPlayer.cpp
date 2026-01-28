@@ -21,8 +21,6 @@ void DebugPlayer::Initialize()
 		m_pCamera->GenerateProjectionMatrix(1.01_cm, 500_m, (WinCore::sm_dwClientWidth / WinCore::sm_dwClientHeight), 60.0f);
 		m_pCamera->SetOwner(shared_from_this());
 	}
-
-	GameObject::Initialize();
 }
 
 void DebugPlayer::ProcessInput()

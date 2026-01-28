@@ -5,11 +5,11 @@
 //////////////////////////////////////////////////////////////////////////
 // LayeredBlendMachine
 
-LayeredBlendMachine::LayeredBlendMachine(std::shared_ptr<GameObject> pGameObject, const std::string& strBranch, int nBlendDepth)
+LayeredBlendMachine::LayeredBlendMachine(std::shared_ptr<IGameObject> pGameObject, const std::string& strBranch, int nBlendDepth)
 	: strBranchBoneName{ strBranch }
 {
-	const auto& ownerBones = pGameObject->GetBones();
-	int nBranchIndex = pGameObject->FindBoneIndex(strBranch);
+	const auto& ownerBones = pGameObject->GetComponent<Skeleton>()->GetBones();
+	int nBranchIndex = pGameObject->GetComponent<Skeleton>()->FindBoneIndex(strBranch);
 	int nBones = ownerBones.size();
 	bLayerMask.assign(nBones, LayerMask{});
 

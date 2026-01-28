@@ -27,12 +27,12 @@ struct MontageSection {
 struct MontageNotify {
 	int nSectionIndex;
 	float fTime;
-	std::function<void(std::shared_ptr<GameObject>)> pCallback;
+	std::function<void(std::shared_ptr<IGameObject>)> pCallback;
 };
 
 class AnimationMontage {
 public:
-	void Initialize(std::shared_ptr<GameObject> pOwner);
+	void Initialize(std::shared_ptr<IGameObject> pOwner);
 	void Update();
 
 	void PlayMontage(const std::string& strSectionName);
@@ -51,7 +51,7 @@ protected:
 	void UpdateFallback();
 
 protected:
-	std::weak_ptr<GameObject>	m_wpOwner;
+	std::weak_ptr<IGameObject>	m_wpOwner;
 
 	float m_fTotalPlaytime = 0.f;	// PlayMontage() 시작부터 총 재생시간
 	float m_fTotalDuration = 0.f;	// 전채 재생시간

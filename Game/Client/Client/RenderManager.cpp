@@ -265,7 +265,7 @@ void RenderManager::Add(std::shared_ptr<MeshRenderer> pMeshRenderer, MeshRenderP
 }
 
 
-void RenderManager::AddAnimatedObject(std::shared_ptr<GameObject> pObj)
+void RenderManager::AddAnimatedObject(std::shared_ptr<IGameObject> pObj)
 {
 	m_pAnimatedObjects.push_back(pObj);
 }

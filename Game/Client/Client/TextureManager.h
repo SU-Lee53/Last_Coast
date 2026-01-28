@@ -16,12 +16,15 @@ public:
 
 public:
 	std::shared_ptr<Texture> LoadTexture(const std::string& strTextureName);
+	std::shared_ptr<Texture> LoadTextureFromRaw(const std::string& strTextureName, uint32 unWidth, uint32 unHeight);
 	std::shared_ptr<Texture> LoadTextureArray(const std::string& strTextureName, const std::wstring& wstrTexturePath);
+	
 	std::shared_ptr<Texture> Get(const std::string& strTextureName) const;
 
 public:
 	std::shared_ptr<Texture> CreateTextureFromFile(const std::wstring& wstrTexturePath);
 	std::shared_ptr<Texture> CreateTextureArrayFromFile(const std::wstring& wstrTexturePath);
+	std::shared_ptr<Texture> CreateTextureFromRawFile(const std::wstring& wstrTexturePath, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM);
 
 public:
 	std::shared_ptr<Texture> CreateRTVTexture(const std::string& strName, UINT uiWidth, UINT uiHeight, DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN, DXGI_FORMAT dxgiRTVFormat = DXGI_FORMAT_UNKNOWN);

@@ -1,12 +1,12 @@
 ﻿#include "pch.h"
 #include "Collider.h"
 
-Collider::Collider(std::shared_ptr<GameObject> pOwner)
+ICollider::ICollider(std::shared_ptr<IGameObject> pOwner)
 	: IComponent{ pOwner }
 {
 }
 
-void Collider::MergeOBB(std::shared_ptr<GameObject> pObj)
+void ICollider::MergeOBB(std::shared_ptr<IGameObject> pObj)
 {
 	if (m_bInitialized) {
 		return;
@@ -41,7 +41,7 @@ void Collider::MergeOBB(std::shared_ptr<GameObject> pObj)
 	}
 }
 
-void Collider::Initialize()
+void ICollider::Initialize()
 {
 	auto& pOwner = m_wpOwner.lock();
 	MergeOBB(pOwner);
@@ -52,16 +52,30 @@ void Collider::Initialize()
 	m_bInitialized = true;
 }
 
-bool Collider::IsInFrustum(const BoundingFrustum& xmFrustumInWorld)
+bool ICollider::IsInFrustum(const BoundingFrustum& xmFrustumInWorld) const
 {
 	return xmFrustumInWorld.Intersects(m_xmOBBWorld);
+}
+
+bool ICollider::CheckCollision(std::shared_ptr<ICollider> pOther) const
+{
+	return m_xmOBBWorld.Intersects(pOther->m_xmOBBWorld);
+}
+
+const BoundingBox ICollider::GetAABBFromOBBWorld() const
+{
+	BoundingBox xmRet;
+	XMFLOAT3 pxmf3OBBCorners[BoundingOrientedBox::CORNER_COUNT];
+	m_xmOBBWorld.GetCorners(pxmf3OBBCorners);
+	BoundingBox::CreateFromPoints(xmRet, BoundingOrientedBox::CORNER_COUNT, pxmf3OBBCorners, sizeof(XMFLOAT3));
+	return xmRet;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
 // StaticCollider
 
-StaticCollider::StaticCollider(std::shared_ptr<GameObject> pOwner)
-	:Collider{ pOwner }
+StaticCollider::StaticCollider(std::shared_ptr<IGameObject> pOwner)
+	:ICollider{ pOwner }
 {
 }
 
@@ -70,7 +84,7 @@ void StaticCollider::Update()
 	// Do nothing
 }
 
-std::shared_ptr<IComponent> StaticCollider::Copy(std::shared_ptr<GameObject> pNewOwner)
+std::shared_ptr<IComponent> StaticCollider::Copy(std::shared_ptr<IGameObject> pNewOwner) const
 {
 	std::shared_ptr<StaticCollider> pClone = std::make_shared<StaticCollider>(pNewOwner);
 	pClone->m_xmOBBOrigin = m_xmOBBOrigin;
@@ -83,8 +97,8 @@ std::shared_ptr<IComponent> StaticCollider::Copy(std::shared_ptr<GameObject> pNe
 //////////////////////////////////////////////////////////////////////////////////////
 // DynamicCollider
 
-DynamicCollider::DynamicCollider(std::shared_ptr<GameObject> pOwner)
-	:Collider{ pOwner }
+DynamicCollider::DynamicCollider(std::shared_ptr<IGameObject> pOwner)
+	:ICollider{ pOwner }
 {
 }
 
@@ -94,7 +108,7 @@ void DynamicCollider::Update()
 	m_xmOBBOrigin.Transform(m_xmOBBWorld, mtxWorld);
 }
 
-std::shared_ptr<IComponent> DynamicCollider::Copy(std::shared_ptr<GameObject> pNewOwner)
+std::shared_ptr<IComponent> DynamicCollider::Copy(std::shared_ptr<IGameObject> pNewOwner) const
 {
 	std::shared_ptr<DynamicCollider> pClone = std::make_shared<DynamicCollider>(pNewOwner);
 	pClone->m_xmOBBOrigin = m_xmOBBOrigin;

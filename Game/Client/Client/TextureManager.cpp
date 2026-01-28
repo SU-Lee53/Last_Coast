@@ -50,6 +50,19 @@ std::shared_ptr<Texture> TextureManager::LoadTexture(const std::string& strTextu
 	return m_pTexturePool[strTextureName];
 }
 
+std::shared_ptr<Texture> TextureManager::LoadTextureFromRaw(const std::string& strTextureName, uint32 unWidth, uint32 unHeight)
+{
+	auto it = m_pTexturePool.find(strTextureName);
+	if (it == m_pTexturePool.end()) {
+		std::shared_ptr<Texture> pTexture = CreateTextureFromRawFile(::StringToWString(strTextureName), unWidth, unHeight);
+		if (pTexture) {
+			m_pTexturePool[strTextureName] = pTexture;
+		}
+	}
+
+	return m_pTexturePool[strTextureName];
+}
+
 std::shared_ptr<Texture> TextureManager::LoadTextureArray(const std::string& strTextureName, const std::wstring& wstrTexturePath)
 {
 	auto it = m_pTexturePool.find(strTextureName);
@@ -228,6 +241,114 @@ std::shared_ptr<Texture> TextureManager::CreateTextureArrayFromFile(const std::w
 	return pTexture;
 }
 
+std::shared_ptr<Texture> TextureManager::CreateTextureFromRawFile(const std::wstring& wstrTexturePath, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiFormat)
+{
+	// TODO : std::vector 생명주기와 GPU 복사 시기를 고려해야 함
+	namespace fs = std::filesystem;
+
+	//std::wstring wstrTexturePath;
+	std::ifstream in{ wstrTexturePath, std::ios::binary };
+	if (!in) {
+		OutputDebugStringA(std::format("{} - {} : {} : {}\n", __FILE__, __LINE__, "Texture file not exist", fs::path(wstrTexturePath).string()).c_str());
+		__debugbreak();
+		return nullptr;
+	}
+
+	// 파일 읽기
+	in.seekg(0, std::ios::end);
+	int32 nSize = in.tellg();
+	in.seekg(0, std::ios::beg);
+
+	std::vector<uint8> rawData;
+	rawData.resize(nSize);
+	in.read((char*)rawData.data(), nSize);
+
+	// 리소스 포인터 생성
+	D3D12_RESOURCE_DESC resourceDesc = {};
+	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	resourceDesc.Alignment = 0;
+	resourceDesc.Width = unWidth;
+	resourceDesc.Height = unHeight;
+	resourceDesc.DepthOrArraySize = 1;
+	resourceDesc.MipLevels = 1;
+	resourceDesc.Format = dxgiFormat;
+	resourceDesc.SampleDesc.Count = 1;
+	resourceDesc.SampleDesc.Quality = 0;
+	resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+	std::shared_ptr<Texture> pTexture = std::make_shared<Texture>();
+	CD3DX12_HEAP_PROPERTIES d3dHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
+
+	pTexture->m_pTexResource.Create(
+		m_pd3dDevice,
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&resourceDesc,
+		D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
+		nullptr
+	);
+
+	// UploadBuffer 생성
+	D3D12_RESOURCE_DESC d3dTextureResourceDesc = pTexture->m_pTexResource.pResource->GetDesc();
+	UINT64 nBytes = GetRequiredIntermediateSize(pTexture->m_pTexResource.pResource.Get(), 0, 1);
+
+	ComPtr<ID3D12Resource> pd3dUploadBuffer = nullptr;
+	m_pd3dDevice->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(nBytes),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(pd3dUploadBuffer.GetAddressOf())
+	);
+
+	// UploadBuffer 에 바로 Raw data 복사
+	uint8* pMappedPtr = nullptr;
+	CD3DX12_RANGE d3dReadRange(0, 0);
+	pd3dUploadBuffer->Map(0, &d3dReadRange, reinterpret_cast<void**>(&pMappedPtr));
+	::memcpy(pMappedPtr, rawData.data(), rawData.size());
+	pd3dUploadBuffer->Unmap(0, nullptr);
+
+	D3D12_SUBRESOURCE_DATA subresourceData{};
+	subresourceData.pData = pMappedPtr;
+	subresourceData.RowPitch = unWidth * sizeof(uint32); // R8G8B8A8
+	subresourceData.SlicePitch = subresourceData.RowPitch * unHeight;
+
+	// Raw Data -> Tex Resource 로 복사
+	auto cmdList = AllocateCommandListSafe();
+	{
+		pTexture->m_pTexResource.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_COPY_DEST);
+		{
+			::UpdateSubresources(cmdList->pd3dCommandList.Get(), pTexture->m_pTexResource.pResource.Get(), pd3dUploadBuffer.Get(), 0, 0, 1, &subresourceData);
+		}
+		pTexture->m_pTexResource.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+	}
+
+	ExcuteCommandList(*cmdList);
+	cmdList->ui64FenceValue = Fence();
+	m_PendingUploadBuffers.push_back({ pd3dUploadBuffer, cmdList });
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	{
+		srvDesc.Format = d3dTextureResourceDesc.Format;
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = d3dTextureResourceDesc.MipLevels;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.PlaneSlice = 0;
+		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+	}
+	pTexture->m_d3dSRVDesc = srvDesc;
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE SRVHandle = m_SRVUAVDescriptorHeap.GetDescriptorHandleFromHeapStart().cpuHandle;
+	SRVHandle.Offset(m_nNumSRVUAVTextures++);
+	m_pd3dDevice->CreateShaderResourceView(pTexture->m_pTexResource.pResource.Get(), &srvDesc, SRVHandle);
+	pTexture->m_d3dSRVHandle = SRVHandle;
+
+	return pTexture;
+}
+
 std::shared_ptr<Texture> TextureManager::CreateRTVTexture(const std::string& strName, UINT uiWidth, UINT uiHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat)
 {
 	if (auto pTex = m_pTexturePool.find(strName); pTex != m_pTexturePool.end()) {
@@ -322,7 +443,7 @@ void TextureManager::LoadFromWICFile(ID3D12Resource** ppOutResource, const std::
 		wstrTexturePath.c_str(),
 		0,
 		D3D12_RESOURCE_FLAG_NONE,
-		WIC_LOADER_DEFAULT,
+		WIC_LOADER_IGNORE_SRGB,
 		ppOutResource,
 		ddsData,
 		subResources[0]

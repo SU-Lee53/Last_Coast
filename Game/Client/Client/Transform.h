@@ -1,16 +1,15 @@
 ﻿#pragma once
 #include "Component.h"
 
-class GameObject;
+class IGameObject;
 
 class Transform : public IComponent{
 public:
-	Transform(std::shared_ptr<GameObject> pOwner);
+	Transform(std::shared_ptr<IGameObject> pOwner);
 
-	// IComponent을(를) 통해 상속됨
 	virtual void Initialize() override;
 	virtual void Update() override;
-	virtual std::shared_ptr<IComponent> Copy(std::shared_ptr<GameObject> pNewOwner) override;
+	virtual std::shared_ptr<IComponent> Copy(std::shared_ptr<IGameObject> pNewOwner) const override;
 
 public:
 	void SetFrameMatrix(const Matrix& mtxFrame);

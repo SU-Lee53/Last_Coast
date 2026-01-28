@@ -3,13 +3,13 @@
 
 uint64 MeshRenderer::g_ui64RendererIDBase = 0;
 
-MeshRenderer::MeshRenderer(std::shared_ptr<GameObject> pOwner)
+MeshRenderer::MeshRenderer(std::shared_ptr<IGameObject> pOwner)
 	: IComponent{ pOwner }
 {
 	m_ui64RendererID = ++g_ui64RendererIDBase;
 }
 
-MeshRenderer::MeshRenderer(std::shared_ptr<GameObject> pOwner, const std::vector<MESHLOADINFO>& meshLoadInfos, const std::vector<MATERIALLOADINFO>& materialLoadInfo)
+MeshRenderer::MeshRenderer(std::shared_ptr<IGameObject> pOwner, const std::vector<MESHLOADINFO>& meshLoadInfos, const std::vector<MATERIALLOADINFO>& materialLoadInfo)
 	: IComponent{ pOwner }
 {
 	m_pMeshes.reserve(meshLoadInfos.size());
@@ -77,7 +77,7 @@ void MeshRenderer::Initialize()
 
 void MeshRenderer::Update()
 {
-	if (m_eMeshType == MESH_TYPE::TERRAIN) {
+	if (m_eMeshType == MESH_TYPE::TERRAIN || m_eMeshType == MESH_TYPE::SKINNED) {
 		return;
 	}
 
@@ -93,13 +93,14 @@ void MeshRenderer::Update()
 #endif
 }
 
-std::shared_ptr<IComponent> MeshRenderer::Copy(std::shared_ptr<GameObject> pNewOwner)
+std::shared_ptr<IComponent> MeshRenderer::Copy(std::shared_ptr<IGameObject> pNewOwner) const
 {
 	std::shared_ptr<MeshRenderer> pClone = std::make_shared<MeshRenderer>(pNewOwner);
 	pClone->m_pMeshes = m_pMeshes;
 	pClone->m_pMaterials = m_pMaterials;
 	pClone->m_ui64RendererID = m_ui64RendererID;
 	pClone->m_eRenderType = m_eRenderType;
+	pClone->m_eMeshType = m_eMeshType;
 	pClone->SetOwner(pNewOwner);
 
 	return pClone;

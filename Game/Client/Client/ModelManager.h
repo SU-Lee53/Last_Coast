@@ -10,21 +10,21 @@ public:
 	void LoadGameModels();
 
 public:
-	void Add(const std::string& strModelName, std::shared_ptr<GameObject> pObj);
-	std::shared_ptr<GameObject> Get(const std::string& strObjName);
+	void Add(const std::string& strModelName, std::shared_ptr<IGameObject> pObj);
+	std::shared_ptr<IGameObject> Get(const std::string& strObjName);
 
-	std::shared_ptr<GameObject> LoadOrGet(const std::string& strFileName);
+	std::shared_ptr<IGameObject> LoadOrGet(const std::string& strFileName);
 
 private:
-	std::shared_ptr<GameObject> LoadFrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, const nlohmann::json& inJson);
-	std::shared_ptr<GameObject> LoadModelFromFile(const std::string& strFilePath);
+	std::shared_ptr<IGameObject> LoadFrameHierarchyFromFile(std::shared_ptr<IGameObject> pParent, const nlohmann::json& inJson);
+	std::shared_ptr<IGameObject> LoadModelFromFile(const std::string& strFilePath);
 
 	std::pair<MESHLOADINFO, MATERIALLOADINFO> LoadMeshInfoFromFiles(const nlohmann::json& inJson);
 	MATERIALLOADINFO LoadMaterialInfoFromFiles(const nlohmann::json& inJson);
 
 private:
 	// Model Pool
-	std::unordered_map<std::string, std::shared_ptr<GameObject>> m_pModelPool;
+	std::unordered_map<std::string, std::shared_ptr<IGameObject>> m_pModelPool;
 
 private:
 	inline static std::string g_strModelBasePath = "../Resources/Models";
