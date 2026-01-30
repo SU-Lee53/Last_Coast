@@ -14,6 +14,15 @@
 #include "LandscapeLayerInfoObject.h"
 #include "Engine/Texture2D.h"
 
+#include "Engine/PointLight.h"
+#include "Engine/SpotLight.h"
+#include "Engine/DirectionalLight.h"
+#include "Engine/SkyLight.h"
+#include "Components/PointLightComponent.h"
+#include "Components/SpotLightComponent.h"
+#include "Components/DirectionalLightComponent.h"
+#include "Components/SkyLightComponent.h"
+
 #if WITH_EDITOR
 #include "HAL/PlatformFilemanager.h"
 #include "Misc/FileHelper.h"
@@ -46,48 +55,119 @@
 
 bool UJsonSaveManager::SaveActorsToJson(const TArray<AActor*>& Actors, const FString& FileName)
 {
-    FString OutputString = "[\n";  // 배열 시작
+    TSharedPtr<FJsonObject> RootJson = MakeShareable(new FJsonObject);
 
-    for (int32 i = 0; i < Actors.Num(); i++)
+    // ========================================
+    // 1. Static Mesh Actors
+    // ========================================
+    TArray<TSharedPtr<FJsonValue>> MeshActorsArray;
+
+    for (AActor* Actor : Actors)
     {
-        AActor* Actor = Actors[i];
-        if (Actor)
+        if (!Actor) continue;
+
+        AStaticMeshActor* StaticMeshActor = Cast<AStaticMeshActor>(Actor);
+        if (StaticMeshActor && StaticMeshActor->GetStaticMeshComponent())
         {
-            AStaticMeshActor* StaticMeshActor = Cast<AStaticMeshActor>(Actor);
-            if (StaticMeshActor && StaticMeshActor->GetStaticMeshComponent())
+            UStaticMesh* Mesh = StaticMeshActor->GetStaticMeshComponent()->GetStaticMesh();
+            if (Mesh)
             {
-                UStaticMesh* Mesh = StaticMeshActor->GetStaticMeshComponent()->GetStaticMesh();
-                if (Mesh)
-                {
-                    TSharedPtr<FJsonObject> ActorJson = MakeShareable(new FJsonObject);
-                    ActorJson->SetStringField(TEXT("ActorName"), Actor->GetName());
-                    ActorJson->SetStringField(TEXT("MeshName"), Mesh->GetName());
-                    ActorJson->SetObjectField(TEXT("Transform"), TransformToJson(Actor->GetActorTransform()));
-                    
-                    FString ActorString;
-                    TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&ActorString);
-                    FJsonSerializer::Serialize(ActorJson.ToSharedRef(), Writer);
+                TSharedPtr<FJsonObject> ActorJson = MakeShareable(new FJsonObject);
+                ActorJson->SetStringField(TEXT("ActorName"), Actor->GetName());
+                ActorJson->SetStringField(TEXT("MeshName"), Mesh->GetName());
+                ActorJson->SetObjectField(TEXT("Transform"), TransformToJson(Actor->GetActorTransform()));
 
-                    OutputString += ActorString;
-
-                    // 마지막 항목이 아니면 쉼표 추가
-                    if (i < Actors.Num() - 1)
-                    {
-                        OutputString += TEXT(",\n");
-                    }
-                }  
+                MeshActorsArray.Add(MakeShareable(new FJsonValueObject(ActorJson)));
             }
         }
     }
 
-    OutputString += "\n]";  // 배열 종료
+    RootJson->SetArrayField(TEXT("StaticMeshActors"), MeshActorsArray);
+
+    // ========================================
+    // 2. Light Actors
+    // ========================================
+    TArray<TSharedPtr<FJsonValue>> LightsArray;
+
+    for (AActor* Actor : Actors)
+    {
+        if (!Actor) continue;
+
+        TSharedPtr<FJsonObject> LightJson = nullptr;
+
+        // Point Light
+        if (APointLight* PointLight = Cast<APointLight>(Actor))
+        {
+            LightJson = MakeShareable(new FJsonObject);
+            LightJson->SetStringField(TEXT("Type"), TEXT("PointLight"));
+            LightJson->SetStringField(TEXT("ActorName"), Actor->GetName());
+            LightJson->SetObjectField(TEXT("Transform"), TransformToJson(Actor->GetActorTransform()));
+
+            if (UPointLightComponent* LightComp = PointLight->PointLightComponent)
+            {
+                LightJson->SetNumberField(TEXT("Intensity"), LightComp->Intensity);
+                LightJson->SetNumberField(TEXT("AttenuationRadius"), LightComp->AttenuationRadius);
+                LightJson->SetNumberField(TEXT("SourceRadius"), LightComp->SourceRadius);
+
+                FLinearColor LightColor = LightComp->LightColor;
+                TSharedPtr<FJsonObject> ColorJson = MakeShareable(new FJsonObject);
+                ColorJson->SetNumberField(TEXT("R"), LightColor.R);
+                ColorJson->SetNumberField(TEXT("G"), LightColor.G);
+                ColorJson->SetNumberField(TEXT("B"), LightColor.B);
+                LightJson->SetObjectField(TEXT("Color"), ColorJson);
+
+                LightJson->SetBoolField(TEXT("CastShadows"), LightComp->CastShadows);
+            }
+        }
+        // Spot Light
+        else if (ASpotLight* SpotLight = Cast<ASpotLight>(Actor))
+        {
+            LightJson = MakeShareable(new FJsonObject);
+            LightJson->SetStringField(TEXT("Type"), TEXT("SpotLight"));
+            LightJson->SetStringField(TEXT("ActorName"), Actor->GetName());
+            LightJson->SetObjectField(TEXT("Transform"), TransformToJson(Actor->GetActorTransform()));
+
+            if (USpotLightComponent* LightComp = SpotLight->SpotLightComponent)
+            {
+                LightJson->SetNumberField(TEXT("Intensity"), LightComp->Intensity);
+                LightJson->SetNumberField(TEXT("AttenuationRadius"), LightComp->AttenuationRadius);
+                LightJson->SetNumberField(TEXT("InnerConeAngle"), LightComp->InnerConeAngle);
+                LightJson->SetNumberField(TEXT("OuterConeAngle"), LightComp->OuterConeAngle);
+
+                FLinearColor LightColor = LightComp->LightColor;
+                TSharedPtr<FJsonObject> ColorJson = MakeShareable(new FJsonObject);
+                ColorJson->SetNumberField(TEXT("R"), LightColor.R);
+                ColorJson->SetNumberField(TEXT("G"), LightColor.G);
+                ColorJson->SetNumberField(TEXT("B"), LightColor.B);
+                LightJson->SetObjectField(TEXT("Color"), ColorJson);
+
+                LightJson->SetBoolField(TEXT("CastShadows"), LightComp->CastShadows);
+            }
+        }
+        if (LightJson.IsValid())
+        {
+            LightsArray.Add(MakeShareable(new FJsonValueObject(LightJson)));
+        }
+    }
+
+    RootJson->SetArrayField(TEXT("Lights"), LightsArray);
+
+    // ========================================
+    // 3. JSON 저장
+    // ========================================
+    FString OutputString;
+    TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
+    FJsonSerializer::Serialize(RootJson.ToSharedRef(), Writer);
+
     FString Directory = FPaths::ProjectSavedDir() + TEXT("../SceneJson/");
     FString FullPath = Directory + FileName + TEXT(".json");
+
     bool bSuccess = FFileHelper::SaveStringToFile(OutputString, *FullPath);
 
     if (bSuccess)
     {
-        UE_LOG(LogTemp, Log, TEXT("%d actors saved to: %s"), Actors.Num(), *FullPath);
+        UE_LOG(LogTemp, Log, TEXT("Scene saved: %d meshes, %d lights to: %s"),
+            MeshActorsArray.Num(), LightsArray.Num(), *FullPath);
     }
 
     return bSuccess;
