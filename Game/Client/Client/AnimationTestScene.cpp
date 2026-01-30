@@ -6,17 +6,15 @@
 
 void AnimationTestScene::BuildObjects()
 {
-	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
-	LoadFromFiles("TEST");
-
-	/*
+	//m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	//LoadFromFiles("TEST");
+	 
 	m_pPlayer = std::make_shared<DebugPlayer>();
 
 	m_pTerrain = std::make_shared<TerrainObject>();
 	m_pTerrain->LoadFromFiles("TEST");
 
 	v3TerrainPos = m_pTerrain->GetTransform()->GetPosition();
-	*/
 }
 
 void AnimationTestScene::OnEnterScene()

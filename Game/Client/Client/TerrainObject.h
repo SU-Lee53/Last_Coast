@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "GameObject.h"
+#include "StaticObject.h"
 #include "TerrainComponent.h"
 #include "HeightMapRawImage.h";
 
@@ -21,7 +21,7 @@ struct TERRAINLOADINFO {
 	std::vector<TERRAINCOMPONENTLOADINFO> ComponentInfos;
 };
 
-class TerrainObject : public IGameObject {
+class TerrainObject : public StaticObject {
 public:
 	virtual void RenderImmediate(ComPtr<ID3D12Device> pd3dDevice,
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
@@ -45,5 +45,6 @@ private:
 	Vector3 m_v3TerrainScale;
 
 	const static std::string g_strTerrainPath;
+
 };
 

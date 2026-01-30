@@ -45,7 +45,7 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice, C
 	d3dDescriptorRanges[8].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 6, 0, 0);	// Bone Transform				-> b6
 	d3dDescriptorRanges[9].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 11, 0, 0);	// Diffuse, Normal/Height		-> t11 ~ t14
 
-	CD3DX12_ROOT_PARAMETER d3dRootParameters[10];
+	CD3DX12_ROOT_PARAMETER d3dRootParameters[10]; 
 	d3dRootParameters[0].InitAsDescriptorTable(1, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);	// Scene (Camera)
 	d3dRootParameters[1].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL);						// Scene (Light)
 	d3dRootParameters[2].InitAsDescriptorTable(1, &d3dDescriptorRanges[1], D3D12_SHADER_VISIBILITY_ALL);	// Scene (Cubemap(Skybox))
