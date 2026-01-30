@@ -14,26 +14,30 @@ void ICollider::MergeOBB(std::shared_ptr<IGameObject> pObj)
 
 	auto pMeshRenderer = pObj->GetComponent<MeshRenderer>();
 	if (pMeshRenderer) {
-		// Get corner fron OBB to merge
-		XMFLOAT3 pxmf3OBBPoints1[BoundingOrientedBox::CORNER_COUNT];
-		BoundingOrientedBox xmOBBMesh;
-		pMeshRenderer->GetOBBMerged().Transform(xmOBBMesh, pObj->GetTransform()->GetWorldMatrix());
-		xmOBBMesh.GetCorners(pxmf3OBBPoints1);
+		if (m_xmOBBOrigin.Center == Vector3(0, 0, 0) && m_xmOBBOrigin.Extents == Vector3(1, 1, 1)) {
+			m_xmOBBOrigin = pMeshRenderer->GetOBBMerged();
+		}
+		else {
+			// Get corner fron OBB to merge
+			XMFLOAT3 pxmf3OBBPoints1[BoundingOrientedBox::CORNER_COUNT];
+			BoundingOrientedBox xmOBBMesh = pMeshRenderer->GetOBBMerged();
+			xmOBBMesh.GetCorners(pxmf3OBBPoints1);
 
-		XMFLOAT3 pxmf3OBBPoints2[BoundingOrientedBox::CORNER_COUNT];
-		m_xmOBBOrigin.GetCorners(pxmf3OBBPoints2);
+			XMFLOAT3 pxmf3OBBPoints2[BoundingOrientedBox::CORNER_COUNT];
+			m_xmOBBOrigin.GetCorners(pxmf3OBBPoints2);
 
-		// Create AABB from OBB points for merge
-		BoundingBox xmAABB1, xmAABB2;
-		BoundingBox::CreateFromPoints(xmAABB1, BoundingOrientedBox::CORNER_COUNT, pxmf3OBBPoints1, sizeof(XMFLOAT3));
-		BoundingBox::CreateFromPoints(xmAABB2, BoundingOrientedBox::CORNER_COUNT, pxmf3OBBPoints2, sizeof(XMFLOAT3));
+			// Create AABB from OBB points for merge
+			BoundingBox xmAABB1, xmAABB2;
+			BoundingBox::CreateFromPoints(xmAABB1, BoundingOrientedBox::CORNER_COUNT, pxmf3OBBPoints1, sizeof(XMFLOAT3));
+			BoundingBox::CreateFromPoints(xmAABB2, BoundingOrientedBox::CORNER_COUNT, pxmf3OBBPoints2, sizeof(XMFLOAT3));
 
-		// Merge OBB
-		BoundingBox xmAABBMerged;
-		BoundingBox::CreateMerged(xmAABBMerged, xmAABB1, xmAABB2);
+			// Merge OBB
+			BoundingBox xmAABBMerged;
+			BoundingBox::CreateMerged(xmAABBMerged, xmAABB1, xmAABB2);
 
-		// Set OBB
-		BoundingOrientedBox::CreateFromBoundingBox(m_xmOBBOrigin, xmAABBMerged);
+			// Set OBB
+			BoundingOrientedBox::CreateFromBoundingBox(m_xmOBBOrigin, xmAABBMerged);
+		}
 	}
 
 	for (const auto& pChild : pObj->GetChildren()) {

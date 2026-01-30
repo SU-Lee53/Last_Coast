@@ -52,6 +52,7 @@ public:
 	const Vector3& GetLook() const;
 	
 	const Matrix& GetWorldMatrix() const;
+	const Matrix& GetFrameMatrix() const;
 
 private:
 	// m_mtxFrameRelative : 계층 모델에서 부모로부터의 상대 변환

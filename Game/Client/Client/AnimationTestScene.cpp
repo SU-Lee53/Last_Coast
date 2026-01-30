@@ -6,15 +6,15 @@
 
 void AnimationTestScene::BuildObjects()
 {
-	//m_pPlayer = std::make_shared<ThirdPersonPlayer>();
-	//LoadFromFiles("TEST");
+	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	LoadFromFiles("TEST");
 	 
-	m_pPlayer = std::make_shared<DebugPlayer>();
-
-	m_pTerrain = std::make_shared<TerrainObject>();
-	m_pTerrain->LoadFromFiles("TEST");
-
-	v3TerrainPos = m_pTerrain->GetTransform()->GetPosition();
+	// m_pPlayer = std::make_shared<DebugPlayer>();
+	// 
+	// m_pTerrain = std::make_shared<TerrainObject>();
+	// m_pTerrain->LoadFromFiles("TEST");
+	// 
+	// v3TerrainPos = m_pTerrain->GetTransform()->GetPosition();
 }
 
 void AnimationTestScene::OnEnterScene()
@@ -71,6 +71,22 @@ void AnimationTestScene::Update()
 			Vector3 v3PlayerPos = transform->GetPosition();
 			ImGui::Text("Player Position : (%f, %f, %f)", v3PlayerPos.x, v3PlayerPos.y, v3PlayerPos.z);
 
+			const auto& spaceDesc = GetSpacePartitionDesc();
+			SpacePartitionDesc::CellCoord cdPlayer = spaceDesc.WorldToCellXZ(v3PlayerPos);
+			int32 cellIndex = spaceDesc.CellToIndex(cdPlayer.x, cdPlayer.y);
+			ImGui::NewLine();
+			ImGui::Text("====== Space Partition ======");
+			ImGui::Text("Player is in (%d, %d) - # %d", cdPlayer.x, cdPlayer.y, cellIndex);
+
+			const auto& cellData = spaceDesc.GetCellData(cdPlayer);
+			if (cellData) {
+				for (uint32 i = 0; i < cellData->pObjectsInCell.size(); ++i) {
+					ImGui::Text("# %d - Name : %s", i, cellData->pObjectsInCell[i]->GetName().c_str());
+				}
+			}
+			else {
+				ImGui::Text("Out of Range");
+			}
 		}
 		else {
 			ImGui::Text("No Animation");

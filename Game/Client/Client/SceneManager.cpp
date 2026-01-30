@@ -29,6 +29,7 @@ void SceneManager::Update()
 {
 	m_upCurrentScene->PreUpdate();
 	m_upCurrentScene->Update();
+	m_upCurrentScene->FixedUpdate();
 	m_upCurrentScene->PostUpdate();
 }
 

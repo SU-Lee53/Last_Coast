@@ -42,6 +42,8 @@ public:
 	void SetChild(std::shared_ptr<IGameObject> pChild);
 	void SetName(const std::string& strFrameName);
 
+	const std::string& GetName() const { return m_strFrameName; }
+
 	template<ComponentType T>
 	std::shared_ptr<T> GetComponent() const;
 	std::shared_ptr<Transform> GetTransform();

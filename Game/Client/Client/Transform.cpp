@@ -167,3 +167,8 @@ const Matrix& Transform::GetWorldMatrix() const
 {
 	return m_mtxWorld;
 }
+
+const Matrix& Transform::GetFrameMatrix() const
+{
+	return m_mtxFrameRelative;
+}

@@ -189,14 +189,19 @@ void MeshRenderer::Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Graphics
 
 BoundingOrientedBox MeshRenderer::GetOBBMerged() const
 {
-	BoundingBox xmAABBMerged{};
+	BoundingBox xmAABBMerged;
 	for (const auto& pMesh : m_pMeshes) {
 		XMFLOAT3 pxmf3OBBPoints[BoundingOrientedBox::CORNER_COUNT];
 		pMesh->GetBoundingBox().GetCorners(pxmf3OBBPoints);
 		BoundingBox xmAABB{};
 		BoundingBox::CreateFromPoints(xmAABB, BoundingOrientedBox::CORNER_COUNT, pxmf3OBBPoints, sizeof(XMFLOAT3));
 
-		BoundingBox::CreateMerged(xmAABBMerged, xmAABBMerged, xmAABB);
+		if (xmAABBMerged.Center == Vector3(0, 0, 0) && xmAABBMerged.Extents == Vector3(1, 1, 1)) {
+			xmAABBMerged = xmAABB;
+		}
+		else {
+			BoundingBox::CreateMerged(xmAABBMerged, xmAABBMerged, xmAABB);
+		}
 	}
 
 	BoundingOrientedBox xmOBBResult{};

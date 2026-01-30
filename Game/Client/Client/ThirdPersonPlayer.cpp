@@ -26,6 +26,7 @@ void ThirdPersonPlayer::Initialize()
 		auto pModel = MODEL->Get("Ch33_nonPBR")->CopyObject<NodeObject>();
 		pModel->GetTransform()->Rotate(Vector3::Up, -90.f);
 		SetChild(pModel);
+		//GetTransform()->Rotate(Vector3::Up, -90.f);
 
 		// AnimationController
 		AddComponent<PlayerAnimationController>();
