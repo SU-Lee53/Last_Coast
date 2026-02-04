@@ -23,6 +23,7 @@
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SkyLightComponent.h"
 
+
 #if WITH_EDITOR
 #include "HAL/PlatformFilemanager.h"
 #include "Misc/FileHelper.h"
@@ -101,22 +102,36 @@ bool UJsonSaveManager::SaveActorsToJson(const TArray<AActor*>& Actors, const FSt
             LightJson = MakeShareable(new FJsonObject);
             LightJson->SetStringField(TEXT("Type"), TEXT("PointLight"));
             LightJson->SetStringField(TEXT("ActorName"), Actor->GetName());
+
+            // ✅ Transform (위치 포함)
             LightJson->SetObjectField(TEXT("Transform"), TransformToJson(Actor->GetActorTransform()));
 
             if (UPointLightComponent* LightComp = PointLight->PointLightComponent)
             {
+                // ✅ Intensity (밝기)
                 LightJson->SetNumberField(TEXT("Intensity"), LightComp->Intensity);
-                LightJson->SetNumberField(TEXT("AttenuationRadius"), LightComp->AttenuationRadius);
-                LightJson->SetNumberField(TEXT("SourceRadius"), LightComp->SourceRadius);
 
+                // ✅ Color (색상, Vector4)
                 FLinearColor LightColor = LightComp->LightColor;
                 TSharedPtr<FJsonObject> ColorJson = MakeShareable(new FJsonObject);
-                ColorJson->SetNumberField(TEXT("R"), LightColor.R);
-                ColorJson->SetNumberField(TEXT("G"), LightColor.G);
-                ColorJson->SetNumberField(TEXT("B"), LightColor.B);
+                ColorJson->SetNumberField(TEXT("X"), LightColor.R);
+                ColorJson->SetNumberField(TEXT("Y"), LightColor.G);
+                ColorJson->SetNumberField(TEXT("Z"), LightColor.B);
                 LightJson->SetObjectField(TEXT("Color"), ColorJson);
 
-                LightJson->SetBoolField(TEXT("CastShadows"), LightComp->CastShadows);
+                // ✅ Range
+                LightJson->SetNumberField(TEXT("Range"), LightComp->AttenuationRadius);
+
+                // ✅ Attenuation
+                LightJson->SetNumberField(TEXT("Attenuation0"), 1.0f);
+                LightJson->SetNumberField(TEXT("Attenuation1"), 0.0f);
+
+                float Range = LightComp->AttenuationRadius;
+                float Attenuation2 = (Range > 0.0f) ? (1.0f / (Range * Range)) : 0.0f;
+                LightJson->SetNumberField(TEXT("Attenuation2"), Attenuation2);
+
+                // 추가 정보
+                LightJson->SetNumberField(TEXT("SourceRadius"), LightComp->SourceRadius);
             }
         }
         // Spot Light
@@ -125,23 +140,50 @@ bool UJsonSaveManager::SaveActorsToJson(const TArray<AActor*>& Actors, const FSt
             LightJson = MakeShareable(new FJsonObject);
             LightJson->SetStringField(TEXT("Type"), TEXT("SpotLight"));
             LightJson->SetStringField(TEXT("ActorName"), Actor->GetName());
+
+            // ✅ Transform
             LightJson->SetObjectField(TEXT("Transform"), TransformToJson(Actor->GetActorTransform()));
+
+            // ✅ Direction (Transform의 Forward Vector)
+            LightJson->SetObjectField(TEXT("Direction"), DirectionToJson(Actor->GetActorTransform()));
 
             if (USpotLightComponent* LightComp = SpotLight->SpotLightComponent)
             {
+                // ✅ Intensity
                 LightJson->SetNumberField(TEXT("Intensity"), LightComp->Intensity);
-                LightJson->SetNumberField(TEXT("AttenuationRadius"), LightComp->AttenuationRadius);
-                LightJson->SetNumberField(TEXT("InnerConeAngle"), LightComp->InnerConeAngle);
-                LightJson->SetNumberField(TEXT("OuterConeAngle"), LightComp->OuterConeAngle);
 
+                // ✅ Color (Vector4)
                 FLinearColor LightColor = LightComp->LightColor;
                 TSharedPtr<FJsonObject> ColorJson = MakeShareable(new FJsonObject);
-                ColorJson->SetNumberField(TEXT("R"), LightColor.R);
-                ColorJson->SetNumberField(TEXT("G"), LightColor.G);
-                ColorJson->SetNumberField(TEXT("B"), LightColor.B);
+                ColorJson->SetNumberField(TEXT("X"), LightColor.R);
+                ColorJson->SetNumberField(TEXT("Y"), LightColor.G);
+                ColorJson->SetNumberField(TEXT("Z"), LightColor.B);
+                ColorJson->SetNumberField(TEXT("W"), 1.0f);
                 LightJson->SetObjectField(TEXT("Color"), ColorJson);
 
-                LightJson->SetBoolField(TEXT("CastShadows"), LightComp->CastShadows);
+                // ✅ Range
+                LightJson->SetNumberField(TEXT("Range"), LightComp->AttenuationRadius);
+
+                // ✅ Falloff (언리얼에는 직접 대응 없음, 기본값 1.0)
+                LightJson->SetNumberField(TEXT("Falloff"), 1.0f);
+
+                // ✅ Attenuation
+                LightJson->SetNumberField(TEXT("Attenuation0"), 1.0f);
+                LightJson->SetNumberField(TEXT("Attenuation1"), 0.0f);
+
+                float Range = LightComp->AttenuationRadius;
+                float Attenuation2 = (Range > 0.0f) ? (1.0f / (Range * Range)) : 0.0f;
+                LightJson->SetNumberField(TEXT("Attenuation2"), Attenuation2);
+
+                // ✅ Theta (Inner Cone) - 라디안으로 변환
+                float InnerConeAngle = LightComp->InnerConeAngle;
+                float Theta = FMath::DegreesToRadians(InnerConeAngle);
+                LightJson->SetNumberField(TEXT("Theta"), Theta);
+
+                // ✅ Phi (Outer Cone) - 라디안으로 변환
+                float OuterConeAngle = LightComp->OuterConeAngle;
+                float Phi = FMath::DegreesToRadians(OuterConeAngle);
+                LightJson->SetNumberField(TEXT("Phi"), Phi);
             }
         }
         if (LightJson.IsValid())
@@ -263,6 +305,37 @@ TSharedPtr<FJsonObject> UJsonSaveManager::TransformToJson(const FTransform& Tran
 
     return TransformJson;
 }
+
+
+TSharedPtr<FJsonObject> UJsonSaveManager::DirectionToJson(const FTransform& Transform)
+{
+    TSharedPtr<FJsonObject> DirectionJson = MakeShareable(new FJsonObject);
+
+    // Forward Vector 추출
+    FVector UnrealForward = Transform.GetRotation().GetForwardVector();
+
+    // 좌표계 변환 행렬
+    FMatrix ConversionMatrix = FMatrix(
+        FPlane(0, 1, 0, 0),
+        FPlane(0, 0, 1, 0),
+        FPlane(1, 0, 0, 0),
+        FPlane(0, 0, 0, 1)
+    );
+
+    // 변환 행렬 적용
+    FVector4 DirectXDirection4 = ConversionMatrix.TransformVector(UnrealForward);
+
+    // 정규화 (방향 벡터이므로)
+    FVector DirectXDirection(DirectXDirection4.X, DirectXDirection4.Y, DirectXDirection4.Z);
+    DirectXDirection.Normalize();
+
+    DirectionJson->SetNumberField(TEXT("X"), DirectXDirection.X);
+    DirectionJson->SetNumberField(TEXT("Y"), DirectXDirection.Y);
+    DirectionJson->SetNumberField(TEXT("Z"), DirectXDirection.Z);
+
+    return DirectionJson;
+}
+
 
 #if WITH_EDITOR
 bool UJsonSaveManager::ExportMeshToFBX(UStaticMesh* Mesh, const FString& FileName, bool bShowOptions)

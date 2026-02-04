@@ -6,11 +6,11 @@
 
 void SceneManager::Initialize()
 {
-	m_upCurrentScene = std::make_unique<AnimationTestScene>();
-	m_upCurrentScene->BuildObjects();
-	
-	//m_upCurrentScene = std::make_unique<TestScene>();
+	//m_upCurrentScene = std::make_unique<AnimationTestScene>();
 	//m_upCurrentScene->BuildObjects();
+	
+	m_upCurrentScene = std::make_unique<TestScene>();
+	m_upCurrentScene->BuildObjects();
 
 	m_upCurrentScene->PostInitialize();
 
