@@ -6,7 +6,7 @@ void TestScene::BuildObjects()
 {
 	m_pPlayer = std::make_shared<DebugPlayer>();
 
-	LoadFromFiles("TEST");
+	LoadFromFiles("Light");
 
 	Scene::InitializeObjects();
 }

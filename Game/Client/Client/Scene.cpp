@@ -247,33 +247,98 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 
 	nlohmann::json jScene = nlohmann::json::parse(inFile);
 
-	for (const auto& jObject : jScene) {
-		std::shared_ptr<IGameObject> pObj = std::make_shared<StaticObject>();
-		pObj->SetName(jObject["ActorName"].get<std::string>());
+	if (jScene.contains("StaticMeshActors")) {
+		for (const auto& jObject : jScene["StaticMeshActors"]) {
+			std::shared_ptr<IGameObject> pObj = std::make_shared<StaticObject>();
+			pObj->SetName(jObject["ActorName"].get<std::string>());
 
-		
-		auto matrixData = jObject["Transform"]["WorldMatrix"].get<std::vector<float>>();
-		Matrix M4x4WorldMatrix(matrixData.data());
+			auto matrixData = jObject["Transform"]["WorldMatrix"].get<std::vector<float>>();
+			Matrix M4x4WorldMatrix(matrixData.data());
+			pObj->GetTransform()->SetWorldMatrix(M4x4WorldMatrix);
 
-		//Vector3 v3Rotation; // X : Pitch, Y : Yaw, Z : Roll
-		//v3Rotation.x = jObject["Transform"]["Rotation"]["Pitch"].get<float>();
-		//v3Rotation.y = jObject["Transform"]["Rotation"]["Yaw"].get<float>();
-		//v3Rotation.z = jObject["Transform"]["Rotation"]["Roll"].get<float>();
+			std::string strMeshName = jObject["MeshName"].get<std::string>();
+			auto pMeshObject = MODEL->LoadOrGet(strMeshName)->CopyObject<NodeObject>();
+			pObj->SetChild(pMeshObject);
 
-		//Vector3 v3Scale;
-		//v3Scale.x = jObject["Transform"]["Scale"]["X"].get<float>();
-		//v3Scale.y = jObject["Transform"]["Scale"]["Y"].get<float>();
-		//v3Scale.z = jObject["Transform"]["Scale"]["Z"].get<float>();
+			m_pGameObjects.push_back(pObj);
+		}
+	}
 
-		pObj->GetTransform()->SetWorldMatrix(M4x4WorldMatrix);
-		//pObj->GetTransform()->SetRotation(v3Rotation);
-		//pObj->GetTransform()->Scale(v3Rotation);
+	// Lights 로드
+	if (jScene.contains("Lights")) {
+		for (const auto& jLight : jScene["Lights"]) {
+			std::string strType = jLight["Type"].get<std::string>();
 
-		std::string strMeshName = jObject["MeshName"].get<std::string>();
-		auto pMeshObject = MODEL->LoadOrGet(strMeshName)->CopyObject<NodeObject>();
-		pObj->SetChild(pMeshObject);
+			// PointLight
+			if (strType == "PointLight") {
+				std::shared_ptr<PointLight> pLight = std::make_shared<PointLight>();
+				// Transform (Position)
+				auto matrixData = jLight["Transform"]["WorldMatrix"].get<std::vector<float>>();
+				Matrix M4x4WorldMatrix(matrixData.data());
+				Vector3 v3Position(M4x4WorldMatrix._41, M4x4WorldMatrix._42, M4x4WorldMatrix._43);
+				pLight->m_v3Position = v3Position;
 
-		m_pGameObjects.push_back(pObj);
+				// Color와 Intensity로 Diffuse 계산
+				float intensity = jLight["Intensity"].get<float>();
+				float colorX = jLight["Color"]["X"].get<float>();
+				float colorY = jLight["Color"]["Y"].get<float>();
+				float colorZ = jLight["Color"]["Z"].get<float>();
+
+				pLight->m_v4Diffuse.x = colorX * intensity;
+				pLight->m_v4Diffuse.y = colorY * intensity;
+				pLight->m_v4Diffuse.z = colorZ * intensity;
+				pLight->m_v4Diffuse.w = 1.0f;
+
+				// Range & Attenuation
+				pLight->m_fRange = jLight["Range"].get<float>();
+				pLight->m_fAttenuation0 = jLight["Attenuation0"].get<float>();
+				pLight->m_fAttenuation1 = jLight["Attenuation1"].get<float>();
+				pLight->m_fAttenuation2 = jLight["Attenuation2"].get<float>();
+
+				m_pLights.push_back(pLight);
+			}
+			// SpotLight
+			else if (strType == "SpotLight") {
+				std::shared_ptr<SpotLight> pLight = std::make_shared<SpotLight>();
+				// Transform (Position)
+				auto matrixData = jLight["Transform"]["WorldMatrix"].get<std::vector<float>>();
+				Matrix M4x4WorldMatrix(matrixData.data());
+				Vector3 v3Position(M4x4WorldMatrix._41, M4x4WorldMatrix._42, M4x4WorldMatrix._43);
+				pLight->m_v3Position = v3Position;
+
+				// Direction
+				float dirX = jLight["Direction"]["X"].get<float>();
+				float dirY = jLight["Direction"]["Y"].get<float>();
+				float dirZ = jLight["Direction"]["Z"].get<float>();
+				pLight->m_v3Direction = Vector3(dirX, dirY, dirZ);
+
+				// Color와 Intensity로 Diffuse 계산
+				float intensity = jLight["Intensity"].get<float>();
+				float colorX = jLight["Color"]["X"].get<float>();
+				float colorY = jLight["Color"]["Y"].get<float>();
+				float colorZ = jLight["Color"]["Z"].get<float>();
+
+				pLight->m_v4Diffuse.x = colorX * intensity;
+				pLight->m_v4Diffuse.y = colorY * intensity;
+				pLight->m_v4Diffuse.z = colorZ * intensity;
+				pLight->m_v4Diffuse.w = 1.0f;
+
+				// Range & Attenuation
+				pLight->m_fRange = jLight["Range"].get<float>();
+				pLight->m_fAttenuation0 = jLight["Attenuation0"].get<float>();
+				pLight->m_fAttenuation1 = jLight["Attenuation1"].get<float>();
+				pLight->m_fAttenuation2 = jLight["Attenuation2"].get<float>();
+
+				// Falloff
+				pLight->m_fFalloff = jLight["Falloff"].get<float>();
+
+				// Cone Angles
+				pLight->m_fTheta = jLight["Theta"].get<float>();
+				pLight->m_fPhi = jLight["Phi"].get<float>();
+
+				m_pLights.push_back(pLight);
+			}
+		}
 	}
 
 }

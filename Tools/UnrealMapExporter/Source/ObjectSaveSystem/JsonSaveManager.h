@@ -41,6 +41,7 @@ private:
     // Transform을 JSON 오브젝트로 변환
     static TSharedPtr<FJsonObject> TransformToJson(const FTransform& Transform);
 
+    static TSharedPtr<FJsonObject> DirectionToJson(const FTransform& Transform);
 
     static bool ExportMeshToFBX(UStaticMesh* Mesh, const FString& FileName, bool bShowOptions = false);
 
