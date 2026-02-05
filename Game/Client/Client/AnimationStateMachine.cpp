@@ -92,6 +92,7 @@ void PlayerAnimationStateMachine::InitializeStateGraph()
 	pRun->fnStateTransitionCallback = RunCallback;
 
 	pIdle->Connect(pWalk, 0.2);
+	pIdle->Connect(pRun, 0.2);
 
 	pWalk->Connect(pIdle, 0.2);
 	pWalk->Connect(pRun, 0.2);
@@ -113,7 +114,7 @@ bool PlayerAnimationStateMachine::IdleCallback(std::shared_ptr<IGameObject> pObj
 	//return !INPUT->GetButtonPressed(VK_UP) && !INPUT->GetButtonPressed(VK_LSHIFT);
 	
 	auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(pObj);
-	return pPlayer->GetMoveSpeed() < std::numeric_limits<float>::epsilon();
+	return pPlayer->GetMoveSpeedSqXZ() < std::numeric_limits<float>::epsilon();
 }
 
 bool PlayerAnimationStateMachine::WalkCallback(std::shared_ptr<IGameObject> pObj)
@@ -122,7 +123,7 @@ bool PlayerAnimationStateMachine::WalkCallback(std::shared_ptr<IGameObject> pObj
 	//return INPUT->GetButtonPressed(VK_UP) && !INPUT->GetButtonPressed(VK_LSHIFT);
 	
 	auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(pObj);
-	return pPlayer->GetMoveSpeed() > std::numeric_limits<float>::epsilon() && !pPlayer->IsRunning();
+	return pPlayer->GetMoveSpeedSqXZ() > std::numeric_limits<float>::epsilon() && !pPlayer->IsRunning();
 }
 
 bool PlayerAnimationStateMachine::RunCallback(std::shared_ptr<IGameObject> pObj)
@@ -131,5 +132,5 @@ bool PlayerAnimationStateMachine::RunCallback(std::shared_ptr<IGameObject> pObj)
 	// return INPUT->GetButtonPressed(VK_UP) && INPUT->GetButtonPressed(VK_LSHIFT);
 	
 	auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(pObj);
-	return pPlayer->GetMoveSpeed() > std::numeric_limits<float>::epsilon() && pPlayer->IsRunning();
+	return pPlayer->GetMoveSpeedSqXZ() > std::numeric_limits<float>::epsilon() && pPlayer->IsRunning();
 }

@@ -19,7 +19,7 @@ void ThirdPersonPlayer::Initialize()
 		m_pCamera->SetViewport(0, 0, WinCore::sm_dwClientWidth, WinCore::sm_dwClientHeight, 0.f, 1.f);
 		m_pCamera->SetScissorRect(0, 0, WinCore::sm_dwClientWidth, WinCore::sm_dwClientHeight);
 		m_pCamera->GenerateViewMatrix(XMFLOAT3(0.f, 0.f, -15.f), XMFLOAT3(0.f, 0.f, 1.f), XMFLOAT3(0.f, 1.f, 0.f));
-		m_pCamera->GenerateProjectionMatrix(1.01f, 500_m, (WinCore::sm_dwClientWidth / WinCore::sm_dwClientHeight), 60.0f);
+		m_pCamera->GenerateProjectionMatrix(1.01f, 500_m, ((float)WinCore::sm_dwClientWidth / (float)WinCore::sm_dwClientHeight), 60.0f);
 		m_pCamera->SetOwner(shared_from_this());
 
 		// Model
@@ -42,8 +42,8 @@ void ThirdPersonPlayer::Initialize()
 		pChild->Initialize();
 	}
 
-	AddComponent<DynamicCollider>();
-	GetComponent<DynamicCollider>()->Initialize();
+	AddComponent<PlayerCollider>();
+	GetComponent<PlayerCollider>()->Initialize();
 }
 
 void ThirdPersonPlayer::ProcessInput()
@@ -102,36 +102,37 @@ void ThirdPersonPlayer::ProcessInput()
 		}
 	}
 
-	Vector3 v3MoveDirection{};
-	bool bMoved = false;
-
 	// Move
+	bool bMoved = false;
+	m_v3MoveDirection.x = 0.f;
+	m_v3MoveDirection.z = 0.f;
 	if (INPUT->GetButtonPressed('W')) {
-		v3MoveDirection += pThirdPersonCamera->GetForwardXZ();
+		m_v3MoveDirection += pThirdPersonCamera->GetForwardXZ();
 		bMoved = true;
 	}
 	if (INPUT->GetButtonPressed('S')) {
-		v3MoveDirection += -pThirdPersonCamera->GetForwardXZ();
+		m_v3MoveDirection += -pThirdPersonCamera->GetForwardXZ();
 		bMoved = true;
 	}
 	if (INPUT->GetButtonPressed('A')) {
-		v3MoveDirection += -pThirdPersonCamera->GetRightXZ();
+		m_v3MoveDirection += -pThirdPersonCamera->GetRightXZ();
 		bMoved = true;
 	}
 	if (INPUT->GetButtonPressed('D')) {
-		v3MoveDirection += pThirdPersonCamera->GetRightXZ();
+		m_v3MoveDirection += pThirdPersonCamera->GetRightXZ();
 		bMoved = true;
 	}
 
 	// 테스트용 나중에 떼버릴것
 	if (INPUT->GetButtonPressed('E')) {
-		v3MoveDirection += pTransform->GetUp();
+		m_v3MoveDirection += pTransform->GetUp();
 		bMoved = true;
 	}
 	if (INPUT->GetButtonPressed('Q')) {
-		v3MoveDirection += -pTransform->GetUp();
+		m_v3MoveDirection += -pTransform->GetUp();
 		bMoved = true;
 	}
+	m_bMoved = bMoved;
 
 	// Run
 	if (INPUT->GetButtonPressed(VK_LSHIFT)) {
@@ -141,25 +142,77 @@ void ThirdPersonPlayer::ProcessInput()
 		m_bRunning = false;
 	}
 
-	if (bMoved) {
-		v3MoveDirection.Normalize();
-		m_fMoveSpeed += 0.5 * m_fAcceleration * m_fFriction;
-		float fMaxSpeed = m_bRunning ? m_fMaxMoveSpeed * 2 : m_fMaxMoveSpeed;
-		m_fMoveSpeed = std::clamp(m_fMoveSpeed, 0.f, fMaxSpeed);
-		pTransform->Move(v3MoveDirection, m_fMoveSpeed * DT);
-
-		// 플레이어가 이동 방향을 바라보도록 돌린다
-		float fYaw = std::atan2f(v3MoveDirection.x, v3MoveDirection.z);
-		pTransform->SetRotation(0.f, fYaw, 0.f);
-	}
-	else {
-		m_fMoveSpeed -= 0.5 * m_fAcceleration * m_fFriction;
-		m_fMoveSpeed = std::clamp(m_fMoveSpeed, 0.f, m_fMaxMoveSpeed);
-	}
+	m_v3MoveDirection.Normalize();
 }
 
 void ThirdPersonPlayer::Update()
 {
+	for (const auto& pChild : m_pChildren) {
+		pChild->Update();
+	}
+
+}
+
+void ThirdPersonPlayer::OnBeginCollision(const CollisionResult& collisionResult)
+{
+	// 여기서는 충돌이 일어난 객체들을 모아놓고 나중에 PostUpdate에서 한번에 이동 블락 처리를 한다
+	m_xmOBBCollided.push_back(collisionResult.DecomposeRef().second.GetOBBWorld());
+}
+
+void ThirdPersonPlayer::OnWhileCollision(const CollisionResult& collisionResult)
+{
+	m_xmOBBCollided.push_back(collisionResult.DecomposeRef().second.GetOBBWorld());
+}
+
+void ThirdPersonPlayer::OnEndCollision(const CollisionResult& collisionResult)
+{
+}
+
+void ThirdPersonPlayer::PostUpdate()
+{
+	auto pTransform = GetTransform();
+
+	// 바닥 접지에 유예 프레임을 적용
+	if (m_unGroundGraceFrames > 0) {
+		--m_unGroundGraceFrames;
+		m_bGrounded = true;
+	}
+	else {
+		m_bGrounded = false;
+	}
+
+	Vector3 v3Delta;
+	if (m_bMoved) {
+		m_fMoveSpeed += +0.5 * m_fAcceleration * m_fFriction;
+		float fMaxSpeed = m_bRunning ? m_fMaxMoveSpeed * 2 : m_fMaxMoveSpeed;
+		m_fMoveSpeed = std::clamp(m_fMoveSpeed, 0.f, fMaxSpeed);
+	}
+	else {
+		m_fMoveSpeed -= 0.5 * m_fAcceleration * m_fFriction;
+		m_fMoveSpeed = std::clamp(m_fMoveSpeed, 0.f, m_fMaxMoveSpeed);
+		if (m_fMoveSpeed <= 0.f) {
+			m_v3MoveDirection = Vector3(0, 0, 0);
+		}
+	}
+	v3Delta = m_v3MoveDirection * (m_fMoveSpeed * DT);
+	v3Delta.y += m_fVerticalVelocity * DT;
+
+	// 접지(Snap) 상태면 아래로 가해지는 중력을 제거함
+	if (m_bGrounded && v3Delta.y < 0.f && std::fabs(v3Delta.y) < m_fGroundDeadZoneY) {
+		v3Delta.y = 0.f;
+	}
+
+	ResolveCollision(v3Delta);
+	ApplyGravity();
+
+	if (m_bMoved) {
+		// 플레이어가 이동 방향을 바라보도록 돌린다
+		float fYaw = std::atan2f(m_v3MoveDirection.x, m_v3MoveDirection.z);
+		pTransform->SetRotation(0.f, fYaw, 0.f);
+	}
+
+	pTransform->Move(v3Delta, 1.f);
+
 	if (m_bAiming) {
 		auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
 		Vector3 v3LookDirection = pThirdPersonCamera->GetForwardXZ();
@@ -167,6 +220,122 @@ void ThirdPersonPlayer::Update()
 		GetTransform()->SetRotation(0.f, fYaw, 0.f);
 	}
 
-	Player::Update();
+	IPlayer::PostUpdate();
+	Vector3::Transform(m_v3FloorPosition, GetWorldMatrix());
+
+	m_xmOBBCollided.clear();
 }
 
+float ThirdPersonPlayer::GetMoveSpeedXZ() const
+{
+	Vector3 v3Delta = m_v3MoveDirection * (m_fMoveSpeed * DT);
+	v3Delta.y = 0.f;
+	return v3Delta.Length();
+}
+
+float ThirdPersonPlayer::GetMoveSpeedSqXZ() const
+{
+	Vector3 v3Delta = m_v3MoveDirection * (m_fMoveSpeed * DT);
+	v3Delta.y = 0.f;
+	return v3Delta.LengthSquared();
+}
+
+void ThirdPersonPlayer::ApplyGravity()
+{
+	if (!m_bGrounded) {
+		m_fVerticalVelocity += m_fGravity * DT; 
+		//m_bMoved = true;
+	}
+	else {
+		if (m_fVerticalVelocity < 0.f)
+			m_fVerticalVelocity = 0.f;
+	}
+}
+
+void ThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
+{
+	const BoundingCapsule& capsuleWorld = GetComponent<PlayerCollider>()->GetCapsuleWorld();
+
+	const uint32 unPassCount = 2;
+	const float fSkin = 0.5f;
+	const float fGround = 0.7f;
+	const float fSnapDistance = 1.0f;
+
+	for (uint32 pass = 0; pass < unPassCount; ++pass) {
+		bool bAnyHit = false;
+
+		for (auto& xmOBB : m_xmOBBCollided) {
+			Vector3 v3Normal;
+			float fDepth;
+			if (!capsuleWorld.Intersects(xmOBB, v3Normal, fDepth)) {
+				continue;
+			}
+
+			if (fDepth < fSkin) {
+				continue;
+			}
+
+			if (v3Normal.y > fGround && outv3Delta.y <= 0.f) {
+				// 바닥 접촉 확정
+				m_bGrounded = true;
+				m_unGroundGraceFrames = m_unMaxGroundGraceFrames;
+
+				if (m_fVerticalVelocity < 0.f) {
+					m_fVerticalVelocity = 0.f;
+				}
+
+				// Penetration Correction
+				if (fDepth > fSnapDistance) {
+					float fPush = std::min(fDepth + fSkin, 5.f);
+					outv3Delta += v3Normal * fPush;
+				}
+				
+				// Slope Projection
+				float fProjected = outv3Delta.Dot(v3Normal);
+				if (fProjected < 0.f) {
+					outv3Delta -= v3Normal * fProjected;
+				}
+			
+				continue;
+			}
+
+			float fProjectedAmount = outv3Delta.Dot(v3Normal);
+			if (fProjectedAmount < 0.f) {
+				// Step
+				if (TryStepUp(capsuleWorld, xmOBB, outv3Delta)) {
+					bAnyHit = true;
+					continue;
+				}
+
+				// Wall
+				outv3Delta -= v3Normal * fProjectedAmount;
+				bAnyHit = true;
+			}
+		}
+
+		if (!bAnyHit) {
+			break;
+		}
+	}
+}
+
+bool ThirdPersonPlayer::TryStepUp(const BoundingCapsule& capsule, const BoundingOrientedBox& box, OUT Vector3& outv3Delta)
+{
+	// Try move up
+	Vector3 v3Up = Vector3(0.f, m_fStepHeight, 0.f);
+	Vector3 v3StepDelta = outv3Delta + v3Up;
+
+	BoundingCapsule testCapsule = capsule;
+	testCapsule.v3Center += v3StepDelta;
+
+	// Collision Check
+	Vector3 v3Normal;
+	float fDepth;
+	if (testCapsule.Intersects(box, v3Normal, fDepth)) {
+		return false;	// Cannot Step up
+	}
+
+	v3StepDelta.y -= m_fStepHeight;
+	outv3Delta = v3StepDelta;
+	return true;
+}

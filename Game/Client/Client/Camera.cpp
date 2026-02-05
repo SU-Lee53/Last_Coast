@@ -15,6 +15,28 @@ Camera::~Camera()
 void Camera::Update()
 {
 	GenerateViewMatrix();
+
+	m_mtxWorld._11 = m_v3Right.x;
+	m_mtxWorld._12 = m_v3Right.y;
+	m_mtxWorld._13 = m_v3Right.z;
+	m_mtxWorld._14 = 0.f;
+
+	m_mtxWorld._21 = m_v3Up.x;
+	m_mtxWorld._22 = m_v3Up.y;
+	m_mtxWorld._23 = m_v3Up.z;
+	m_mtxWorld._24 = 0.f;
+
+	m_mtxWorld._31 = m_v3Look.x;
+	m_mtxWorld._32 = m_v3Look.y;
+	m_mtxWorld._33 = m_v3Look.z;
+	m_mtxWorld._34 = 0.f;
+
+	m_mtxWorld._41 = m_v3Position.x;
+	m_mtxWorld._42 = m_v3Position.y;
+	m_mtxWorld._43 = m_v3Position.z;
+	m_mtxWorld._44 = 1.f;
+
+	m_xmFrustumOrigin.Transform(m_xmFrustumWorld, m_mtxWorld);
 }
 
 Vector3 Camera::GetPosition() const
@@ -120,12 +142,13 @@ void Camera::GenerateViewMatrix()
 	m_v3Up = XMVector3Cross(m_v3Look, m_v3Right);
 	m_v3Up.Normalize();
 
-	m_mtxView._11 = m_v3Right.x; m_mtxView._12 = m_v3Up.x; m_mtxView._13 = m_v3Look.x;
-	m_mtxView._21 = m_v3Right.y; m_mtxView._22 = m_v3Up.y; m_mtxView._23 = m_v3Look.y;
-	m_mtxView._31 = m_v3Right.z; m_mtxView._32 = m_v3Up.z; m_mtxView._33 = m_v3Look.z;
+	m_mtxView._11 = m_v3Right.x; m_mtxView._12 = m_v3Up.x; m_mtxView._13 = m_v3Look.x; m_mtxView._14 = 0.f;
+	m_mtxView._21 = m_v3Right.y; m_mtxView._22 = m_v3Up.y; m_mtxView._23 = m_v3Look.y; m_mtxView._24 = 0.f;
+	m_mtxView._31 = m_v3Right.z; m_mtxView._32 = m_v3Up.z; m_mtxView._33 = m_v3Look.z; m_mtxView._34 = 0.f;
 	m_mtxView._41 = -m_v3Position.Dot(m_v3Right);
 	m_mtxView._42 = -m_v3Position.Dot(m_v3Up);
 	m_mtxView._43 = -m_v3Position.Dot(m_v3Look);
+	m_mtxView._44 = 1.f;
 }
 
 void Camera::GenerateViewMatrix(Vector3 v3Position, Vector3 v3LookAt, Vector3 v3Up)
@@ -155,7 +178,7 @@ void Camera::GenerateProjectionMatrix(float fNearPlaneDistance, float fFarPlaneD
 		)
 	);
 
-	BoundingFrustum::CreateFromMatrix(m_xmFrustum, XMLoadFloat4x4(&m_mtxProjection));
+	BoundingFrustum::CreateFromMatrix(m_xmFrustumOrigin, XMLoadFloat4x4(&m_mtxProjection));
 }
 
 void Camera::SetViewport(int xTopLeft, int yTopLeft, int nWidth, int nHeight, float fMinZ, float fMaxZ)

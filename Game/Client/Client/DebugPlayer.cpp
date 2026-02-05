@@ -86,3 +86,13 @@ void DebugPlayer::ProcessInput()
 
 }
 
+void DebugPlayer::Update()
+{
+	for (const auto& pChild : m_pChildren) {
+		pChild->Update();
+	}
+
+	if (m_pCamera) {
+		m_pCamera->Update();
+	}
+}

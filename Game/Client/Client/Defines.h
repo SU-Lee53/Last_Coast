@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+class IGameObject;
+class ICollider;
 
 //////////////////////////////////////////////////////////////////////////////////
 // Macros
@@ -159,6 +161,32 @@ struct PendingUploadBuffer {
 	CommandListPair* cmdListPair;	// Only for ref
 };
 
+struct CollisionResult {
+	std::shared_ptr<IGameObject> pSelf;
+	std::shared_ptr<IGameObject> pOther;
+
+	bool operator==(const CollisionResult& other) const noexcept {
+		return (pSelf == other.pSelf) && (pOther == other.pOther);
+	}
+
+	// Helpers
+	float GetDistanceBetweenCenter() const;
+	Vector3 GetDirectionToOther() const;
+	std::pair<const ICollider&, const ICollider&> DecomposeRef() const;
+
+};
+
+template<>
+struct std::hash<CollisionResult> {
+	size_t operator()(const CollisionResult& result) const {
+		// hash combine
+		size_t h1 = std::hash<std::shared_ptr<IGameObject>>{}(result.pSelf);
+		size_t h2 = std::hash<std::shared_ptr<IGameObject>>{}(result.pOther);
+
+		return h1 ^ (h2 + 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
+	}
+};
+
 //////////////////////////////////////////////////////////////////////////////////
 // CB Types
 
@@ -264,3 +292,6 @@ D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
 D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
 D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
 D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+
+//////////////////////////////////////////////////////////////////////////////////
+// Type Aliasing

@@ -111,6 +111,7 @@ void Scene::FixedUpdate()
 		obj->Update();
 	}
 
+	CheckCollision();
 }
 
 void Scene::PostUpdate()
@@ -126,6 +127,62 @@ void Scene::PostUpdate()
 
 	for (auto& obj : m_pGameObjects) {
 		obj->PostUpdate();
+	}
+}
+
+void Scene::CheckCollision() 
+{
+	// 1. Broad Phase
+	Vector3 v3PlayerPos = m_pPlayer->GetTransform()->GetPosition();
+	SpacePartitionDesc::CellCoord cdPlayer = m_SpacePartition.WorldToCellXZ(v3PlayerPos);
+	int32 cellIndex = m_SpacePartition.CellToIndex(cdPlayer.x, cdPlayer.y);
+	const GridCell* pBroadPhaseResult = m_SpacePartition.GetCellData(cdPlayer);
+	if (!pBroadPhaseResult) {
+		return;
+	}
+	
+	//std::vector<ICollider> CollidersInCell;
+	//CollidersInCell.reserve(pBroadPhaseResult.size());
+	//std::transform(pBroadPhaseResult.begin(), pBroadPhaseResult.end(), std::back_inserter(CollidersInCell),
+	//	[](const std::shared_ptr<IGameObject> pOBj) {
+	//		return *pOBj->GetComponent<StaticCollider>();
+	//});
+
+	// 2. Narrow Phase
+	const PlayerCollider& playerCollider = *m_pPlayer->GetComponent<PlayerCollider>();
+	for (const auto& pObj : pBroadPhaseResult->pObjectsInCell) {
+		const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
+		bool bResult = playerCollider.CheckCollision(pCollider);
+		if (bResult) {
+			CollisionResult result1(m_pPlayer , pObj);
+			CollisionResult result2(pObj, m_pPlayer);
+			if (!m_pCollisionPairs.contains(result1) || !m_pCollisionPairs.contains(result2)) {
+				// Begin Overlap
+				m_pPlayer->OnBeginCollision(result1);
+				pObj->OnBeginCollision(result2);
+
+				m_pCollisionPairs.insert(result1);
+				m_pCollisionPairs.insert(result2);
+			}
+			else {
+				// While Overlap
+				m_pPlayer->OnWhileCollision(CollisionResult(m_pPlayer, pObj));
+				pObj->OnWhileCollision(CollisionResult(pObj, m_pPlayer));
+			}
+		}
+		else {
+			// End Overlap
+			CollisionResult result1(m_pPlayer, pObj);
+			CollisionResult result2(pObj, m_pPlayer);
+			if (m_pCollisionPairs.contains(result1) || m_pCollisionPairs.contains(result2)) {
+				m_pPlayer->OnEndCollision(result1);
+				pObj->OnEndCollision(result2);
+
+				m_pCollisionPairs.erase(result1);
+				m_pCollisionPairs.erase(result2);
+			}
+		}
+
 	}
 }
 

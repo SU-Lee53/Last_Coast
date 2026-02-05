@@ -10,6 +10,9 @@ struct GridCell {
 	std::vector<std::shared_ptr<IGameObject>> pObjectsInCell;
 };
 
+using CollisionPair = std::pair<std::shared_ptr<IGameObject>, std::shared_ptr<IGameObject>>;
+
+
 struct SpacePartitionDesc {
 	using CellCoord = XMINT2;
 
@@ -99,13 +102,15 @@ public:
 	void FixedUpdate();
 	void PostUpdate();
 
+	void CheckCollision();
+
 	void GenerateSceneBound();
 	void CellPartition(const Vector2& v3OriginXZ, const Vector2& v2SizePerCellXZ, uint32 unCellsX, uint32 unCellsZ);
 
 	virtual void SyncSceneWithServer() {}
 
 public:
-	const std::shared_ptr<Player>& GetPlayer() const { return m_pPlayer; }
+	const std::shared_ptr<IPlayer>& GetPlayer() const { return m_pPlayer; }
 	const std::shared_ptr<TerrainObject>& GetTerrain() const { return m_pTerrain; }
 	const std::shared_ptr<Camera>& GetCamera() const { return m_pPlayer->GetCamera(); }
 	std::vector<std::shared_ptr<IGameObject>>& GetObjectsInScene() { return m_pGameObjects; }
@@ -113,6 +118,7 @@ public:
 	const SpacePartitionDesc& GetSpacePartitionDesc() const { return m_SpacePartition; }
 
 	CB_LIGHT_DATA MakeLightData();
+
 
 protected:
 	void InitializeObjects();
@@ -123,12 +129,14 @@ protected:
 	std::vector<std::shared_ptr<Sprite>>		m_pSprites;
 	std::vector<std::shared_ptr<Light>>			m_pLights = {};
 	
-	std::shared_ptr<Player>						m_pPlayer = nullptr;
+	std::shared_ptr<IPlayer>						m_pPlayer = nullptr;
 	std::shared_ptr<TerrainObject>				m_pTerrain = nullptr;
 
 	//std::vector<GridCell> m_GridCells;
 	SpacePartitionDesc m_SpacePartition{};
 	BoundingBox m_xmSceneBound{};
+
+	std::unordered_set<CollisionResult> m_pCollisionPairs;
 
 	Vector4 m_v4GlobalAmbient;
 

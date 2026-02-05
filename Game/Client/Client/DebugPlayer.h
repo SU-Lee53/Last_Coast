@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "Player.h"
-class DebugPlayer : public Player {
+class DebugPlayer : public IPlayer {
 public:
 	DebugPlayer();
 	virtual ~DebugPlayer();
@@ -8,6 +8,7 @@ public:
 private:
 	virtual void Initialize() override;
 	virtual void ProcessInput() override;
+	virtual void Update() override;
 
 private:
 	float	m_fPitch = 0.f;

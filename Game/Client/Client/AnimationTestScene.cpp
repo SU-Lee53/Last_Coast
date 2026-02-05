@@ -9,12 +9,14 @@ void AnimationTestScene::BuildObjects()
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 	LoadFromFiles("TEST");
 	 
-	// m_pPlayer = std::make_shared<DebugPlayer>();
-	// 
-	// m_pTerrain = std::make_shared<TerrainObject>();
-	// m_pTerrain->LoadFromFiles("TEST");
-	// 
-	// v3TerrainPos = m_pTerrain->GetTransform()->GetPosition();
+	/*
+	m_pPlayer = std::make_shared<DebugPlayer>();
+	
+	m_pTerrain = std::make_shared<TerrainObject>();
+	m_pTerrain->LoadFromFiles("TEST");
+	
+	v3TerrainPos = m_pTerrain->GetTransform()->GetPosition();
+	*/
 }
 
 void AnimationTestScene::OnEnterScene()
@@ -59,7 +61,7 @@ void AnimationTestScene::Update()
 	ImGui::Begin("Test");
 	{
 		if (auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
-			ImGui::Text("Press ` to use mouse control");
+			ImGui::Text("Press `(~) to use mouse control");
 			ImGui::Text("Mouse : %s", pPlayer->IsMouseOn() ? "ON" : "OFF");
 
 			ImGui::Text("Move Speed : %f\n", pPlayer->GetMoveSpeed());
@@ -78,7 +80,12 @@ void AnimationTestScene::Update()
 			ImGui::Text("====== Space Partition ======");
 			ImGui::Text("Player is in (%d, %d) - # %d", cdPlayer.x, cdPlayer.y, cellIndex);
 
-			const auto& cellData = spaceDesc.GetCellData(cdPlayer);
+			ImGui::Text("====== Collision Result ======");
+			for (const auto& pair : m_pCollisionPairs) {
+				ImGui::Text("Collision {%s : %s}", pair.pSelf->GetName().c_str(), pair.pOther->GetName().c_str());
+			}
+
+			/*const auto& cellData = spaceDesc.GetCellData(cdPlayer);
 			if (cellData) {
 				for (uint32 i = 0; i < cellData->pObjectsInCell.size(); ++i) {
 					ImGui::Text("# %d - Name : %s", i, cellData->pObjectsInCell[i]->GetName().c_str());
@@ -86,7 +93,7 @@ void AnimationTestScene::Update()
 			}
 			else {
 				ImGui::Text("Out of Range");
-			}
+			}*/
 		}
 		else {
 			ImGui::Text("No Animation");

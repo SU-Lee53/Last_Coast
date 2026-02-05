@@ -322,9 +322,6 @@
     <ClInclude Include="AnimationTestScene.h">
       <Filter>02.Game\Scene\Test</Filter>
     </ClInclude>
-    <ClInclude Include="CollisionManager.h">
-      <Filter>04.Managers\Game Management</Filter>
-    </ClInclude>
     <ClInclude Include="NetworkTestScene.h">
       <Filter>02.Game\Scene\Test</Filter>
     </ClInclude>
@@ -348,6 +345,9 @@
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClInclude>
     <ClInclude Include="Skeleton.h" />
+    <ClInclude Include="BoundingCapsule.h">
+      <Filter>99.Utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -552,9 +552,6 @@
     <ClCompile Include="AnimationTestScene.cpp">
       <Filter>02.Game\Scene\Test</Filter>
     </ClCompile>
-    <ClCompile Include="CollisionManager.cpp">
-      <Filter>04.Managers\Game Management</Filter>
-    </ClCompile>
     <ClCompile Include="NetworkTestScene.cpp">
       <Filter>02.Game\Scene\Test</Filter>
     </ClCompile>
@@ -578,6 +575,12 @@
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClCompile>
     <ClCompile Include="Skeleton.cpp" />
+    <ClCompile Include="Defines.cpp">
+      <Filter>99.Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="BoundingCapsule.cpp">
+      <Filter>99.Utility</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">

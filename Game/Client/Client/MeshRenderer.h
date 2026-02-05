@@ -12,6 +12,8 @@ enum class OBJECT_RENDER_TYPE : uint8 {
 	COUNT
 };
 
+//#define WITH_FRUSTUM_CULLING
+
 class MeshRenderer : public IComponent {
 public:
 	MeshRenderer(std::shared_ptr<IGameObject> pOwner);

@@ -85,6 +85,14 @@ inline std::pair<Vector3, Vector3> GetMinMaxFromOBB(const BoundingOrientedBox& x
 	return GetMinMaxFromAABB(xmAABB);
 }
 
+inline void CreateAABBFromOBB(OUT BoundingBox& outxmAABB, IN const BoundingOrientedBox& xmOBB) 
+{
+	XMFLOAT3 pxmf3Corners[BoundingOrientedBox::CORNER_COUNT];
+	xmOBB.GetCorners(pxmf3Corners);
+
+	BoundingBox::CreateFromPoints(outxmAABB, BoundingOrientedBox::CORNER_COUNT, pxmf3Corners, sizeof(XMFLOAT3));
+}
+
 /////////////////////////////////////////////////////////////////////////////////
 // Unit Conversion + Literals
 
