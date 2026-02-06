@@ -34,8 +34,6 @@ private:
 		OUT Vector3& outv3Delta);
 
 private:
-	Vector3 m_v3FloorPosition = Vector3(0, 0, 0);
-
 	Vector3	m_v3MoveDirection;
 	float	m_fMoveSpeed = 0.f;
 	float	m_fVerticalVelocity = 0.f;
@@ -54,7 +52,6 @@ private:
 
 	std::vector<BoundingOrientedBox> m_xmOBBCollided;
 
-	bool m_bGrounded = false;
 	bool m_bMoved = false;
 	bool m_bAiming = false;
 	bool m_bRunning = false;

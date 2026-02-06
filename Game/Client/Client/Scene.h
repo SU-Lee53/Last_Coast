@@ -119,6 +119,7 @@ public:
 
 	CB_LIGHT_DATA MakeLightData();
 
+	TerrainHit QueryTerrainHit(const Vector3& v3WorldPos);
 
 protected:
 	void InitializeObjects();

@@ -172,19 +172,13 @@ void ThirdPersonPlayer::PostUpdate()
 {
 	auto pTransform = GetTransform();
 
-	// 바닥 접지에 유예 프레임을 적용
-	if (m_unGroundGraceFrames > 0) {
-		--m_unGroundGraceFrames;
-		m_bGrounded = true;
-	}
-	else {
-		m_bGrounded = false;
-	}
+	const bool bWasGrounded = m_bGrounded;
+	m_bGrounded = false;
 
 	Vector3 v3Delta;
 	if (m_bMoved) {
 		m_fMoveSpeed += +0.5 * m_fAcceleration * m_fFriction;
-		float fMaxSpeed = m_bRunning ? m_fMaxMoveSpeed * 2 : m_fMaxMoveSpeed;
+		float fMaxSpeed = m_bRunning ? m_fMaxMoveSpeed * 2.f : m_fMaxMoveSpeed;
 		m_fMoveSpeed = std::clamp(m_fMoveSpeed, 0.f, fMaxSpeed);
 	}
 	else {
@@ -197,12 +191,23 @@ void ThirdPersonPlayer::PostUpdate()
 	v3Delta = m_v3MoveDirection * (m_fMoveSpeed * DT);
 	v3Delta.y += m_fVerticalVelocity * DT;
 
-	// 접지(Snap) 상태면 아래로 가해지는 중력을 제거함
-	if (m_bGrounded && v3Delta.y < 0.f && std::fabs(v3Delta.y) < m_fGroundDeadZoneY) {
-		v3Delta.y = 0.f;
+	ResolveCollision(v3Delta);
+
+	TerrainHit hit{};
+	ResolveTerrain(v3Delta, hit, bWasGrounded);
+	if (hit.bGrounded) {
+		m_bGrounded = true;
+		if (m_fVerticalVelocity < 0.f) {
+			m_fVerticalVelocity = 0.f;
+		}
 	}
 
-	ResolveCollision(v3Delta);
+	ImGui::Text("======= Terrain Hit Result =======");
+	ImGui::Text("Grounded : %s", hit.bGrounded ? "TRUE" : "FALSE");
+	ImGui::Text("fHeight : %f", hit.fHeight);
+	ImGui::Text("fPenetratioon : %f", hit.fPenetrationDepth);
+	ImGui::Text("v3Normal : (%f, %f, %f)", hit.v3Normal.x, hit.v3Normal.y, hit.v3Normal.z);
+
 	ApplyGravity();
 
 	if (m_bMoved) {
@@ -221,7 +226,6 @@ void ThirdPersonPlayer::PostUpdate()
 	}
 
 	IPlayer::PostUpdate();
-	Vector3::Transform(m_v3FloorPosition, GetWorldMatrix());
 
 	m_xmOBBCollided.clear();
 }
@@ -244,11 +248,9 @@ void ThirdPersonPlayer::ApplyGravity()
 {
 	if (!m_bGrounded) {
 		m_fVerticalVelocity += m_fGravity * DT; 
-		//m_bMoved = true;
 	}
 	else {
-		if (m_fVerticalVelocity < 0.f)
-			m_fVerticalVelocity = 0.f;
+		m_fVerticalVelocity = 0.f;
 	}
 }
 

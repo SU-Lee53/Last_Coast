@@ -161,6 +161,13 @@ struct PendingUploadBuffer {
 	CommandListPair* cmdListPair;	// Only for ref
 };
 
+struct TerrainHit {
+	float fHeight = 0.f;
+	Vector3 v3Normal = Vector3{ 0,0,0 };
+	float fPenetrationDepth = 0.f;
+	bool bGrounded = false;
+};
+
 struct CollisionResult {
 	std::shared_ptr<IGameObject> pSelf;
 	std::shared_ptr<IGameObject> pOther;

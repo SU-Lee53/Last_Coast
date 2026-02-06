@@ -27,8 +27,12 @@ public:
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
 		DescriptorHandle& descHandle) override;
 
-
 	const auto& GetTerrainComponents() const { return m_pTerrainComponents; }
+
+	float GetHeightWorld(const Vector3& v3WorldPos);
+	Vector3 GetNormalWorld(const Vector3& v3WorldPos);
+
+	bool GetHeightNormalWorld(const Vector3& v3WorldPos, OUT float& outfHeight, OUT Vector3& outv3Normal);
 
 public:
 	HRESULT LoadFromFiles(const std::string& strFilename);

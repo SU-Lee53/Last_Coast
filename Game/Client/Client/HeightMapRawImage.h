@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 class HeightMapRawImage {
+	friend class TerrainObject;
+
 public:
 	HRESULT LoadFromFile(
 		const std::string& strFilename,
@@ -12,17 +14,20 @@ public:
 		float fScaleZ,			// cm per quad (Scale.y from unreal)
 		float fHeightScale);	// ZScale
 
-	// Local
-	float GetHeightLocal(float fX, float fZ) const;
-	Vector3 GetNormalLocal(float fX, float fZ) const;
-	Vector3 GetTangentLocal(float fX, float fZ) const;
-
 	// World
 	float GetHeightWorld(float fWorldX, float fWorldZ) const;
 	Vector3 GetNormalWorld(float fWorldX, float fWorldZ) const;
 	Vector3 GetTangentWorld(float fWorldX, float fWorldZ) const;
+	bool IsInsideWorld(float fWorldX, float fWorldZ);
+
 
 private:
+	// Local
+	float GetHeightLocal(float fX, float fZ) const;
+	Vector3 GetNormalLocal(float fX, float fZ) const;
+	Vector3 GetTangentLocal(float fX, float fZ) const;
+	bool IsInsideLocal(float fX, float fZ);
+
 	float SampleHeight(uint32 x, uint32 z) const;
 
 private:
@@ -37,5 +42,6 @@ private:
 	
 	Vector3 m_v3Scale = Vector3{ 0,0,0 };	// cm
 
+	constexpr static float g_fUEHeightInverseScale = 1.0f / 128.f;
 };
 

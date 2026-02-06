@@ -70,17 +70,16 @@ protected:
 
 protected:
 	std::string m_strFrameName;
-
 	std::array<std::shared_ptr<IComponent>, std::to_underlying(COMPONENT_TYPE::COUNT)> m_pComponents = {};
 
-	uint64 m_unGameObjectRuntimeID;
-
-protected:
 	std::weak_ptr<IGameObject> m_pParent;
 	std::vector<std::shared_ptr<IGameObject>> m_pChildren = {};
 	
-protected:
+	Vector3 m_v3FloorPosition = Vector3(0, 0, 0);
 	bool m_bInitialized = false;
+	bool m_bGrounded = false;
+
+	uint64 m_unGameObjectRuntimeID;
 
 public:
 	static uint64 g_GameObjectIDBase;
