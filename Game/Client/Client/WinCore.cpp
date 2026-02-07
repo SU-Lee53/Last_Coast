@@ -4,16 +4,16 @@
 
 HINSTANCE WinCore::sm_hInstance = NULL;
 HWND WinCore::g_hWnd = NULL;
-DWORD WinCore::sm_dwClientWidth = 0;
-DWORD WinCore::sm_dwClientHeight = 0;
+DWORD WinCore::g_dwClientWidth = 0;
+DWORD WinCore::g_dwClientHeight = 0;
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-WinCore::WinCore(HINSTANCE hInstance, DWORD dwWidth, DWORD dwHeight, BOOL bEnableDebugLayer, BOOL bEnableGBV)
+WinCore::WinCore(HINSTANCE hInstance, DWORD dwWidth, DWORD dwHeight, BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnableVSync)
 {
     sm_hInstance = hInstance;
-    sm_dwClientWidth = dwWidth;
-    sm_dwClientHeight = dwHeight;
+    g_dwClientWidth = dwWidth;
+    g_dwClientHeight = dwHeight;
     m_wstrGameName = L"GAME NAME HERE";
 
     MyRegisterClass();
@@ -23,7 +23,7 @@ WinCore::WinCore(HINSTANCE hInstance, DWORD dwWidth, DWORD dwHeight, BOOL bEnabl
         throw std::runtime_error("Failed to Initialize Application");
     }
 
-    m_pGameFramework = std::make_shared<GameFramework>(bEnableDebugLayer, bEnableGBV);
+    m_pGameFramework = std::make_shared<GameFramework>(bEnableDebugLayer, bEnableGBV, bEnableVSync);
 
 }
 
@@ -85,7 +85,7 @@ BOOL WinCore::InitInstance(int cmdShow)
     LoadStringW(sm_hInstance, IDS_APP_TITLE, szTitle, 100);
     LoadStringW(sm_hInstance, IDI_CLIENT, szWindowClass, 100);
 
-    RECT rc = { 0,0,sm_dwClientWidth, sm_dwClientHeight };
+    RECT rc = { 0,0,g_dwClientWidth, g_dwClientHeight };
     DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU | WS_BORDER;
     AdjustWindowRect(&rc, dwStyle, FALSE);
 

@@ -16,10 +16,10 @@ void ThirdPersonPlayer::Initialize()
 	if (!m_bInitialized) {
 		// Camera
 		m_pCamera = std::make_shared<ThirdPersonCamera>();
-		m_pCamera->SetViewport(0, 0, WinCore::sm_dwClientWidth, WinCore::sm_dwClientHeight, 0.f, 1.f);
-		m_pCamera->SetScissorRect(0, 0, WinCore::sm_dwClientWidth, WinCore::sm_dwClientHeight);
+		m_pCamera->SetViewport(0, 0, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight, 0.f, 1.f);
+		m_pCamera->SetScissorRect(0, 0, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight);
 		m_pCamera->GenerateViewMatrix(XMFLOAT3(0.f, 0.f, -15.f), XMFLOAT3(0.f, 0.f, 1.f), XMFLOAT3(0.f, 1.f, 0.f));
-		m_pCamera->GenerateProjectionMatrix(1.01f, 500_m, ((float)WinCore::sm_dwClientWidth / (float)WinCore::sm_dwClientHeight), 60.0f);
+		m_pCamera->GenerateProjectionMatrix(1.01f, 500_m, ((float)WinCore::g_dwClientWidth / (float)WinCore::g_dwClientHeight), 60.0f);
 		m_pCamera->SetOwner(shared_from_this());
 
 		// Model
@@ -69,8 +69,8 @@ void ThirdPersonPlayer::ProcessInput()
 		::ClientToScreen(hWnd, (LPPOINT)&rtClientRect.right);
 
 		int nScreenCenterX = 0, nScreenCenterY = 0;
-		nScreenCenterX = rtClientRect.left + WinCore::sm_dwClientWidth / 2;
-		nScreenCenterY = rtClientRect.top + WinCore::sm_dwClientHeight / 2;
+		nScreenCenterX = rtClientRect.left + WinCore::g_dwClientWidth / 2;
+		nScreenCenterY = rtClientRect.top + WinCore::g_dwClientHeight / 2;
 
 		POINT ptCursorPos;
 		::GetCursorPos(&ptCursorPos);

@@ -2,23 +2,9 @@
 #include "Scene.h"
 #include "D3DCore.h"
 
-#include "RenderManager.h"
-#include "ResourceManager.h"
-#include "ShaderManager.h"
-#include "TextureManager.h"
-#include "SceneManager.h"
-#include "InputManager.h"
-#include "ModelManager.h"
-#include "GameTimer.h"
-#include "GuiManager.h"
-#include "NetworkManager.h"
-#include "EffectManager.h"
-#include "SoundManager.h"
-#include "UIManager.h"
-
 class GameFramework {
 public:
-	GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV);
+	GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnableVSync);
 
 	void Update();
 	void Render();

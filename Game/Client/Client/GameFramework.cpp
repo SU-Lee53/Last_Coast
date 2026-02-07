@@ -4,9 +4,9 @@
 
 std::unique_ptr<D3DCore> GameFramework::g_pD3DCore = nullptr;
 
-GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV)
+GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnableVSync)
 {
-	g_pD3DCore = std::make_unique<D3DCore>(bEnableDebugLayer, bEnableGBV);
+	g_pD3DCore = std::make_unique<D3DCore>(bEnableDebugLayer, bEnableGBV, bEnableVSync);
 	
 	// Init managers
 	RESOURCE->Initialize(g_pD3DCore->GetDevice());

@@ -3,13 +3,15 @@
 
 UINT D3DCore::g_nCBVSRVDescriptorIncrementSize = 0;
 
-D3DCore::D3DCore(BOOL bEnableDebugLayer, BOOL bEnableGBV)
+D3DCore::D3DCore(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnableVSync)
 {
 	CreateD3DDevice(bEnableDebugLayer);
 	CreateCommandQueueAndList();
 	CreateRTVAndDSVDescriptorHeaps();
 	CreateSwapChain();
 	CreateDepthStencilView();
+
+	m_unSyncInterval = bEnableVSync ? 1 : 0;
 
 	g_nCBVSRVDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
@@ -121,33 +123,36 @@ void D3DCore::CreateD3DDevice(bool bEnableDebugLayer)
 
 void D3DCore::CreateSwapChain()
 {
-	DXGI_SWAP_CHAIN_DESC dxgiSwapChainDesc;
-	::ZeroMemory(&dxgiSwapChainDesc, sizeof(DXGI_SWAP_CHAIN_DESC));
-	{
-		dxgiSwapChainDesc.BufferCount = g_nSwapChainBuffers;
-		dxgiSwapChainDesc.BufferDesc.Width = WinCore::sm_dwClientWidth;
-		dxgiSwapChainDesc.BufferDesc.Height = WinCore::sm_dwClientHeight;
-		dxgiSwapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		dxgiSwapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
-		dxgiSwapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
-		dxgiSwapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		dxgiSwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-		dxgiSwapChainDesc.OutputWindow = WinCore::g_hWnd;
-		dxgiSwapChainDesc.SampleDesc.Count = (m_bMsaa4xEnable) ? 4 : 1;
-		dxgiSwapChainDesc.SampleDesc.Quality = (m_bMsaa4xEnable) ? (m_nMsaa4xQualityLevels - 1) : 0;
-		dxgiSwapChainDesc.Windowed = TRUE;
+	DXGI_SWAP_CHAIN_DESC1 dxgiSwapChainDesc;
+	dxgiSwapChainDesc.Width = WinCore::g_dwClientWidth;
+	dxgiSwapChainDesc.Height = WinCore::g_dwClientHeight;
+	dxgiSwapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	dxgiSwapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	dxgiSwapChainDesc.BufferCount = g_nSwapChainBuffers;
+	dxgiSwapChainDesc.SampleDesc.Count = 1;
+	dxgiSwapChainDesc.SampleDesc.Quality = 0;
+	dxgiSwapChainDesc.Scaling = DXGI_SCALING_NONE;
+	dxgiSwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+	dxgiSwapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+	dxgiSwapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING | DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
-		// Set backbuffer resolution as fullscreen resolution.
-		dxgiSwapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-	}
+	DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc;
+	fsSwapChainDesc.Windowed = TRUE;
 
-	ComPtr<IDXGISwapChain> pSwapChain;
-	HRESULT hr = m_pdxgiFactory->CreateSwapChain(m_pd3dCommandQueue.Get(), &dxgiSwapChainDesc, pSwapChain.GetAddressOf());
+	ComPtr<IDXGISwapChain1> pSwapChain1;
+	HRESULT hr = m_pdxgiFactory->CreateSwapChainForHwnd(
+		m_pd3dCommandQueue.Get(), 
+		WinCore::g_hWnd,
+		&dxgiSwapChainDesc,
+		&fsSwapChainDesc,
+		nullptr,
+		pSwapChain1.GetAddressOf());
+
 	if (FAILED(hr)) {
 		SHOW_ERROR("Failed to create SwapChain");
 	}
 
-	pSwapChain->QueryInterface(IID_PPV_ARGS(m_pdxgiSwapChain.GetAddressOf()));
+	pSwapChain1->QueryInterface(IID_PPV_ARGS(m_pdxgiSwapChain.GetAddressOf()));
 	if (FAILED(hr)) {
 		SHOW_ERROR("Failed to create SwapChain QueryInterface");
 	}
@@ -255,8 +260,8 @@ void D3DCore::CreateDepthStencilView()
 	{
 		d3dResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 		d3dResourceDesc.Alignment = 0;
-		d3dResourceDesc.Width = WinCore::sm_dwClientWidth;
-		d3dResourceDesc.Height = WinCore::sm_dwClientHeight;
+		d3dResourceDesc.Width = WinCore::g_dwClientWidth;
+		d3dResourceDesc.Height = WinCore::g_dwClientHeight;
 		d3dResourceDesc.DepthOrArraySize = 1;
 		d3dResourceDesc.MipLevels = 1;
 		d3dResourceDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -310,8 +315,8 @@ void D3DCore::ChangeSwapChainState()
 	DXGI_MODE_DESC dxgiTargetParameters;
 	{
 		dxgiTargetParameters.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		dxgiTargetParameters.Width = WinCore::sm_dwClientWidth;
-		dxgiTargetParameters.Height = WinCore::sm_dwClientHeight;
+		dxgiTargetParameters.Width = WinCore::g_dwClientWidth;
+		dxgiTargetParameters.Height = WinCore::g_dwClientHeight;
 		dxgiTargetParameters.RefreshRate.Numerator = 60;
 		dxgiTargetParameters.RefreshRate.Denominator = 1;
 		dxgiTargetParameters.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
@@ -326,7 +331,7 @@ void D3DCore::ChangeSwapChainState()
 
 	DXGI_SWAP_CHAIN_DESC dxgiSwapChainDesc;
 	m_pdxgiSwapChain->GetDesc(&dxgiSwapChainDesc);
-	m_pdxgiSwapChain->ResizeBuffers(g_nSwapChainBuffers, WinCore::sm_dwClientWidth, WinCore::sm_dwClientHeight,
+	m_pdxgiSwapChain->ResizeBuffers(g_nSwapChainBuffers, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight,
 		dxgiSwapChainDesc.BufferDesc.Format, dxgiSwapChainDesc.Flags);
 
 	m_nSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
@@ -416,6 +421,23 @@ void D3DCore::RenderEnd()
 
 void D3DCore::Present()
 {
+	// 0 : V-Sync OFF
+	// 1 : V-Sync ON
+	uint32 unSyncInterval = m_unSyncInterval;	
+	uint32 unPresentFlags = 0;
+	if (!unSyncInterval) {
+		// if V-Sync is OFF
+		unPresentFlags |= DXGI_PRESENT_ALLOW_TEARING;
+	}
+
+	HRESULT hr{};
+	hr = m_pdxgiSwapChain->Present(unSyncInterval, unPresentFlags);
+
+	if (hr == DXGI_ERROR_DEVICE_REMOVED) {
+		__debugbreak();
+	}
+
+	/*
 	DXGI_PRESENT_PARAMETERS dxgiPresentParameters;
 	dxgiPresentParameters.DirtyRectsCount = 0;
 	dxgiPresentParameters.pDirtyRects = NULL;
@@ -423,6 +445,7 @@ void D3DCore::Present()
 	dxgiPresentParameters.pScrollOffset = NULL;
 
 	m_pdxgiSwapChain->Present1(1, 0, &dxgiPresentParameters);
+	*/
 }
 
 void D3DCore::MoveToNextFrame()

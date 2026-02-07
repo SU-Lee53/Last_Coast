@@ -2,7 +2,7 @@
 
 class D3DCore {
 public:
-	D3DCore(BOOL bEnableDebugLayer, BOOL bEnableGBV);
+	D3DCore(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnableVSync);
 	~D3DCore();
 
 public:
@@ -71,6 +71,8 @@ private:
 	ComPtr<ID3D12Fence> m_pd3dFence = nullptr;
 	HANDLE				m_hFenceEvent = nullptr;
 	std::array<UINT64, g_nSwapChainBuffers> m_nFenceValues = {};
+
+	uint32				m_unSyncInterval = 0;
 
 public:
 	static UINT g_nCBVSRVDescriptorIncrementSize;
