@@ -28,6 +28,7 @@ public:
 private:
 	void ApplyGravity();
 	void ResolveCollision(OUT Vector3& outv3Delta);
+	bool CheckGround(float fMaxDistance, OUT Vector3& outv3Normal);
 	bool TryStepUp(
 		const BoundingCapsule& capsule, 
 		const BoundingOrientedBox& box, 

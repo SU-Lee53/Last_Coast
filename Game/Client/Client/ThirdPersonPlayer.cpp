@@ -202,11 +202,22 @@ void ThirdPersonPlayer::PostUpdate()
 		}
 	}
 
+	// Ground Check (not terrain)
+	//Vector3 v3GroundNormal;
+	//if (!m_bGrounded) {
+	//	if (CheckGround(0.3f, v3GroundNormal)) {
+	//		m_bGrounded = true;
+	//		m_fVerticalVelocity = 0.f;
+	//	}
+	//}
+
+	ImGui::Text("======= Ground Hit Result =======");
+	ImGui::Text("m_bGrounded : %s", m_bGrounded ? "TRUE" : "FALSE");
 	ImGui::Text("======= Terrain Hit Result =======");
-	ImGui::Text("Grounded : %s", hit.bGrounded ? "TRUE" : "FALSE");
-	ImGui::Text("fHeight : %f", hit.fHeight);
-	ImGui::Text("fPenetratioon : %f", hit.fPenetrationDepth);
-	ImGui::Text("v3Normal : (%f, %f, %f)", hit.v3Normal.x, hit.v3Normal.y, hit.v3Normal.z);
+	ImGui::Text("hit.bGrounded : %s", hit.bGrounded ? "TRUE" : "FALSE");
+	ImGui::Text("hit.fHeight : %f", hit.fHeight);
+	ImGui::Text("hit.fPenetratioon : %f", hit.fPenetrationDepth);
+	ImGui::Text("hit.v3Normal : (%f, %f, %f)", hit.v3Normal.x, hit.v3Normal.y, hit.v3Normal.z);
 
 	ApplyGravity();
 
@@ -319,6 +330,27 @@ void ThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 			break;
 		}
 	}
+}
+
+bool ThirdPersonPlayer::CheckGround(float fMaxDistance, OUT Vector3& outv3Normal)
+{
+	const BoundingCapsule& capsuleWorld = GetComponent<PlayerCollider>()->GetCapsuleWorld();
+	const float fProbe = fMaxDistance;
+
+	for (auto& xmOBB : m_xmOBBCollided) {
+		Vector3 v3Normal;
+		float fDepth;
+
+		BoundingCapsule test = capsuleWorld;
+		test.v3Center += Vector3::Down * fProbe;
+		if (test.Intersects(xmOBB, v3Normal, fDepth)) {
+			if (v3Normal.y > 0.6f) {
+				outv3Normal = v3Normal;
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 bool ThirdPersonPlayer::TryStepUp(const BoundingCapsule& capsule, const BoundingOrientedBox& box, OUT Vector3& outv3Delta)

@@ -6,13 +6,12 @@
 
 void AnimationTestScene::BuildObjects()
 {
-	//m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 	LoadFromFiles("TEST");
 
 	//m_pPlayer = std::make_shared<DebugPlayer>();
-	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
-	m_pTerrain = std::make_shared<TerrainObject>();
-	m_pTerrain->LoadFromFiles("TEST");
+	//m_pTerrain = std::make_shared<TerrainObject>();
+	//m_pTerrain->LoadFromFiles("TEST");
 
 	/*
 	m_pPlayer = std::make_shared<DebugPlayer>();
@@ -44,7 +43,7 @@ void AnimationTestScene::Update()
 	//		const auto& SRTs = m_pGameObjects[0]->GetAnimationController()->GetFinalOutput();
 	//		double fTime = m_pGameObjects[0]->GetAnimationController()->GetElapsedTime();
 	//		double dDuration = m_pGameObjects[0]->GetAnimationController()->GetCurrentAnimationDuration();
-	//		ImGui::Text("ElapsedTime : %f", fTime);
+	//		ImGui::Text("ElapsedTime : %f", fTime);0530
 	//		ImGui::Text("Duration : %f", dDuration);
 	//		for (int i = 0; i < SRTs.size(); ++i) {
 	//			if (ImGui::TreeNode(std::format("Animation SRT#{}", i).c_str())) {
