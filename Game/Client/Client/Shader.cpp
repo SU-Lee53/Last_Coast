@@ -20,42 +20,6 @@ D3D12_DEPTH_STENCIL_DESC Shader::CreateDepthStencilState()
 	return CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
 }
 
-D3D12_SHADER_BYTECODE Shader::CompileShaderFromFile(const std::wstring& wstrFileName, const std::string& strShaderName, const std::string& strShaderProfile, ID3DBlob** ppd3dShaderBlob)
-{
-	UINT nCompileFlags = 0;
-#ifdef _DEBUG
-	nCompileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#endif
-
-	ComPtr<ID3DBlob> pd3dErrorBlob = nullptr;
-	HRESULT hResult = ::D3DCompileFromFile(wstrFileName.data(), NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, strShaderName.data(), strShaderProfile.data(), nCompileFlags, 0, ppd3dShaderBlob, pd3dErrorBlob.GetAddressOf());
-	if (FAILED(hResult)) {
-		char* pErrorString = NULL;
-		if (pd3dErrorBlob) {
-			pErrorString = (char*)pd3dErrorBlob->GetBufferPointer();
-			HWND hWnd = ::GetActiveWindow();
-			MessageBoxA(hWnd, pErrorString, NULL, 0);
-			OutputDebugStringA(pErrorString);
-		}
-		__debugbreak();
-	}
-	
-	char* pErrorString = NULL;
-	if (pd3dErrorBlob) {
-		pErrorString = (char*)pd3dErrorBlob->GetBufferPointer();
-		HWND hWnd = ::GetActiveWindow();
-		MessageBoxA(hWnd, pErrorString, NULL, 0);
-		OutputDebugStringA(pErrorString);
-		__debugbreak();
-	}
-
-	D3D12_SHADER_BYTECODE d3dShaderByteCode{};
-	d3dShaderByteCode.BytecodeLength = (*ppd3dShaderBlob)->GetBufferSize();
-	d3dShaderByteCode.pShaderBytecode = (*ppd3dShaderBlob)->GetBufferPointer();
-
-	return(d3dShaderByteCode);
-}
-
 D3D12_SHADER_BYTECODE Shader::ReadCompiledShaderFromFile(const std::wstring& wstrFileName, ID3DBlob** ppd3dShaderBlob)
 {
 	std::ifstream in{ wstrFileName.data(), std::ios::binary };
@@ -84,42 +48,6 @@ D3D12_SHADER_BYTECODE Shader::ReadCompiledShaderFromFile(const std::wstring& wst
 	d3dShaderByteCode.pShaderBytecode = (*ppd3dShaderBlob)->GetBufferPointer();
 
 	return d3dShaderByteCode;
-}
-
-D3D12_SHADER_BYTECODE Shader::CompileShader(const std::wstring& wstrFileName, const std::string& strShaderName, const std::string& strShaderProfile, ID3DBlob** ppd3dShaderBlob)
-{
-	UINT nCompileFlags = 0;
-#ifdef _DEBUG
-	nCompileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#endif
-
-	ComPtr<ID3DBlob> pd3dErrorBlob = nullptr;
-	HRESULT hResult = ::D3DCompileFromFile(wstrFileName.data(), NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, strShaderName.data(), strShaderProfile.data(), nCompileFlags, 0, ppd3dShaderBlob, pd3dErrorBlob.GetAddressOf());
-	if (FAILED(hResult)) {
-		char* pErrorString = NULL;
-		if (pd3dErrorBlob) {
-			pErrorString = (char*)pd3dErrorBlob->GetBufferPointer();
-			HWND hWnd = ::GetActiveWindow();
-			MessageBoxA(hWnd, pErrorString, NULL, 0);
-			OutputDebugStringA(pErrorString);
-		}
-		__debugbreak();
-	}
-
-	char* pErrorString = NULL;
-	if (pd3dErrorBlob) {
-		pErrorString = (char*)pd3dErrorBlob->GetBufferPointer();
-		HWND hWnd = ::GetActiveWindow();
-		MessageBoxA(hWnd, pErrorString, NULL, 0);
-		OutputDebugStringA(pErrorString);
-		__debugbreak();
-	}
-
-	D3D12_SHADER_BYTECODE d3dShaderByteCode{};
-	d3dShaderByteCode.BytecodeLength = (*ppd3dShaderBlob)->GetBufferSize();
-	d3dShaderByteCode.pShaderBytecode = (*ppd3dShaderBlob)->GetBufferPointer();
-
-	return(d3dShaderByteCode);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////

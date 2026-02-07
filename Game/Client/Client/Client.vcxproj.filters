@@ -621,6 +621,8 @@
     <FxCompile Include="..\HLSL\Shaders.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
-    <FxCompile Include="NewCommon.hlsl" />
+    <FxCompile Include="NewCommon.hlsl">
+      <Filter>03.Engine\HLSL</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

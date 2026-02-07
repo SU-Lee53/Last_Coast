@@ -1,19 +1,30 @@
 ﻿#include "pch.h"
 #include "ShaderManager.h"
 
+const std::wstring ShaderManager::g_wstrShaderPath = L"../HLSL/";
+const std::string ShaderManager::g_strShaderPath = "../HLSL/";
 
 ShaderManager::~ShaderManager()
 {
 	OutputDebugStringA("ShaderManager Destroy\n");
-	OutputDebugStringA("==========================================================================================");
+	OutputDebugStringA("==========================================================================================\n");
 	OutputDebugStringA(std::format("FullScreenShader Ref Count : {}\n", m_pShaderMap[typeid(FullScreenShader)].use_count()).c_str());
 	OutputDebugStringA(std::format("StandardShader Ref Count : {}\n", m_pShaderMap[typeid(StandardShader)].use_count()).c_str());
-	OutputDebugStringA("==========================================================================================");
+	OutputDebugStringA("==========================================================================================\n");
 }
 
 void ShaderManager::Initialize(ComPtr<ID3D12Device> pDevice)
 {
 	m_pd3dDevice = pDevice;
+
+	if (!m_pdxcUtils) {
+		DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(m_pdxcUtils.GetAddressOf()));
+	}
+
+	if (!m_pdxcCompiler) {
+		DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(m_pdxcCompiler.GetAddressOf()));
+	}
+
 	CompileShaders();
 
 	Load<FullScreenShader>();
@@ -26,7 +37,7 @@ D3D12_SHADER_BYTECODE ShaderManager::GetShaderByteCode(const std::string& strSha
 {
 	auto it = m_pCompiledShaderByteCodeMap.find(strShaderName);
 	if (it != m_pCompiledShaderByteCodeMap.end()) {
-		return it->second;
+		return it->second.first;
 	}
 
 	return D3D12_SHADER_BYTECODE{};
@@ -42,75 +53,158 @@ void ShaderManager::ReleaseBlobs()
 	m_pd3dBlobs.clear();
 }
 
+D3D12_SHADER_BYTECODE ShaderManager::CompileShaderDXC(const std::wstring& wstrFileName, const std::wstring& wstrShaderEntry, const std::wstring& wstrShaderProfile, IDxcBlob** ppBlob)
+{
+	HRESULT hr{};
+
+	if (!m_pdxcUtils) {
+		DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(m_pdxcUtils.GetAddressOf()));
+	}
+
+	if (!m_pdxcCompiler) {
+		DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(m_pdxcCompiler.GetAddressOf()));
+	}
+
+	const std::wstring wstrFilePath = g_wstrShaderPath + wstrFileName;
+
+	ComPtr<IDxcBlobEncoding> pSourceBlob;
+	m_pdxcUtils->LoadFile(wstrFilePath.c_str(), nullptr, pSourceBlob.GetAddressOf());
+	if (FAILED(hr)) {
+		MessageBoxW(WinCore::g_hWnd, (L"Failed to open : " + wstrFilePath).c_str(), wstrFileName.c_str(), 0);
+		__debugbreak();
+		return D3D12_SHADER_BYTECODE{};
+	}
+
+	DxcBuffer dxcBuffer{};
+	dxcBuffer.Ptr = pSourceBlob->GetBufferPointer();
+	dxcBuffer.Size = pSourceBlob->GetBufferSize();
+	dxcBuffer.Encoding = DXC_CP_UTF8;
+
+	std::vector<LPCWSTR> lpwstrArgs = {
+		L"-E", wstrShaderEntry.c_str(),
+		L"-T", wstrShaderProfile.c_str(),
+		L"-I", L"../HLSL",
+#ifdef _DEBUG
+		L"-Zi", L"Qembed_debug",
+		L"-Od"
+#endif
+	};
+
+	ComPtr<IDxcIncludeHandler> pdxcIncludeHandler;
+	m_pdxcUtils->CreateDefaultIncludeHandler(pdxcIncludeHandler.GetAddressOf());
+
+	// Compile
+	ComPtr<IDxcResult> pdxcResult = nullptr;
+	hr = m_pdxcCompiler->Compile(
+		&dxcBuffer,
+		lpwstrArgs.data(),
+		(UINT32)lpwstrArgs.size(),
+		pdxcIncludeHandler.Get(),
+		IID_PPV_ARGS(pdxcResult.GetAddressOf()));
+
+	if (FAILED(hr)) {
+		MessageBoxW(WinCore::g_hWnd, (L"Failed to compile : " + wstrFilePath).c_str(), wstrFileName.c_str(), 0);
+		__debugbreak();
+		return D3D12_SHADER_BYTECODE{};
+	}
+
+	ComPtr<IDxcBlobUtf8> pdxcErrorBlob = nullptr;
+	pdxcResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(pdxcErrorBlob.GetAddressOf()), nullptr);
+	if (pdxcErrorBlob && pdxcErrorBlob->GetStringLength() > 0) {
+		OutputDebugStringA(pdxcErrorBlob->GetStringPointer());
+		MessageBoxA(WinCore::g_hWnd, pdxcErrorBlob->GetStringPointer(), "DXC ERROR", 0);
+		__debugbreak();
+		return D3D12_SHADER_BYTECODE{};;
+	}
+
+	pdxcResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(ppBlob), nullptr);
+	D3D12_SHADER_BYTECODE d3dByteCode{};
+	d3dByteCode.BytecodeLength = (*ppBlob)->GetBufferSize();
+	d3dByteCode.pShaderBytecode = (*ppBlob)->GetBufferPointer();
+
+	return d3dByteCode;
+}
+
 void ShaderManager::CompileShaders()
 {
-	ComPtr<ID3DBlob> m_pd3dVSBlob;
-	ComPtr<ID3DBlob> m_pd3dGSBlob;
-	ComPtr<ID3DBlob> m_pd3dPSBlob;
+	enum class SHADER_TYPE { VS, HS, DS, GS, PS, CS };
+
+	const auto Compile = [&](const std::string& strKey, const std::wstring& wstrFilename, const std::wstring& wstrEntry, SHADER_TYPE eShaderType) {
+		ComPtr<IDxcBlob> pBlob;
+		D3D12_SHADER_BYTECODE d3dByteCode{};
+		switch (eShaderType) {
+		case SHADER_TYPE::VS:
+		{
+			d3dByteCode = CompileShaderDXC(wstrFilename, wstrEntry, L"vs_6_1", pBlob.GetAddressOf());
+			break;
+		}
+		case SHADER_TYPE::HS:
+		{
+			d3dByteCode = CompileShaderDXC(wstrFilename, wstrEntry, L"hs_6_1", pBlob.GetAddressOf());
+			break;
+		}
+		case SHADER_TYPE::DS:
+		{
+			d3dByteCode = CompileShaderDXC(wstrFilename, wstrEntry, L"ds_6_1", pBlob.GetAddressOf());
+			break;
+		}
+		case SHADER_TYPE::GS:
+		{
+			d3dByteCode = CompileShaderDXC(wstrFilename, wstrEntry, L"gs_6_1", pBlob.GetAddressOf());
+			break;
+		}
+		case SHADER_TYPE::PS:
+		{
+			d3dByteCode = CompileShaderDXC(wstrFilename, wstrEntry, L"ps_6_1", pBlob.GetAddressOf());
+			break;
+		}
+		case SHADER_TYPE::CS:
+		{
+			d3dByteCode = CompileShaderDXC(wstrFilename, wstrEntry, L"cs_6_1", pBlob.GetAddressOf());
+			break;
+		}
+		default:
+		{
+			std::unreachable();
+		}
+		}
+
+		m_pCompiledShaderByteCodeMap.insert({ strKey, { d3dByteCode, pBlob } });
+	};
 
 	// Shaders.hlsl
-	m_pCompiledShaderByteCodeMap.insert({ "StandardVS", Shader::CompileShader(L"../HLSL/Shaders.hlsl", "VSStandard", "vs_5_1", m_pd3dVSBlob.GetAddressOf()) });
-	m_pCompiledShaderByteCodeMap.insert({ "StandardPS", Shader::CompileShader(L"../HLSL/Shaders.hlsl", "PSStandard", "ps_5_1", m_pd3dGSBlob.GetAddressOf()) });
-	m_pd3dBlobs.push_back(m_pd3dVSBlob);
-	m_pd3dBlobs.push_back(m_pd3dPSBlob);
+	Compile("StandardVS", L"Shaders.hlsl", L"VSStandard", SHADER_TYPE::VS);
+	Compile("StandardPS", L"Shaders.hlsl", L"PSStandard", SHADER_TYPE::PS);
 	
-	m_pCompiledShaderByteCodeMap.insert({ "AnimatedVS", Shader::CompileShader(L"../HLSL/Shaders.hlsl", "VSAnimated", "vs_5_1", m_pd3dVSBlob.GetAddressOf()) });
-	m_pCompiledShaderByteCodeMap.insert({ "AnimatedPS", Shader::CompileShader(L"../HLSL/Shaders.hlsl", "PSAnimated", "ps_5_1", m_pd3dGSBlob.GetAddressOf()) });
-	m_pd3dBlobs.push_back(m_pd3dVSBlob);
-	m_pd3dBlobs.push_back(m_pd3dPSBlob);
+	Compile("AnimatedVS", L"Shaders.hlsl", L"VSAnimated", SHADER_TYPE::VS);
+	Compile("AnimatedPS", L"Shaders.hlsl", L"PSAnimated", SHADER_TYPE::PS);
 	
-	m_pCompiledShaderByteCodeMap.insert({ "TerrainVS", Shader::CompileShader(L"../HLSL/Shaders.hlsl", "VSTerrain", "vs_5_1", m_pd3dVSBlob.GetAddressOf()) });
-	m_pCompiledShaderByteCodeMap.insert({ "TerrainPS", Shader::CompileShader(L"../HLSL/Shaders.hlsl", "PSTerrain", "ps_5_1", m_pd3dGSBlob.GetAddressOf()) });
-	m_pd3dBlobs.push_back(m_pd3dVSBlob);
-	m_pd3dBlobs.push_back(m_pd3dPSBlob);
+	Compile("TerrainVS", L"Shaders.hlsl", L"VSTerrain", SHADER_TYPE::VS);
+	Compile("TerrainPS", L"Shaders.hlsl", L"PSTerrain", SHADER_TYPE::PS);
 
-	m_pCompiledShaderByteCodeMap.insert({ "FullScreenVS", Shader::CompileShader(L"../HLSL/FullScreenShader.hlsl", "VSFullScreen", "vs_5_1", m_pd3dVSBlob.GetAddressOf()) });
-	m_pCompiledShaderByteCodeMap.insert({ "FullScreenPS", Shader::CompileShader(L"../HLSL/FullScreenShader.hlsl", "PSFullScreen", "ps_5_1", m_pd3dGSBlob.GetAddressOf()) });
-	m_pd3dBlobs.push_back(m_pd3dVSBlob);
-	m_pd3dBlobs.push_back(m_pd3dGSBlob);
-	m_pd3dBlobs.push_back(m_pd3dPSBlob);
+	// FullScreenShader.hlsl
+	Compile("FullScreenVS", L"FullScreenShader.hlsl", L"VSFullScreen", SHADER_TYPE::VS);
+	Compile("FullScreenPS", L"FullScreenShader.hlsl", L"PSFullScreen", SHADER_TYPE::PS);
+	
+	// EffectShader.hlsl
+	Compile("RayVS", L"EffectShader.hlsl", L"VSRay", SHADER_TYPE::VS);
+	Compile("RayGS", L"EffectShader.hlsl", L"GSRay", SHADER_TYPE::GS);
+	Compile("RayPS", L"EffectShader.hlsl", L"PSRay", SHADER_TYPE::PS);
+	
+	Compile("ExplosionVS", L"EffectShader.hlsl", L"VSExplosion", SHADER_TYPE::VS);
+	Compile("ExplosionGS", L"EffectShader.hlsl", L"GSExplosion", SHADER_TYPE::GS);
+	Compile("ExplosionPS", L"EffectShader.hlsl", L"PSExplosion", SHADER_TYPE::PS);
 
-	m_pCompiledShaderByteCodeMap.insert({ "RayVS", Shader::CompileShader(L"../HLSL/EffectShader.hlsl", "VSRay", "vs_5_1", m_pd3dVSBlob.GetAddressOf()) });
-	m_pCompiledShaderByteCodeMap.insert({ "RayGS", Shader::CompileShader(L"../HLSL/EffectShader.hlsl", "GSRay", "gs_5_1", m_pd3dGSBlob.GetAddressOf()) });
-	m_pCompiledShaderByteCodeMap.insert({ "RayPS", Shader::CompileShader(L"../HLSL/EffectShader.hlsl", "PSRay", "ps_5_1", m_pd3dPSBlob.GetAddressOf()) });
-	m_pd3dBlobs.push_back(m_pd3dVSBlob);
-	m_pd3dBlobs.push_back(m_pd3dGSBlob);
-	m_pd3dBlobs.push_back(m_pd3dPSBlob);
-
-	m_pCompiledShaderByteCodeMap.insert({ "ExplosionVS", Shader::CompileShader(L"../HLSL/EffectShader.hlsl", "VSExplosion", "vs_5_1", m_pd3dVSBlob.GetAddressOf()) });
-	m_pCompiledShaderByteCodeMap.insert({ "ExplosionGS", Shader::CompileShader(L"../HLSL/EffectShader.hlsl", "GSExplosion", "gs_5_1", m_pd3dGSBlob.GetAddressOf()) });
-	m_pCompiledShaderByteCodeMap.insert({ "ExplosionPS", Shader::CompileShader(L"../HLSL/EffectShader.hlsl", "PSExplosion", "ps_5_1", m_pd3dPSBlob.GetAddressOf()) });
-	m_pd3dBlobs.push_back(m_pd3dVSBlob);
-	m_pd3dBlobs.push_back(m_pd3dGSBlob);
-	m_pd3dBlobs.push_back(m_pd3dPSBlob);
-
-	//m_pCompiledShaderByteCodeMap.insert({ "BillboardVS", Shader::CompileShader(L"../HLSL/BillboardShader.hlsl", "VSBillboard", "vs_5_1", m_pd3dVSBlob.GetAddressOf()) });
-	//m_pCompiledShaderByteCodeMap.insert({ "BillboardGS", Shader::CompileShader(L"../HLSL/BillboardShader.hlsl", "GSBillboard", "gs_5_1", m_pd3dGSBlob.GetAddressOf()) });
-	//m_pCompiledShaderByteCodeMap.insert({ "BillboardPS", Shader::CompileShader(L"../HLSL/BillboardShader.hlsl", "PSBillboard", "ps_5_1", m_pd3dPSBlob.GetAddressOf()) });
-	//m_pd3dBlobs.push_back(m_pd3dVSBlob);
-	//m_pd3dBlobs.push_back(m_pd3dGSBlob);
-	//m_pd3dBlobs.push_back(m_pd3dPSBlob);
-
-	// Sprite.hlsl						   
-	m_pCompiledShaderByteCodeMap.insert({ "TextureSpriteVS", Shader::CompileShader(L"../HLSL/Sprite.hlsl", "VSTextureSprite", "vs_5_1", m_pd3dVSBlob.GetAddressOf()) });
-	m_pCompiledShaderByteCodeMap.insert({ "TextureSpriteGS", Shader::CompileShader(L"../HLSL/Sprite.hlsl", "GSTextureSprite", "gs_5_1", m_pd3dGSBlob.GetAddressOf()) });
-	m_pCompiledShaderByteCodeMap.insert({ "TextureSpritePS", Shader::CompileShader(L"../HLSL/Sprite.hlsl", "PSTextureSprite", "ps_5_1", m_pd3dPSBlob.GetAddressOf()) });
-	m_pd3dBlobs.push_back(m_pd3dVSBlob);
-	m_pd3dBlobs.push_back(m_pd3dGSBlob);
-	m_pd3dBlobs.push_back(m_pd3dPSBlob);
-
-	m_pCompiledShaderByteCodeMap.insert({ "TextSpriteVS", Shader::CompileShader(L"../HLSL/Sprite.hlsl", "VSTextSprite", "vs_5_1", m_pd3dVSBlob.GetAddressOf()) });
-	m_pCompiledShaderByteCodeMap.insert({ "TextSpriteGS", Shader::CompileShader(L"../HLSL/Sprite.hlsl", "GSTextSprite", "gs_5_1", m_pd3dGSBlob.GetAddressOf()) });
-	m_pCompiledShaderByteCodeMap.insert({ "TextSpritePS", Shader::CompileShader(L"../HLSL/Sprite.hlsl", "PSTextSprite", "ps_5_1", m_pd3dPSBlob.GetAddressOf()) });
-	m_pd3dBlobs.push_back(m_pd3dVSBlob);
-	m_pd3dBlobs.push_back(m_pd3dGSBlob);
-	m_pd3dBlobs.push_back(m_pd3dPSBlob);
-
-	m_pCompiledShaderByteCodeMap.insert({ "BillboardSpriteVS", Shader::CompileShader(L"../HLSL/Sprite.hlsl", "VSBillboardSprite", "vs_5_1", m_pd3dVSBlob.GetAddressOf()) });
-	m_pCompiledShaderByteCodeMap.insert({ "BillboardSpriteGS", Shader::CompileShader(L"../HLSL/Sprite.hlsl", "GSBillboardSprite", "gs_5_1", m_pd3dGSBlob.GetAddressOf()) });
-	m_pCompiledShaderByteCodeMap.insert({ "BillboardSpritePS", Shader::CompileShader(L"../HLSL/Sprite.hlsl", "PSBillboardSprite", "ps_5_1", m_pd3dPSBlob.GetAddressOf()) });
-	m_pd3dBlobs.push_back(m_pd3dVSBlob);
-	m_pd3dBlobs.push_back(m_pd3dGSBlob);
-	m_pd3dBlobs.push_back(m_pd3dPSBlob);
-
+	// Sprite.hlsl
+	Compile("TextureSpriteVS", L"Sprite.hlsl", L"VSTextureSprite", SHADER_TYPE::VS);
+	Compile("TextureSpriteGS", L"Sprite.hlsl", L"GSTextureSprite", SHADER_TYPE::GS);
+	Compile("TextureSpritePS", L"Sprite.hlsl", L"PSTextureSprite", SHADER_TYPE::PS);
+	
+	Compile("TextSpriteVS", L"Sprite.hlsl", L"VSTextSprite", SHADER_TYPE::VS);
+	Compile("TextSpriteGS", L"Sprite.hlsl", L"GSTextSprite", SHADER_TYPE::GS);
+	Compile("TextSpritePS", L"Sprite.hlsl", L"PSTextSprite", SHADER_TYPE::PS);
+	
+	Compile("BillboardSpriteVS", L"Sprite.hlsl", L"VSBillboardSprite", SHADER_TYPE::VS);
+	Compile("BillboardSpriteGS", L"Sprite.hlsl", L"GSBillboardSprite", SHADER_TYPE::GS);
+	Compile("BillboardSpritePS", L"Sprite.hlsl", L"PSBillboardSprite", SHADER_TYPE::PS);
 }

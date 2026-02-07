@@ -157,7 +157,7 @@ void GSRay(point VS_PARTICLE_OUTPUT input[1], inout TriangleStream<GS_PARTICLE_O
 	}
 	
 	float3 vUpRef = float3(0, 1, 0);
-	if (abs(dot(vUpRef, vRayDirectionW) > 0.99f))
+	if (abs(dot(vUpRef, vRayDirectionW) > 0.99f) > 0.f)
 	{
 		vUpRef = float3(1, 0, 0);
 	}

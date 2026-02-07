@@ -49,6 +49,8 @@
 // D3DCompiler
 #include <d3dcompiler.h>
 
+#include <dxcapi.h>
+
 // DirectXMath
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
@@ -68,7 +70,8 @@ using namespace DirectX::PackedVector;
 using namespace Microsoft::WRL;
 
 // Import libraries
-#pragma comment(lib, "d3dcompiler.lib")
+#pragma comment(lib, "d3dcompiler.lib")	// FXC
+#pragma comment(lib, "dxcompiler.lib")	// DXC
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "dxguid.lib")

@@ -19,15 +19,27 @@ public:
 	void CompileShaders();
 	void ReleaseBlobs();
 
+	D3D12_SHADER_BYTECODE CompileShaderDXC(
+		const std::wstring& wstrFileName, 
+		const std::wstring& wstrShaderEntry,
+		const std::wstring& wstrShaderProfile, 
+		IDxcBlob** ppBlob);
+
 
 private:
-	ComPtr<ID3D12Device>				m_pd3dDevice = nullptr;		// Reference to D3DCore::m_pd3dDevice
+	ComPtr<ID3D12Device>	m_pd3dDevice = nullptr;		// Reference to D3DCore::m_pd3dDevice
+
+	ComPtr<IDxcUtils>		m_pdxcUtils = nullptr;
+	ComPtr<IDxcCompiler3>	m_pdxcCompiler = nullptr;
 
 private:
 	std::unordered_map<std::type_index, std::shared_ptr<Shader>> m_pShaderMap;
-	std::unordered_map<std::string, D3D12_SHADER_BYTECODE> m_pCompiledShaderByteCodeMap;
+	std::unordered_map<std::string, std::pair<D3D12_SHADER_BYTECODE, ComPtr<IDxcBlob>>> m_pCompiledShaderByteCodeMap;
 
 	std::vector<ComPtr<ID3DBlob>> m_pd3dBlobs;
+
+	const static std::wstring g_wstrShaderPath;
+	const static std::string g_strShaderPath;
 };
 
 template<typename T> requires std::derived_from<T, Shader>

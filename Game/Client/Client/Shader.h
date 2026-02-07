@@ -20,7 +20,6 @@ protected:
 	virtual D3D12_BLEND_DESC CreateBlendState();
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState();
 
-	D3D12_SHADER_BYTECODE CompileShaderFromFile(const std::wstring& wstrFileName, const std::string& strShaderName, const std::string& strShaderProfile, ID3DBlob** ppd3dShaderBlob);
 	D3D12_SHADER_BYTECODE ReadCompiledShaderFromFile(const std::wstring& wstrFileName, ID3DBlob** ppd3dShaderBlob);
 
 protected:
@@ -31,9 +30,6 @@ protected:
 	std::vector<ComPtr<ID3D12PipelineState>>	m_pd3dPipelineStates = {};
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC>		m_d3dInputElements = {};
-
-public:
-	static D3D12_SHADER_BYTECODE CompileShader(const std::wstring& wstrFileName, const std::string& strShaderName, const std::string& strShaderProfile, ID3DBlob** ppd3dShaderBlob);
 
 };
 

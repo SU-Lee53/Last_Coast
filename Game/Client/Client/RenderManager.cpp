@@ -121,16 +121,16 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice, C
 
 void RenderManager::CreateSkyboxPipelineState(ComPtr<ID3D12Device> pd3dDevice)
 {
-	ComPtr<ID3DBlob> m_pd3dVertexShaderBlob = nullptr;
-	ComPtr<ID3DBlob> m_pd3dGeometryShaderBlob = nullptr;
-	ComPtr<ID3DBlob> m_pd3dPixelShaderBlob = nullptr;
+	ComPtr<IDxcBlob> m_pd3dVertexShaderBlob = nullptr;
+	ComPtr<IDxcBlob> m_pd3dGeometryShaderBlob = nullptr;
+	ComPtr<IDxcBlob> m_pd3dPixelShaderBlob = nullptr;
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC d3dPipelineDesc{};
 	{
 		d3dPipelineDesc.pRootSignature = g_pd3dGlobalRootSignature.Get();
-		d3dPipelineDesc.VS = Shader::CompileShader(L"../HLSL/SkyboxShader.hlsl", "VSSkybox", "vs_5_1", m_pd3dVertexShaderBlob.GetAddressOf());
-		d3dPipelineDesc.GS = Shader::CompileShader(L"../HLSL/SkyboxShader.hlsl", "GSSkybox", "gs_5_1", m_pd3dGeometryShaderBlob.GetAddressOf());
-		d3dPipelineDesc.PS = Shader::CompileShader(L"../HLSL/SkyboxShader.hlsl", "PSSkybox", "ps_5_1", m_pd3dPixelShaderBlob.GetAddressOf());
+		d3dPipelineDesc.VS = SHADER->CompileShaderDXC(L"../HLSL/SkyboxShader.hlsl", L"VSSkybox", L"vs_6_1", m_pd3dVertexShaderBlob.GetAddressOf());
+		d3dPipelineDesc.GS = SHADER->CompileShaderDXC(L"../HLSL/SkyboxShader.hlsl", L"GSSkybox", L"gs_6_1", m_pd3dGeometryShaderBlob.GetAddressOf());
+		d3dPipelineDesc.PS = SHADER->CompileShaderDXC(L"../HLSL/SkyboxShader.hlsl", L"PSSkybox", L"ps_6_1", m_pd3dPixelShaderBlob.GetAddressOf());
 		d3dPipelineDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_FRONT;
 		d3dPipelineDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
