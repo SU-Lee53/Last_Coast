@@ -6,6 +6,7 @@ class ALandscape;
 class ULandscapeComponent;
 class UTexture2D;
 class UMaterialExpressionLandscapeLayerBlend;
+class ARecastNavMesh;
 struct FWeightmapLayerAllocationInfo;
 
 struct FExportedLayerTextures
@@ -36,6 +37,11 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "JSON Save System")
     static bool ExportLandscapeHeightmap(ALandscape* Landscape, const FString& FileName);
+
+    UFUNCTION(BlueprintCallable, Category = "JSON Save System")
+    static bool ExportNavMeshToJson(UWorld* World, const FString& FileName);
+
+    
 
 private:
     // Transform을 JSON 오브젝트로 변환
@@ -96,6 +102,11 @@ private:
         UMaterialExpression* TargetExpression,
         UMaterialExpression* CurrentExpression,
         TSet<UMaterialExpression*>& VisitedNodes);
+
+
+    static TSharedPtr<FJsonObject> NavMeshToJson(ARecastNavMesh* NavMesh);
+
+    static TSharedPtr<FJsonObject> Vector3ToJson(const FVector& UnrealVector);
 };
 
 
