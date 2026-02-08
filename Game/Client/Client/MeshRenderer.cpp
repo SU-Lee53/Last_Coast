@@ -85,7 +85,16 @@ void MeshRenderer::Update()
 		.mtxWorld = m_wpOwner.lock()->GetWorldMatrix().Transpose()
 	};
 #ifdef WITH_FRUSTUM_CULLING
-
+	const auto& pCamera = CUR_SCENE->GetCamera();
+	const auto& xmFrustumInWorld = pCamera->GetFrustumWorld();
+	const Matrix& mtxWorld = GetOwner()->GetWorldMatrix().Invert();
+	for (const auto& pMesh : m_pMeshes) {
+		BoundingFrustum xmFrustum;
+		xmFrustumInWorld.Transform(xmFrustum, mtxWorld);
+		if (xmFrustum.Intersects(pMesh->GetBoundingBox())) {
+			RENDER->Add(std::static_pointer_cast<MeshRenderer>(shared_from_this()), meshParam);
+		}
+	}
 #else
 	for (int i = 0; i < m_pMeshes.size(); ++i) {
 		RENDER->Add(std::static_pointer_cast<MeshRenderer>(shared_from_this()), meshParam);
@@ -105,6 +114,7 @@ std::shared_ptr<IComponent> MeshRenderer::Copy(std::shared_ptr<IGameObject> pNew
 
 	return pClone;
 }
+
 
 void MeshRenderer::Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 	DescriptorHandle& descHandle, int32 nInstanceCount, OUT int32& outnInstanceBase, const Matrix& mtxWorld) const
@@ -189,14 +199,19 @@ void MeshRenderer::Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Graphics
 
 BoundingOrientedBox MeshRenderer::GetOBBMerged() const
 {
-	BoundingBox xmAABBMerged{};
+	BoundingBox xmAABBMerged;
 	for (const auto& pMesh : m_pMeshes) {
 		XMFLOAT3 pxmf3OBBPoints[BoundingOrientedBox::CORNER_COUNT];
 		pMesh->GetBoundingBox().GetCorners(pxmf3OBBPoints);
 		BoundingBox xmAABB{};
 		BoundingBox::CreateFromPoints(xmAABB, BoundingOrientedBox::CORNER_COUNT, pxmf3OBBPoints, sizeof(XMFLOAT3));
 
-		BoundingBox::CreateMerged(xmAABBMerged, xmAABBMerged, xmAABB);
+		if (xmAABBMerged.Center == Vector3(0, 0, 0) && xmAABBMerged.Extents == Vector3(1, 1, 1)) {
+			xmAABBMerged = xmAABB;
+		}
+		else {
+			BoundingBox::CreateMerged(xmAABBMerged, xmAABBMerged, xmAABB);
+		}
 	}
 
 	BoundingOrientedBox xmOBBResult{};

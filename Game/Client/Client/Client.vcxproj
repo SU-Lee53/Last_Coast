@@ -160,9 +160,9 @@
     <ClInclude Include="AnimationManager.h" />
     <ClInclude Include="AnimationMontage.h" />
     <ClInclude Include="AnimationStateMachine.h" />
+    <ClInclude Include="BoundingCapsule.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Collider.h" />
-    <ClInclude Include="CollisionManager.h" />
     <ClInclude Include="CommandListPool.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="Concepts.h" />
@@ -275,15 +275,16 @@
     <ClCompile Include="AnimationManager.cpp" />
     <ClCompile Include="AnimationMontage.cpp" />
     <ClCompile Include="AnimationStateMachine.cpp" />
+    <ClCompile Include="BoundingCapsule.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Collider.cpp" />
-    <ClCompile Include="CollisionManager.cpp" />
     <ClCompile Include="CommandListPool.cpp" />
     <ClCompile Include="Component.cpp" />
     <ClCompile Include="ConstantBuffer.cpp" />
     <ClCompile Include="ConstantBufferPool.cpp" />
     <ClCompile Include="D3DCore.cpp" />
     <ClCompile Include="DebugPlayer.cpp" />
+    <ClCompile Include="Defines.cpp" />
     <ClCompile Include="DescriptorHeap.cpp" />
     <ClCompile Include="DynamicObject.cpp" />
     <ClCompile Include="Effect.cpp" />
@@ -382,6 +383,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
+    <FxCompile Include="NewCommon.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

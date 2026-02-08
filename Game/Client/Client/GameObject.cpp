@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "GameObject.h"
 #include "Transform.h"
+#include "TerrainObject.h"
 
 uint64 IGameObject::g_GameObjectIDBase = 0;
 

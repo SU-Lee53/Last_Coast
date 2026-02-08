@@ -2,37 +2,19 @@
 #include "Player.h"
 #include "Camera.h"
 
-Player::Player()
+IPlayer::IPlayer()
 {
 }
 
-Player::~Player()
+IPlayer::~IPlayer()
 {
 }
 
-void Player::Initialize()
-{
-	if (!m_bInitialized) {
-		// Camera
-		m_pCamera = std::make_shared<Camera>();
-		m_pCamera->SetViewport(0, 0, WinCore::sm_dwClientWidth, WinCore::sm_dwClientHeight, 0.f, 1.f);
-		m_pCamera->SetScissorRect(0, 0, WinCore::sm_dwClientWidth, WinCore::sm_dwClientHeight);
-		m_pCamera->GenerateViewMatrix(XMFLOAT3(0.f, 0.f, -15.f), XMFLOAT3(0.f, 0.f, 1.f), XMFLOAT3(0.f, 1.f, 0.f));
-		m_pCamera->GenerateProjectionMatrix(1.01f, 5000.0f, (WinCore::sm_dwClientWidth / WinCore::sm_dwClientHeight), 60.0f);
-		m_pCamera->SetOwner(shared_from_this());
-		m_bInitialized = true;
-	}
-}
-
-void Player::ProcessInput()
-{
-}
-
-void Player::Update()
+void IPlayer::PostUpdate()
 {
 	if (m_pCamera) {
 		m_pCamera->Update();
 	}
 
-	DynamicObject::Update();
+	DynamicObject::PostUpdate();
 }

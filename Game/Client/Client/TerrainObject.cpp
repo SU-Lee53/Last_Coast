@@ -3,6 +3,28 @@
 
 const std::string TerrainObject::g_strTerrainPath = "../Resources/Terrain/";
 
+float TerrainObject::GetHeightWorld(const Vector3& v3WorldPos)
+{
+	return m_pHeightMapRawImage->GetHeightWorld(v3WorldPos.x, v3WorldPos.z);
+}
+
+Vector3 TerrainObject::GetNormalWorld(const Vector3& v3WorldPos)
+{
+	return m_pHeightMapRawImage->GetNormalWorld(v3WorldPos.x, v3WorldPos.z);
+}
+
+bool TerrainObject::GetHeightNormalWorld(const Vector3& v3WorldPos, OUT float& outfHeight, OUT Vector3& outv3Normal)
+{
+	if (!m_pHeightMapRawImage->IsInsideWorld(v3WorldPos.x, v3WorldPos.z)) {
+		return false;
+	}
+
+	outfHeight = m_pHeightMapRawImage->GetHeightWorld(v3WorldPos.x, v3WorldPos.z);
+	outv3Normal = m_pHeightMapRawImage->GetNormalWorld(v3WorldPos.x, v3WorldPos.z);
+
+	return true;
+}
+
 HRESULT TerrainObject::LoadFromFiles(const std::string& strFilename)
 {
 	// TODO : Height 조절 필요
@@ -18,8 +40,6 @@ HRESULT TerrainObject::LoadFromFiles(const std::string& strFilename)
 	m_pHeightMapRawImage = std::make_unique<HeightMapRawImage>();
 	hr = m_pHeightMapRawImage->LoadFromFile(
 		terrainInfo.strHeightMapName,
-		//"../Resources/Terrain/Images/TEST2.raw",
-		//"../Resources/Terrain/Images/Terrain.raw",
 		terrainInfo.v2HeightMapResolutionXZ.x,
 		terrainInfo.v2HeightMapResolutionXZ.y,
 		0.f,

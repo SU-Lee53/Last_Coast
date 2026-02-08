@@ -3,16 +3,14 @@
 
 class Camera;
 
-class Player : public DynamicObject {
+interface IPlayer abstract : public DynamicObject {
 public:
-	Player();
-	virtual ~Player();
+	IPlayer();
+	virtual ~IPlayer();
+
+	virtual void PostUpdate() override;
 
 public:
-	virtual void Initialize() override;
-	virtual void ProcessInput() override;
-	virtual void Update() override;
-
 	virtual ClientToServerPacket MakePacketToSend() { return ClientToServerPacket{}; }
 
 public:

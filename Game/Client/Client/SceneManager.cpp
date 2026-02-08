@@ -6,11 +6,11 @@
 
 void SceneManager::Initialize()
 {
-	//m_upCurrentScene = std::make_unique<AnimationTestScene>();
-	//m_upCurrentScene->BuildObjects();
-	
-	m_upCurrentScene = std::make_unique<NetworkTestScene>();
+	m_upCurrentScene = std::make_unique<AnimationTestScene>();
 	m_upCurrentScene->BuildObjects();
+	
+	//m_upCurrentScene = std::make_unique<TestScene>();
+	//m_upCurrentScene->BuildObjects();
 
 	m_upCurrentScene->PostInitialize();
 
@@ -29,6 +29,7 @@ void SceneManager::Update()
 {
 	m_upCurrentScene->PreUpdate();
 	m_upCurrentScene->Update();
+	m_upCurrentScene->FixedUpdate();
 	m_upCurrentScene->PostUpdate();
 }
 

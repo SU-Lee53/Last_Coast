@@ -31,6 +31,9 @@ public:
 	float GetYaw() const;
 	float GetRoll() const;
 
+	const BoundingFrustum& GetFrustumOrigin() const { return m_xmFrustumOrigin; }
+	const BoundingFrustum& GetFrustumWorld() const { return m_xmFrustumWorld; }
+
 public:
 	void SetPosition(float x, float y, float z);
 	void SetPosition(const Vector3& v3Position);
@@ -57,8 +60,10 @@ public:
 	CB_CAMERA_DATA MakeCBData() const;
 
 protected:
-	BoundingFrustum m_xmFrustum = {};
+	BoundingFrustum m_xmFrustumOrigin = {};
+	BoundingFrustum m_xmFrustumWorld = {};
 
+	Matrix m_mtxWorld;
 	Matrix m_mtxView;
 	Matrix m_mtxProjection;
 

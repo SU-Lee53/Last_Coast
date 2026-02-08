@@ -38,14 +38,52 @@ void Scene::PostInitialize()
 {
 	InitializeObjects();
 	GenerateSceneBound();
-	if (m_pTerrain) {
-		Vector3 v3TerrainPos = m_pTerrain->GetComponent<Transform>()->GetPosition();
-		uint32 unComponents = std::sqrt(m_pTerrain->GetTerrainComponents().size());
-		Vector2 v2CellSize = m_pTerrain->GetTerrainComponents()[0]->GetComponentSize();
-		CellPartition(Vector2{v3TerrainPos.x, v3TerrainPos.z}, v2CellSize, unComponents, unComponents);
-	}
-	else {
-		CellPartition(Vector2{ g_fWorldMinX, g_fWorldMinZ }, Vector2{100_m, 100_m}, 10, 10);
+
+
+	auto [v3SceneMin, v3SceneMax] = ::GetMinMaxFromAABB(m_xmSceneBound);
+	float fSceneWidth = v3SceneMax.x - v3SceneMin.x;
+	float fSceneHeight = v3SceneMax.z - v3SceneMin.z;
+
+	Vector2 v2SceneOriginXZ;
+	v2SceneOriginXZ.x = v3SceneMin.x;
+	v2SceneOriginXZ.y = v3SceneMin.z;
+
+	Vector2 v2CellSizeXZ;
+	v2CellSizeXZ.x = fSceneWidth / 5;
+	v2CellSizeXZ.y = fSceneHeight / 5;
+
+	uint32 unCellsX = std::ceil(fSceneWidth / v2CellSizeXZ.x) + 1;
+	uint32 unCellsZ = std::ceil(fSceneHeight / v2CellSizeXZ.y) + 1;
+
+	CellPartition(v2SceneOriginXZ, v2CellSizeXZ, unCellsX, unCellsZ);
+
+	//if (m_pTerrain) {
+	//	Vector3 v3TerrainPos = m_pTerrain->GetComponent<Transform>()->GetPosition();
+	//	uint32 unComponents = std::sqrt(m_pTerrain->GetTerrainComponents().size());
+	//	Vector2 v2CellSize = m_pTerrain->GetTerrainComponents()[0]->GetComponentSize();
+	//	CellPartition(Vector2{v3TerrainPos.x, v3TerrainPos.z}, v2CellSize, unComponents, unComponents);
+	//}
+	//else {
+	//	auto [v3SceneMin, v3SceneMax] = ::GetMinMaxFromAABB(m_xmSceneBound);
+	//	float fSceneWidth = v3SceneMax.x - v3SceneMin.x;
+	//	float fSceneHeight = v3SceneMax.z - v3SceneMin.z;
+
+	//	Vector2 v2SceneOriginXZ;
+	//	v2SceneOriginXZ.x = v3SceneMin.x;
+	//	v2SceneOriginXZ.y = v3SceneMin.z;
+
+	//	Vector2 v2CellSizeXZ;
+	//	v2CellSizeXZ.x = fSceneWidth / 5;
+	//	v2CellSizeXZ.y = fSceneHeight / 5;
+
+	//	uint32 unCellsX = std::ceil(fSceneWidth / v2CellSizeXZ.x) + 1;
+	//	uint32 unCellsZ = std::ceil(fSceneHeight / v2CellSizeXZ.y) + 1;
+
+	//	CellPartition(v2SceneOriginXZ, v2CellSizeXZ, unCellsX, unCellsZ);
+	//}
+
+	if (m_pPlayer) {
+		m_pPlayer->GetTransform()->SetPosition(m_xmSceneBound.Center);
 	}
 }
 
@@ -77,9 +115,9 @@ void Scene::PreUpdate()
 	}
 }
 
-void Scene::PostUpdate()
+void Scene::FixedUpdate()
 {
-	// Update
+	// Component Update
 	if (m_pPlayer) {
 		m_pPlayer->Update();
 	}
@@ -92,6 +130,11 @@ void Scene::PostUpdate()
 		obj->Update();
 	}
 
+	CheckCollision();
+}
+
+void Scene::PostUpdate()
+{
 	// Post Update
 	if (m_pPlayer) {
 		m_pPlayer->PostUpdate();
@@ -106,6 +149,54 @@ void Scene::PostUpdate()
 	}
 }
 
+void Scene::CheckCollision() 
+{
+	// 1. Broad Phase
+	Vector3 v3PlayerPos = m_pPlayer->GetTransform()->GetPosition();
+	SpacePartitionDesc::CellCoord cdPlayer = m_SpacePartition.WorldToCellXZ(v3PlayerPos);
+	int32 cellIndex = m_SpacePartition.CellToIndex(cdPlayer.x, cdPlayer.y);
+	const GridCell* pBroadPhaseResult = m_SpacePartition.GetCellData(cdPlayer);
+	if (!pBroadPhaseResult) {
+		return;
+	}
+	
+	const PlayerCollider& playerCollider = *m_pPlayer->GetComponent<PlayerCollider>();
+	for (const auto& pObj : pBroadPhaseResult->pObjectsInCell) {
+		const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
+		bool bResult = playerCollider.CheckCollision(pCollider);
+		if (bResult) {
+			CollisionResult result1(m_pPlayer , pObj);
+			CollisionResult result2(pObj, m_pPlayer);
+			if (!m_pCollisionPairs.contains(result1) || !m_pCollisionPairs.contains(result2)) {
+				// Begin Overlap
+				m_pPlayer->OnBeginCollision(result1);
+				pObj->OnBeginCollision(result2);
+
+				m_pCollisionPairs.insert(result1);
+				m_pCollisionPairs.insert(result2);
+			}
+			else {
+				// While Overlap
+				m_pPlayer->OnWhileCollision(CollisionResult(m_pPlayer, pObj));
+				pObj->OnWhileCollision(CollisionResult(pObj, m_pPlayer));
+			}
+		}
+		else {
+			// End Overlap
+			CollisionResult result1(m_pPlayer, pObj);
+			CollisionResult result2(pObj, m_pPlayer);
+			if (m_pCollisionPairs.contains(result1) || m_pCollisionPairs.contains(result2)) {
+				m_pPlayer->OnEndCollision(result1);
+				pObj->OnEndCollision(result2);
+
+				m_pCollisionPairs.erase(result1);
+				m_pCollisionPairs.erase(result2);
+			}
+		}
+
+	}
+}
+
 void Scene::GenerateSceneBound()
 {
 	for (const auto& pObj : m_pGameObjects) {
@@ -115,7 +206,12 @@ void Scene::GenerateSceneBound()
 		}
 
 		const auto& xmAABB = pCollider->GetAABBFromOBBWorld();
-		BoundingBox::CreateMerged(m_xmSceneBound, m_xmSceneBound, xmAABB);
+		if (m_xmSceneBound.Center == Vector3(0, 0, 0) && m_xmSceneBound.Extents == Vector3(1, 1, 1)) {
+			m_xmSceneBound = xmAABB;
+		}
+		else {
+			BoundingBox::CreateMerged(m_xmSceneBound, m_xmSceneBound, xmAABB);
+		}
 	}
 }
 
@@ -145,6 +241,29 @@ CB_LIGHT_DATA Scene::MakeLightData()
 	lightData.gnLights = m_pLights.size();
 
 	return lightData;
+}
+
+TerrainHit Scene::QueryTerrainHit(const Vector3& v3WorldPos)
+{
+	TerrainHit result{};
+	if (!m_pTerrain) {
+		return result;
+	}
+
+	float fHeight = m_pTerrain->GetHeightWorld(v3WorldPos);
+	if (v3WorldPos.y <= fHeight) {
+		result.bGrounded = true;
+		result.fHeight = fHeight;
+
+		result.v3Normal = m_pTerrain->GetNormalWorld(v3WorldPos);
+		if (result.v3Normal.LengthSquared() < 0.1f) {
+			result.v3Normal = Vector3::Up;
+		}
+
+		result.fPenetrationDepth = fHeight - v3WorldPos.y;
+	}
+
+	return result;
 }
 
 HRESULT Scene::LoadFromFiles(const std::string& strFileName)

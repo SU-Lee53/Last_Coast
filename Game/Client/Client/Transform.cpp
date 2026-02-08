@@ -143,22 +143,22 @@ void Transform::Scale(float fScale)
 // Basis
 // =====
 
-const Vector3& Transform::GetPosition() const
+Vector3 Transform::GetPosition() const
 {
 	return m_mtxWorld.Translation();
 }
 
-const Vector3& Transform::GetRight() const
+Vector3 Transform::GetRight() const
 {
 	return m_mtxWorld.Right();
 }
 
-const Vector3& Transform::GetUp() const
+Vector3 Transform::GetUp() const
 {
 	return m_mtxWorld.Up();
 }
 
-const Vector3& Transform::GetLook() const
+Vector3 Transform::GetLook() const
 {
 	return m_mtxWorld.Backward();
 }
@@ -166,4 +166,9 @@ const Vector3& Transform::GetLook() const
 const Matrix& Transform::GetWorldMatrix() const
 {
 	return m_mtxWorld;
+}
+
+const Matrix& Transform::GetFrameMatrix() const
+{
+	return m_mtxFrameRelative;
 }

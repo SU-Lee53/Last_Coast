@@ -35,6 +35,9 @@ void NodeObject::PreUpdate()
 
 void NodeObject::Update()
 {
+	for (const auto& pChild : m_pChildren) {
+		pChild->Update();
+	}
 }
 
 void NodeObject::PostUpdate()

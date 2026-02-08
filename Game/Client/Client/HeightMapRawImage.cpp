@@ -75,10 +75,10 @@ Vector3 HeightMapRawImage::GetNormalLocal(float fX, float fZ) const
 	const float fEpsilonX = m_v3Scale.x;
 	const float fEpsilonZ = m_v3Scale.z;
 
-	float fLeft = GetHeightWorld(fX - fEpsilonX, fZ);
-	float fRight = GetHeightWorld(fX + fEpsilonX, fZ);
-	float fBottom = GetHeightWorld(fX, fZ - fEpsilonZ);
-	float fTop = GetHeightWorld(fX, fZ + fEpsilonZ);
+	float fLeft = GetHeightLocal(fX - fEpsilonX, fZ);
+	float fRight = GetHeightLocal(fX + fEpsilonX, fZ);
+	float fBottom = GetHeightLocal(fX, fZ - fEpsilonZ);
+	float fTop = GetHeightLocal(fX, fZ + fEpsilonZ);
 
 	Vector3 v3DeltaX = { 2.0f * fEpsilonX, fRight - fLeft, 0.f };
 	Vector3 v3DeltaZ = { 0.f, fTop - fBottom, 2.0f * fEpsilonZ };
@@ -92,40 +92,72 @@ Vector3 HeightMapRawImage::GetTangentLocal(float fX, float fZ) const
 {
 	const float fEpsilonX = m_v3Scale.x;
 
-	float fLeft = GetHeightWorld(fX - fEpsilonX, fZ);
-	float fRight = GetHeightWorld(fX + fEpsilonX, fZ);
+	float fLeft = GetHeightLocal(fX - fEpsilonX, fZ);
+	float fRight = GetHeightLocal(fX + fEpsilonX, fZ);
 
 	Vector3 v3Tangent = { 2.0f * fEpsilonX, fRight - fLeft, 0.f };
 	v3Tangent.Normalize();
 	return v3Tangent;
 }
 
+bool HeightMapRawImage::IsInsideLocal(float fX, float fZ)
+{
+	const float fGridX = fX / m_v3Scale.x;
+	const float fGridZ = fZ / m_v3Scale.z;
+
+	return
+		fGridX >= 0.f &&
+		fGridZ >= 0.f &&
+		fGridX <= (float)(m_unWidth - 1) &&
+		fGridZ <= (float)(m_unHeight - 1);
+}
+
 float HeightMapRawImage::GetHeightWorld(float fWorldX, float fWorldZ) const
 {
-	const float fLocalX = fWorldX - m_fOriginX;
-	const float fLocalZ = fWorldZ - m_fOriginZ;
+	const float ueX = fWorldZ;
+	const float ueZ = fWorldX;
+
+	const float fLocalX = ueX - m_fOriginX;
+	const float fLocalZ = ueZ - m_fOriginZ;
 	return GetHeightLocal(fLocalX, fLocalZ);
 }
 
 Vector3 HeightMapRawImage::GetNormalWorld(float fWorldX, float fWorldZ) const
 {
-	const float fLocalX = fWorldX - m_fOriginX;
-	const float fLocalZ = fWorldZ - m_fOriginZ;
+	const float ueX = fWorldZ;
+	const float ueZ = fWorldX;
+
+	const float fLocalX = ueX - m_fOriginX;
+	const float fLocalZ = ueZ - m_fOriginZ;
 	return GetNormalLocal(fLocalX, fLocalZ);
 }
 
 Vector3 HeightMapRawImage::GetTangentWorld(float fWorldX, float fWorldZ) const
 {
-	const float fLocalX = fWorldX - m_fOriginX;
-	const float fLocalZ = fWorldZ - m_fOriginZ;
+	const float ueX = fWorldZ;
+	const float ueZ = fWorldX;
+
+	const float fLocalX = ueX - m_fOriginX;
+	const float fLocalZ = ueZ - m_fOriginZ;
 	return GetTangentLocal(fLocalX, fLocalZ);
+}
+
+bool HeightMapRawImage::IsInsideWorld(float fWorldX, float fWorldZ)
+{
+	const float ueX = fWorldZ;
+	const float ueZ = fWorldX;
+
+	const float fLocalX = ueX - m_fOriginX;
+	const float fLocalZ = ueZ - m_fOriginZ;
+	return IsInsideLocal(fLocalX, fLocalZ);
 }
 
 float HeightMapRawImage::SampleHeight(uint32 x, uint32 z) const
 {
-	uint16 un16Raw = m_HeightMapRawData[z * m_unWidth + x];
-	const float fHeightRaw = static_cast<float>(un16Raw) / static_cast<float>(std::numeric_limits<uint16>::max());
-	return fHeightRaw * ::M(m_v3Scale.y);
-	//return fHeightRaw * 1000.f;
+	const uint16 un16Raw = m_HeightMapRawData[z * m_unWidth + x];
+	const int32 nSignedRaw = static_cast<int32>(un16Raw) - 32768;
+	const float fHeightInCM = static_cast<float>(nSignedRaw) * (m_v3Scale.y * g_fUEHeightInverseScale);
+	return fHeightInCM;
 }
+
 
