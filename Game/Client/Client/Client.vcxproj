@@ -198,6 +198,7 @@
     <ClInclude Include="RenderPass.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="ResourceManager.h" />
+    <ClInclude Include="ResourceTable.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="SceneManager.h" />
     <ClInclude Include="Shader.h" />
@@ -314,6 +315,7 @@
     <ClCompile Include="RenderManager.cpp" />
     <ClCompile Include="RenderPass.cpp" />
     <ClCompile Include="ResourceManager.cpp" />
+    <ClCompile Include="ResourceTable.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="SceneManager.cpp" />
     <ClCompile Include="Shader.cpp" />

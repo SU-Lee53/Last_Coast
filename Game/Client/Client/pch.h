@@ -116,6 +116,7 @@ using namespace Microsoft::WRL;
 #include "WinCore.h"
 #include "D3DCore.h"
 #include "GameFramework.h"
+#include "ResourceTable.h"
 
 // Managers
 #include "ResourceManager.h"

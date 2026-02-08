@@ -20,3 +20,5 @@ public:
 };
 
 #define D3DCORE			GameFramework::g_pD3DCore
+
+#define DEVICE			D3DCORE->GetDevice()

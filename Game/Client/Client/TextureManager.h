@@ -19,33 +19,33 @@ public:
 	std::shared_ptr<Texture> LoadTextureFromRaw(const std::string& strTextureName, uint32 unWidth, uint32 unHeight);
 	std::shared_ptr<Texture> LoadTextureArray(const std::string& strTextureName, const std::wstring& wstrTexturePath);
 	
-	std::shared_ptr<Texture> Get(const std::string& strTextureName) const;
-
-public:
-	std::shared_ptr<Texture> CreateTextureFromFile(const std::wstring& wstrTexturePath);
-	std::shared_ptr<Texture> CreateTextureArrayFromFile(const std::wstring& wstrTexturePath);
-	std::shared_ptr<Texture> CreateTextureFromRawFile(const std::wstring& wstrTexturePath, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM);
-
-public:
-	std::shared_ptr<Texture> CreateRTVTexture(const std::string& strName, UINT uiWidth, UINT uiHeight, DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN, DXGI_FORMAT dxgiRTVFormat = DXGI_FORMAT_UNKNOWN);
-	std::shared_ptr<Texture> CreateUAVTexture(const std::string& strName, UINT uiWidth, UINT uiHeight, DXGI_FORMAT dxgiFormat = DXGI_FORMAT_UNKNOWN);
-	std::shared_ptr<Texture> CreateDSVTexture(const std::string& strName, UINT uiWidth, UINT uiHeight, DXGI_FORMAT dxgiFormat);
+	std::shared_ptr<Texture> GetByName(const std::string& strTextureName) const;
+	std::shared_ptr<Texture> GetByID(uint64 unID) const;
 
 	void WaitForCopyComplete();
 
+	D3D12_CPU_DESCRIPTOR_HANDLE CreateSRV(const ShaderResource& texResource, const DXGI_FORMAT* pdxgiFormat, OUT D3D12_SHADER_RESOURCE_VIEW_DESC& outViewDesc);
+	D3D12_CPU_DESCRIPTOR_HANDLE CreateRTV(const ShaderResource& texResource, const DXGI_FORMAT* pdxgiFormat, OUT D3D12_RENDER_TARGET_VIEW_DESC& outViewDesc);
+	D3D12_CPU_DESCRIPTOR_HANDLE CreateDSV(const ShaderResource& texResource, const DXGI_FORMAT* pdxgiFormat, OUT D3D12_DEPTH_STENCIL_VIEW_DESC& outViewDesc);
+	D3D12_CPU_DESCRIPTOR_HANDLE CreateUAV(const ShaderResource& texResource, ComPtr<ID3D12Resource> pCounterResource, const DXGI_FORMAT* pdxgiFormat, OUT D3D12_UNORDERED_ACCESS_VIEW_DESC& outViewDesc);
 
-private:
-	void LoadFromDDSFile(ID3D12Resource** ppOutResource, const std::wstring& wstrTexturePath, std::unique_ptr<uint8_t[]>& ddsData, std::vector<D3D12_SUBRESOURCE_DATA>& subResources);
+	void UpdateResources(
+		ShaderResource& texResource,
+		const std::vector<D3D12_SUBRESOURCE_DATA>& subResources,
+		uint32 unBytes,
+		ComPtr<ID3D12Resource> pd3dUploadBuffer = nullptr);
 
-	// 왠만하면 쓸일 없도록 합시다
-	void LoadFromWICFile(ID3D12Resource** ppOutResource, const std::wstring& wstrTexturePath, std::unique_ptr<uint8_t[]>& ddsData, std::vector<D3D12_SUBRESOURCE_DATA>& subResources);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE RegisterSRV(std::shared_ptr<Texture> pTexture, const DXGI_FORMAT* pdxgiFormat, OUT D3D12_SHADER_RESOURCE_VIEW_DESC& outViewDesc);
 
 private:
 	void ReleaseCompletedUploadBuffers();
+	void CreateUploadBuffer(ID3D12Resource** ppUploadBuffer, uint32 unBytes);
 
 private:
-	// Texture Pool
-	std::unordered_map<std::string, std::shared_ptr<Texture>> m_pTexturePool;
+	TextureTable m_SRVTextureTable;
+	TextureTable m_RTVTextureTable;
+	TextureTable m_DSVTextureTable;
 
 private:
 	CommandListPool						m_CommandListPool;
@@ -77,9 +77,6 @@ private:
 	UINT m_nNumRTVTextures = 0;
 	UINT m_nNumDSVTextures = 0;
 #pragma endregion
-
-private:
-	inline static std::wstring g_wstrTextureBasePath = L"../Resources/Textures";
 
 };
 

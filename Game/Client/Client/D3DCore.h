@@ -76,4 +76,6 @@ private:
 
 public:
 	static UINT g_nCBVSRVDescriptorIncrementSize;
+	static UINT g_nRTVDescriptorIncrementSize;
+	static UINT g_nDSVDescriptorIncrementSize;
 };

@@ -2,6 +2,8 @@
 #include "D3DCore.h"
 
 UINT D3DCore::g_nCBVSRVDescriptorIncrementSize = 0;
+UINT D3DCore::g_nRTVDescriptorIncrementSize = 0;
+UINT D3DCore::g_nDSVDescriptorIncrementSize = 0;
 
 D3DCore::D3DCore(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnableVSync)
 {
@@ -14,6 +16,8 @@ D3DCore::D3DCore(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnableVSync)
 	m_unSyncInterval = bEnableVSync ? 1 : 0;
 
 	g_nCBVSRVDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	g_nRTVDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	g_nDSVDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 }
 
 D3DCore::~D3DCore()
@@ -329,10 +333,10 @@ void D3DCore::ChangeSwapChainState()
 			m_pd3dRenderTargetBuffers[i].Reset();
 	}
 
-	DXGI_SWAP_CHAIN_DESC dxgiSwapChainDesc;
-	m_pdxgiSwapChain->GetDesc(&dxgiSwapChainDesc);
+	DXGI_SWAP_CHAIN_DESC1 dxgiSwapChainDesc;
+	m_pdxgiSwapChain->GetDesc1(&dxgiSwapChainDesc);
 	m_pdxgiSwapChain->ResizeBuffers(g_nSwapChainBuffers, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight,
-		dxgiSwapChainDesc.BufferDesc.Format, dxgiSwapChainDesc.Flags);
+		dxgiSwapChainDesc.Format, dxgiSwapChainDesc.Flags);
 
 	m_nSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
@@ -437,15 +441,6 @@ void D3DCore::Present()
 		__debugbreak();
 	}
 
-	/*
-	DXGI_PRESENT_PARAMETERS dxgiPresentParameters;
-	dxgiPresentParameters.DirtyRectsCount = 0;
-	dxgiPresentParameters.pDirtyRects = NULL;
-	dxgiPresentParameters.pScrollRect = NULL;
-	dxgiPresentParameters.pScrollOffset = NULL;
-
-	m_pdxgiSwapChain->Present1(1, 0, &dxgiPresentParameters);
-	*/
 }
 
 void D3DCore::MoveToNextFrame()

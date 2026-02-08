@@ -348,6 +348,9 @@
     <ClInclude Include="BoundingCapsule.h">
       <Filter>99.Utility</Filter>
     </ClInclude>
+    <ClInclude Include="ResourceTable.h">
+      <Filter>99.Utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -579,6 +582,9 @@
       <Filter>99.Utility</Filter>
     </ClCompile>
     <ClCompile Include="BoundingCapsule.cpp">
+      <Filter>99.Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="ResourceTable.cpp">
       <Filter>99.Utility</Filter>
     </ClCompile>
   </ItemGroup>
