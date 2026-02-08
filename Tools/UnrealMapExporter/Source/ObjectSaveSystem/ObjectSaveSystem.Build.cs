@@ -1,4 +1,5 @@
-﻿using UnrealBuildTool;
+﻿using System.IO;
+using UnrealBuildTool;
 
 public class ObjectSaveSystem : ModuleRules
 {
@@ -11,14 +12,16 @@ public class ObjectSaveSystem : ModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-            "InputCore",           // ✅ 추가
-            "EnhancedInput",       // ✅ 추가 (Enhanced Input용)
+            "InputCore",
+            "EnhancedInput",
             "Json",
             "JsonUtilities",
             "Landscape",
             "ImageWrapper",
             "RenderCore",
-            "RHI"
+            "RHI",
+            "NavigationSystem",
+            "Navmesh"  // ✅ 중요
         });
 
         if (Target.bBuildEditor)
@@ -33,5 +36,14 @@ public class ObjectSaveSystem : ModuleRules
                 "SlateCore"
             });
         }
+        string NavmeshPublicPath = Path.Combine(
+           EngineDirectory,
+           "Source",
+           "Runtime",
+           "Navmesh",
+           "Public"
+       );
+
+        PublicIncludePaths.Add(NavmeshPublicPath);
     }
 }

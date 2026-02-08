@@ -1,17 +1,56 @@
-﻿// pch.h: 미리 컴파일된 헤더 파일입니다.
-// 아래 나열된 파일은 한 번만 컴파일되었으며, 향후 빌드에 대한 빌드 성능을 향상합니다.
-// 코드 컴파일 및 여러 코드 검색 기능을 포함하여 IntelliSense 성능에도 영향을 미칩니다.
-// 그러나 여기에 나열된 파일은 빌드 간 업데이트되는 경우 모두 다시 컴파일됩니다.
-// 여기에 자주 업데이트할 파일을 추가하지 마세요. 그러면 성능이 저하됩니다.
+﻿#pragma once
 
-#pragma once
+#define WIN32_LEAN_AND_MEAN             // 거의 사용되지 않는 내용을 Windows 헤더에서 제외합니다.
+// Windows 헤더 파일
 #include <windows.h>
-#include <vector>
-
+// C 런타임 헤더 파일입니다.
+#include <stdlib.h>
+#include <malloc.h>
+#include <memory.h>
+#include <tchar.h>
 
 #undef min
 #undef max
 
+// STL Essentials
+#include <iostream>
+#include <fstream>
+#include <memory>
+#include <string>
+#include <array>
+#include <vector>
+#include <set>
+#include <unordered_set>
+#include <unordered_map>
+#include <deque>
+#include <span>
+#include <algorithm>
+#include <type_traits>
+#include <ranges>
+#include <concepts>
+#include <utility>
+#include <filesystem>
+#include <typeindex>
 
+
+
+// DirectXMath
 #include <DirectXMath.h>
+#include <DirectXPackedVector.h>
+#include <DirectXColors.h>
+#include <DirectXCollision.h>
+
+
+#include "SimpleMath.h"
+using namespace DirectX::SimpleMath;
+
 using namespace DirectX;
+using namespace DirectX::PackedVector;
+
+
+
+
+// Json
+#include <nlohmann_json/json.hpp>
+#include <nlohmann_json/json_fwd.hpp>
+

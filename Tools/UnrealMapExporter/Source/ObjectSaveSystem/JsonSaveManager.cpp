@@ -4,16 +4,20 @@
 #include "Misc/Optional.h"
 #include "Templates/SharedPointer.h"
 #include "Containers/Array.h"
+#include "Containers/Set.h"
 
-// 나머지 헤더들
+// JSON 관련
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
+
+// Landscape 관련
 #include "Landscape.h"
 #include "LandscapeComponent.h"
 #include "LandscapeLayerInfoObject.h"
 #include "Engine/Texture2D.h"
 
+// Light 관련
 #include "Engine/PointLight.h"
 #include "Engine/SpotLight.h"
 #include "Engine/DirectionalLight.h"
@@ -23,25 +27,31 @@
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SkyLightComponent.h"
 
-
 #if WITH_EDITOR
+// 파일 시스템
 #include "HAL/PlatformFilemanager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+
+// Landscape 관련
 #include "LandscapeDataAccess.h"
 #include "LandscapeInfo.h"
 #include "ImageUtils.h"
+
+// Export 관련
 #include "Exporters/Exporter.h"
 #include "AssetExportTask.h"
+
+// Image Wrapper
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
 #include "Modules/ModuleManager.h"
 
-// Material 관련 헤더
+// Material 관련
+#include "Materials/Material.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceConstant.h"
 #include "Materials/MaterialInstanceDynamic.h"
-#include "Materials/Material.h"
 #include "Materials/MaterialExpression.h"
 #include "Materials/MaterialExpressionTextureSample.h"
 #include "Materials/MaterialExpressionLandscapeLayerBlend.h"
@@ -52,6 +62,12 @@
 // StaticMesh 관련
 #include "Engine/StaticMeshActor.h"
 #include "Engine/StaticMesh.h"
+
+// ✅ NavMesh 관련 (Detour 포함)
+#include "NavigationSystem.h"
+#include "NavMesh/RecastNavMesh.h"
+#include "Detour/DetourNavMesh.h"
+#include "Detour/DetourNavMeshQuery.h"
 #endif
 
 bool UJsonSaveManager::SaveActorsToJson(const TArray<AActor*>& Actors, const FString& FileName)
@@ -336,6 +352,25 @@ TSharedPtr<FJsonObject> UJsonSaveManager::DirectionToJson(const FTransform& Tran
     return DirectionJson;
 }
 
+TSharedPtr<FJsonObject> UJsonSaveManager::Vector3ToJson(const FVector& UnrealVector)
+{
+    // TransformToJson과 동일한 변환 행렬 사용
+    FMatrix ConversionMatrix = FMatrix(
+        FPlane(0, 1, 0, 0),
+        FPlane(0, 0, 1, 0),
+        FPlane(1, 0, 0, 0),
+        FPlane(0, 0, 0, 1)
+    );
+
+    FVector DirectXVector = ConversionMatrix.TransformPosition(UnrealVector);
+
+    TSharedPtr<FJsonObject> VectorJson = MakeShareable(new FJsonObject);
+    VectorJson->SetNumberField(TEXT("X"), DirectXVector.X);
+    VectorJson->SetNumberField(TEXT("Y"), DirectXVector.Y);
+    VectorJson->SetNumberField(TEXT("Z"), DirectXVector.Z);
+
+    return VectorJson;
+}
 
 #if WITH_EDITOR
 bool UJsonSaveManager::ExportMeshToFBX(UStaticMesh* Mesh, const FString& FileName, bool bShowOptions)
@@ -1699,5 +1734,180 @@ bool UJsonSaveManager::IsExpressionConnectedToInput(
     }
 
     return false;
+}
+
+
+
+
+bool UJsonSaveManager::ExportNavMeshToJson(UWorld* World, const FString& FileName)
+{
+    if (!World)
+    {
+        UE_LOG(LogTemp, Error, TEXT("World is null"));
+        return false;
+    }
+
+    // Navigation System 가져오기
+    UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(World);
+    if (!NavSys)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Navigation System not found"));
+        UE_LOG(LogTemp, Error, TEXT("Enable it: Edit → Project Settings → Navigation System"));
+        return false;
+    }
+
+    // Recast NavMesh 가져오기
+    ARecastNavMesh* NavMesh = Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance());
+    if (!NavMesh)
+    {
+        UE_LOG(LogTemp, Error, TEXT("RecastNavMesh not found"));
+        UE_LOG(LogTemp, Error, TEXT("Add 'Nav Mesh Bounds Volume' to the level and press P to visualize"));
+        return false;
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("✅ NavMesh found successfully!"));
+
+    // NavMesh를 JSON으로 변환
+    TSharedPtr<FJsonObject> RootJson = NavMeshToJson(NavMesh);
+
+    // JSON 저장
+    FString OutputString;
+    TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
+    FJsonSerializer::Serialize(RootJson.ToSharedRef(), Writer);
+
+    FString Directory = FPaths::ProjectSavedDir() + TEXT("../NavMesh/");
+    FString FullPath = Directory + FileName + TEXT(".json");
+
+    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+    if (!PlatformFile.DirectoryExists(*Directory))
+    {
+        PlatformFile.CreateDirectoryTree(*Directory);
+    }
+
+    bool bSuccess = FFileHelper::SaveStringToFile(OutputString, *FullPath);
+
+    if (bSuccess)
+    {
+        UE_LOG(LogTemp, Log, TEXT("✅ NavMesh saved to: %s"), *FullPath);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("❌ Failed to save NavMesh"));
+    }
+
+    return bSuccess;
+}
+
+TSharedPtr<FJsonObject> UJsonSaveManager::NavMeshToJson(ARecastNavMesh* NavMesh)
+{
+    TSharedPtr<FJsonObject> RootJson = MakeShareable(new FJsonObject);
+
+    if (!NavMesh)
+    {
+        return RootJson;
+    }
+
+    // Config
+    TSharedPtr<FJsonObject> ConfigJson = MakeShareable(new FJsonObject);
+    ConfigJson->SetNumberField(TEXT("CellSize"), NavMesh->CellSize);
+    ConfigJson->SetNumberField(TEXT("CellHeight"), NavMesh->CellHeight);
+    ConfigJson->SetNumberField(TEXT("AgentRadius"), NavMesh->AgentRadius);
+    ConfigJson->SetNumberField(TEXT("AgentHeight"), NavMesh->AgentHeight);
+    ConfigJson->SetNumberField(TEXT("AgentMaxSlope"), NavMesh->AgentMaxSlope);
+    ConfigJson->SetNumberField(TEXT("AgentMaxStepHeight"), NavMesh->AgentMaxStepHeight);
+    RootJson->SetObjectField(TEXT("Config"), ConfigJson);
+
+    // Detour NavMesh 가져오기
+    const dtNavMesh* DetourNavMesh = NavMesh->GetRecastMesh();
+    if (!DetourNavMesh)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Detour NavMesh is null"));
+        return RootJson;
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("✅ Detour NavMesh accessed successfully"));
+
+    // Tiles 처리
+    TArray<TSharedPtr<FJsonValue>> TilesArray;
+
+    int32 MaxTiles = DetourNavMesh->getMaxTiles();
+    int32 ValidTileCount = 0;
+
+    UE_LOG(LogTemp, Log, TEXT("Processing tiles (Max: %d)..."), MaxTiles);
+
+    for (int32 i = 0; i < MaxTiles; i++)
+    {
+        const dtMeshTile* Tile = DetourNavMesh->getTile(i);
+
+        if (!Tile || !Tile->header || Tile->header->vertCount == 0)
+        {
+            continue;
+        }
+
+        ValidTileCount++;
+        TSharedPtr<FJsonObject> TileJson = MakeShareable(new FJsonObject);
+
+        // Tile 위치
+        TileJson->SetNumberField(TEXT("X"), Tile->header->x);
+        TileJson->SetNumberField(TEXT("Y"), Tile->header->y);
+        TileJson->SetNumberField(TEXT("Layer"), Tile->header->layer);
+
+        // Tile Bounding Box
+        TSharedPtr<FJsonObject> BoundsJson = MakeShareable(new FJsonObject);
+        FVector BoundsMin(Tile->header->bmin[0], Tile->header->bmin[1], Tile->header->bmin[2]);
+        FVector BoundsMax(Tile->header->bmax[0], Tile->header->bmax[1], Tile->header->bmax[2]);
+        BoundsJson->SetObjectField(TEXT("Min"), Vector3ToJson(BoundsMin));
+        BoundsJson->SetObjectField(TEXT("Max"), Vector3ToJson(BoundsMax));
+        TileJson->SetObjectField(TEXT("Bounds"), BoundsJson);
+
+        // ✅ Vertices (Vector3ToJson 사용)
+        TArray<TSharedPtr<FJsonValue>> VerticesArray;
+        for (int32 v = 0; v < Tile->header->vertCount; v++)
+        {
+            const dtReal* Vert = &Tile->verts[v * 3];
+
+            FVector UnrealVertex((float)Vert[0], (float)Vert[1], (float)Vert[2]);
+
+            VerticesArray.Add(MakeShareable(new FJsonValueObject(
+                Vector3ToJson(UnrealVertex)
+            )));
+        }
+        TileJson->SetArrayField(TEXT("Vertices"), VerticesArray);
+
+        // Polygons
+        TArray<TSharedPtr<FJsonValue>> PolygonsArray;
+        for (int32 p = 0; p < Tile->header->polyCount; p++)
+        {
+            const dtPoly* Poly = &Tile->polys[p];
+
+            TSharedPtr<FJsonObject> PolyJson = MakeShareable(new FJsonObject);
+
+            TArray<TSharedPtr<FJsonValue>> IndicesArray;
+            for (int32 j = 0; j < Poly->vertCount; j++)
+            {
+                IndicesArray.Add(MakeShareable(new FJsonValueNumber(Poly->verts[j])));
+            }
+            PolyJson->SetArrayField(TEXT("Indices"), IndicesArray);
+            PolyJson->SetNumberField(TEXT("AreaType"), Poly->getArea());
+            PolyJson->SetNumberField(TEXT("Flags"), Poly->flags);
+
+            PolygonsArray.Add(MakeShareable(new FJsonValueObject(PolyJson)));
+        }
+        TileJson->SetArrayField(TEXT("Polygons"), PolygonsArray);
+
+        TilesArray.Add(MakeShareable(new FJsonValueObject(TileJson)));
+
+        if (ValidTileCount % 10 == 0)
+        {
+            UE_LOG(LogTemp, Log, TEXT("  Processed %d tiles..."), ValidTileCount);
+        }
+    }
+
+    RootJson->SetArrayField(TEXT("Tiles"), TilesArray);
+    RootJson->SetNumberField(TEXT("TileCount"), ValidTileCount);
+
+    UE_LOG(LogTemp, Log, TEXT("✅ Exported %d valid tiles with full mesh data"), ValidTileCount);
+
+    return RootJson;
 }
 #endif

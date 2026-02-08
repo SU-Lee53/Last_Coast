@@ -1,33 +1,63 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="소스 파일">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="헤더 파일">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
     <Filter Include="리소스 파일">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="99.pch">
+      <UniqueIdentifier>{f0a8f2b5-2099-43fb-ae8a-e757ae09ea55}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00.AI">
+      <UniqueIdentifier>{b6ce606a-8cbb-4758-ab94-b4efa959b4c9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="99.Utillity">
+      <UniqueIdentifier>{c54cfa67-21ea-418d-a3aa-6402c8f5d248}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>99.pch</Filter>
     </ClInclude>
     <ClInclude Include="AI.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>00.AI</Filter>
+    </ClInclude>
+    <ClInclude Include="SimpleMath.h">
+      <Filter>99.Utillity</Filter>
+    </ClInclude>
+    <ClInclude Include="NavMeshImpl.h">
+      <Filter>00.AI</Filter>
+    </ClInclude>
+    <ClInclude Include="AIAgentImpl.h">
+      <Filter>00.AI</Filter>
+    </ClInclude>
+    <ClInclude Include="AIManagerImpl.h">
+      <Filter>00.AI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>99.pch</Filter>
     </ClCompile>
     <ClCompile Include="AI.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>00.AI</Filter>
     </ClCompile>
+    <ClCompile Include="SimpleMath.cpp">
+      <Filter>99.Utillity</Filter>
+    </ClCompile>
+    <ClCompile Include="NavMeshImpl.cpp">
+      <Filter>00.AI</Filter>
+    </ClCompile>
+    <ClCompile Include="AIAgentImpl.cpp">
+      <Filter>00.AI</Filter>
+    </ClCompile>
+    <ClCompile Include="AIManagerImpl.cpp">
+      <Filter>00.AI</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="SimpleMath.inl">
+      <Filter>99.Utillity</Filter>
+    </None>
   </ItemGroup>
 </Project>
