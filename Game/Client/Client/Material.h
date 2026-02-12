@@ -30,36 +30,35 @@ struct MATERIALLOADINFO {
 	float fUVTiling;
 }; 
 
-class Material {
+interface IMaterial abstract {
 public:
-	Material(const MATERIALLOADINFO& materialLoadInfo);
-	virtual ~Material();
+	friend class MaterialManager;
+	using ID = uint64;
 
 public:
 	const MaterialColors& GetMaterialColors() const { return m_MaterialColors; }
 	const std::shared_ptr<Shader>& GetShader() const { return m_pShader; }
 	void SetShader(std::shared_ptr<Shader> pShader);
 
-	void SetTexture(std::shared_ptr<Texture> pTexture, TEXTURE_TYPE eTextureType);
+	void SetTexture(Texture::ID texID, TEXTURE_TYPE eTextureType);
 	std::shared_ptr<Texture> GetTexture(int nIndex);
 
-public:
-	virtual void UpdateShaderVariables(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, void* dataForBind);
-	virtual void UpdateShaderVariables(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle);
+protected:
+	IMaterial(const MATERIALLOADINFO& materialLoadInfo);
+	virtual ~IMaterial();
 
 protected:
 	MaterialColors m_MaterialColors{};
-	std::vector<std::shared_ptr<Texture>> m_pTextures;
+	std::vector<Texture::ID> m_TextureIDs;
 
 	std::shared_ptr<Shader> m_pShader;
-
 };
 
 //////////////////////////////////////////////////////////////////////////////////
 // StandardMaterial
 
-class StandardMaterial : public Material {
-public:
+class StandardMaterial : public IMaterial {
+private:
 	StandardMaterial(const MATERIALLOADINFO& materialLoadInfo);
 	virtual ~StandardMaterial() {}
 
@@ -68,8 +67,8 @@ public:
 //////////////////////////////////////////////////////////////////////////////////
 // SkinnedMaterial
 
-class SkinnedMaterial : public Material {
-public:
+class SkinnedMaterial : public IMaterial {
+private:
 	SkinnedMaterial(const MATERIALLOADINFO& materialLoadInfo);
 	virtual ~SkinnedMaterial() {}
 
@@ -78,8 +77,8 @@ public:
 //////////////////////////////////////////////////////////////////////////////////
 // TerrainMaterial
 
-class TerrainMaterial : public Material {
-public:
+class TerrainMaterial : public IMaterial {
+private:
 	TerrainMaterial(const MATERIALLOADINFO& materialLoadInfo);
 	virtual ~TerrainMaterial() {}
 

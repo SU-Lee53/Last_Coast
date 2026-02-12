@@ -24,7 +24,6 @@ D3DCore::~D3DCore()
 {
 	// TODO : Release debug layer
 	WaitForGPUComplete();
-
 }
 
 void D3DCore::CreateD3DDevice(bool bEnableDebugLayer)
@@ -459,8 +458,7 @@ void D3DCore::WaitForGPUComplete()
 {
 	UINT64 nFenceValue = ++m_nFenceValues[m_nSwapChainBufferIndex];
 	HRESULT hResult = m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), nFenceValue);
-	if (m_pd3dFence->GetCompletedValue() < nFenceValue)
-	{
+	if (m_pd3dFence->GetCompletedValue() < nFenceValue) {
 		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
 		::WaitForSingleObject(m_hFenceEvent, INFINITE);
 	}

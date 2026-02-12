@@ -10,10 +10,10 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 	
 	// Init managers
 	RESOURCE->Initialize(g_pD3DCore->GetDevice());
+	MATERIAL->Initialize();
 	RENDER->Initialize(g_pD3DCore->GetDevice(), g_pD3DCore->GetCommandList());
 	SHADER->Initialize(g_pD3DCore->GetDevice());
 	INPUT->Initialize(WinCore::g_hWnd);
-	TIMER->Initialize();
 	MODEL->Initialize();
 	GUI->Initialize(g_pD3DCore->GetDevice());
 	NETWORK->Initialize();
@@ -32,6 +32,11 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 	//SOUND->Initialize();
 
 	SHADER->ReleaseBlobs();
+
+	RESOURCE->WaitForCopyComplete();
+	TEXTURE->WaitForCopyComplete();
+
+	TIMER->Initialize();
 	TIMER->Start();
 
 	// Init Scene
@@ -54,7 +59,6 @@ void GameFramework::Update()
 	SCENE->Update();
 
 	EFFECT->Update(DT);
-
 
 	// 게임 중간에 리소스 생성이 필요할 수 있으므로 대기
 	// 리소스 생성될게 없으면 바로 리턴함

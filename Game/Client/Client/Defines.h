@@ -34,14 +34,14 @@ public:										\
 #define UI				GET_SINGLE(UIManager)
 #define TIME			GET_SINGLE(GameTimer)
 #define ANIMATION		GET_SINGLE(AnimationManager)
+#define MATERIAL		GET_SINGLE(MaterialManager)
 
 #define CUR_SCENE		SCENE->GetCurrentScene()
 #define DT				TIME->GetTimeElapsed()
 
 //////////////////////////////////////////////////////////////////////////////////
 // Constants
-constexpr static float PLANET_ROTATION = 20.f;
-
+constexpr static uint64 INVALID_ID = std::numeric_limits<uint64>::max();
 
 //////////////////////////////////////////////////////////////////////////////////
 // Enums

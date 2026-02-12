@@ -1,12 +1,12 @@
 ﻿#include "pch.h"
 #include "MeshRenderer.h"
 
-uint64 MeshRenderer::g_ui64RendererIDBase = 0;
+MeshRenderer::ID MeshRenderer::g_ui64RendererIDBase = 0;
 
 MeshRenderer::MeshRenderer(std::shared_ptr<IGameObject> pOwner)
 	: IComponent{ pOwner }
 {
-	m_ui64RendererID = ++g_ui64RendererIDBase;
+	m_RuntimeID = ++g_ui64RendererIDBase;
 }
 
 MeshRenderer::MeshRenderer(std::shared_ptr<IGameObject> pOwner, const std::vector<MESHLOADINFO>& meshLoadInfos, const std::vector<MATERIALLOADINFO>& materialLoadInfo)
@@ -15,7 +15,7 @@ MeshRenderer::MeshRenderer(std::shared_ptr<IGameObject> pOwner, const std::vecto
 	m_pMeshes.reserve(meshLoadInfos.size());
 
 	for (const auto& meshLoadInfo : meshLoadInfos) {
-		std::shared_ptr<Mesh> pMesh;
+		std::shared_ptr<IMesh> pMesh;
 		switch (meshLoadInfo.eMeshType)
 		{
 		case MESH_TYPE::STATIC:
@@ -41,32 +41,40 @@ MeshRenderer::MeshRenderer(std::shared_ptr<IGameObject> pOwner, const std::vecto
 		m_pMeshes.push_back(pMesh);
 	}
 
+	uint32 unCount = 0;
 	for (const auto& materialInfo : materialLoadInfo) {
-		std::shared_ptr<Material> pMaterial;
+		std::string strMaterialKey = pOwner->GetName() + std::to_string(unCount++);
+		IMaterial::ID id{};
 		switch (m_eMeshType)
 		{
 		case MESH_TYPE::STATIC:
 		{
-			pMaterial = std::make_shared<StandardMaterial>(materialInfo);
+			id = MATERIAL->LoadMaterial<StandardMaterial>(strMaterialKey, materialInfo);
 			break;
 		}
 		case MESH_TYPE::SKINNED:
 		{
-			pMaterial = std::make_shared<SkinnedMaterial>(materialInfo);
+			id = MATERIAL->LoadMaterial<SkinnedMaterial>(strMaterialKey, materialInfo);
 			break;
 		}
 		case MESH_TYPE::TERRAIN:
 		{
-			pMaterial = std::make_shared<TerrainMaterial>(materialInfo);
+			id = MATERIAL->LoadMaterial<TerrainMaterial>(strMaterialKey, materialInfo);
 			break;
 		}
 		default:
 			std::unreachable();
 		}
-		m_pMaterials.push_back(pMaterial);
+
+		if (id == INVALID_ID) {
+			OutputDebugStringA("Material load failed");
+			continue;
+		}
+
+		m_MaterialIDs.push_back(id);
 	}
 
-	m_ui64RendererID = ++g_ui64RendererIDBase;
+	m_RuntimeID = ++g_ui64RendererIDBase;
 }
 
 void MeshRenderer::Initialize()
@@ -105,96 +113,20 @@ void MeshRenderer::Update()
 std::shared_ptr<IComponent> MeshRenderer::Copy(std::shared_ptr<IGameObject> pNewOwner) const
 {
 	std::shared_ptr<MeshRenderer> pClone = std::make_shared<MeshRenderer>(pNewOwner);
+	g_ui64RendererIDBase--; // 의도치 않게 올라간 RuntimeIDBase 를 다시 하나 내려주어야 함 (필수는 아니고 디버깅이 편함)
+
 	pClone->m_pMeshes = m_pMeshes;
-	pClone->m_pMaterials = m_pMaterials;
-	pClone->m_ui64RendererID = m_ui64RendererID;
+	pClone->m_MaterialIDs = m_MaterialIDs;
+	pClone->m_RuntimeID = m_RuntimeID;	// 반드시 필수
 	pClone->m_eRenderType = m_eRenderType;
 	pClone->m_eMeshType = m_eMeshType;
-	pClone->SetOwner(pNewOwner);
 
 	return pClone;
 }
 
-
-void MeshRenderer::Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-	DescriptorHandle& descHandle, int32 nInstanceCount, OUT int32& outnInstanceBase, const Matrix& mtxWorld) const
+void MeshRenderer::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle, int32 unStartIndex, int32 unIndexCount, int32 nInstanceCount, OUT int32& outnInstanceBase, const Matrix& mtxWorld) const
 {
-	for (int i = 0; i < m_pMeshes.size(); ++i) {
-		// Per Object CB
-		CB_PER_OBJECT_DATA cbData = { m_pMaterials[i]->GetMaterialColors(), outnInstanceBase };
-		ConstantBuffer cbuffer = RESOURCE->AllocCBuffer<CB_PER_OBJECT_DATA>();
-		cbuffer.WriteData(&cbData);
-
-		if (m_eMeshType == MESH_TYPE::STATIC) {
-			pd3dDevice->CopyDescriptorsSimple(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, descHandle.cpuHandle, cbuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::OBJ_MATERIAL_DATA), descHandle.gpuHandle);
-			descHandle.cpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-			descHandle.gpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-		}
-		else {
-			Matrix mtxWorldTransposed = mtxWorld.Transpose();
-			ConstantBuffer worldCBuffer = RESOURCE->AllocCBuffer<CB_WORLD_TRANSFORM_DATA>();
-			worldCBuffer.WriteData(&mtxWorldTransposed);
-
-			pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, cbuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-			pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, worldCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-			pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::OBJ_MATERIAL_DATA), descHandle.gpuHandle);
-			descHandle.gpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-		}
-
-		// Texture (있다면)
-		m_pMaterials[i]->UpdateShaderVariables(pd3dDevice, pd3dCommandList, descHandle);	// Texture 가 있다면 Descriptor 가 복사될 것이고 아니면 안될것
-
-		const auto& pipelineStates = m_pMaterials[i]->GetShader()->GetPipelineStates();
-		pd3dCommandList->SetPipelineState(pipelineStates[0].Get());
-
-		m_pMeshes[i]->Render(pd3dCommandList, nInstanceCount);
-	}
-	outnInstanceBase += nInstanceCount;
-}
-
-void MeshRenderer::Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-	DescriptorHandle& descHandle, int32 unStartIndex, int32 unIndexCount, int32 nInstanceCount, OUT int32& outnInstanceBase, const Matrix& mtxWorld) const
-{
-	for (int i = 0; i < m_pMeshes.size(); ++i) {
-		// Per Object CB
-		CB_PER_OBJECT_DATA cbData = { m_pMaterials[i]->GetMaterialColors(), outnInstanceBase };
-		ConstantBuffer cbuffer = RESOURCE->AllocCBuffer<CB_PER_OBJECT_DATA>();
-		cbuffer.WriteData(&cbData);
-
-		if (m_eMeshType == MESH_TYPE::STATIC) {
-			pd3dDevice->CopyDescriptorsSimple(ConstantBufferSize<CB_PER_OBJECT_DATA>::nDescriptors, descHandle.cpuHandle, cbuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::OBJ_MATERIAL_DATA), descHandle.gpuHandle);
-			descHandle.cpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-			descHandle.gpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-		}
-		else {
-			Matrix mtxWorldTransposed = mtxWorld.Transpose();
-			ConstantBuffer worldCBuffer = RESOURCE->AllocCBuffer<CB_WORLD_TRANSFORM_DATA>();
-			worldCBuffer.WriteData(&mtxWorldTransposed);
-
-			pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, cbuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-			pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, worldCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-			pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::OBJ_MATERIAL_DATA), descHandle.gpuHandle);
-			descHandle.gpuHandle.Offset(2, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-		}
-
-		// Texture (있다면)
-		m_pMaterials[i]->UpdateShaderVariables(pd3dDevice, pd3dCommandList, descHandle);	// Texture 가 있다면 Descriptor 가 복사될 것이고 아니면 안될것
-
-		const auto& pipelineStates = m_pMaterials[i]->GetShader()->GetPipelineStates();
-		pd3dCommandList->SetPipelineState(pipelineStates[0].Get());
-
-		m_pMeshes[i]->Render(pd3dCommandList, unStartIndex, unIndexCount, nInstanceCount);
-	}
-	outnInstanceBase += nInstanceCount;
+	// TODO : 구현
 }
 
 BoundingOrientedBox MeshRenderer::GetOBBMerged() const
@@ -220,8 +152,9 @@ BoundingOrientedBox MeshRenderer::GetOBBMerged() const
 	return xmOBBResult;
 }
 
-void MeshRenderer::SetTexture(std::shared_ptr<Texture> pTexture, UINT nMaterialIndex, TEXTURE_TYPE eTextureType)
+void MeshRenderer::SetTexture(Texture::ID texID, UINT nMaterialIndex, TEXTURE_TYPE eTextureType)
 {
 	assert(pTexture);
-	m_pMaterials[nMaterialIndex]->SetTexture(pTexture, eTextureType);
+	auto pMaterial = MATERIAL->GetMaterialByID(m_MaterialIDs[nMaterialIndex]);
+	pMaterial->SetTexture(texID, eTextureType);
 }

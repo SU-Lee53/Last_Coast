@@ -47,8 +47,6 @@
 
 
 // D3DCompiler
-#include <d3dcompiler.h>
-
 #include <dxcapi.h>
 
 // DirectXMath
@@ -70,7 +68,6 @@ using namespace DirectX::PackedVector;
 using namespace Microsoft::WRL;
 
 // Import libraries
-#pragma comment(lib, "d3dcompiler.lib")	// FXC
 #pragma comment(lib, "dxcompiler.lib")	// DXC
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -133,3 +130,4 @@ using namespace Microsoft::WRL;
 #include "SoundManager.h"
 #include "UIManager.h"
 #include "AnimationManager.h"
+#include "MaterialManager.h"

@@ -47,15 +47,21 @@ struct MESHLOADINFO {
 	bool bIsSkinned = false;
 };
 
-class Mesh {
+interface IMesh abstract {
 public:
-	Mesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	virtual ~Mesh() {}
+	using ID = uint64;
+
+public:
+	IMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	virtual ~IMesh() {}
 	
 	const BoundingOrientedBox& GetBoundingBox() const { return m_xmOBB; }
 
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount = 1) const = 0;
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 unStartIndex, uint32 unIndexCount, uint32 nInstanceCount = 1) const = 0;
+	virtual void Render(
+		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
+		uint32 unStartIndex, 
+		uint32 unIndexCount = std::numeric_limits<uint32>::max(),
+		uint32 nInstanceCount = 1) const = 0;
 
 protected:
 	VertexBuffer					m_Positions;
@@ -70,32 +76,35 @@ protected:
 protected:
 	// Bounding Volume
 	BoundingOrientedBox m_xmOBB;
-
-public:
-	static std::shared_ptr<Mesh> LoadMeshFromFile(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const nlohmann::json& inJson);
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FullScreenMesh
 
-class FullScreenMesh : public Mesh {
+class FullScreenMesh : public IMesh {
 public:
 	FullScreenMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount = 1) const override;
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 unStartIndex, uint32 unIndexCount, uint32 nInstanceCount = 1) const override {}
+	virtual void Render(
+		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
+		uint32 unStartIndex,
+		uint32 unIndexCount = std::numeric_limits<uint32>::max(),
+		uint32 nInstanceCount = 1) const = 0;
 
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // StaticMesh
 
-class StaticMesh : public Mesh {
+class StaticMesh : public IMesh {
 public:
 	StaticMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount = 1) const override;
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 unStartIndex, uint32 unIndexCount, uint32 nInstanceCount = 1) const override {}
+
+	virtual void Render(
+		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
+		uint32 unStartIndex,
+		uint32 unIndexCount = std::numeric_limits<uint32>::max(),
+		uint32 nInstanceCount = 1) const override;
 
 protected:
 	VertexBuffer m_Normals;
@@ -109,9 +118,12 @@ protected:
 class SkinnedMesh : public StaticMesh {
 public:
 	SkinnedMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount = 1) const override;
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 unStartIndex, uint32 unIndexCount, uint32 nInstanceCount = 1) const override {}
+
+	virtual void Render(
+		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
+		uint32 unStartIndex,
+		uint32 unIndexCount = std::numeric_limits<uint32>::max(),
+		uint32 nInstanceCount = 1) const override;
 
 protected:
 	VertexBuffer m_BlendIndices;
@@ -121,12 +133,15 @@ protected:
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TerrainMesh
 
-class TerrainMesh : public Mesh {
+class TerrainMesh : public IMesh {
 public:
 	TerrainMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount = 1) const override {}
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 unStartIndex, uint32 unIndexCount, uint32 nInstanceCount = 1) const override;
+	virtual void Render(
+		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
+		uint32 unStartIndex,
+		uint32 unIndexCount = std::numeric_limits<uint32>::max(),
+		uint32 nInstanceCount = 1) const override;
 
 protected:
 	VertexBuffer m_Normals;

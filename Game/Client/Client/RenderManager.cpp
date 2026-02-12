@@ -227,7 +227,7 @@ void RenderManager::RenderAnimated(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 
 void RenderManager::RenderSkybox(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descriptorHandleFromPassStart)
 {
-	std::shared_ptr<Texture> pSkyboxTexture = TEXTURE->Get("Skybox");
+	std::shared_ptr<Texture> pSkyboxTexture = TEXTURE->GetTextureByName("Skybox", TEXTURE_RESOURCE_TYPE::SRV);
 	if (!pSkyboxTexture) {
 		return;
 	}

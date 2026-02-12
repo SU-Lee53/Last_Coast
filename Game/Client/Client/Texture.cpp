@@ -1,12 +1,7 @@
 ﻿#include "pch.h"
 #include "Texture.h"
 
-Texture::Texture()
-{
-
-}
-
-void Texture::CreateTextureFromFile(const std::wstring& wstrTextureName)
+bool Texture::CreateTextureFromFile(const std::wstring& wstrTextureName)
 {
 	namespace fs = std::filesystem;
 
@@ -18,64 +13,69 @@ void Texture::CreateTextureFromFile(const std::wstring& wstrTextureName)
 		wstrTexturePath = std::format(L"{}/{}.dds", g_wstrTextureBasePath, wstrTextureName);
 	}
 
-
 	fs::path texPath{ wstrTexturePath };
 	if (!fs::exists(texPath)) {
 		OutputDebugStringA(std::format("{} - {} : {} : {}\n", __FILE__, __LINE__, "Texture file not exist", texPath.string()).c_str());
-		return;
+		return false;
 	}
-
-	std::shared_ptr<Texture> pTexture = std::make_shared<Texture>();
 
 	std::unique_ptr<uint8_t[]> ddsData = nullptr;
 	std::vector<D3D12_SUBRESOURCE_DATA> subResources;
-	if (texPath.extension().string() == ".dds" || texPath.extension().string() == ".DDS") {
-		LoadFromDDSFile(m_pTexResource.pResource.GetAddressOf(), wstrTexturePath, ddsData, subResources);
-	}
-	else {
-		LoadFromWICFile(m_pTexResource.pResource.GetAddressOf(), wstrTexturePath, ddsData, subResources);
+	auto isDDS = [](const fs::path& path) -> bool {return path.extension().string() == ".dds" || path.extension().string() == ".DDS"; };
+	HRESULT hr;
+	hr = isDDS(texPath) ? LoadFromDDSFile(m_pTexResource.pResource.GetAddressOf(), wstrTexturePath, ddsData, subResources) 
+		                : LoadFromWICFile(m_pTexResource.pResource.GetAddressOf(), wstrTexturePath, ddsData, subResources);
+
+	if (FAILED(hr)) {
+		OutputDebugStringA(std::format("{} - {} : {} : {}\n", __FILE__, __LINE__, "Texture load failed", texPath.string()).c_str());
+		return false;
 	}
 
-	D3D12_RESOURCE_DESC d3dTextureResourceDesc = pTexture->m_pTexResource.pResource->GetDesc();
+	D3D12_RESOURCE_DESC d3dTextureResourceDesc = m_pTexResource.pResource->GetDesc();
 	UINT nSubResources = (UINT)subResources.size();
-	UINT64 nBytes = GetRequiredIntermediateSize(pTexture->m_pTexResource.pResource.Get(), 0, nSubResources);
+	UINT64 nBytes = GetRequiredIntermediateSize(m_pTexResource.pResource.Get(), 0, nSubResources);
 	nBytes = (nBytes == 0) ? 1 : nBytes;
 
 	TEXTURE->UpdateResources(m_pTexResource, subResources, nBytes);
-	m_d3dSRVHandle = TEXTURE->CreateSRV(m_pTexResource, nullptr, m_d3dSRVDesc);
+
+	return true;
 }
 
-void Texture::CreateTextureArrayFromFile(const std::wstring& wstrTexturePath)
+bool Texture::CreateTextureArrayFromFile(const std::wstring& wstrTexturePath)
 {
 	namespace fs = std::filesystem;
 
 	fs::path texPath{ wstrTexturePath };
 	if (!fs::exists(texPath)) {
 		OutputDebugStringA(std::format("{} - {} : {} : {}\n", __FILE__, __LINE__, "Texture file not exist", texPath.string()).c_str());
-		return;
+		return false;
 	}
 
 	std::shared_ptr<Texture> pTexture = std::make_shared<Texture>();
 
 	std::unique_ptr<uint8_t[]> ddsData = nullptr;
 	std::vector<D3D12_SUBRESOURCE_DATA> subResources;
-	if (texPath.extension().string() == ".dds" || texPath.extension().string() == ".DDS") {
-		LoadFromDDSFile(pTexture->m_pTexResource.pResource.GetAddressOf(), wstrTexturePath, ddsData, subResources);
-	}
-	else {
-		LoadFromWICFile(pTexture->m_pTexResource.pResource.GetAddressOf(), wstrTexturePath, ddsData, subResources);
+	auto isDDS = [](const fs::path& path) -> bool {return path.extension().string() == ".dds" || path.extension().string() == ".DDS"; };
+	HRESULT hr;
+	hr = isDDS(texPath) ? LoadFromDDSFile(m_pTexResource.pResource.GetAddressOf(), wstrTexturePath, ddsData, subResources)
+		: LoadFromWICFile(m_pTexResource.pResource.GetAddressOf(), wstrTexturePath, ddsData, subResources);
+
+	if (FAILED(hr)) {
+		OutputDebugStringA(std::format("{} - {} : {} : {}\n", __FILE__, __LINE__, "Texture load failed", texPath.string()).c_str());
+		return false;
 	}
 
-	D3D12_RESOURCE_DESC d3dTextureResourceDesc = pTexture->m_pTexResource.pResource->GetDesc();
+	D3D12_RESOURCE_DESC d3dTextureResourceDesc = m_pTexResource.pResource->GetDesc();
 	UINT nSubResources = (UINT)subResources.size();
-	UINT64 nBytes = GetRequiredIntermediateSize(pTexture->m_pTexResource.pResource.Get(), 0, nSubResources);
+	UINT64 nBytes = GetRequiredIntermediateSize(m_pTexResource.pResource.Get(), 0, nSubResources);
 	nBytes = (nBytes == 0) ? 1 : nBytes;
 
 	TEXTURE->UpdateResources(m_pTexResource, subResources, nBytes);
-	m_d3dSRVHandle = TEXTURE->CreateSRV(m_pTexResource, nullptr, m_d3dSRVDesc);
+
+	return true;
 }
 
-void Texture::CreateTextureFromRawFile(const std::wstring& wstrTexturePath, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiFormat)
+bool Texture::CreateTextureFromRawFile(const std::wstring& wstrTexturePath, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiFormat)
 {
 	namespace fs = std::filesystem;
 
@@ -83,8 +83,7 @@ void Texture::CreateTextureFromRawFile(const std::wstring& wstrTexturePath, uint
 	std::ifstream in{ wstrTexturePath, std::ios::binary };
 	if (!in) {
 		OutputDebugStringA(std::format("{} - {} : {} : {}\n", __FILE__, __LINE__, "Texture file not exist", fs::path(wstrTexturePath).string()).c_str());
-		__debugbreak();
-		return;
+		return false;
 	}
 
 	// 파일 읽기
@@ -151,10 +150,11 @@ void Texture::CreateTextureFromRawFile(const std::wstring& wstrTexturePath, uint
 	subResources[0].SlicePitch = subResources[0].RowPitch * unHeight;
 
 	TEXTURE->UpdateResources(m_pTexResource, subResources, nBytes, pd3dUploadBuffer);
-	m_d3dSRVHandle = TEXTURE->CreateSRV(m_pTexResource, nullptr, m_d3dSRVDesc);
+
+	return true;
 }
 
-void Texture::LoadFromDDSFile(ID3D12Resource** ppOutResource, const std::wstring& wstrTexturePath, std::unique_ptr<uint8_t[]>& ddsData, std::vector<D3D12_SUBRESOURCE_DATA>& subResources)
+HRESULT Texture::LoadFromDDSFile(ID3D12Resource** ppOutResource, const std::wstring& wstrTexturePath, std::unique_ptr<uint8_t[]>& ddsData, std::vector<D3D12_SUBRESOURCE_DATA>& subResources)
 {
 	HRESULT hr;
 	DDS_ALPHA_MODE ddsAlphaMode = DDS_ALPHA_MODE_UNKNOWN;
@@ -175,12 +175,12 @@ void Texture::LoadFromDDSFile(ID3D12Resource** ppOutResource, const std::wstring
 
 	if (FAILED(hr)) {
 		OutputDebugStringA(std::format("{} - {} : {}", __FILE__, __LINE__, "Failed To Load DDS File").c_str());
-		return;
 	}
 
+	return hr;
 }
-
-void Texture::LoadFromWICFile(ID3D12Resource** ppOutResource, const std::wstring& wstrTexturePath, std::unique_ptr<uint8_t[]>& ddsData, std::vector<D3D12_SUBRESOURCE_DATA>& subResources)
+	
+HRESULT Texture::LoadFromWICFile(ID3D12Resource** ppOutResource, const std::wstring& wstrTexturePath, std::unique_ptr<uint8_t[]>& ddsData, std::vector<D3D12_SUBRESOURCE_DATA>& subResources)
 {
 	HRESULT hr;
 
@@ -199,8 +199,9 @@ void Texture::LoadFromWICFile(ID3D12Resource** ppOutResource, const std::wstring
 
 	if (FAILED(hr)) {
 		OutputDebugStringA(std::format("{} - {} : {}", __FILE__, __LINE__, "Failed To Load WIC File").c_str());
-		return;
 	}
+
+	return hr;
 }
 
 void Texture::StateTransition(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, D3D12_RESOURCE_STATES d3dAfterState)
@@ -208,7 +209,7 @@ void Texture::StateTransition(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 	m_pTexResource.StateTransition(pd3dCommandList, d3dAfterState);
 }
 
-void RenderTargetTexture::Initialize(ComPtr<ID3D12Device> pd3dDevice, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat)
+bool RenderTargetTexture::Initialize(uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat)
 {
 	D3D12_RESOURCE_DESC d3dRTTextureDesc;
 	{
@@ -217,7 +218,7 @@ void RenderTargetTexture::Initialize(ComPtr<ID3D12Device> pd3dDevice, uint32 unW
 		d3dRTTextureDesc.Width = unWidth;
 		d3dRTTextureDesc.Height = unHeight;
 		d3dRTTextureDesc.DepthOrArraySize = 1;
-		d3dRTTextureDesc.Format = DXGI_FORMAT_UNKNOWN;
+		d3dRTTextureDesc.Format = dxgiRTVFormat;
 		d3dRTTextureDesc.SampleDesc.Count = 1;
 		d3dRTTextureDesc.SampleDesc.Quality = 0;
 		d3dRTTextureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
@@ -230,7 +231,7 @@ void RenderTargetTexture::Initialize(ComPtr<ID3D12Device> pd3dDevice, uint32 unW
 	clearValue.Format = d3dRTTextureDesc.Format;
 	::memcpy(clearValue.Color, pfClearColor, 4 * sizeof(float));
 	
-	pd3dDevice->CreateCommittedResource(
+	DEVICE->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
 		&d3dRTTextureDesc,
@@ -239,16 +240,15 @@ void RenderTargetTexture::Initialize(ComPtr<ID3D12Device> pd3dDevice, uint32 unW
 		IID_PPV_ARGS(m_pTexResource.pResource.GetAddressOf())
 	);
 
-	m_d3dSRVHandle = TEXTURE->CreateSRV(m_pTexResource, &dxgiSRVFormat, m_d3dSRVDesc);
-	m_d3dRTVHandle = TEXTURE->CreateRTV(m_pTexResource, &dxgiRTVFormat, m_d3dRTVDesc);
+	return true;
 }
 
-void UnorderedAccessTexture::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, UINT nWidth, UINT nHeight)
+void DepthStencilTexture::Initialize(UINT nWidth, UINT nHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiDSVFormat)
 {
 	// TODO : 구현
 }
 
-void DepthStencilTexture::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, UINT nWidth, UINT nHeight)
+void UnorderedAccessTexture::Initialize(UINT nWidth, UINT nHeight, DXGI_FORMAT dxgiSRVUAVFormat)
 {
 	// TODO : 구현
 }

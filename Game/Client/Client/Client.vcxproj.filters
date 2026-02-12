@@ -334,7 +334,6 @@
     <ClInclude Include="MeshRenderer.h">
       <Filter>02.Game\Components\Components</Filter>
     </ClInclude>
-    <ClInclude Include="Collider.h" />
     <ClInclude Include="DynamicObject.h">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClInclude>
@@ -344,13 +343,19 @@
     <ClInclude Include="StaticObject.h">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClInclude>
-    <ClInclude Include="Skeleton.h" />
     <ClInclude Include="BoundingCapsule.h">
       <Filter>99.Utility</Filter>
     </ClInclude>
     <ClInclude Include="ResourceTable.h">
       <Filter>99.Utility</Filter>
     </ClInclude>
+    <ClInclude Include="Skeleton.h">
+      <Filter>02.Game\Components\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Collider.h">
+      <Filter>02.Game\Components\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="MaterialManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -567,7 +572,6 @@
     <ClCompile Include="MeshRenderer.cpp">
       <Filter>02.Game\Components\Components</Filter>
     </ClCompile>
-    <ClCompile Include="Collider.cpp" />
     <ClCompile Include="DynamicObject.cpp">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClCompile>
@@ -577,7 +581,6 @@
     <ClCompile Include="StaticObject.cpp">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClCompile>
-    <ClCompile Include="Skeleton.cpp" />
     <ClCompile Include="Defines.cpp">
       <Filter>99.Utility</Filter>
     </ClCompile>
@@ -587,6 +590,13 @@
     <ClCompile Include="ResourceTable.cpp">
       <Filter>99.Utility</Filter>
     </ClCompile>
+    <ClCompile Include="Skeleton.cpp">
+      <Filter>02.Game\Components\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Collider.cpp">
+      <Filter>02.Game\Components\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="MaterialManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
@@ -627,7 +637,7 @@
     <FxCompile Include="..\HLSL\Shaders.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
-    <FxCompile Include="NewCommon.hlsl">
+    <FxCompile Include="..\HLSL\NewCommon.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
   </ItemGroup>

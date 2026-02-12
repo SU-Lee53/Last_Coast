@@ -20,7 +20,7 @@ Sprite::Sprite(float fLeft, float fTop, float fRight, float fBottom, UINT uiLaye
 TexturedSprite::TexturedSprite(const std::string& strTextureName, float fLeft, float fTop, float fRight, float fBottom, UINT uiLayerIndex, bool bClickable)
 	: Sprite(fLeft, fTop, fRight, fBottom, uiLayerIndex, bClickable)
 {
-	m_pTexture = TEXTURE->Get(strTextureName);
+	m_pTexture = TEXTURE->GetTextureByName(strTextureName, TEXTURE_RESOURCE_TYPE::SRV);
 }
 
 void TexturedSprite::SetTexture(std::shared_ptr<Texture> pTexture)
@@ -180,7 +180,7 @@ void TextSprite::Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCo
 BillboardSprite::BillboardSprite(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::string& strTextureName, XMFLOAT3 xmf3Position, XMFLOAT2 xmf2Size)
 	: Sprite(0, 0, 0, 0, 0, false)
 {
-	m_pTexture = TEXTURE->Get(strTextureName);
+	m_pTexture = TEXTURE->GetTextureByName(strTextureName, TEXTURE_RESOURCE_TYPE::SRV);
 	m_xmf3Position = xmf3Position;
 	m_xmf2Size = xmf2Size;
 }

@@ -5,6 +5,13 @@
 
 constexpr static UINT MAX_TEXTURE_COUNT = 200;
 
+enum class TEXTURE_RESOURCE_TYPE {
+	SRV,
+	RTV,
+	UAV,
+	DSV
+};
+
 class TextureManager {
 	
 	DECLARE_SINGLE(TextureManager)
@@ -15,19 +22,36 @@ public:
 	void LoadGameTextures();
 
 public:
-	std::shared_ptr<Texture> LoadTexture(const std::string& strTextureName);
-	std::shared_ptr<Texture> LoadTextureFromRaw(const std::string& strTextureName, uint32 unWidth, uint32 unHeight);
-	std::shared_ptr<Texture> LoadTextureArray(const std::string& strTextureName, const std::wstring& wstrTexturePath);
+	Texture::ID LoadTexture(const std::string& strTextureName);
+	Texture::ID LoadTextureFromRaw(const std::string& strTextureName, uint32 unWidth, uint32 unHeight);
+	Texture::ID LoadTextureArray(const std::string& strTextureName, const std::wstring& wstrTexturePath);
 	
-	std::shared_ptr<Texture> GetByName(const std::string& strTextureName) const;
-	std::shared_ptr<Texture> GetByID(uint64 unID) const;
+	std::pair<Texture::ID, Texture::ID> LoadRenderTargetTexture(
+		const std::string& strTextureName, 
+		uint32 unWidth,
+		uint32 unHeight,
+		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT dxgiRTVFormat = DXGI_FORMAT_UNKNOWN);
+	
+	std::pair<Texture::ID, Texture::ID> LoadDepthStencilTexture(
+		const std::string& strTextureName,
+		uint32 unWidth,
+		uint32 unHeight,
+		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT dxgiDSVFormat = DXGI_FORMAT_UNKNOWN) { }
+	
+	std::pair<Texture::ID, Texture::ID> LoadUnorderedAccessTexture(
+		const std::string& strTextureName, 
+		uint32 unWidth,
+		uint32 unHeight,
+		DXGI_FORMAT dxgiSRVUAVFormat = DXGI_FORMAT_UNKNOWN) { }
+
+	std::shared_ptr<Texture> GetTextureByName(const std::string& strTextureName, TEXTURE_RESOURCE_TYPE eResourceType) const;
+	std::shared_ptr<Texture> GetTextureByID(uint64 unID, TEXTURE_RESOURCE_TYPE eResourceType) const;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCPUHandleByID(uint64 unID, TEXTURE_RESOURCE_TYPE eResourceType) const;
+
 
 	void WaitForCopyComplete();
-
-	D3D12_CPU_DESCRIPTOR_HANDLE CreateSRV(const ShaderResource& texResource, const DXGI_FORMAT* pdxgiFormat, OUT D3D12_SHADER_RESOURCE_VIEW_DESC& outViewDesc);
-	D3D12_CPU_DESCRIPTOR_HANDLE CreateRTV(const ShaderResource& texResource, const DXGI_FORMAT* pdxgiFormat, OUT D3D12_RENDER_TARGET_VIEW_DESC& outViewDesc);
-	D3D12_CPU_DESCRIPTOR_HANDLE CreateDSV(const ShaderResource& texResource, const DXGI_FORMAT* pdxgiFormat, OUT D3D12_DEPTH_STENCIL_VIEW_DESC& outViewDesc);
-	D3D12_CPU_DESCRIPTOR_HANDLE CreateUAV(const ShaderResource& texResource, ComPtr<ID3D12Resource> pCounterResource, const DXGI_FORMAT* pdxgiFormat, OUT D3D12_UNORDERED_ACCESS_VIEW_DESC& outViewDesc);
 
 	void UpdateResources(
 		ShaderResource& texResource,
@@ -36,8 +60,6 @@ public:
 		ComPtr<ID3D12Resource> pd3dUploadBuffer = nullptr);
 
 
-	D3D12_CPU_DESCRIPTOR_HANDLE RegisterSRV(std::shared_ptr<Texture> pTexture, const DXGI_FORMAT* pdxgiFormat, OUT D3D12_SHADER_RESOURCE_VIEW_DESC& outViewDesc);
-
 private:
 	void ReleaseCompletedUploadBuffers();
 	void CreateUploadBuffer(ID3D12Resource** ppUploadBuffer, uint32 unBytes);
@@ -45,6 +67,7 @@ private:
 private:
 	TextureTable m_SRVTextureTable;
 	TextureTable m_RTVTextureTable;
+	TextureTable m_UAVTextureTable;
 	TextureTable m_DSVTextureTable;
 
 private:
@@ -69,13 +92,6 @@ private:
 	HANDLE					m_hFenceEvent = nullptr;
 	UINT64					m_nFenceValue = 0;
 
-	DescriptorHeap m_SRVUAVDescriptorHeap{};
-	DescriptorHeap m_RTVDescriptorHeap{};
-	DescriptorHeap m_DSVDescriptorHeap{};
-
-	UINT m_nNumSRVUAVTextures = 0;
-	UINT m_nNumRTVTextures = 0;
-	UINT m_nNumDSVTextures = 0;
 #pragma endregion
 
 };
