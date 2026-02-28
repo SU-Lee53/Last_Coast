@@ -51,6 +51,7 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 
 GameFramework::~GameFramework()
 {
+	RENDER->WaitForGPUComplete();
 }
 
 void GameFramework::Update()
@@ -79,8 +80,6 @@ void GameFramework::Render()
 	//RENDER->Render(g_pD3DCore->GetCommandList());
 	//EFFECT->Render(g_pD3DCore->GetCommandList());
 	//UI->Render(g_pD3DCore->GetCommandList());
-
-	RENDER->Clear();
 
 	SCENE->PrepareRender();
 	RENDER->Render();

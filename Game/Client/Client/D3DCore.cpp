@@ -23,6 +23,7 @@ D3DCore::~D3DCore()
 {
 	//WaitForGPUComplete();
 	//RENDER->WaitForGPUComplete();
+	//RENDER->WaitForGPUComplete();
 }
 
 void D3DCore::Initialize()

@@ -27,10 +27,11 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 		d3dHeapDesc.NodeMask = 0;
 	}
 
-	m_DescriptorHeapForDraw.Initialize(pd3dDevice, d3dHeapDesc);
-
-	m_ConstantBufferPool.Initialize(5000);
-	m_StructuredBufferPool.Initialize(1'000'000, 1000);
+	for (uint32 i = 0; i < g_unMaxPendingFrames; ++i) {
+		m_DescriptorHeapForDraw[i].Initialize(pd3dDevice, d3dHeapDesc);
+		m_ConstantBufferPool[i].Initialize(5000);
+		m_StructuredBufferPool[i].Initialize(1'000'000, 1000);
+	}
 }
 
 void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
@@ -138,47 +139,34 @@ void RenderManager::Render()
 {
 	OnPrepareRender();
 
-	m_pd3dCommandList->SetGraphicsRootSignature(g_pd3dGlobalRootSignature.Get());
-	m_pd3dCommandList->SetDescriptorHeaps(1, m_DescriptorHeapForDraw.GetD3DDescriptorHeap().GetAddressOf());
+	ComPtr<ID3D12GraphicsCommandList> pd3dCommandList = m_ppd3dCommandList[m_unCurrentContextIndex];
+
+	pd3dCommandList->SetGraphicsRootSignature(g_pd3dGlobalRootSignature.Get());
+	pd3dCommandList->SetDescriptorHeaps(1, m_DescriptorHeapForDraw[m_unCurrentContextIndex].GetD3DDescriptorHeap().GetAddressOf());
 	
 	auto pCamera = CUR_SCENE->GetCamera();
-	pCamera->SetViewportsAndScissorRects(m_pd3dCommandList);
+	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 
-	DescriptorHandle descHandle = m_DescriptorHeapForDraw.GetDescriptorHandleFromHeapStart();
-	BindPerSceneData(m_pd3dCommandList, descHandle);
+	DescriptorHandle descHandle = m_DescriptorHeapForDraw[m_unCurrentContextIndex].GetDescriptorHandleFromHeapStart();
+	BindPerSceneData(pd3dCommandList, descHandle);
 
 	RenderPassInput input{};
 	input.passResource.pResource = (void*)(&m_pRenderItems);
 	 
-	m_RenderGraph.Run(descHandle, m_pd3dCommandList, input);
+	m_RenderGraph.Run(descHandle, pd3dCommandList, input);
 
-	GUI->Render(m_pd3dCommandList);
+	GUI->Render(pd3dCommandList);
 
 	OnPostRender();
 	Present();
-	MoveToNextFrame();
 }
 
-void RenderManager::Clear()
+void RenderManager::Reset(uint32 unContextIndex)
 {
 	m_pRenderItems.clear();
 
-	m_ConstantBufferPool.Reset();
-	m_StructuredBufferPool.Reset();
-}
-
-void RenderManager::FrustumCulling(const BoundingFrustum& xmFrustumWorld)
-{
-	const auto& pCamera = CUR_SCENE->GetCamera();
-
-	m_pFrustumCulledObjects.reserve(m_pRenderItems.size());
-	for (const auto pObj : m_pRenderItems) {
-		if (auto pCollider = pObj->GetComponent<ICollider>()) {
-			if (pCollider->IsInFrustum(xmFrustumWorld)) {
-				m_pFrustumCulledObjects.push_back(pObj);
-			}
-		}
-	}
+	m_ConstantBufferPool[unContextIndex].Reset();
+	m_StructuredBufferPool[unContextIndex].Reset();
 }
 
 void RenderManager::BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle)
@@ -232,7 +220,7 @@ void RenderManager::BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dComma
 
 const std::shared_ptr<RenderTargetTexture> RenderManager::GetCurrentBackBuffer() const
 {
-	return std::static_pointer_cast<RenderTargetTexture>(TEXTURE->GetTextureByID(m_BackBufferIDs[m_unSwapChainBufferIndex].second, TEXTURE_RESOURCE_TYPE::RTV));
+	return std::static_pointer_cast<RenderTargetTexture>(TEXTURE->GetTextureByID(m_BackBufferIDs[m_unBackBufferIndex].second, TEXTURE_RESOURCE_TYPE::RTV));
 }
 
 const std::shared_ptr<DepthStencilTexture> RenderManager::GetDepthStencilBuffer() const
@@ -242,7 +230,7 @@ const std::shared_ptr<DepthStencilTexture> RenderManager::GetDepthStencilBuffer(
 
 const CD3DX12_CPU_DESCRIPTOR_HANDLE RenderManager::GetCurrentBackBufferHandle() const
 {
-	auto p = TEXTURE->GetTextureByID(m_BackBufferIDs[m_unSwapChainBufferIndex].second, TEXTURE_RESOURCE_TYPE::RTV);
+	auto p = TEXTURE->GetTextureByID(m_BackBufferIDs[m_unBackBufferIndex].second, TEXTURE_RESOURCE_TYPE::RTV);
 	return CD3DX12_CPU_DESCRIPTOR_HANDLE(static_pointer_cast<RenderTargetTexture>(p)->GetRTVHandle());
 }
 
@@ -254,15 +242,17 @@ const CD3DX12_CPU_DESCRIPTOR_HANDLE RenderManager::GetDepthStencilBufferHandle()
 
 void RenderManager::OnPrepareRender()
 {
+	ComPtr<ID3D12CommandAllocator> pd3dCommandAllocator = m_ppd3dCommandAllocator[m_unCurrentContextIndex];
+	ComPtr<ID3D12GraphicsCommandList> pd3dCommandList = m_ppd3dCommandList[m_unCurrentContextIndex];
 	HRESULT hr{};
 
-	hr = m_pd3dCommandAllocator->Reset();
+	hr = pd3dCommandAllocator->Reset();
 	if (FAILED(hr)) {
 		SHOW_ERROR("Faied to reset CommandAllocator");
 		__debugbreak();
 	}
 
-	hr = m_pd3dCommandList->Reset(m_pd3dCommandAllocator.Get(), NULL);
+	hr = pd3dCommandList->Reset(pd3dCommandAllocator.Get(), NULL);
 	if (FAILED(hr)) {
 		SHOW_ERROR("Faied to reset CommandList");
 		__debugbreak();
@@ -278,20 +268,21 @@ void RenderManager::OnPrepareRender()
 		d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 	}
-	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
+	pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = GetCurrentBackBufferHandle();
 	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dDSVDescriptorHandle = GetDepthStencilBufferHandle();
 
 	float pfClearColor[4] = { 0.f, 0.0f, 0.0f, 1.0f };
-	m_pd3dCommandList->ClearRenderTargetView(d3dRTVCPUDescriptorHandle, pfClearColor, 0, NULL);
-	m_pd3dCommandList->ClearDepthStencilView(d3dDSVDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, NULL);
+	pd3dCommandList->ClearRenderTargetView(d3dRTVCPUDescriptorHandle, pfClearColor, 0, NULL);
+	pd3dCommandList->ClearDepthStencilView(d3dDSVDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, NULL);
 	
-	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, &d3dDSVDescriptorHandle);
+	pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, &d3dDSVDescriptorHandle);
 }
 
 void RenderManager::OnPostRender()
 {
+	ComPtr<ID3D12GraphicsCommandList> pd3dCommandList = m_ppd3dCommandList[m_unCurrentContextIndex];
 	HRESULT hr;
 
 	// Change rendered render target's resource state from D3D12_RESOURCE_STATE_RENDER_TARGET to D3D12_RESOURCE_STATE_PRESENT
@@ -305,15 +296,12 @@ void RenderManager::OnPostRender()
 		d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 		d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 	}
-	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
+	pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
 
-	m_pd3dCommandList->Close();
+	pd3dCommandList->Close();
 
-	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList.Get() };
+	ID3D12CommandList* ppd3dCommandLists[] = { pd3dCommandList.Get() };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
-
-	Fence();
-	WaitForGPUComplete();
 }
 
 void RenderManager::CreateFence()
@@ -338,19 +326,21 @@ void RenderManager::CreateCommandQueueAndList()
 	}
 
 	// Create Command Allocator
-	hr = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_pd3dCommandAllocator.GetAddressOf()));
-	if (FAILED(hr)) {
-		SHOW_ERROR("Failed to create CommandAllocator");
+	for (uint32 i = 0; i < g_unMaxPendingFrames; ++i) {
+		hr = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_ppd3dCommandAllocator[i].GetAddressOf()));
+		if (FAILED(hr)) {
+			SHOW_ERROR("Failed to create CommandAllocator");
+		}
+
+		// Create Command List
+		hr = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_ppd3dCommandAllocator[i].Get(), NULL, IID_PPV_ARGS(m_ppd3dCommandList[i].GetAddressOf()));
+		if (FAILED(hr)) {
+			SHOW_ERROR("Failed to create CommandList");
+		}
+		// Close Command List(default is opened)
+		hr = m_ppd3dCommandList[i]->Close();
 	}
 
-	// Create Command List
-	hr = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dCommandAllocator.Get(), NULL, IID_PPV_ARGS(m_pd3dCommandList.GetAddressOf()));
-	if (FAILED(hr)) {
-		SHOW_ERROR("Failed to create CommandList");
-	}
-
-	// Close Command List(default is opened)
-	hr = m_pd3dCommandList->Close();
 }
 
 void RenderManager::CreateSwapChain()
@@ -360,7 +350,7 @@ void RenderManager::CreateSwapChain()
 	dxgiSwapChainDesc.Height = WinCore::g_dwClientHeight;
 	dxgiSwapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	dxgiSwapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	dxgiSwapChainDesc.BufferCount = m_unSwapChainBuffers;
+	dxgiSwapChainDesc.BufferCount = g_unMaxPendingFrames;
 	dxgiSwapChainDesc.SampleDesc.Count = 1;
 	dxgiSwapChainDesc.SampleDesc.Quality = 0;
 	dxgiSwapChainDesc.Scaling = DXGI_SCALING_NONE;
@@ -389,7 +379,7 @@ void RenderManager::CreateSwapChain()
 		SHOW_ERROR("Failed to create SwapChain QueryInterface");
 	}
 
-	m_unSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
+	m_unBackBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
 	DXGI_FACTORY->MakeWindowAssociation(WinCore::g_hWnd, DXGI_MWA_NO_ALT_ENTER);
 }
@@ -397,7 +387,7 @@ void RenderManager::CreateSwapChain()
 void RenderManager::CreateRenderTarget()
 {
 	HRESULT hr{};
-	for (UINT i = 0; i < m_unSwapChainBuffers; ++i)
+	for (UINT i = 0; i < g_unMaxPendingFrames; ++i)
 	{
 		ComPtr<ID3D12Resource> pd3dRenderTarget;
 		hr = m_pdxgiSwapChain->GetBuffer(i, IID_PPV_ARGS(pd3dRenderTarget.GetAddressOf()));
@@ -422,6 +412,8 @@ void RenderManager::CreateDepthStencil()
 
 void RenderManager::Present()
 {
+	Fence();
+
 	// 0 : V-Sync OFF
 	// 1 : V-Sync ON
 	uint32 unSyncInterval = D3DCore::g_unSyncInterval;
@@ -437,35 +429,39 @@ void RenderManager::Present()
 	if (hr == DXGI_ERROR_DEVICE_REMOVED) {
 		__debugbreak();
 	}
+
+	m_unBackBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
+
+	// Prepare next frame
+	uint32 unNextContextIndex = (m_unCurrentContextIndex + 1) % g_unMaxPendingFrames;
+	WaitForFenceValue(m_un64LastFenceValues[unNextContextIndex]);
+
+	Reset(unNextContextIndex);
+	m_unCurrentContextIndex = unNextContextIndex;
 }
 
 uint64 RenderManager::Fence()
 {
-	const uint64 ui64FenceValue = ++m_nFenceValues[m_unSwapChainBufferIndex];
-	m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), ui64FenceValue);
-	return ui64FenceValue;
+	m_un64FenceValues++;
+	m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), m_un64FenceValues);
+	m_un64LastFenceValues[m_unCurrentContextIndex] = m_un64FenceValues;
+	return m_un64FenceValues;
+}
+
+void RenderManager::WaitForFenceValue(uint64 un64ExpectedFenceValue)
+{
+	if (m_pd3dFence->GetCompletedValue() < un64ExpectedFenceValue)
+	{
+		m_pd3dFence->SetEventOnCompletion(un64ExpectedFenceValue, m_hFenceEvent);
+		WaitForSingleObject(m_hFenceEvent, INFINITE);
+	}
 }
 
 void RenderManager::WaitForGPUComplete()
 {
-	const UINT64 expectedFenceValue = m_nFenceValues[m_unSwapChainBufferIndex];
-
-	if (m_pd3dFence->GetCompletedValue() < expectedFenceValue)
-	{
-		m_pd3dFence->SetEventOnCompletion(expectedFenceValue, m_hFenceEvent);
-		::WaitForSingleObject(m_hFenceEvent, INFINITE);
-	}
-}
-
-void RenderManager::MoveToNextFrame()
-{
-	m_unSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
-
-	UINT64 nFenceValue = ++m_nFenceValues[m_unSwapChainBufferIndex];
-	HRESULT hResult = m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), nFenceValue);
-	if (m_pd3dFence->GetCompletedValue() < nFenceValue) {
-		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
-		::WaitForSingleObject(m_hFenceEvent, INFINITE);
+	Fence();
+	for (uint32 i = 0; i < g_unMaxPendingFrames; ++i) {
+		WaitForFenceValue(m_un64LastFenceValues[i]);
 	}
 }
 
