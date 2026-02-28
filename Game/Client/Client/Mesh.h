@@ -57,11 +57,10 @@ public:
 	
 	const BoundingOrientedBox& GetBoundingBox() const { return m_xmOBB; }
 
-	virtual void Render(
-		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
-		uint32 unStartIndex, 
-		uint32 unIndexCount = std::numeric_limits<uint32>::max(),
-		uint32 nInstanceCount = 1) const = 0;
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
+		uint32 nInstanceCount = 1, 
+		uint32 unStartIndex = 0, 
+		int32 nIndexCount = -1) const = 0;
 
 protected:
 	VertexBuffer					m_Positions;
@@ -87,9 +86,9 @@ public:
 
 	virtual void Render(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-		uint32 unStartIndex,
-		uint32 unIndexCount = std::numeric_limits<uint32>::max(),
-		uint32 nInstanceCount = 1) const = 0;
+		uint32 nInstanceCount = 1, 
+		uint32 unStartIndex = 0, 
+		int32 nIndexCount = -1) const = 0;
 
 };
 
@@ -102,9 +101,9 @@ public:
 
 	virtual void Render(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-		uint32 unStartIndex,
-		uint32 unIndexCount = std::numeric_limits<uint32>::max(),
-		uint32 nInstanceCount = 1) const override;
+		uint32 nInstanceCount = 1, 
+		uint32 unStartIndex = 0, 
+		int32 nIndexCount = -1) const override;
 
 protected:
 	VertexBuffer m_Normals;
@@ -121,9 +120,9 @@ public:
 
 	virtual void Render(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-		uint32 unStartIndex,
-		uint32 unIndexCount = std::numeric_limits<uint32>::max(),
-		uint32 nInstanceCount = 1) const override;
+		uint32 nInstanceCount = 1, 
+		uint32 unStartIndex = 0, 
+		int32 nIndexCount = -1) const override;
 
 protected:
 	VertexBuffer m_BlendIndices;
@@ -139,9 +138,9 @@ public:
 
 	virtual void Render(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-		uint32 unStartIndex,
-		uint32 unIndexCount = std::numeric_limits<uint32>::max(),
-		uint32 nInstanceCount = 1) const override;
+		uint32 nInstanceCount = 1, 
+		uint32 unStartIndex = 0, 
+		int32 nIndexCount = -1) const override;
 
 protected:
 	VertexBuffer m_Normals;

@@ -7,27 +7,31 @@ std::unique_ptr<D3DCore> GameFramework::g_pD3DCore = nullptr;
 GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnableVSync)
 {
 	g_pD3DCore = std::make_unique<D3DCore>(bEnableDebugLayer, bEnableGBV, bEnableVSync);
+	g_pD3DCore->Initialize();
 	
 	// Init managers
-	RESOURCE->Initialize(g_pD3DCore->GetDevice());
+	TEXTURE->Initialize(g_pD3DCore->GetDevice());
 	MATERIAL->Initialize();
-	RENDER->Initialize(g_pD3DCore->GetDevice(), g_pD3DCore->GetCommandList());
+	RENDER->Initialize(g_pD3DCore->GetDevice());
 	SHADER->Initialize(g_pD3DCore->GetDevice());
-	INPUT->Initialize(WinCore::g_hWnd);
+
+	RESOURCE->Initialize(g_pD3DCore->GetDevice());
 	MODEL->Initialize();
+	ANIMATION->Initialize();
+
+	SCENE->Initialize();
+
+	INPUT->Initialize(WinCore::g_hWnd);
 	GUI->Initialize(g_pD3DCore->GetDevice());
 	NETWORK->Initialize();
-	TIME->Initialize();
-	TEXTURE->Initialize(g_pD3DCore->GetDevice());
-	EFFECT->Initialize(g_pD3DCore->GetDevice(), g_pD3DCore->GetCommandList());
-	UI->Initialize(g_pD3DCore->GetDevice());
-	ANIMATION->Initialize();
+	EFFECT->Initialize(g_pD3DCore->GetDevice());
+	//UI->Initialize(g_pD3DCore->GetDevice());
+
+	RENDER->BuildRenderGraph();
 
 	TEXTURE->LoadGameTextures();
 	MODEL->LoadGameModels();
 	ANIMATION->LoadGameAnimations();
-
-	SCENE->Initialize();
 
 	//SOUND->Initialize();
 
@@ -45,14 +49,17 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 	//g_pResourceManager->ExcuteCommandList();
 }
 
+GameFramework::~GameFramework()
+{
+}
+
 void GameFramework::Update()
 {
 	TIMER->Tick();
 	GUI->Update();
 	SOUND->Update();
 
-	RENDER->Clear();
-	UI->Clear();
+	//UI->Clear();
 
 	INPUT->Update();
 	SCENE->ProcessInput();
@@ -68,23 +75,16 @@ void GameFramework::Update()
 
 void GameFramework::Render()
 {
-	g_pD3DCore->RenderBegin();
-
 	// TODO : Render Logic Here
-	SCENE->Render(g_pD3DCore->GetCommandList());
-	RENDER->Render(g_pD3DCore->GetCommandList());
-	EFFECT->Render(g_pD3DCore->GetCommandList());
-	UI->Render(g_pD3DCore->GetCommandList());
-	GUI->Render(g_pD3DCore->GetCommandList());
+	//RENDER->Render(g_pD3DCore->GetCommandList());
+	//EFFECT->Render(g_pD3DCore->GetCommandList());
+	//UI->Render(g_pD3DCore->GetCommandList());
 
-	g_pD3DCore->RenderEnd();
+	RENDER->Clear();
 
-	RESOURCE->ResetCBufferBool();
-
-	g_pD3DCore->Present();
-	g_pD3DCore->MoveToNextFrame();
-
-
+	SCENE->PrepareRender();
+	RENDER->Render();
+	
 	std::wstring tstrFrameRate;
 	TIMER->GetFrameRate(L"Game", tstrFrameRate);
 	tstrFrameRate = std::format(L"{}", tstrFrameRate);

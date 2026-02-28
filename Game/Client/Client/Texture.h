@@ -23,11 +23,13 @@ public:
 	using ID = uint64;
 
 public:
-	void StateTransition(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, D3D12_RESOURCE_STATES d3dAfterState);
+	void StateTransition(
+		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
+		D3D12_RESOURCE_STATES d3dBeforeState, 
+		D3D12_RESOURCE_STATES d3dAfterState);
 
-	ShaderResource GetTexture() const { return m_pTexResource; }
-	ComPtr<ID3D12Resource> GetResource() const { return m_pTexResource.pResource; }
-	D3D12_CPU_DESCRIPTOR_HANDLE GetHandle() { return m_d3dSRVHandle; }
+	ComPtr<ID3D12Resource> GetResource() const { return m_pd3dResource; }
+	CD3DX12_CPU_DESCRIPTOR_HANDLE GetSRVHandle() { return m_d3dSRVHandle; }
 	const D3D12_SHADER_RESOURCE_VIEW_DESC& GetSRVDesc() const { return m_d3dSRVDesc; }
 	TEXTURE_TYPE GetType() const { return m_eType; }
 
@@ -37,12 +39,23 @@ private:
 	bool CreateTextureFromRawFile(const std::wstring& wstrTexturePath, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM);
 	
 	[[nodiscard]] 
-	HRESULT LoadFromDDSFile(ID3D12Resource** ppOutResource, const std::wstring& wstrTexturePath, std::unique_ptr<uint8_t[]>& ddsData, std::vector<D3D12_SUBRESOURCE_DATA>& subResources);
+	HRESULT LoadFromDDSFile(
+		ID3D12Resource** ppOutResource, 
+		const std::wstring& wstrTexturePath, 
+		std::unique_ptr<uint8_t[]>& ddsData, 
+		std::vector<D3D12_SUBRESOURCE_DATA>& subResources);
+
 	[[nodiscard]] 
-	HRESULT LoadFromWICFile(ID3D12Resource** ppOutResource, const std::wstring& wstrTexturePath, std::unique_ptr<uint8_t[]>& ddsData, std::vector<D3D12_SUBRESOURCE_DATA>& subResources);
+	HRESULT LoadFromWICFile(
+		ID3D12Resource** ppOutResource, 
+		const std::wstring& wstrTexturePath, 
+		std::unique_ptr<uint8_t[]>& ddsData,
+		std::vector<D3D12_SUBRESOURCE_DATA>& subResources);
 
 protected:
-	ShaderResource m_pTexResource;
+	ComPtr<ID3D12Resource> m_pd3dResource;
+	D3D12_RESOURCE_STATES m_d3dCurrentState;
+
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_d3dSRVHandle;
 	D3D12_SHADER_RESOURCE_VIEW_DESC m_d3dSRVDesc;
 	TEXTURE_TYPE m_eType;
@@ -58,14 +71,19 @@ private:
 
 class RenderTargetTexture : public Texture {
 	friend class TextureManager;
+
+public:
+	const D3D12_RENDER_TARGET_VIEW_DESC& GetRTVDesc() const { return m_d3dRTVDesc; }
+	D3D12_CPU_DESCRIPTOR_HANDLE GetRTVHandle() { return m_d3dRTVHandle; }
+
 private:
 	bool Initialize(
 		uint32 unWidth, 
 		uint32 unHeight, 
 		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN, 
 		DXGI_FORMAT dxgiRTVFormat = DXGI_FORMAT_UNKNOWN);
-
-	const D3D12_RENDER_TARGET_VIEW_DESC& GetRTVDesc() const { return m_d3dRTVDesc; }
+	
+	bool Initialize(ComPtr<ID3D12Resource> pd3dRTVResource);
 
 private:
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_d3dRTVHandle;
@@ -78,18 +96,25 @@ private:
 // DepthStencilTexture
 
 class DepthStencilTexture : public Texture {
+	friend class TextureManager;
+
+public:
+	const D3D12_DEPTH_STENCIL_VIEW_DESC& GetDSVDesc() const { return m_d3dDSVDesc; }
+	D3D12_CPU_DESCRIPTOR_HANDLE GetDSVHandle() { return m_d3dDSVHandle; }
+
 private:
-	void Initialize(
+	bool Initialize(
 		UINT nWidth, 
 		UINT nHeight,
+		bool bMsaa4xEnable,
 		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN,
 		DXGI_FORMAT dxgiDSVFormat = DXGI_FORMAT_UNKNOWN);
 
-	const D3D12_DEPTH_STENCIL_VIEW_DESC& GetDSVDesc() const { return m_d3dRTVDesc; }
+	bool Initialize(ComPtr<ID3D12Resource> pd3dDSVResource);
 
 private:
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_d3dDSVHandle;
-	D3D12_DEPTH_STENCIL_VIEW_DESC m_d3dRTVDesc;
+	D3D12_DEPTH_STENCIL_VIEW_DESC m_d3dDSVDesc;
 
 	uint64 m_un64RuntimeDSVID;
 };
@@ -98,17 +123,21 @@ private:
 // UnorderedAccessTexture
 
 class UnorderedAccessTexture : public Texture {
+	friend class TextureManager;
+
+public:
+	const D3D12_UNORDERED_ACCESS_VIEW_DESC& GetUAVDesc() const { return m_d3dUAVDesc; }
+	D3D12_CPU_DESCRIPTOR_HANDLE GetUAVHandle() { return m_d3dUAVHandle; }
+
 private:
-	void Initialize(
+	bool Initialize(
 		UINT nWidth,
 		UINT nHeight,
 		DXGI_FORMAT dxgiSRVUAVFormat = DXGI_FORMAT_UNKNOWN);
 
-	const D3D12_UNORDERED_ACCESS_VIEW_DESC& GetDSVDesc() const { return m_d3dRTVDesc; }
-
 private:
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_d3dUAVHandle;
-	D3D12_UNORDERED_ACCESS_VIEW_DESC m_d3dRTVDesc;
+	D3D12_UNORDERED_ACCESS_VIEW_DESC m_d3dUAVDesc;
 
 	uint64 m_un64RuntimeUAVID;
 };

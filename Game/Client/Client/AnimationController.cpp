@@ -12,6 +12,7 @@ AnimationController::AnimationController(std::shared_ptr<IGameObject> pOwner)
 
 void AnimationController::Initialize()
 {
+	m_mtxFinalBoneTransforms.reserve(m_wpOwnerSkeleton.lock()->GetBones().size());
 }
 
 void AnimationController::Update()
@@ -31,7 +32,7 @@ void AnimationController::Update()
 	ComputeFinalMatrix();
 }
 
-const std::vector<Matrix> AnimationController::GetFinalOutput() const
+const std::vector<Matrix>& AnimationController::GetFinalOutput() const
 {
 	return m_mtxFinalBoneTransforms;
 }

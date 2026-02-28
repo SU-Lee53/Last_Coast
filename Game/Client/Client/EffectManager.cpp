@@ -1,18 +1,18 @@
 ﻿#include "pch.h"
 #include "EffectManager.h"
 
-void EffectManager::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
+void EffectManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 {
 	m_pd3dDevice = pd3dDevice;
 	CreateRootSignature();
 
-	std::shared_ptr<ExplosionEffect> pExplodeEffect = std::make_shared<ExplosionEffect>();
-	pExplodeEffect->Create(pd3dDevice, pd3dCommandList, m_pd3dRootSignature, 5000);
-	m_pEffects.insert({ typeid(ExplosionEffect), EffectPair{ pExplodeEffect, {}} });
+	//std::shared_ptr<ExplosionEffect> pExplodeEffect = std::make_shared<ExplosionEffect>();
+	//pExplodeEffect->Create(pd3dDevice, pd3dCommandList, m_pd3dRootSignature, 5000);
+	//m_pEffects.insert({ typeid(ExplosionEffect), EffectPair{ pExplodeEffect, {}} });
 
-	std::shared_ptr<RayEffect> pRayEffect = std::make_shared<RayEffect>();
-	pRayEffect->Create(pd3dDevice, pd3dCommandList, m_pd3dRootSignature, 1);
-	m_pEffects.insert({ typeid(RayEffect), EffectPair{ pRayEffect, {}} });
+	//std::shared_ptr<RayEffect> pRayEffect = std::make_shared<RayEffect>();
+	//pRayEffect->Create(pd3dDevice, pd3dCommandList, m_pd3dRootSignature, 1);
+	//m_pEffects.insert({ typeid(RayEffect), EffectPair{ pRayEffect, {}} });
 
 }
 
@@ -38,34 +38,6 @@ void EffectManager::Update(float fTimeElapsed)
 
 void EffectManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 {
-	if (m_nParticles <= 0) {
-		return;
-	}
-
-	pd3dCommandList->SetGraphicsRootSignature(m_pd3dRootSignature.Get());
-
-	CB_CAMERA_DATA camData = CUR_SCENE->GetCamera()->MakeCBData();
-	ConstantBuffer& camCBuffer = RESOURCE->AllocCBuffer<CB_CAMERA_DATA>();
-	camCBuffer.WriteData(&camData);
-	camCBuffer.Bind(pd3dCommandList, 0);
-
-	UINT uiCBufferOffset = 0;
-	ConstantBuffer& particleCBuffer = RESOURCE->AllocCBuffer<CB_PARTICLE_DATA>();
-	for (auto& effectPair : m_pEffects) {
-		auto& [pEffect, parameters] = effectPair.second;
-		particleCBuffer.WriteData(parameters, uiCBufferOffset);
-		uiCBufferOffset += parameters.size();
-	}
-
-	particleCBuffer.Bind(pd3dCommandList, 1);
-
-	UINT nDataOffsetBaseInCBuffer = 0;
-	for (auto& effectPair : m_pEffects) {
-		auto& [pEffect, parameters] = effectPair.second;
-		if (parameters.size() == 0) continue;
-		pEffect->Render(m_pd3dDevice, pd3dCommandList, nDataOffsetBaseInCBuffer, parameters.size());
-		nDataOffsetBaseInCBuffer += parameters.size();
-	}
 }
 
 void EffectManager::CreateRootSignature()

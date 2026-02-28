@@ -1,22 +1,18 @@
 ﻿#include "pch.h"
 #include "Material.h"
 
-IMaterial::IMaterial(const MATERIALLOADINFO& materialLoadInfo)
+void IMaterial::InitializeColors(const MATERIALLOADINFO& materialLoadInfo)
 {
-	m_MaterialColors.xmf4Ambient = materialLoadInfo.v4Ambient;
-	m_MaterialColors.xmf4Diffuse = materialLoadInfo.v4Diffuse;
-	m_MaterialColors.xmf4Specular = materialLoadInfo.v4Specular;
-	m_MaterialColors.xmf4Emissive = materialLoadInfo.v4Emissive;
+	m_MaterialData.v4Ambient = materialLoadInfo.v4Ambient;
+	m_MaterialData.v4Diffuse = materialLoadInfo.v4Diffuse;
+	m_MaterialData.v4Specular = materialLoadInfo.v4Specular;
+	m_MaterialData.v4Emissive = materialLoadInfo.v4Emissive;
 
-	m_MaterialColors.fGlossiness = materialLoadInfo.fGlossiness;
-	m_MaterialColors.fSmoothness = materialLoadInfo.fSmoothness;
-	m_MaterialColors.fSpecularHighlight = materialLoadInfo.fSpecularHighlight;
-	m_MaterialColors.fMetallic = materialLoadInfo.fMetallic;
-	m_MaterialColors.fGlossyReflection = materialLoadInfo.fGlossyReflection;
-}
-
-IMaterial::~IMaterial()
-{
+	m_MaterialData.fGlossiness = materialLoadInfo.fGlossiness;
+	m_MaterialData.fSmoothness = materialLoadInfo.fSmoothness;
+	m_MaterialData.fSpecularHighlight = materialLoadInfo.fSpecularHighlight;
+	m_MaterialData.fMetallic = materialLoadInfo.fMetallic;
+	m_MaterialData.fGlossyReflection = materialLoadInfo.fGlossyReflection;
 }
 
 void IMaterial::SetShader(std::shared_ptr<Shader> pShader)
@@ -34,17 +30,18 @@ void IMaterial::SetTexture(Texture::ID texID, TEXTURE_TYPE eTextureType)
 
 std::shared_ptr<Texture> IMaterial::GetTexture(int nIndex)
 {
-	assert(nIndex < m_pTextures.size());
+	assert(nIndex < m_TextureIDs.size());
 
-	return TEXTURE->GetTextureByID(m_TextureIDs[nIndex]);
+	return TEXTURE->GetTextureByID(m_TextureIDs[nIndex], TEXTURE_RESOURCE_TYPE::SRV);
 }
 
 //////////////////////////////////////////////////////////////////////////////////
 // StandardMaterial
 
-StandardMaterial::StandardMaterial(const MATERIALLOADINFO& materialLoadInfo)
-	: IMaterial(materialLoadInfo)
+void StandardMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 {
+	InitializeColors(materialLoadInfo);
+
 	m_TextureIDs.resize(4);
 	m_TextureIDs[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName);			// Diffused
 	m_TextureIDs[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName);			// Normal
@@ -56,9 +53,10 @@ StandardMaterial::StandardMaterial(const MATERIALLOADINFO& materialLoadInfo)
 //////////////////////////////////////////////////////////////////////////////////
 // SkinnedMaterial
 
-SkinnedMaterial::SkinnedMaterial(const MATERIALLOADINFO& materialLoadInfo)
-	: IMaterial(materialLoadInfo)
+void SkinnedMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 {
+	InitializeColors(materialLoadInfo);
+
 	m_TextureIDs.resize(4);
 	m_TextureIDs[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName);			// Diffused
 	m_TextureIDs[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName);			// Normal
@@ -67,9 +65,13 @@ SkinnedMaterial::SkinnedMaterial(const MATERIALLOADINFO& materialLoadInfo)
 	m_pShader = SHADER->Get<AnimatedShader>();
 }
 
-TerrainMaterial::TerrainMaterial(const MATERIALLOADINFO& materialLoadInfo)
-	: IMaterial(materialLoadInfo)
+//////////////////////////////////////////////////////////////////////////////////
+// TerrainMaterial
+
+void TerrainMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 {
+	InitializeColors(materialLoadInfo);
+
 	m_strLayerName = materialLoadInfo.strTerrainLayerName;
 	m_unIndex = materialLoadInfo.unTerrainLayerIndex;
 	m_fTiling = materialLoadInfo.fUVTiling;
@@ -80,4 +82,3 @@ TerrainMaterial::TerrainMaterial(const MATERIALLOADINFO& materialLoadInfo)
 
 	m_pShader = SHADER->Get<TerrainShader>();
 }
-

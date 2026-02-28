@@ -90,7 +90,6 @@ public:
 public:
 	virtual void ProcessInput() = 0;
 	virtual void Update() = 0;
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList) = 0;
 
 	virtual void OnEnterScene() = 0;
 	virtual void OnLeaveScene() = 0;
@@ -101,6 +100,7 @@ public:
 	void PreUpdate();
 	void FixedUpdate();
 	void PostUpdate();
+	void PrepareRender();
 
 	void CheckCollision();
 
@@ -113,24 +113,25 @@ public:
 	const std::shared_ptr<IPlayer>& GetPlayer() const { return m_pPlayer; }
 	const std::shared_ptr<TerrainObject>& GetTerrain() const { return m_pTerrain; }
 	const std::shared_ptr<Camera>& GetCamera() const { return m_pPlayer->GetCamera(); }
-	std::vector<std::shared_ptr<IGameObject>>& GetObjectsInScene() { return m_pGameObjects; }
+	const std::vector<std::shared_ptr<IGameObject>>& GetObjectsInScene() const { return m_pGameObjects; }
+	const std::vector<std::shared_ptr<Light>>& GetLightsInScene() const { return m_pLights; }
+	const Vector4& GetGlobalAmbient() const { return m_v4GlobalAmbient; }
 
 	const SpacePartitionDesc& GetSpacePartitionDesc() const { return m_SpacePartition; }
 
-	CB_LIGHT_DATA MakeLightData();
+	std::vector<LightData> MakeLightData() const;
 
 	TerrainHit QueryTerrainHit(const Vector3& v3WorldPos);
 
 protected:
 	void InitializeObjects();
-	void RenderObjects(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
 
 protected:
 	std::vector<std::shared_ptr<IGameObject>>	m_pGameObjects = {};
 	std::vector<std::shared_ptr<Sprite>>		m_pSprites;
 	std::vector<std::shared_ptr<Light>>			m_pLights = {};
 	
-	std::shared_ptr<IPlayer>						m_pPlayer = nullptr;
+	std::shared_ptr<IPlayer>					m_pPlayer = nullptr;
 	std::shared_ptr<TerrainObject>				m_pTerrain = nullptr;
 
 	//std::vector<GridCell> m_GridCells;

@@ -41,6 +41,9 @@ void StaticObject::PreUpdate()
 
 void StaticObject::Update()
 {
+	for (const auto& pChild : m_pChildren) {
+		pChild->Update();
+	}
 }
 
 void StaticObject::PostUpdate()

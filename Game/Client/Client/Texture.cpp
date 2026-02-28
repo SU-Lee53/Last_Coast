@@ -23,20 +23,20 @@ bool Texture::CreateTextureFromFile(const std::wstring& wstrTextureName)
 	std::vector<D3D12_SUBRESOURCE_DATA> subResources;
 	auto isDDS = [](const fs::path& path) -> bool {return path.extension().string() == ".dds" || path.extension().string() == ".DDS"; };
 	HRESULT hr;
-	hr = isDDS(texPath) ? LoadFromDDSFile(m_pTexResource.pResource.GetAddressOf(), wstrTexturePath, ddsData, subResources) 
-		                : LoadFromWICFile(m_pTexResource.pResource.GetAddressOf(), wstrTexturePath, ddsData, subResources);
+	hr = isDDS(texPath) ? LoadFromDDSFile(m_pd3dResource.GetAddressOf(), wstrTexturePath, ddsData, subResources) 
+		                : LoadFromWICFile(m_pd3dResource.GetAddressOf(), wstrTexturePath, ddsData, subResources);
 
 	if (FAILED(hr)) {
 		OutputDebugStringA(std::format("{} - {} : {} : {}\n", __FILE__, __LINE__, "Texture load failed", texPath.string()).c_str());
 		return false;
 	}
 
-	D3D12_RESOURCE_DESC d3dTextureResourceDesc = m_pTexResource.pResource->GetDesc();
+	D3D12_RESOURCE_DESC d3dTextureResourceDesc = m_pd3dResource->GetDesc();
 	UINT nSubResources = (UINT)subResources.size();
-	UINT64 nBytes = GetRequiredIntermediateSize(m_pTexResource.pResource.Get(), 0, nSubResources);
+	UINT64 nBytes = GetRequiredIntermediateSize(m_pd3dResource.Get(), 0, nSubResources);
 	nBytes = (nBytes == 0) ? 1 : nBytes;
 
-	TEXTURE->UpdateResources(m_pTexResource, subResources, nBytes);
+	TEXTURE->UpdateResources(m_pd3dResource, m_d3dCurrentState, subResources, nBytes);
 
 	return true;
 }
@@ -57,20 +57,20 @@ bool Texture::CreateTextureArrayFromFile(const std::wstring& wstrTexturePath)
 	std::vector<D3D12_SUBRESOURCE_DATA> subResources;
 	auto isDDS = [](const fs::path& path) -> bool {return path.extension().string() == ".dds" || path.extension().string() == ".DDS"; };
 	HRESULT hr;
-	hr = isDDS(texPath) ? LoadFromDDSFile(m_pTexResource.pResource.GetAddressOf(), wstrTexturePath, ddsData, subResources)
-		: LoadFromWICFile(m_pTexResource.pResource.GetAddressOf(), wstrTexturePath, ddsData, subResources);
+	hr = isDDS(texPath) ? LoadFromDDSFile(m_pd3dResource.GetAddressOf(), wstrTexturePath, ddsData, subResources)
+		: LoadFromWICFile(m_pd3dResource.GetAddressOf(), wstrTexturePath, ddsData, subResources);
 
 	if (FAILED(hr)) {
 		OutputDebugStringA(std::format("{} - {} : {} : {}\n", __FILE__, __LINE__, "Texture load failed", texPath.string()).c_str());
 		return false;
 	}
 
-	D3D12_RESOURCE_DESC d3dTextureResourceDesc = m_pTexResource.pResource->GetDesc();
+	D3D12_RESOURCE_DESC d3dTextureResourceDesc = m_pd3dResource->GetDesc();
 	UINT nSubResources = (UINT)subResources.size();
-	UINT64 nBytes = GetRequiredIntermediateSize(m_pTexResource.pResource.Get(), 0, nSubResources);
+	UINT64 nBytes = GetRequiredIntermediateSize(m_pd3dResource.Get(), 0, nSubResources);
 	nBytes = (nBytes == 0) ? 1 : nBytes;
 
-	TEXTURE->UpdateResources(m_pTexResource, subResources, nBytes);
+	TEXTURE->UpdateResources(m_pd3dResource, m_d3dCurrentState, subResources, nBytes);
 
 	return true;
 }
@@ -114,18 +114,18 @@ bool Texture::CreateTextureFromRawFile(const std::wstring& wstrTexturePath, uint
 	std::shared_ptr<Texture> pTexture = std::make_shared<Texture>();
 	CD3DX12_HEAP_PROPERTIES d3dHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
 
-	pTexture->m_pTexResource.Create(
-		DEVICE,
+	DEVICE->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&resourceDesc,
 		D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
-		nullptr
+		nullptr,
+		IID_PPV_ARGS(m_pd3dResource.GetAddressOf())
 	);
 
 	// UploadBuffer 생성
-	D3D12_RESOURCE_DESC d3dTextureResourceDesc = pTexture->m_pTexResource.pResource->GetDesc();
-	UINT64 nBytes = GetRequiredIntermediateSize(pTexture->m_pTexResource.pResource.Get(), 0, 1);
+	D3D12_RESOURCE_DESC d3dTextureResourceDesc = pTexture->m_pd3dResource->GetDesc();
+	UINT64 nBytes = GetRequiredIntermediateSize(pTexture->m_pd3dResource.Get(), 0, 1);
 
 	ComPtr<ID3D12Resource> pd3dUploadBuffer = nullptr;
 	DEVICE->CreateCommittedResource(
@@ -149,7 +149,7 @@ bool Texture::CreateTextureFromRawFile(const std::wstring& wstrTexturePath, uint
 	subResources[0].RowPitch = unWidth * sizeof(uint32); // R8G8B8A8
 	subResources[0].SlicePitch = subResources[0].RowPitch * unHeight;
 
-	TEXTURE->UpdateResources(m_pTexResource, subResources, nBytes, pd3dUploadBuffer);
+	TEXTURE->UpdateResources(m_pd3dResource, m_d3dCurrentState, subResources, nBytes, pd3dUploadBuffer);
 
 	return true;
 }
@@ -204,9 +204,19 @@ HRESULT Texture::LoadFromWICFile(ID3D12Resource** ppOutResource, const std::wstr
 	return hr;
 }
 
-void Texture::StateTransition(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, D3D12_RESOURCE_STATES d3dAfterState)
+void Texture::StateTransition(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, D3D12_RESOURCE_STATES d3dBeforeState, D3D12_RESOURCE_STATES d3dAfterState)
 {
-	m_pTexResource.StateTransition(pd3dCommandList, d3dAfterState);
+	pd3dCommandList->ResourceBarrier(
+		1,
+		&CD3DX12_RESOURCE_BARRIER::Transition(
+			m_pd3dResource.Get(),
+			d3dBeforeState,
+			d3dAfterState,
+			D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+			D3D12_RESOURCE_BARRIER_FLAG_NONE)
+	);
+
+	m_d3dCurrentState = d3dAfterState;
 }
 
 bool RenderTargetTexture::Initialize(uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat)
@@ -235,20 +245,69 @@ bool RenderTargetTexture::Initialize(uint32 unWidth, uint32 unHeight, DXGI_FORMA
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
 		&d3dRTTextureDesc,
-		D3D12_RESOURCE_STATE_COMMON,
+		D3D12_RESOURCE_STATE_PRESENT,
 		&clearValue,
-		IID_PPV_ARGS(m_pTexResource.pResource.GetAddressOf())
+		IID_PPV_ARGS(m_pd3dResource.GetAddressOf())
 	);
+
+
+	m_d3dCurrentState = D3D12_RESOURCE_STATE_PRESENT;
+	return true;
+}
+
+bool RenderTargetTexture::Initialize(ComPtr<ID3D12Resource> pd3dRTVResource)
+{
+	m_pd3dResource = pd3dRTVResource;
+	m_d3dCurrentState = D3D12_RESOURCE_STATE_PRESENT;
 
 	return true;
 }
 
-void DepthStencilTexture::Initialize(UINT nWidth, UINT nHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiDSVFormat)
+bool DepthStencilTexture::Initialize(UINT nWidth, UINT nHeight, bool bMsaa4xEnable, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiDSVFormat)
 {
-	// TODO : 구현
+	D3D12_RESOURCE_DESC d3dResourceDesc{};
+	{
+		d3dResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		d3dResourceDesc.Alignment = 0;
+		d3dResourceDesc.Width = nWidth;
+		d3dResourceDesc.Height = nHeight;
+		d3dResourceDesc.DepthOrArraySize = 1;
+		d3dResourceDesc.MipLevels = 1;
+		d3dResourceDesc.Format = (dxgiDSVFormat == DXGI_FORMAT_D32_FLOAT) ? DXGI_FORMAT_R32_TYPELESS : DXGI_FORMAT_R24G8_TYPELESS;
+		d3dResourceDesc.SampleDesc.Count = (bMsaa4xEnable) ? 4 : 1;
+		d3dResourceDesc.SampleDesc.Quality = (bMsaa4xEnable) ? (bMsaa4xEnable - 1) : 0;
+		d3dResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		d3dResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+	}
+
+	D3D12_CLEAR_VALUE d3dClearValue;
+	d3dClearValue.Format = dxgiDSVFormat;
+	d3dClearValue.DepthStencil.Depth = 1.f;
+	d3dClearValue.DepthStencil.Stencil = 0;
+
+	DEVICE->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&d3dResourceDesc,
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&d3dClearValue,
+		IID_PPV_ARGS(m_pd3dResource.GetAddressOf())
+	);
+
+	m_d3dCurrentState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+	return true;
 }
 
-void UnorderedAccessTexture::Initialize(UINT nWidth, UINT nHeight, DXGI_FORMAT dxgiSRVUAVFormat)
+bool DepthStencilTexture::Initialize(ComPtr<ID3D12Resource> pd3dDSVResource)
+{
+	m_pd3dResource = pd3dDSVResource;
+	m_d3dCurrentState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+
+	return true;
+}
+
+bool UnorderedAccessTexture::Initialize(UINT nWidth, UINT nHeight, DXGI_FORMAT dxgiSRVUAVFormat)
 {
 	// TODO : 구현
+	return true;
 }

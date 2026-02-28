@@ -23,7 +23,7 @@ void ThirdPersonPlayer::Initialize()
 		m_pCamera->SetOwner(shared_from_this());
 
 		// Model
-		auto pModel = MODEL->Get("Ch33_nonPBR")->CopyObject<NodeObject>();
+		auto pModel = MODEL->LoadOrGet("Ch33_nonPBR")->CopyObject<NodeObject>();
 		pModel->GetTransform()->Rotate(Vector3::Up, -90.f);
 		SetChild(pModel);
 		//GetTransform()->Rotate(Vector3::Up, -90.f);
@@ -150,7 +150,6 @@ void ThirdPersonPlayer::Update()
 	for (const auto& pChild : m_pChildren) {
 		pChild->Update();
 	}
-
 }
 
 void ThirdPersonPlayer::OnBeginCollision(const CollisionResult& collisionResult)

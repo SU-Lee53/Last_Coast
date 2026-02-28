@@ -16,7 +16,7 @@ public:
 	std::shared_ptr<IGameObject> LoadOrGet(const std::string& strFileName);
 
 private:
-	std::shared_ptr<IGameObject> LoadFrameHierarchyFromFile(std::shared_ptr<IGameObject> pParent, const nlohmann::json& inJson);
+	std::shared_ptr<IGameObject> LoadFrameHierarchyFromFile(std::shared_ptr<IGameObject> pParent, std::shared_ptr<IGameObject> pRoot, const nlohmann::json& inJson);
 	std::shared_ptr<IGameObject> LoadModelFromFile(const std::string& strFilePath);
 
 	std::pair<MESHLOADINFO, MATERIALLOADINFO> LoadMeshInfoFromFiles(const nlohmann::json& inJson);

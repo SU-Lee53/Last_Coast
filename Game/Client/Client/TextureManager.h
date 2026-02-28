@@ -33,12 +33,17 @@ public:
 		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN,
 		DXGI_FORMAT dxgiRTVFormat = DXGI_FORMAT_UNKNOWN);
 	
+	std::pair<Texture::ID, Texture::ID> LoadRenderTargetTexture(
+		ComPtr<ID3D12Resource> pd3dRTVResourceFromSwapChain,
+		DXGI_FORMAT dxgiSRVFormat,
+		DXGI_FORMAT dxgiRTVFormat);
+
 	std::pair<Texture::ID, Texture::ID> LoadDepthStencilTexture(
 		const std::string& strTextureName,
 		uint32 unWidth,
 		uint32 unHeight,
 		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN,
-		DXGI_FORMAT dxgiDSVFormat = DXGI_FORMAT_UNKNOWN) { }
+		DXGI_FORMAT dxgiDSVFormat = DXGI_FORMAT_UNKNOWN);
 	
 	std::pair<Texture::ID, Texture::ID> LoadUnorderedAccessTexture(
 		const std::string& strTextureName, 
@@ -54,7 +59,8 @@ public:
 	void WaitForCopyComplete();
 
 	void UpdateResources(
-		ShaderResource& texResource,
+		ComPtr<ID3D12Resource> pResource,
+		D3D12_RESOURCE_STATES d3dCurrentState,
 		const std::vector<D3D12_SUBRESOURCE_DATA>& subResources,
 		uint32 unBytes,
 		ComPtr<ID3D12Resource> pd3dUploadBuffer = nullptr);
@@ -73,6 +79,9 @@ private:
 private:
 	CommandListPool						m_CommandListPool;
 	std::vector<PendingUploadBuffer>	m_PendingUploadBuffers;
+
+	static uint32 g_unRTVFromCoreCount;
+	static uint32 g_unDSVFromCoreCount;
 
 #pragma region D3D
 private:

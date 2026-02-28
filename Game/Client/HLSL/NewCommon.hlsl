@@ -1,9 +1,67 @@
-#ifndef _COMMON_
-#define _COMMON_
+#ifndef _NEW_COMMON_
+#define _NEW_COMMON_
 
+// ================================================================================
+//  Shader Inputs
+// ================================================================================
 
-//////////////////////////////////////////////////////////////////////////////////
+struct VS_STANDARD_INPUT
+{
+	float3 position : POSITION;
+	float3 normal : NORMAL;
+	float3 tangent : TANGENT;
+	float2 uv : TEXCOORD0;
+};
+
+struct VS_STANDARD_OUTPUT
+{
+	float4 position : SV_POSITION;
+	float3 positionW : POSITION;
+	float3 normalW : NORMAL;
+	float3 tangentW : TANGENT;
+	float2 uv : TEXCOORD0;
+};
+
+struct VS_SKINNED_INPUT
+{
+	float3 position : POSITION;
+	float3 normal : NORMAL;
+	float3 tangent : TANGENT;
+	float2 uv : TEXCOORD0;
+	
+	uint4 blendInices : BLENDINDICES;
+	float4 blendWeights : BLENDWEIGHTS;
+};
+
+struct VS_SKINNED_OUTPUT
+{
+	float4 position : SV_POSITION;
+	float3 positionW : POSITION;
+	float3 normalW : NORMAL;
+	float3 tangentW : TANGENT;
+	float2 uv : TEXCOORD0;
+};
+
+struct VS_TERRAIN_INPUT
+{
+	float3 position : POSITION;
+	float3 normal : NORMAL;
+	float3 tangent : TANGENT;
+};
+
+struct VS_TERRAIN_OUTPUT
+{
+	float4 position : SV_POSITION;
+	float3 positionW : POSITION;
+	float3 normalW : NORMAL;
+	float3 tangentW : TANGENT;
+	
+	float2 positionLocalXZ : TEXCOORD0;
+};
+
+// ================================================================================
 // Per Scene (Frame)
+// ================================================================================
 
 // ============ Structs ============
 
@@ -41,20 +99,12 @@ struct LightData
 	float	pad0;						// c7.w
 };
 
-struct TerrainLayerData
-{
-	float4 v4LayerTiling;
-	int nLayers;
-	float3 pad0;
-};
-
 // ============ cbuffers ============
 
 cbuffer cbSceneData : register(b0, space0)
 {
 	CameraData gCamera;
 	SceneGlobalData gSceneGlobal;
-	TerrainLayerData gTerrainLayer;
 };
 
 // ============ StructuredBuffers ============
@@ -65,9 +115,6 @@ StructuredBuffer<LightData> gLightData : register(t0, space0);
 Texture2DArray gtxtSkyboxDay : register(t1, space0);
 Texture2DArray gtxtSkyboxNIght : register(t2, space0);
 
-Texture2D gtxtTerrainAlbedo[4] : register(t3, space0);	// t3, t4, t5, t6
-Texture2D gtxtTerrainNormal[4] : register(t7, space0); // t7, t8, t9, t10
-
 Texture2D gtxtShadows[8] : register(t11, space0);	// t11, t12, t13, t14, t15, t16, t17, t18
 
 // ============ Samplers ============
@@ -76,40 +123,42 @@ SamplerState gWeightMapSamplerState : register(s1, space0);
 SamplerState gSamplerState : register(s2, space0);
 
 
-//////////////////////////////////////////////////////////////////////////////////
-// Global Resources
+
+// ================================================================================
+// Per Pass
+// ================================================================================
 
 // ============ Structs ============
 
 struct MaterialData
 {
-	float4 cAmbient;						// c0
-	float4 cDiffuse;						// c1
+	float4 cAmbient; // c0
+	float4 cDiffuse; // c1
 	float4 cSpecular; //(r,g,b,a=power)		// c2
-	float4 cEmissive;						// c3
+	float4 cEmissive; // c3
 	
-	float fGlossiness;						// c4.x
-	float fSmoothness;						// c4.y
-	float fSpecularHighlight;				// c4.z
-	float fMetallic;						// c4.w
-	float fGlossyReflection;				// c5.x
+	float fGlossiness; // c4.x
+	float fSmoothness; // c4.y
+	float fSpecularHighlight; // c4.z
+	float fMetallic; // c4.w
+	float fGlossyReflection; // c5.x
 	
-	float3 pad0;							// c6.yzw
-};
-
-struct InstanceData
-{
-	float4x4 mtxWorld;
+	float3 pad0; // c6.yzw
 };
 
 // ============ StructuredBuffers ============
 
 StructuredBuffer<MaterialData> gMaterialData : register(t0, space1);
-StructuredBuffer<InstanceData> gInstanceData : register(t1, space1);
-Texture2D gtxtTextures[] : register(t2, space1); // Unbounded
 
-//////////////////////////////////////////////////////////////////////////////////
+// ============ Textures ============
+
+Texture2D gtxtTextures[] : register(t1, space1); // Unbounded
+
+
+
+// ================================================================================
 // Per Instance (Object)
+// ================================================================================
 
 // ============ Structs ============
 
@@ -122,23 +171,57 @@ struct TerrainComponentData
 	int2 pad0;
 };
 
+struct InstanceData
+{
+	float4x4 mtxWorld;
+};
+
 #define MAX_BONES 100
 #define MAX_TERRAIN_COMPONENTS 8*8
 
 // ============ cbuffers ============
 
+#define TEXTURE_TYPE_ALBEDO			0
+#define TEXTURE_TYPE_NORMAL			1
+#define TEXTURE_TYPE_METALLIC		2
+#define TEXTURE_TYPE_EMISSION		3
+
+#define TEXTURE_TYPE_DIFFUSE 0
+
 cbuffer cbInstanceData : register(b0, space2)
 {
-	int gnTextureIndex[4];	// Diffuse, Normal, Metallic, Emission
-	int gnInstanceBase;
+	int4 gnTextureIndex;	// Diffuse, Normal, Metallic, Emission
 	int gnMaterialIndex;
-	int2 pad0;
+};
+
+#define MAX_LAYER 4
+
+cbuffer cbTerrainLayerData : register(b1, space2)
+{
+	float4 gv4LayerTiling;
+	int gnTerrainLayers;
+	float3 pad0;
+};
+
+cbuffer cbTerrainComponentData : register(b2, space2)
+{
+	float2 gv2ComponentOriginXZ;
+	float2 gv2ComponentSizeXZ;
+	int4 gi4LayerIndex;
+	int2 gv2NumQuadsXZ;
+	int2 pad1;
 };
 
 // ============ StructuredBuffers ============
 
-StructuredBuffer<TerrainComponentData> gTerrainComponents : register(t0, space2);
-StructuredBuffer<float4x4> gBoneTransforms : register(t1, space2);
+StructuredBuffer<InstanceData> gWorldTransforms : register(t0, space2);
+StructuredBuffer<matrix> gBoneTransforms : register(t1, space2);
+
+
+Texture2D gtxtTerrainAlbedo[4] : register(t2, space2); // t2, t3, t4, t5
+Texture2D gtxtTerrainNormal[4] : register(t6, space2); // t6, t7, t8, t9
+
+Texture2D gtxtTerrainWeightMap : register(t10, space2);
 
 
 #endif 

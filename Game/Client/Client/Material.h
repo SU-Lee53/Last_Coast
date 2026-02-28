@@ -36,19 +36,22 @@ public:
 	using ID = uint64;
 
 public:
-	const MaterialColors& GetMaterialColors() const { return m_MaterialColors; }
+	virtual void Initialize(const MATERIALLOADINFO& materialLoadInfo) = 0;
+
+	const MaterialData& GetMaterialData() const { return m_MaterialData; }
 	const std::shared_ptr<Shader>& GetShader() const { return m_pShader; }
 	void SetShader(std::shared_ptr<Shader> pShader);
 
 	void SetTexture(Texture::ID texID, TEXTURE_TYPE eTextureType);
 	std::shared_ptr<Texture> GetTexture(int nIndex);
 
-protected:
-	IMaterial(const MATERIALLOADINFO& materialLoadInfo);
-	virtual ~IMaterial();
+	const std::vector<Texture::ID>& GetTextureIDs() const { return m_TextureIDs; }
 
 protected:
-	MaterialColors m_MaterialColors{};
+	void InitializeColors(const MATERIALLOADINFO& materialLoadInfo);
+
+protected:
+	MaterialData m_MaterialData{};
 	std::vector<Texture::ID> m_TextureIDs;
 
 	std::shared_ptr<Shader> m_pShader;
@@ -58,9 +61,8 @@ protected:
 // StandardMaterial
 
 class StandardMaterial : public IMaterial {
-private:
-	StandardMaterial(const MATERIALLOADINFO& materialLoadInfo);
-	virtual ~StandardMaterial() {}
+public:
+	virtual void Initialize(const MATERIALLOADINFO& materialLoadInfo) override;
 
 };
 
@@ -68,9 +70,8 @@ private:
 // SkinnedMaterial
 
 class SkinnedMaterial : public IMaterial {
-private:
-	SkinnedMaterial(const MATERIALLOADINFO& materialLoadInfo);
-	virtual ~SkinnedMaterial() {}
+public:
+	virtual void Initialize(const MATERIALLOADINFO& materialLoadInfo) override;
 
 };
 
@@ -78,10 +79,8 @@ private:
 // TerrainMaterial
 
 class TerrainMaterial : public IMaterial {
-private:
-	TerrainMaterial(const MATERIALLOADINFO& materialLoadInfo);
-	virtual ~TerrainMaterial() {}
-
+public:
+	virtual void Initialize(const MATERIALLOADINFO& materialLoadInfo) override;
 	float GetTiling() const { return m_fTiling; }
 
 private:

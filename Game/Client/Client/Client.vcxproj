@@ -162,6 +162,7 @@
     <ClInclude Include="AnimationStateMachine.h" />
     <ClInclude Include="BoundingCapsule.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="CB_Types.h" />
     <ClInclude Include="Collider.h" />
     <ClInclude Include="CommandListPool.h" />
     <ClInclude Include="Component.h" />
@@ -181,6 +182,7 @@
     <ClInclude Include="GameTimer.h" />
     <ClInclude Include="GuiManager.h" />
     <ClInclude Include="HeightMapRawImage.h" />
+    <ClInclude Include="IDGenerator.h" />
     <ClInclude Include="InputManager.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="Material.h" />
@@ -195,6 +197,7 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="RandomGenerator.h" />
+    <ClInclude Include="RenderGraph.h" />
     <ClInclude Include="RenderManager.h" />
     <ClInclude Include="RenderPass.h" />
     <ClInclude Include="Resource.h" />
@@ -210,7 +213,7 @@
     <ClInclude Include="SoundManager.h" />
     <ClInclude Include="Sprite.h" />
     <ClInclude Include="StaticObject.h" />
-    <ClInclude Include="StructuredBuffer.h" />
+    <ClInclude Include="StructuredBufferPool.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="AnimationTestScene.h" />
     <ClInclude Include="TerrainComponent.h" />
@@ -298,6 +301,7 @@
     <ClCompile Include="GameTimer.cpp" />
     <ClCompile Include="GuiManager.cpp" />
     <ClCompile Include="HeightMapRawImage.cpp" />
+    <ClCompile Include="IDGenerator.cpp" />
     <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Material.cpp" />
@@ -314,6 +318,7 @@
     </ClCompile>
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="RandomGenerator.cpp" />
+    <ClCompile Include="RenderGraph.cpp" />
     <ClCompile Include="RenderManager.cpp" />
     <ClCompile Include="RenderPass.cpp" />
     <ClCompile Include="ResourceManager.cpp" />
@@ -328,8 +333,8 @@
     <ClCompile Include="SoundManager.cpp" />
     <ClCompile Include="Sprite.cpp" />
     <ClCompile Include="StaticObject.cpp" />
-    <ClCompile Include="StructuredBuffer.cpp" />
     <ClCompile Include="AnimationTestScene.cpp" />
+    <ClCompile Include="StructuredBufferPool.cpp" />
     <ClCompile Include="TerrainComponent.cpp" />
     <ClCompile Include="TerrainObject.cpp" />
     <ClCompile Include="TestScene.cpp" />

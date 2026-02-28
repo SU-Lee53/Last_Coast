@@ -18,7 +18,7 @@ public:
 public:
 	void ProcessInput();
 	void Update();
-	void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList);
+	void PrepareRender();
 	
 private:
 	std::unique_ptr<Scene> m_upCurrentScene;

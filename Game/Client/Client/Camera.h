@@ -57,7 +57,7 @@ public:
 
 	virtual void SetViewportsAndScissorRects(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
 
-	CB_CAMERA_DATA MakeCBData() const;
+	CameraData MakeCBData() const;
 
 protected:
 	BoundingFrustum m_xmFrustumOrigin = {};

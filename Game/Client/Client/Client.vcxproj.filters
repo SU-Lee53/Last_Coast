@@ -193,9 +193,6 @@
     <ClInclude Include="ConstantBuffer.h">
       <Filter>03.Engine\Resources\Buffer</Filter>
     </ClInclude>
-    <ClInclude Include="ConstantBufferPool.h">
-      <Filter>03.Engine\Resources\Buffer</Filter>
-    </ClInclude>
     <ClInclude Include="DescriptorHeap.h">
       <Filter>03.Engine\Resources\DescriptorHeap</Filter>
     </ClInclude>
@@ -216,9 +213,6 @@
     </ClInclude>
     <ClInclude Include="Sprite.h">
       <Filter>03.Engine\Graphic Components</Filter>
-    </ClInclude>
-    <ClInclude Include="StructuredBuffer.h">
-      <Filter>03.Engine\Resources\Buffer</Filter>
     </ClInclude>
     <ClInclude Include="ShaderResource.h">
       <Filter>03.Engine\Resources</Filter>
@@ -355,7 +349,24 @@
     <ClInclude Include="Collider.h">
       <Filter>02.Game\Components\Components</Filter>
     </ClInclude>
-    <ClInclude Include="MaterialManager.h" />
+    <ClInclude Include="CB_Types.h">
+      <Filter>03.Engine\Resources\Buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="ConstantBufferPool.h">
+      <Filter>03.Engine\Resources\Buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="StructuredBufferPool.h">
+      <Filter>03.Engine\Resources\Buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="MaterialManager.h">
+      <Filter>04.Managers\Resource Management</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderGraph.h">
+      <Filter>03.Engine\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="IDGenerator.h">
+      <Filter>99.Utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -463,9 +474,6 @@
     </ClCompile>
     <ClCompile Include="Sprite.cpp">
       <Filter>03.Engine\Graphic Components</Filter>
-    </ClCompile>
-    <ClCompile Include="StructuredBuffer.cpp">
-      <Filter>03.Engine\Resources\Buffer</Filter>
     </ClCompile>
     <ClCompile Include="ShaderResource.cpp">
       <Filter>03.Engine\Resources</Filter>
@@ -596,7 +604,18 @@
     <ClCompile Include="Collider.cpp">
       <Filter>02.Game\Components\Components</Filter>
     </ClCompile>
-    <ClCompile Include="MaterialManager.cpp" />
+    <ClCompile Include="StructuredBufferPool.cpp">
+      <Filter>03.Engine\Resources\Buffer</Filter>
+    </ClCompile>
+    <ClCompile Include="MaterialManager.cpp">
+      <Filter>04.Managers\Resource Management</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderGraph.cpp">
+      <Filter>03.Engine\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="IDGenerator.cpp">
+      <Filter>99.Utility</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">

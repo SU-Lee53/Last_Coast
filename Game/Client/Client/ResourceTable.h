@@ -40,6 +40,8 @@ public:
 		m_KeyIDMap.reserve(nMaxSize);
 
 		m_bShaderVisible = (d3dHeapFlags & D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE) ? true : false;
+	
+		m_d3dHeapType = d3dHeapType;
 	}
 
 	// Register
@@ -57,7 +59,10 @@ public:
 		ResourceEntry<ResourceType> entry;
 		entry.pResource = pResource;
 		entry.un64DescriptorIndex = id;
-		if (outpView) {
+		//if (outpView) {
+		//	RegisterView(pResource->GetResource(), id, outpView, nViewSize, pContext, nContextSize);
+		//}
+		if constexpr (std::same_as<ResourceType, Texture>) {	// Temporary
 			RegisterView(pResource->GetResource(), id, outpView, nViewSize, pContext, nContextSize);
 		}
 
@@ -141,8 +146,9 @@ private:
 
 };
 
-using TextureTable = ResourceTable<std::string, class Texture>;
-using MaterialTable = ResourceTable<std::string, class IMaterial>;
+using TextureTable = ResourceTable<std::string, Texture>;
+using MaterialTable = ResourceTable<std::string, IMaterial>;
+using RenderItemTable = ResourceTable<MeshRenderer::ID, MeshRenderer>;
 
 template<typename KeyType, typename ResourceType, typename Hash, typename KeyEqual>
 inline void ResourceTable<KeyType, ResourceType, Hash, KeyEqual>::RegisterView(ComPtr<ID3D12Resource> pd3dResource, uint64 id, OUT void* outpView, size_t nViewSize, const void* pContext, size_t nContextSize)
@@ -151,8 +157,9 @@ inline void ResourceTable<KeyType, ResourceType, Hash, KeyEqual>::RegisterView(C
 	switch (m_d3dHeapType) {
 	case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
 	{
+		// TODO : 수정필요 - D3D12_SHADER_RESOURCE_VIEW_DESC 와 D3D12_UNORDERED_ACCESS_VIEW_DESC 가 크기가 같음
 		if (nViewSize == sizeof(D3D12_SHADER_RESOURCE_VIEW_DESC)) {
-			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
 			{
 				srvDesc.Format = pContext ? (*(DXGI_FORMAT*)pContext) : d3dResourceDesc.Format;
 				srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -170,7 +177,7 @@ inline void ResourceTable<KeyType, ResourceType, Hash, KeyEqual>::RegisterView(C
 		}
 		else {	// nViewSize == sizeof(D3D12_UNORDERED_ACCESS_VIEW_DESC)
 
-			D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc;
+			D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
 			{
 				uavDesc.Format = pContext ? (*(DXGI_FORMAT*)pContext) : d3dResourceDesc.Format;
 				uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
@@ -188,7 +195,7 @@ inline void ResourceTable<KeyType, ResourceType, Hash, KeyEqual>::RegisterView(C
 	}
 	case D3D12_DESCRIPTOR_HEAP_TYPE_RTV:
 	{
-		D3D12_RENDER_TARGET_VIEW_DESC rtvDesc;
+		D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
 		{
 			rtvDesc.Format = pContext ? (*(DXGI_FORMAT*)pContext) : d3dResourceDesc.Format;
 			rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
@@ -205,11 +212,12 @@ inline void ResourceTable<KeyType, ResourceType, Hash, KeyEqual>::RegisterView(C
 	}
 	case D3D12_DESCRIPTOR_HEAP_TYPE_DSV:
 	{
-		D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
+		D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
 		{
 			dsvDesc.Format = pContext ? (*(DXGI_FORMAT*)pContext) : d3dResourceDesc.Format;
 			dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 			dsvDesc.Texture2D.MipSlice = 0;
+			dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
 		}
 		memcpy(outpView, &dsvDesc, sizeof(D3D12_DEPTH_STENCIL_VIEW_DESC));
 

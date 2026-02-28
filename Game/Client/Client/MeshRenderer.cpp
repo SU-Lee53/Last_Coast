@@ -85,29 +85,6 @@ void MeshRenderer::Initialize()
 
 void MeshRenderer::Update()
 {
-	if (m_eMeshType == MESH_TYPE::TERRAIN || m_eMeshType == MESH_TYPE::SKINNED) {
-		return;
-	}
-
-	MeshRenderParameters meshParam{
-		.mtxWorld = m_wpOwner.lock()->GetWorldMatrix().Transpose()
-	};
-#ifdef WITH_FRUSTUM_CULLING
-	const auto& pCamera = CUR_SCENE->GetCamera();
-	const auto& xmFrustumInWorld = pCamera->GetFrustumWorld();
-	const Matrix& mtxWorld = GetOwner()->GetWorldMatrix().Invert();
-	for (const auto& pMesh : m_pMeshes) {
-		BoundingFrustum xmFrustum;
-		xmFrustumInWorld.Transform(xmFrustum, mtxWorld);
-		if (xmFrustum.Intersects(pMesh->GetBoundingBox())) {
-			RENDER->Add(std::static_pointer_cast<MeshRenderer>(shared_from_this()), meshParam);
-		}
-	}
-#else
-	for (int i = 0; i < m_pMeshes.size(); ++i) {
-		RENDER->Add(std::static_pointer_cast<MeshRenderer>(shared_from_this()), meshParam);
-	}
-#endif
 }
 
 std::shared_ptr<IComponent> MeshRenderer::Copy(std::shared_ptr<IGameObject> pNewOwner) const
@@ -154,7 +131,7 @@ BoundingOrientedBox MeshRenderer::GetOBBMerged() const
 
 void MeshRenderer::SetTexture(Texture::ID texID, UINT nMaterialIndex, TEXTURE_TYPE eTextureType)
 {
-	assert(pTexture);
+	assert(texID == INVALID_ID);
 	auto pMaterial = MATERIAL->GetMaterialByID(m_MaterialIDs[nMaterialIndex]);
 	pMaterial->SetTexture(texID, eTextureType);
 }

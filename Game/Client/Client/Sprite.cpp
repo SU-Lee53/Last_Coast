@@ -49,30 +49,6 @@ void TexturedSprite::AddToUI(UINT nLayerIndex)
 
 void TexturedSprite::Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle) const
 {
-	ConstantBuffer& cbSprite = RESOURCE->AllocCBuffer<CB_SPRITE_DATA>();
-
-	CB_SPRITE_DATA spriteData;
-	{
-		spriteData.fLeft = m_Rect.fLeft;
-		spriteData.fTop = m_Rect.fTop;
-		spriteData.fRight = m_Rect.fRight;
-		spriteData.fBottom = m_Rect.fBottom;
-	}
-	cbSprite.WriteData(&spriteData);
-
-	pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, cbSprite.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-	pd3dCommandList->SetGraphicsRootDescriptorTable(1, descHandle.gpuHandle);
-	descHandle.gpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-	
-	pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, m_pTexture->GetHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-	pd3dCommandList->SetGraphicsRootDescriptorTable(3, descHandle.gpuHandle);
-	descHandle.gpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-	pd3dCommandList->DrawInstanced(1, 1, 0, 0);
 }
 
 void Sprite::SetLayerIndex(UINT uiLayerIndex)
@@ -133,45 +109,6 @@ void TextSprite::AddToUI(UINT nLayerIndex)
 
 void TextSprite::Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle) const
 {
-	ConstantBuffer& cbSprite = RESOURCE->AllocCBuffer<CB_SPRITE_DATA>();
-
-	CB_SPRITE_DATA spriteData;
-	{
-		spriteData.fLeft = m_Rect.fLeft;
-		spriteData.fTop = m_Rect.fTop;
-		spriteData.fRight = m_Rect.fRight;
-		spriteData.fBottom = m_Rect.fBottom;
-	}
-	cbSprite.WriteData(&spriteData);
-
-	pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, cbSprite.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-	pd3dCommandList->SetGraphicsRootDescriptorTable(1, descHandle.gpuHandle);
-	descHandle.gpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-	ConstantBuffer& cbText = RESOURCE->AllocCBuffer<CB_TEXT_DATA>();
-
-	CB_TEXT_DATA textData;
-	{
-		memset(textData.nCharacters, 0, sizeof(textData.nCharacters));
-
-		for (int i = 0; i < m_nTextLength; ++i) {
-			textData.nCharacters[i] = m_cstrText[i];
-		}
-		//textData.pad = XMUINT2(99, 99);
-		textData.nLength = m_nTextLength;
-		textData.xmf4TextColor = m_xmf4TextColor;
-	}
-	cbText.WriteData(&textData);
-
-	pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, cbText.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-	pd3dCommandList->SetGraphicsRootDescriptorTable(2, descHandle.gpuHandle);
-	descHandle.gpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-	pd3dCommandList->DrawInstanced(m_nTextLength, 1, 0, 0);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -192,31 +129,4 @@ void BillboardSprite::AddToUI(UINT nLayerIndex)
 
 void BillboardSprite::Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle) const
 {
-	ConstantBuffer& cbBillboard = RESOURCE->AllocCBuffer<CB_BILLBOARD_SPRITE_DATA>();
-
-	CB_BILLBOARD_SPRITE_DATA billboardData;
-	{
-		billboardData.xmf3Position = m_xmf3Position;
-		billboardData.xmf2Size = m_xmf2Size;
-		billboardData.xmf3CameraPosition = CUR_SCENE->GetCamera()->GetPosition();
-
-		XMMATRIX xmmtxCameraView = XMLoadFloat4x4(&CUR_SCENE->GetCamera()->GetViewMatrix());
-		XMMATRIX xmmtxCameraProjection = XMLoadFloat4x4(&CUR_SCENE->GetCamera()->GetProjectionMatrix());
-		XMStoreFloat4x4(&billboardData.xmf4x4ViewProjection, XMMatrixTranspose(XMMatrixMultiply(xmmtxCameraView, xmmtxCameraProjection)));
-	}
-	cbBillboard.WriteData(&billboardData);
-
-	pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, cbBillboard.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-	pd3dCommandList->SetGraphicsRootDescriptorTable(4, descHandle.gpuHandle);
-	descHandle.gpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-	pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, m_pTexture->GetHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-	pd3dCommandList->SetGraphicsRootDescriptorTable(3, descHandle.gpuHandle);
-	descHandle.gpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-	pd3dCommandList->DrawInstanced(1, 1, 0, 0);
 }

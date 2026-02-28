@@ -1,14 +1,7 @@
 #ifndef _LIGHT_
 #define _LIGHT_
 
-#include "Common.hlsl"
-
-// ==============================================================
-// 10.31
-// 현재 조명처리에서 Material 반영을 제거함
-// 사유 : Sphere 모델의 Material에 정체모를 푸른색이 들어가있음;;
-// ==============================================================
-
+#include "NewCommon.hlsl"
 
 float4 DirectionalLight(int nIndex, float3 vNormal, float3 vToCamera)
 {

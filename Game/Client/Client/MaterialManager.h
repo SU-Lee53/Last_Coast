@@ -26,11 +26,13 @@ inline IMaterial::ID MaterialManager::LoadMaterial(const std::string& strNameKey
 {
 	IMaterial::ID findID = m_MaterialTable.GetID(strNameKey);
 	if (findID == MaterialTable::InvalidID) {
-		std::shared_ptr<IMaterial> pMaterial = std::make_shared<T>(loadInfo);
+		std::shared_ptr<IMaterial> pMaterial = std::make_shared<T>();
 		IMaterial::ID id = m_MaterialTable.Register(strNameKey, pMaterial);
 		if (id == MaterialTable::InvalidID) {
-			OutputDebugStringA(std::format("Failed to load material : {}", strNameKey).c_str());
-			return MaterialTable::InvalidID;
+			OutputDebugStringA(std::format("Failed to load material : {}\n", strNameKey).c_str());
+		}
+		else {
+			pMaterial->Initialize(loadInfo);
 		}
 
 		return id;

@@ -2,6 +2,8 @@
 
 class HeightMapRawImage {
 	friend class TerrainObject;
+public:
+	void UpdateOrigin(const Matrix& mtxWorld);
 
 public:
 	HRESULT LoadFromFile(

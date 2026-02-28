@@ -7,11 +7,11 @@
 void AnimationTestScene::BuildObjects()
 {
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
-	LoadFromFiles("TEST");
+	//LoadFromFiles("TEST");
+	m_pTerrain = std::make_shared<TerrainObject>();
+	m_pTerrain->LoadFromFiles("TEST");
 
 	//m_pPlayer = std::make_shared<DebugPlayer>();
-	//m_pTerrain = std::make_shared<TerrainObject>();
-	//m_pTerrain->LoadFromFiles("TEST");
 
 	/*
 	m_pPlayer = std::make_shared<DebugPlayer>();
@@ -105,19 +105,14 @@ void AnimationTestScene::Update()
 	}
 	ImGui::End();
 
-	//ImGui::Begin("Test");
-	//{
-	//	ImGui::DragFloat3("Terrain Position", (float*)&v3TerrainPos);
-	//	ImGui::DragFloat3("Terrain Rotation", (float*)&v3TerrainRotation);
-	//
-	//	m_pTerrain->GetTransform()->SetPosition(v3TerrainPos);
-	//	m_pTerrain->GetTransform()->SetRotation(v3TerrainRotation);
-	//}
-	//ImGui::End();
+	ImGui::Begin("Test");
+	{
+		ImGui::DragFloat3("Terrain Position", (float*)&v3TerrainPos);
+		ImGui::DragFloat3("Terrain Rotation", (float*)&v3TerrainRotation);
+	
+		m_pTerrain->GetTransform()->SetPosition(v3TerrainPos);
+		m_pTerrain->GetTransform()->SetRotation(v3TerrainRotation);
+	}
+	ImGui::End();
 
-}
-
-void AnimationTestScene::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList)
-{
-	Scene::RenderObjects(pd3dCommansList);
 }

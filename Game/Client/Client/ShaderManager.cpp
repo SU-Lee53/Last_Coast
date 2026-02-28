@@ -27,10 +27,10 @@ void ShaderManager::Initialize(ComPtr<ID3D12Device> pDevice)
 
 	CompileShaders();
 
-	Load<FullScreenShader>();
 	Load<StandardShader>();
 	Load<AnimatedShader>();
 	Load<TerrainShader>();
+	//Load<FullScreenShader>();
 }
 
 D3D12_SHADER_BYTECODE ShaderManager::GetShaderByteCode(const std::string& strShaderName)
@@ -85,8 +85,17 @@ D3D12_SHADER_BYTECODE ShaderManager::CompileShaderDXC(const std::wstring& wstrFi
 		L"-T", wstrShaderProfile.c_str(),
 		L"-I", L"../HLSL",
 #ifdef _DEBUG
-		L"-Zi", L"Qembed_debug",
-		L"-Od"
+		L"-Zi",
+		L"-Qembed_debug",
+		L"-Od",
+		L"-Zss",
+		L"-Zpc",
+		L"-Wall",
+#else
+		L"-O3",
+		L"-Qstrip_debug",
+		L"-Qstrip_reflect",
+		L"-Wall",
 #endif
 	};
 
@@ -114,7 +123,7 @@ D3D12_SHADER_BYTECODE ShaderManager::CompileShaderDXC(const std::wstring& wstrFi
 		OutputDebugStringA(pdxcErrorBlob->GetStringPointer());
 		MessageBoxA(WinCore::g_hWnd, pdxcErrorBlob->GetStringPointer(), "DXC ERROR", 0);
 		__debugbreak();
-		return D3D12_SHADER_BYTECODE{};;
+		return D3D12_SHADER_BYTECODE{};
 	}
 
 	pdxcResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(ppBlob), nullptr);
@@ -182,29 +191,29 @@ void ShaderManager::CompileShaders()
 	Compile("TerrainVS", L"Shaders.hlsl", L"VSTerrain", SHADER_TYPE::VS);
 	Compile("TerrainPS", L"Shaders.hlsl", L"PSTerrain", SHADER_TYPE::PS);
 
-	// FullScreenShader.hlsl
-	Compile("FullScreenVS", L"FullScreenShader.hlsl", L"VSFullScreen", SHADER_TYPE::VS);
-	Compile("FullScreenPS", L"FullScreenShader.hlsl", L"PSFullScreen", SHADER_TYPE::PS);
-	
-	// EffectShader.hlsl
-	Compile("RayVS", L"EffectShader.hlsl", L"VSRay", SHADER_TYPE::VS);
-	Compile("RayGS", L"EffectShader.hlsl", L"GSRay", SHADER_TYPE::GS);
-	Compile("RayPS", L"EffectShader.hlsl", L"PSRay", SHADER_TYPE::PS);
-	
-	Compile("ExplosionVS", L"EffectShader.hlsl", L"VSExplosion", SHADER_TYPE::VS);
-	Compile("ExplosionGS", L"EffectShader.hlsl", L"GSExplosion", SHADER_TYPE::GS);
-	Compile("ExplosionPS", L"EffectShader.hlsl", L"PSExplosion", SHADER_TYPE::PS);
+	//// FullScreenShader.hlsl
+	//Compile("FullScreenVS", L"FullScreenShader.hlsl", L"VSFullScreen", SHADER_TYPE::VS);
+	//Compile("FullScreenPS", L"FullScreenShader.hlsl", L"PSFullScreen", SHADER_TYPE::PS);
+	//
+	//// EffectShader.hlsl
+	//Compile("RayVS", L"EffectShader.hlsl", L"VSRay", SHADER_TYPE::VS);
+	//Compile("RayGS", L"EffectShader.hlsl", L"GSRay", SHADER_TYPE::GS);
+	//Compile("RayPS", L"EffectShader.hlsl", L"PSRay", SHADER_TYPE::PS);
+	//
+	//Compile("ExplosionVS", L"EffectShader.hlsl", L"VSExplosion", SHADER_TYPE::VS);
+	//Compile("ExplosionGS", L"EffectShader.hlsl", L"GSExplosion", SHADER_TYPE::GS);
+	//Compile("ExplosionPS", L"EffectShader.hlsl", L"PSExplosion", SHADER_TYPE::PS);
 
-	// Sprite.hlsl
-	Compile("TextureSpriteVS", L"Sprite.hlsl", L"VSTextureSprite", SHADER_TYPE::VS);
-	Compile("TextureSpriteGS", L"Sprite.hlsl", L"GSTextureSprite", SHADER_TYPE::GS);
-	Compile("TextureSpritePS", L"Sprite.hlsl", L"PSTextureSprite", SHADER_TYPE::PS);
-	
-	Compile("TextSpriteVS", L"Sprite.hlsl", L"VSTextSprite", SHADER_TYPE::VS);
-	Compile("TextSpriteGS", L"Sprite.hlsl", L"GSTextSprite", SHADER_TYPE::GS);
-	Compile("TextSpritePS", L"Sprite.hlsl", L"PSTextSprite", SHADER_TYPE::PS);
-	
-	Compile("BillboardSpriteVS", L"Sprite.hlsl", L"VSBillboardSprite", SHADER_TYPE::VS);
-	Compile("BillboardSpriteGS", L"Sprite.hlsl", L"GSBillboardSprite", SHADER_TYPE::GS);
-	Compile("BillboardSpritePS", L"Sprite.hlsl", L"PSBillboardSprite", SHADER_TYPE::PS);
+	//// Sprite.hlsl
+	//Compile("TextureSpriteVS", L"Sprite.hlsl", L"VSTextureSprite", SHADER_TYPE::VS);
+	//Compile("TextureSpriteGS", L"Sprite.hlsl", L"GSTextureSprite", SHADER_TYPE::GS);
+	//Compile("TextureSpritePS", L"Sprite.hlsl", L"PSTextureSprite", SHADER_TYPE::PS);
+	//
+	//Compile("TextSpriteVS", L"Sprite.hlsl", L"VSTextSprite", SHADER_TYPE::VS);
+	//Compile("TextSpriteGS", L"Sprite.hlsl", L"GSTextSprite", SHADER_TYPE::GS);
+	//Compile("TextSpritePS", L"Sprite.hlsl", L"PSTextSprite", SHADER_TYPE::PS);
+	//
+	//Compile("BillboardSpriteVS", L"Sprite.hlsl", L"VSBillboardSprite", SHADER_TYPE::VS);
+	//Compile("BillboardSpriteGS", L"Sprite.hlsl", L"GSBillboardSprite", SHADER_TYPE::GS);
+	//Compile("BillboardSpritePS", L"Sprite.hlsl", L"PSBillboardSprite", SHADER_TYPE::PS);
 }

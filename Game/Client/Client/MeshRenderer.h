@@ -14,9 +14,18 @@ enum class OBJECT_RENDER_TYPE : uint8 {
 
 //#define WITH_FRUSTUM_CULLING
 
+struct MeshRendererHash;
+struct MeshRendererEq;
+
 class MeshRenderer : public IComponent {
 public:
 	using ID = uint64;
+	
+	friend MeshRendererHash;
+	friend MeshRendererEq;
+
+	template<typename T>
+	using InstanceMap = std::unordered_map<std::reference_wrapper<MeshRenderer>, T, MeshRendererHash, MeshRendererEq>;
 
 public:
 	MeshRenderer(std::shared_ptr<IGameObject> pOwner);
@@ -60,8 +69,22 @@ protected:
 	static MeshRenderer::ID g_ui64RendererIDBase;
 };
 
+struct MeshRendererHash {
+	size_t operator()(const std::reference_wrapper<MeshRenderer>& mr) const {
+		return std::hash<MeshRenderer::ID>{}(mr.get().m_RuntimeID);
+	}
+};
+
+struct MeshRendererEq {
+	using KeyType = std::reference_wrapper<MeshRenderer>;
+	bool operator()(const KeyType& lhs, const KeyType& rhs) const {
+		return lhs.get().m_RuntimeID == rhs.get().m_RuntimeID;
+	}
+};
+
 template <>
 struct ComponentIndex<MeshRenderer> {
 	constexpr static COMPONENT_TYPE componentType = COMPONENT_TYPE::MESH_RENDERER;
 	constexpr static std::underlying_type_t<COMPONENT_TYPE> index = std::to_underlying(COMPONENT_TYPE::MESH_RENDERER);
 };
+

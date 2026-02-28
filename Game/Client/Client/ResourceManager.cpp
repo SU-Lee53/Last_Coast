@@ -9,7 +9,6 @@ void ResourceManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 	CreateCommandList();
 	CreateFence();
 
-	m_ConstantBufferPool.Initialize(pd3dDevice, 5000);
 	m_CommandListPool.Initialize(pd3dDevice);
 }
 

@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include "ConstantBufferPool.h"
 
 // ===========================================================================================
 // ResourceManager
@@ -13,6 +12,9 @@
 //  10.18
 //  - ShaderManager, TextureManager 별도 구현
 //  - Device와 CommandList 는 ResourceManager 의 것을 같이쓴다
+// 
+//  2026.02.13
+//	- ConstantBufferPool 은 RenderManager 로 옮김
 // ===========================================================================================
 
 constexpr static size_t MAX_CB_POOL_SIZE = 1024;
@@ -36,15 +38,6 @@ public:
 	void WaitForCopyComplete();
 
 public:
-	template<typename T>
-	ConstantBuffer& AllocCBuffer() {
-		return m_ConstantBufferPool.Allocate<T>();
-	}
-
-	void ResetCBufferBool() {
-		m_ConstantBufferPool.Reset();
-	}
-
 private:
 	void ReleaseCompletedUploadBuffers();
 
@@ -66,9 +59,6 @@ private:
 	ComPtr<ID3D12Fence>		m_pd3dFence = nullptr;
 	HANDLE					m_hFenceEvent = nullptr;
 	UINT64					m_nFenceValue = 0;
-
-private:
-	ConstantBufferPool		m_ConstantBufferPool;
 
 private:
 	CommandListPool			m_CommandListPool;

@@ -21,6 +21,7 @@
 #include <string>
 #include <array>
 #include <vector>
+#include <list>
 #include <set>
 #include <unordered_set>
 #include <unordered_map>
@@ -96,6 +97,7 @@ using namespace Microsoft::WRL;
 #include "CommandListPool.h"
 #include "Typedef.h"
 #include "Defines.h"
+#include "CB_Types.h"
 #include "Concepts.h"
 #include "Utility.h"
 #include "ShaderResource.h"

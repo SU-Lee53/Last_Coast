@@ -1,59 +1,47 @@
 ﻿#include "pch.h"
 #include "Light.h"
 
-LightData PointLight::MakeLightData()
+LightData PointLight::MakeCBData()
 {
-	LightData data{};
-	{
-		data.nType = LIGHT_TYPE_POINT_LIGHT;
-		data.bEnable = TRUE;
-		data.v4Diffuse = m_v4Diffuse;
-		data.v4Ambient = m_v4Ambient;
-		data.v4Specular = m_v4Specular;
-		data.v3Position = m_v3Position;
-		data.fRange = m_fRange;
-		data.v3Attenuation.x = m_fAttenuation0;
-		data.v3Attenuation.y = m_fAttenuation1;
-		data.v3Attenuation.z = m_fAttenuation2;
-	}
-
-	return data;
+	return LightData{
+		.v4Ambient = m_v4Ambient,
+		.v4Diffuse = m_v4Diffuse,
+		.v4Specular = m_v4Specular,
+		.v3Position = m_v3Position,
+		.v3Attenuation = Vector3{m_fAttenuation0, m_fAttenuation1, m_fAttenuation2},
+		.bEnable = TRUE,
+		.nType = LIGHT_TYPE_POINT_LIGHT,
+		.fRange = m_fRange,
+	};
 }
 
-LightData SpotLight::MakeLightData()
+LightData SpotLight::MakeCBData()
 {
-	LightData data{};
-	{
-		data.nType = LIGHT_TYPE_SPOT_LIGHT;
-		data.bEnable = TRUE;
-		data.v4Diffuse = m_v4Diffuse;
-		data.v4Ambient = m_v4Ambient;
-		data.v4Specular = m_v4Specular;
-		data.v3Position = m_v3Position;
-		data.v3Direction = m_v3Direction;
-		data.fRange = m_fRange;
-		data.fFalloff = m_fFalloff;
-		data.v3Attenuation.x = m_fAttenuation0;
-		data.v3Attenuation.y = m_fAttenuation1;
-		data.v3Attenuation.z = m_fAttenuation2;
-		data.fTheta = m_fTheta;
-		data.fPhi = m_fPhi;
-	}
-
-	return data;
+	return LightData{
+		.v4Ambient = m_v4Ambient,
+		.v4Diffuse = m_v4Diffuse,
+		.v4Specular = m_v4Specular,
+		.v3Position = m_v3Position,
+		.fFalloff = m_fFalloff,
+		.v3Direction = m_v3Direction,
+		.fTheta = m_fTheta,
+		.v3Attenuation = Vector3{m_fAttenuation0, m_fAttenuation1, m_fAttenuation2},
+		.fPhi = m_fPhi,
+		.bEnable = TRUE,
+		.nType = LIGHT_TYPE_SPOT_LIGHT,
+		.fRange = m_fRange,
+		.pad0 = 0.f
+	};
 }
 
-LightData DirectionalLight::MakeLightData()
+LightData DirectionalLight::MakeCBData()
 {
-	LightData data{};
-	{
-		data.nType = LIGHT_TYPE_DIRECTIONAL_LIGHT;
-		data.bEnable = TRUE;
-		data.v4Diffuse = m_v4Diffuse;
-		data.v4Ambient = m_v4Ambient;
-		data.v4Specular = m_v4Specular;
-		data.v3Direction = m_v3Direction;
-	}
-
-	return data;
+	return LightData {
+		.v4Ambient = m_v4Ambient,
+		.v4Diffuse = m_v4Diffuse,
+		.v4Specular = m_v4Specular,
+		.v3Direction = m_v3Direction,
+		.bEnable = TRUE,
+		.nType = LIGHT_TYPE_DIRECTIONAL_LIGHT,
+	};
 }
