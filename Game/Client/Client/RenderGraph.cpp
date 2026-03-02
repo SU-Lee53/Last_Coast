@@ -1,5 +1,7 @@
 ﻿#include "pch.h"
 #include "RenderGraph.h"
+#include "ForwardPass.h"
+#include "TerrainPass.h"
 #include <queue>
 
 void RenderGraph::BuildGraph()

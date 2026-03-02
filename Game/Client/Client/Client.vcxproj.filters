@@ -110,6 +110,9 @@
     <Filter Include="02.Game\GameObject\GameObjects">
       <UniqueIdentifier>{bf0745fd-7c0f-4232-8a53-13a737f7c144}</UniqueIdentifier>
     </Filter>
+    <Filter Include="03.Engine\Rendering\RenderPasses">
+      <UniqueIdentifier>{47aadbd6-47a8-4b75-9667-086d83dc6c33}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h">
@@ -367,6 +370,12 @@
     <ClInclude Include="IDGenerator.h">
       <Filter>99.Utility</Filter>
     </ClInclude>
+    <ClInclude Include="ForwardPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="TerrainPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -615,6 +624,12 @@
     </ClCompile>
     <ClCompile Include="IDGenerator.cpp">
       <Filter>99.Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="ForwardPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="TerrainPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

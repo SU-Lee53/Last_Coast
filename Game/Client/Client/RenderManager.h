@@ -74,9 +74,6 @@ public:
 	// Objects Ready-To-Draw
 	std::vector<std::shared_ptr<IGameObject>> m_pRenderItems;
 
-	// Cache of Current Draw
-	std::vector<std::shared_ptr<IGameObject>> m_pFrustumCulledObjects;
-
 private:
 	// Frame Resources
 	DescriptorHeap			m_DescriptorHeapForDraw[g_unMaxPendingFrames];

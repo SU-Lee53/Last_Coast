@@ -115,7 +115,7 @@ StructuredBuffer<LightData> gLightData : register(t0, space0);
 Texture2DArray gtxtSkyboxDay : register(t1, space0);
 Texture2DArray gtxtSkyboxNIght : register(t2, space0);
 
-Texture2D gtxtShadows[8] : register(t11, space0);	// t11, t12, t13, t14, t15, t16, t17, t18
+Texture2D gtxtShadows[8] : register(t3, space0);	// t3, t4, t5, t6, t7, t8, t9, t10
 
 // ============ Samplers ============
 SamplerState gSkyboxSamplerState : register(s0, space0);
