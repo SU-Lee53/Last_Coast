@@ -2,20 +2,25 @@
 #include "RenderGraph.h"
 #include "ForwardPass.h"
 #include "TerrainPass.h"
+#include "GBufferPass.h"
 #include <queue>
 
 void RenderGraph::BuildGraph()
 {
-	std::shared_ptr<IRenderPass> pForwardPass = std::make_shared<ForwardPass>();
+	//std::shared_ptr<IRenderPass> pForwardPass = std::make_shared<ForwardPass>();
+	//pForwardPass->Initialize();
+	//m_pAdjLists.push_back(pForwardPass);
+	//
+	//if (CUR_SCENE->GetTerrain()) {
+	//	std::shared_ptr<IRenderPass> pTerrainPass = std::make_shared<TerrainPass>();
+	//	pTerrainPass->Initialize();
+	//	pForwardPass->Connect(pTerrainPass);
+	//	m_pAdjLists.push_back(pTerrainPass);
+	//}
+	
+	std::shared_ptr<IRenderPass> pForwardPass = std::make_shared<GBufferPass>();
 	pForwardPass->Initialize();
 	m_pAdjLists.push_back(pForwardPass);
-	
-	if (CUR_SCENE->GetTerrain()) {
-		std::shared_ptr<IRenderPass> pTerrainPass = std::make_shared<TerrainPass>();
-		pTerrainPass->Initialize();
-		pForwardPass->Connect(pTerrainPass);
-		m_pAdjLists.push_back(pTerrainPass);
-	}
 
 	m_unEntryNodeIndex = 0;
 }

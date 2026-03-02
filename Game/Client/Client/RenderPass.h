@@ -26,7 +26,10 @@ struct RenderPassOutput {
 
 interface IRenderPass abstract {
 public:
-	void Initialize();
+	using RenderTargetArray = std::array<std::vector<std::shared_ptr<RenderTargetTexture>>, 3>;
+
+public:
+	virtual void Initialize() {};
 
 	void Execute(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
@@ -44,20 +47,12 @@ protected:
 
 
 protected:
-	std::vector<RenderTargetTexture> m_pRTVs;			// for MRT
+	RenderTargetArray m_pRTVs;			// for MRT
 
 	std::list<std::shared_ptr<IRenderPass>> m_pEdgeList;
 };
 
 class ShadowMapPass : public IRenderPass {
-public:
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const override {}
-	virtual void OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
-	virtual void OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
-
-};
-
-class GBufferPass : public IRenderPass {
 public:
 	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const override {}
 	virtual void OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}

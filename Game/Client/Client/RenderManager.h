@@ -8,16 +8,15 @@
 
 #include "RenderGraph.h"
 
-// 2월에 전부 갈아엎을 예정
-
 enum class ROOT_PARAMETER : uint32 {
 	PER_SCENE_DATA							= 0,
-	PER_PASS_DATA							= 1,
-	PER_INSTANCE_DATA						= 2,
-	WORLD_TRANSFORM_DATA					= 3,
-	BONE_TRANSFORM							= 4,
-	TERRAIN_LAYER							= 5,
-	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 6,
+	G_BUFFER								= 1,
+	PER_PASS_DATA							= 2,
+	PER_INSTANCE_DATA						= 3,
+	WORLD_TRANSFORM_DATA					= 4,
+	BONE_TRANSFORM							= 5,
+	TERRAIN_LAYER							= 6,
+	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 7,
 };
 
 constexpr UINT DESCRIPTOR_PER_DRAW = 100'000;
@@ -82,6 +81,8 @@ private:
 
 #pragma region D3D
 public:
+	uint32 GetCurrentContextIndex() const { return m_unCurrentContextIndex; }
+
 	const std::shared_ptr<RenderTargetTexture> GetCurrentBackBuffer() const;
 	const std::shared_ptr<DepthStencilTexture> GetDepthStencilBuffer() const;
 	

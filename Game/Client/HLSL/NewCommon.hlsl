@@ -117,6 +117,9 @@ Texture2DArray gtxtSkyboxNIght : register(t2, space0);
 
 Texture2D gtxtShadows[8] : register(t3, space0);	// t3, t4, t5, t6, t7, t8, t9, t10
 
+Texture2D gtxtGBuffer[4] : register(t11, space0);
+
+
 // ============ Samplers ============
 SamplerState gSkyboxSamplerState : register(s0, space0);
 SamplerState gWeightMapSamplerState : register(s1, space0);
@@ -222,6 +225,147 @@ Texture2D gtxtTerrainAlbedo[4] : register(t2, space2); // t2, t3, t4, t5
 Texture2D gtxtTerrainNormal[4] : register(t6, space2); // t6, t7, t8, t9
 
 Texture2D gtxtTerrainWeightMap : register(t10, space2);
+
+
+
+// ================================================================================
+// Functions / Helpers
+// ================================================================================
+
+#define FLT_EPSILON 1e-8f
+
+// Octahedral encoding
+float2 EncodeNormalOcta(float3 n)
+{
+	float3 vNormal = normalize(n);
+	vNormal /= (abs(vNormal.x) + abs(vNormal.y) + abs(vNormal.z) + FLT_EPSILON);
+	
+	float2 vEncoded = vNormal.xy;
+	if (vNormal.z < 0.f)
+	{
+		vEncoded = (1.f - abs(vEncoded.yx)) * sign(vEncoded.xy);
+	}
+	
+	vEncoded *= 0.5f + 0.5f;	// [-1, 1] -> [0, 1]
+	return vEncoded;
+}
+
+float3 DecodeNormalOcta(float2 enc)
+{
+	float2 f = enc * 2.0f - 1.0f;
+	float3 n = float3(f.x, f.y, 1.0f - abs(f.x) - abs(f.y));
+	
+	float t = saturate(-n.z);
+	//n.xy += (n.xy > 0.f) ? -t : t;
+	n.xy += select((n.xy > 0.f), -t, t);
+	
+	return normalize(n);
+}
+
+void GetMaterialParams(out float fMetallic, out float fRoughness, out float fAO)
+{
+	MaterialData m = gMaterialData[gnMaterialIndex];
+	
+	fMetallic = m.fMetallic;
+	fRoughness = 1.0f - saturate(m.fSmoothness);
+	fAO = 1.0f;
+}
+
+float3 ComputeNormal(float3 normalW, float3 tangentW, float2 uv)
+{
+	float3 N = normalize(normalW);
+	float3 T = normalize(tangentW - dot(tangentW, N) * N);
+	float3 B = cross(N, T);
+	float3x3 TBN = float3x3(T, B, N);
+    
+	float3 normalFromMap = gtxtTextures[gnTextureIndex.y].Sample(gSamplerState, uv).rgb;
+	float3 normal = (normalFromMap * 2.0f) - 1.0f; // [0, 1] -> [-1, 1]
+    
+	return normalize(mul(normal, TBN));
+}
+
+float3 BlendTerrainNormal(float2 localXZ, float weights[MAX_LAYER], float3 normalW, float3 tangentW)
+{
+	float3 bitangentW = normalize(cross(normalW, tangentW));
+
+	float3 blended = float3(0, 0, 0);
+
+    [unroll(MAX_LAYER)]
+	for (int layer = 0; layer < gnTerrainLayers; ++layer)
+	{
+		float w = weights[layer];
+		if (w <= 1e-6f)
+			continue;
+
+		float2 uv = localXZ * gv4LayerTiling[layer];
+		float3 nTS = gtxtTerrainNormal[layer].Sample(gSamplerState, uv).xyz * 2 - 1;
+
+        // TBN 변환
+		float3 nW =
+            nTS.x * tangentW +
+            nTS.y * bitangentW +
+            nTS.z * normalW;
+
+		blended += nW * w;
+	}
+
+	return normalize(blended);
+}
+
+float4 BlendTerrainAlbedo(float2 localXZ, out float weights[MAX_LAYER])
+{
+	[unroll(MAX_LAYER)]
+	for (int i = 0; i < MAX_LAYER; ++i)
+	{
+		weights[i] = 0.0f;
+	}
+	
+	float2 vWeightUV = (localXZ - gv2ComponentOriginXZ) / gv2ComponentSizeXZ;
+	vWeightUV = saturate(vWeightUV);
+	
+	// Half tiling
+	// 안맞추면 경계면 이상함
+	// 조건 : gvNumQuadsXZ + 1.0f 가 WeightMap의 해상도와 일치해야 함
+	float2 vWeightMapSize = float2(gv2NumQuadsXZ) + 1.0f;
+	vWeightUV += 0.5f / vWeightMapSize;
+	
+	float4 vWeight = gtxtTerrainWeightMap.Sample(gWeightMapSamplerState, vWeightUV);
+	
+	// Layer Remapping
+	[unroll(MAX_LAYER)]
+	for (int channel = 0; channel < MAX_LAYER; ++channel)
+	{
+		int nLayer = gi4LayerIndex[channel];
+		if (nLayer >= 0)
+		{
+			weights[nLayer] += vWeight[channel];
+		}
+	}
+	
+	// Albedo sample + blend
+	float4 cFinalColor = 0;
+	[unroll(MAX_LAYER)]
+	for (int layer = 0; layer < gnTerrainLayers; ++layer)
+	{
+		float fWeight = weights[layer];
+		if (fWeight > 1e-6f)
+		{
+			float2 vTileUV = localXZ * gv4LayerTiling[layer];
+			float4 cAlbedo = gtxtTerrainAlbedo[layer].Sample(gSamplerState, vTileUV);
+			cFinalColor += cAlbedo * fWeight;
+		}
+	}
+	
+	float fSum = vWeight.r + vWeight.g + vWeight.b + vWeight.a;
+	if (fSum > 1e-6f)
+	{
+		cFinalColor /= fSum;
+	}
+	
+	return cFinalColor;
+}
+
+
 
 
 #endif 

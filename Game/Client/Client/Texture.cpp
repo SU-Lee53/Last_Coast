@@ -204,19 +204,43 @@ HRESULT Texture::LoadFromWICFile(ID3D12Resource** ppOutResource, const std::wstr
 	return hr;
 }
 
-void Texture::StateTransition(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, D3D12_RESOURCE_STATES d3dBeforeState, D3D12_RESOURCE_STATES d3dAfterState)
+void Texture::StateTransition(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, D3D12_RESOURCE_STATES d3dAfterState)
 {
+	if (m_d3dCurrentState == d3dAfterState) {
+		//__debugbreak();
+		return;
+	}
+
 	pd3dCommandList->ResourceBarrier(
 		1,
 		&CD3DX12_RESOURCE_BARRIER::Transition(
 			m_pd3dResource.Get(),
-			d3dBeforeState,
+			m_d3dCurrentState,
 			d3dAfterState,
 			D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
 			D3D12_RESOURCE_BARRIER_FLAG_NONE)
 	);
 
 	m_d3dCurrentState = d3dAfterState;
+}
+
+CD3DX12_RESOURCE_BARRIER Texture::GetResourceBarrier(D3D12_RESOURCE_STATES d3dAfterState, bool bChangeState)
+{
+	if (m_d3dCurrentState == d3dAfterState) {
+		//__debugbreak();
+		return CD3DX12_RESOURCE_BARRIER{};
+	}
+
+	CD3DX12_RESOURCE_BARRIER d3dResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		m_pd3dResource.Get(),
+		m_d3dCurrentState,
+		d3dAfterState,
+		D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+		D3D12_RESOURCE_BARRIER_FLAG_NONE);
+
+	m_d3dCurrentState = (bChangeState) ? d3dAfterState : m_d3dCurrentState;
+
+	return d3dResourceBarrier;
 }
 
 bool RenderTargetTexture::Initialize(uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat)
@@ -242,7 +266,7 @@ bool RenderTargetTexture::Initialize(uint32 unWidth, uint32 unHeight, DXGI_FORMA
 	::memcpy(clearValue.Color, pfClearColor, 4 * sizeof(float));
 	
 	DEVICE->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&d3dRTTextureDesc,
 		D3D12_RESOURCE_STATE_PRESENT,

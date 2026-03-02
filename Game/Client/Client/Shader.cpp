@@ -69,8 +69,10 @@ void StandardShader::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Ro
 		d3dPipelineDesc.InputLayout = CreateInputLayout();
 		d3dPipelineDesc.SampleMask = UINT_MAX;
 		d3dPipelineDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		d3dPipelineDesc.NumRenderTargets = 1;
+		d3dPipelineDesc.NumRenderTargets = 3;
 		d3dPipelineDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		d3dPipelineDesc.RTVFormats[1] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		d3dPipelineDesc.RTVFormats[2] = DXGI_FORMAT_R8G8B8A8_UNORM;
 		d3dPipelineDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		d3dPipelineDesc.SampleDesc.Count = 1;
 		d3dPipelineDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
@@ -126,8 +128,10 @@ void AnimatedShader::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Ro
 		d3dPipelineDesc.InputLayout = CreateInputLayout();
 		d3dPipelineDesc.SampleMask = UINT_MAX;
 		d3dPipelineDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		d3dPipelineDesc.NumRenderTargets = 1;
+		d3dPipelineDesc.NumRenderTargets = 3;
 		d3dPipelineDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		d3dPipelineDesc.RTVFormats[1] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		d3dPipelineDesc.RTVFormats[2] = DXGI_FORMAT_R8G8B8A8_UNORM;
 		d3dPipelineDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		d3dPipelineDesc.SampleDesc.Count = 1;
 		d3dPipelineDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
@@ -175,8 +179,10 @@ void TerrainShader::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Roo
 		d3dPipelineDesc.InputLayout = CreateInputLayout();
 		d3dPipelineDesc.SampleMask = UINT_MAX;
 		d3dPipelineDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		d3dPipelineDesc.NumRenderTargets = 1;
+		d3dPipelineDesc.NumRenderTargets = 3;
 		d3dPipelineDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		d3dPipelineDesc.RTVFormats[1] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		d3dPipelineDesc.RTVFormats[2] = DXGI_FORMAT_R8G8B8A8_UNORM;
 		d3dPipelineDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		d3dPipelineDesc.SampleDesc.Count = 1;
 		d3dPipelineDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;

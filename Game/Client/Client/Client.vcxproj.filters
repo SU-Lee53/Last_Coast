@@ -376,6 +376,9 @@
     <ClInclude Include="TerrainPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
+    <ClInclude Include="GBufferPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -631,6 +634,9 @@
     <ClCompile Include="TerrainPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
+    <ClCompile Include="GBufferPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
@@ -672,6 +678,9 @@
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\NewCommon.hlsl">
+      <Filter>03.Engine\HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\DefferedShader.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
   </ItemGroup>

@@ -181,6 +181,7 @@
     <ClInclude Include="GameFramework.h" />
     <ClInclude Include="GameObject.h" />
     <ClInclude Include="GameTimer.h" />
+    <ClInclude Include="GBufferPass.h" />
     <ClInclude Include="GuiManager.h" />
     <ClInclude Include="HeightMapRawImage.h" />
     <ClInclude Include="IDGenerator.h" />
@@ -302,6 +303,7 @@
     <ClCompile Include="GameFramework.cpp" />
     <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="GameTimer.cpp" />
+    <ClCompile Include="GBufferPass.cpp" />
     <ClCompile Include="GuiManager.cpp" />
     <ClCompile Include="HeightMapRawImage.cpp" />
     <ClCompile Include="IDGenerator.cpp" />
@@ -357,6 +359,10 @@
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="..\HLSL\Common.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\DefferedShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>

@@ -25,8 +25,11 @@ public:
 public:
 	void StateTransition(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-		D3D12_RESOURCE_STATES d3dBeforeState, 
 		D3D12_RESOURCE_STATES d3dAfterState);
+	
+	CD3DX12_RESOURCE_BARRIER GetResourceBarrier(
+		D3D12_RESOURCE_STATES d3dAfterState,
+		bool bChangeState = false);
 
 	ComPtr<ID3D12Resource> GetResource() const { return m_pd3dResource; }
 	CD3DX12_CPU_DESCRIPTOR_HANDLE GetSRVHandle() { return m_d3dSRVHandle; }
@@ -74,7 +77,7 @@ class RenderTargetTexture : public Texture {
 
 public:
 	const D3D12_RENDER_TARGET_VIEW_DESC& GetRTVDesc() const { return m_d3dRTVDesc; }
-	D3D12_CPU_DESCRIPTOR_HANDLE GetRTVHandle() { return m_d3dRTVHandle; }
+	CD3DX12_CPU_DESCRIPTOR_HANDLE GetRTVHandle() { return m_d3dRTVHandle; }
 
 private:
 	bool Initialize(
@@ -100,7 +103,7 @@ class DepthStencilTexture : public Texture {
 
 public:
 	const D3D12_DEPTH_STENCIL_VIEW_DESC& GetDSVDesc() const { return m_d3dDSVDesc; }
-	D3D12_CPU_DESCRIPTOR_HANDLE GetDSVHandle() { return m_d3dDSVHandle; }
+	CD3DX12_CPU_DESCRIPTOR_HANDLE GetDSVHandle() { return m_d3dDSVHandle; }
 
 private:
 	bool Initialize(
@@ -127,7 +130,7 @@ class UnorderedAccessTexture : public Texture {
 
 public:
 	const D3D12_UNORDERED_ACCESS_VIEW_DESC& GetUAVDesc() const { return m_d3dUAVDesc; }
-	D3D12_CPU_DESCRIPTOR_HANDLE GetUAVHandle() { return m_d3dUAVHandle; }
+	CD3DX12_CPU_DESCRIPTOR_HANDLE GetUAVHandle() { return m_d3dUAVHandle; }
 
 private:
 	bool Initialize(

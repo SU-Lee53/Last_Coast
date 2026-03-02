@@ -182,14 +182,24 @@ void ShaderManager::CompileShaders()
 	};
 
 	// Shaders.hlsl
-	Compile("StandardVS", L"Shaders.hlsl", L"VSStandard", SHADER_TYPE::VS);
-	Compile("StandardPS", L"Shaders.hlsl", L"PSStandard", SHADER_TYPE::PS);
+	//	Compile("StandardVS", L"Shaders.hlsl", L"VSStandard", SHADER_TYPE::VS);
+	//	Compile("StandardPS", L"Shaders.hlsl", L"PSStandard", SHADER_TYPE::PS);
+	//	
+	//	Compile("AnimatedVS", L"Shaders.hlsl", L"VSAnimated", SHADER_TYPE::VS);
+	//	Compile("AnimatedPS", L"Shaders.hlsl", L"PSAnimated", SHADER_TYPE::PS);
+	//	
+	//	Compile("TerrainVS", L"Shaders.hlsl", L"VSTerrain", SHADER_TYPE::VS);
+	//	Compile("TerrainPS", L"Shaders.hlsl", L"PSTerrain", SHADER_TYPE::PS);
+
+	// Shaders.hlsl
+	Compile("StandardVS", L"DefferedShader.hlsl", L"VSStandard", SHADER_TYPE::VS);
+	Compile("StandardPS", L"DefferedShader.hlsl", L"PSStandard", SHADER_TYPE::PS);
 	
-	Compile("AnimatedVS", L"Shaders.hlsl", L"VSAnimated", SHADER_TYPE::VS);
-	Compile("AnimatedPS", L"Shaders.hlsl", L"PSAnimated", SHADER_TYPE::PS);
+	Compile("AnimatedVS", L"DefferedShader.hlsl", L"VSAnimated", SHADER_TYPE::VS);
+	Compile("AnimatedPS", L"DefferedShader.hlsl", L"PSAnimated", SHADER_TYPE::PS);
 	
-	Compile("TerrainVS", L"Shaders.hlsl", L"VSTerrain", SHADER_TYPE::VS);
-	Compile("TerrainPS", L"Shaders.hlsl", L"PSTerrain", SHADER_TYPE::PS);
+	Compile("TerrainVS", L"DefferedShader.hlsl", L"VSTerrain", SHADER_TYPE::VS);
+	Compile("TerrainPS", L"DefferedShader.hlsl", L"PSTerrain", SHADER_TYPE::PS);
 
 	//// FullScreenShader.hlsl
 	//Compile("FullScreenVS", L"FullScreenShader.hlsl", L"VSFullScreen", SHADER_TYPE::VS);
