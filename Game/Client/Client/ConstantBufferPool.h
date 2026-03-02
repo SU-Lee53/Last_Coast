@@ -28,7 +28,7 @@ class ConstantBufferPool {
 public:
 	ConstantBufferPool();
 
-	void Initialize(ComPtr<ID3D12Device> pd3dDevice, size_t nCBVCountIn256Bytes, UINT minCBVSize = 256, UINT maxCBVSize = 65536);
+	void Initialize(size_t nCBVCountIn256Bytes, UINT minCBVSize = 256, UINT maxCBVSize = 65536);
 
 	template<typename T>
 	ConstantBuffer& Allocate();

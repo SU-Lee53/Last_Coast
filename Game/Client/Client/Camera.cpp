@@ -205,14 +205,14 @@ void Camera::SetViewportsAndScissorRects(ComPtr<ID3D12GraphicsCommandList> pd3dC
 	pd3dCommandList->RSSetScissorRects(1, &m_d3dScissorRect);
 }
 
-CB_CAMERA_DATA Camera::MakeCBData() const
+CameraData Camera::MakeCBData() const
 {
-	CB_CAMERA_DATA camData{
-		.mtxView = m_mtxView.Transpose(),
-		.mtxProjection = m_mtxProjection.Transpose(),
-		.v3CameraPosition = m_v3Position
-	};
-
+	CameraData camData{};
+	{
+		camData.mtxView = m_mtxView.Transpose();
+		camData.mtxProjection = m_mtxProjection.Transpose();
+		camData.v3CameraPosition = m_v3Position;
+	}
 
 	return camData;
 }

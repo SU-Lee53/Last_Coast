@@ -8,10 +8,10 @@ void AnimationTestScene::BuildObjects()
 {
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 	LoadFromFiles("TEST");
-
-	//m_pPlayer = std::make_shared<DebugPlayer>();
 	//m_pTerrain = std::make_shared<TerrainObject>();
 	//m_pTerrain->LoadFromFiles("TEST");
+
+	//m_pPlayer = std::make_shared<DebugPlayer>();
 
 	/*
 	m_pPlayer = std::make_shared<DebugPlayer>();
@@ -115,9 +115,4 @@ void AnimationTestScene::Update()
 	//}
 	//ImGui::End();
 
-}
-
-void AnimationTestScene::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList)
-{
-	Scene::RenderObjects(pd3dCommansList);
 }

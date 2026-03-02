@@ -221,9 +221,9 @@ void UIManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(m_pd3dDescriptorHeap->GetGPUDescriptorHandleForHeapStart()) 
 	};
 
-	std::shared_ptr<Texture> pFontTex = TEXTURE->Get("font");
+	std::shared_ptr<Texture> pFontTex = TEXTURE->GetTextureByName("font", TEXTURE_RESOURCE_TYPE::SRV);
 
-	m_pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, pFontTex->GetHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	m_pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, pFontTex->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 
 	pd3dCommandList->SetGraphicsRootDescriptorTable(0, descHandle.gpuHandle);

@@ -1,6 +1,14 @@
 ﻿#include "pch.h"
 #include "HeightMapRawImage.h"
 
+void HeightMapRawImage::UpdateOrigin(const Matrix& mtxWorld)
+{
+	Vector3 v3Origin{ m_fOriginX, 0.f, m_fOriginZ };
+	Vector3::Transform(v3Origin, mtxWorld);
+	m_fOriginX = v3Origin.x;
+	m_fOriginZ = v3Origin.z;
+}
+
 HRESULT HeightMapRawImage::LoadFromFile(const std::string& strFilename, uint32 unWidth, uint32 unHeight, float fOriginX, float fOriginZ, float fScaleX, float fScaleZ, float fHeightScale)
 {
 	m_unWidth = unWidth;

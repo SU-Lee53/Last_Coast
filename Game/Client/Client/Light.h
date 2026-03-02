@@ -8,7 +8,7 @@ enum LIGHT_TYPE : int {
 
 class Light {
 public:
-    virtual LightData MakeLightData() { return LightData{}; }
+    virtual LightData MakeCBData() { return LightData{}; }
 
 public:
     bool m_bEnable;
@@ -16,7 +16,7 @@ public:
 
 class PointLight : public Light {
 public:
-    virtual LightData MakeLightData() override;
+    virtual LightData MakeCBData() override;
 
     Vector4    m_v4Diffuse;
     Vector4    m_v4Ambient;
@@ -34,7 +34,7 @@ public:
 
 class SpotLight : public Light {
 public:
-    virtual LightData MakeLightData() override;
+    virtual LightData MakeCBData() override;
 
     Vector4    m_v4Diffuse;
     Vector4    m_v4Ambient;
@@ -54,7 +54,7 @@ public:
 
 class DirectionalLight : public Light {
 public:
-    virtual LightData MakeLightData() override;
+    virtual LightData MakeCBData() override;
 
     Vector4    m_v4Diffuse;
     Vector4    m_v4Ambient;

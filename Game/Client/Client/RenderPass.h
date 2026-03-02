@@ -1,30 +1,114 @@
 ﻿#pragma once
 #include "Scene.h"
-#include "StructuredBuffer.h"
 
-struct InstancePair;
-class RenderTargetTexture;
+struct RenderPassResource {
+	void* pResource;
 
-class RenderPass {
+	template<typename T>
+	const T* Get() const {
+		return static_cast<T*>(pResource);
+	}
+};
+
+struct RenderPassInput {
+	std::vector<RenderTargetTexture> pRenderTargets;
+	RenderPassResource passResource;
+};
+
+struct RenderPassOutput {
+	std::vector<RenderTargetTexture> pRenderTargets;
+	RenderPassResource passResource;
+
+	RenderPassInput ToInput() {
+		return RenderPassInput{ pRenderTargets, passResource };
+	}
+};
+
+interface IRenderPass abstract {
 public:
-	RenderPass() {}
-	virtual ~RenderPass() {}
+	void Initialize();
 
-	virtual void Run(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<InstancePair>& instances, DescriptorHandle& descHandleFromPassStart) = 0;
+	void Execute(
+		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
+		const RenderPassInput& input, 
+		OUT RenderPassOutput& output, 
+		OUT DescriptorHandle& outDescHandle);
+
+	void Connect(std::shared_ptr<IRenderPass> pNode);
+	const std::list<std::shared_ptr<IRenderPass>>& GetEdges() const { return m_pEdgeList; }
+
+protected:
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const = 0;
+	virtual void OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const = 0;
+	virtual void OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const = 0;
+
 
 protected:
 	std::vector<RenderTargetTexture> m_pRTVs;			// for MRT
 
+	std::list<std::shared_ptr<IRenderPass>> m_pEdgeList;
 };
 
-class ForwardPass : public RenderPass {
+class ShadowMapPass : public IRenderPass {
 public:
-	ForwardPass(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommmandList);
-	virtual ~ForwardPass() {}
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const override {}
+	virtual void OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
+	virtual void OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
 
-	virtual void Run(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<InstancePair>& instances, DescriptorHandle& descHandleFromPassStart) override;
+};
 
-protected:
-	StructuredBuffer m_InstanceSBuffer;
+class GBufferPass : public IRenderPass {
+public:
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const override {}
+	virtual void OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
+	virtual void OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
+
+};
+
+class DefferedLightingPass: public IRenderPass {
+public:
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const override {}
+	virtual void OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
+	virtual void OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
+
+};
+
+class TransparentPass: public IRenderPass {	// Forward
+public:
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const override {}
+	virtual void OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
+	virtual void OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
+
+};
+
+class SkyboxPass : public IRenderPass {
+public:
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const override {}
+	virtual void OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
+	virtual void OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
+
+};
+
+class PostProcessingHDRPass: public IRenderPass {
+public:
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const override {}
+	virtual void OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
+	virtual void OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
+
+};
+
+class PostProcessingLDRPass: public IRenderPass {
+public:
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const override {}
+	virtual void OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
+	virtual void OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
+
+};
+
+class ToneMappingPass : public IRenderPass {
+public:
+	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const override {}
+	virtual void OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
+	virtual void OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const override {}
 
 };

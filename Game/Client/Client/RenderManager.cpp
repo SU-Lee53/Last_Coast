@@ -5,12 +5,18 @@
 
 ComPtr<ID3D12RootSignature> RenderManager::g_pd3dGlobalRootSignature = nullptr;
 
-void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
+void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 {
-	CreateGlobalRootSignature(pd3dDevice, pd3dCommandList);
-	CreateSkyboxPipelineState(pd3dDevice);
+	m_pd3dDevice = pd3dDevice;
+	CreateFence();
+	CreateCommandQueueAndList();
+	CreateSwapChain();
+	CreateRenderTarget();
+	CreateDepthStencil();
 
-	m_pForwardPass = std::make_shared<ForwardPass>(pd3dDevice, pd3dCommandList);
+	CreateGlobalRootSignature(pd3dDevice);
+
+	//m_pForwardPass = std::make_shared<ForwardPass>(pd3dDevice, pd3dCommandList);
 
 	// DescriptorHandle Heap For Draw
 	D3D12_DESCRIPTOR_HEAP_DESC d3dHeapDesc;
@@ -21,71 +27,73 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Gra
 		d3dHeapDesc.NodeMask = 0;
 	}
 
-	m_DescriptorHeapForDraw.Initialize(pd3dDevice, d3dHeapDesc);
+	for (uint32 i = 0; i < g_unMaxPendingFrames; ++i) {
+		m_DescriptorHeapForDraw[i].Initialize(pd3dDevice, d3dHeapDesc);
+		m_ConstantBufferPool[i].Initialize(1000);
+		m_StructuredBufferPool[i].Initialize(100'000, 1000);
+	}
 }
 
-void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
+void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 {
-	m_pd3dDevice = pd3dDevice;
+	CD3DX12_DESCRIPTOR_RANGE1 d3dDescriptorRanges[11]; 
+	// space0 : Per Scene (Frame) 
+	d3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbSceneData 
+	d3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gLightData 
+	d3dDescriptorRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtSkyboxDay / Night 
+	d3dDescriptorRanges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 8, 11, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtShadows[8] 
+	
+	// space1 : Per Pass 
+	d3dDescriptorRanges[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 1, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // gMaterialData 
+	d3dDescriptorRanges[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, 1, 1, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTextures
 
-	// Global Root Signature
-	CD3DX12_DESCRIPTOR_RANGE d3dDescriptorRanges[10];
-	d3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, 0);	// Per Scene (Camera)			-> b0
-	d3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, 0);	// Per Scene (Cubemap)			-> t0
+	// space2 : cbTerrainLayerData
+	d3dDescriptorRanges[6].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbTerrainLayerData
+	d3dDescriptorRanges[7].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 2, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainAlbedo[4] 
+	d3dDescriptorRanges[8].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 6, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainNormal[4]
 
-	d3dDescriptorRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 0, 0);	// Per Scene (Terrain Layer)	-> b2
-	d3dDescriptorRanges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 8, 1, 0, 1);	// Per Scene (Terrain Texture)	-> 4 Albedo + 4 Normal -> t1 ~ t8
+	// space2 : cbTerrainComponentData
+	d3dDescriptorRanges[9].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbTerrainComponentData 
+	d3dDescriptorRanges[10].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 10, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainWeightMap
 
-	d3dDescriptorRanges[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 3, 0, 0);	// Per Scene (Terrain data)		-> b3	(b1 : CBV light data)
-	d3dDescriptorRanges[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 9, 0, 0);	// Per Scene (Weightmap)		-> 1 Weightmap -> t9
+	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[7];
+	// Per Pass
+	d3dRootParameters[0].InitAsDescriptorTable(4, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);
+	
+	// Per Pass
+	d3dRootParameters[1].InitAsDescriptorTable(2, &d3dDescriptorRanges[4], D3D12_SHADER_VISIBILITY_ALL);
 
-	d3dDescriptorRanges[6].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 10, 0, 0);	// Per Pass	 (World 변환)		-> t10
+	// Per Instance(Draw)
+	d3dRootParameters[2].InitAsConstantBufferView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// cbInstanceData
+	d3dRootParameters[3].InitAsShaderResourceView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gWorldTransforms
+	d3dRootParameters[4].InitAsShaderResourceView(1, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gBoneTransforms
+	d3dRootParameters[5].InitAsDescriptorTable(3, &d3dDescriptorRanges[6], D3D12_SHADER_VISIBILITY_ALL);	// TerrainLayer
+	d3dRootParameters[6].InitAsDescriptorTable(2, &d3dDescriptorRanges[9], D3D12_SHADER_VISIBILITY_ALL);	// TerrainComponent
 
-	d3dDescriptorRanges[7].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2, 4, 0, 0);	// Per Object (Material, instance base) + 필요한경우 World	-> b4, b5
-	d3dDescriptorRanges[8].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 6, 0, 0);	// Bone Transform				-> b6
-	d3dDescriptorRanges[9].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 11, 0, 0);	// Diffuse, Normal/Height		-> t11 ~ t14
-
-	CD3DX12_ROOT_PARAMETER d3dRootParameters[10]; 
-	d3dRootParameters[0].InitAsDescriptorTable(1, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);	// Scene (Camera)
-	d3dRootParameters[1].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL);						// Scene (Light)
-	d3dRootParameters[2].InitAsDescriptorTable(1, &d3dDescriptorRanges[1], D3D12_SHADER_VISIBILITY_ALL);	// Scene (Cubemap(Skybox))
-	d3dRootParameters[3].InitAsDescriptorTable(2, &d3dDescriptorRanges[2], D3D12_SHADER_VISIBILITY_ALL);	// Scene (Terrain Textures)		RP 2, 3
-	d3dRootParameters[4].InitAsDescriptorTable(1, &d3dDescriptorRanges[4], D3D12_SHADER_VISIBILITY_ALL);	// Scene (Terrain data)			RP 4
-	d3dRootParameters[5].InitAsDescriptorTable(1, &d3dDescriptorRanges[5], D3D12_SHADER_VISIBILITY_ALL);	// Scene (Weightmap)			RP 5
-
-	d3dRootParameters[6].InitAsDescriptorTable(1, &d3dDescriptorRanges[6], D3D12_SHADER_VISIBILITY_ALL);	// Pass (World)
-
-	d3dRootParameters[7].InitAsDescriptorTable(1, &d3dDescriptorRanges[7], D3D12_SHADER_VISIBILITY_ALL);	// Material
-	d3dRootParameters[8].InitAsDescriptorTable(1, &d3dDescriptorRanges[8], D3D12_SHADER_VISIBILITY_ALL);	// Bone Transform
-	d3dRootParameters[9].InitAsDescriptorTable(1, &d3dDescriptorRanges[9], D3D12_SHADER_VISIBILITY_ALL);	// Texture(Diffused, Normal/Height)
-
-	// s0 : SkyboxSampler
 	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[3];
+	// s0 : SkyboxSampler
 	d3dSamplerDesc[0].Init(0);
 	d3dSamplerDesc[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 	d3dSamplerDesc[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 	d3dSamplerDesc[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 	d3dSamplerDesc[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	d3dSamplerDesc[0].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 	d3dSamplerDesc[0].MinLOD = 0;
 	d3dSamplerDesc[0].MaxLOD = D3D12_FLOAT32_MAX;
 	d3dSamplerDesc[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	// s1 : TextureSampler (general)
+	// s1 : WeightMap Sampler
 	d3dSamplerDesc[1].Init(1);
-	d3dSamplerDesc[1].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-	d3dSamplerDesc[1].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	d3dSamplerDesc[1].Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+	d3dSamplerDesc[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	d3dSamplerDesc[1].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	d3dSamplerDesc[1].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 	d3dSamplerDesc[1].MinLOD = 0;
 	d3dSamplerDesc[1].MaxLOD = D3D12_FLOAT32_MAX;
 	d3dSamplerDesc[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	// s2 : WeightMap Sampler
+	// s2 : TextureSampler (General)
 	d3dSamplerDesc[2].Init(2);
-	d3dSamplerDesc[2].Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-	d3dSamplerDesc[2].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-	d3dSamplerDesc[2].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	d3dSamplerDesc[2].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	d3dSamplerDesc[2].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	d3dSamplerDesc[2].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 	d3dSamplerDesc[2].MinLOD = 0;
 	d3dSamplerDesc[2].MaxLOD = D3D12_FLOAT32_MAX;
 	d3dSamplerDesc[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
@@ -94,20 +102,19 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice, C
 		| D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS
 		| D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS;
 
-	D3D12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc{};
-	{
-		d3dRootSignatureDesc.NumParameters = _countof(d3dRootParameters);
-		d3dRootSignatureDesc.pParameters = d3dRootParameters;
-		d3dRootSignatureDesc.NumStaticSamplers = _countof(d3dSamplerDesc);
-		d3dRootSignatureDesc.pStaticSamplers = d3dSamplerDesc;
-		d3dRootSignatureDesc.Flags = d3dRootSignatureFlags;
-	}
+	D3D12_VERSIONED_ROOT_SIGNATURE_DESC d3dRootSignatureDesc{};
+	d3dRootSignatureDesc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
+	d3dRootSignatureDesc.Desc_1_1.NumParameters = _countof(d3dRootParameters);
+	d3dRootSignatureDesc.Desc_1_1.pParameters = d3dRootParameters;
+	d3dRootSignatureDesc.Desc_1_1.NumStaticSamplers = _countof(d3dSamplerDesc);
+	d3dRootSignatureDesc.Desc_1_1.pStaticSamplers = d3dSamplerDesc;
+	d3dRootSignatureDesc.Desc_1_1.Flags = d3dRootSignatureFlags;
 
 	ComPtr<ID3DBlob> pd3dSignatureBlob = nullptr;
 	ComPtr<ID3DBlob> pd3dErrorBlob = nullptr;
 
-	HRESULT hr = D3D12SerializeRootSignature(&d3dRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, pd3dSignatureBlob.GetAddressOf(), pd3dErrorBlob.GetAddressOf());
-	if (pd3dErrorBlob) {
+	HRESULT hr = D3D12SerializeVersionedRootSignature(&d3dRootSignatureDesc, pd3dSignatureBlob.GetAddressOf(), pd3dErrorBlob.GetAddressOf());
+	if (FAILED(hr)) {
 		char* pErrorString = (char*)pd3dErrorBlob->GetBufferPointer();
 		HWND hWnd = ::GetActiveWindow();
 		MessageBoxA(hWnd, pErrorString, NULL, 0);
@@ -115,166 +122,351 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice, C
 		__debugbreak();
 	}
 
-	pd3dDevice->CreateRootSignature(0, pd3dSignatureBlob->GetBufferPointer(), pd3dSignatureBlob->GetBufferSize(), IID_PPV_ARGS(g_pd3dGlobalRootSignature.GetAddressOf()));
-
+	pd3dDevice->CreateRootSignature(
+		0, 
+		pd3dSignatureBlob->GetBufferPointer(), 
+		pd3dSignatureBlob->GetBufferSize(), 
+		IID_PPV_ARGS(g_pd3dGlobalRootSignature.GetAddressOf())
+	);
 }
 
-void RenderManager::CreateSkyboxPipelineState(ComPtr<ID3D12Device> pd3dDevice)
+void RenderManager::BuildRenderGraph()
 {
-	ComPtr<ID3DBlob> m_pd3dVertexShaderBlob = nullptr;
-	ComPtr<ID3DBlob> m_pd3dGeometryShaderBlob = nullptr;
-	ComPtr<ID3DBlob> m_pd3dPixelShaderBlob = nullptr;
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC d3dPipelineDesc{};
-	{
-		d3dPipelineDesc.pRootSignature = g_pd3dGlobalRootSignature.Get();
-		d3dPipelineDesc.VS = Shader::CompileShader(L"../HLSL/SkyboxShader.hlsl", "VSSkybox", "vs_5_1", m_pd3dVertexShaderBlob.GetAddressOf());
-		d3dPipelineDesc.GS = Shader::CompileShader(L"../HLSL/SkyboxShader.hlsl", "GSSkybox", "gs_5_1", m_pd3dGeometryShaderBlob.GetAddressOf());
-		d3dPipelineDesc.PS = Shader::CompileShader(L"../HLSL/SkyboxShader.hlsl", "PSSkybox", "ps_5_1", m_pd3dPixelShaderBlob.GetAddressOf());
-		d3dPipelineDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_FRONT;
-		d3dPipelineDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-		d3dPipelineDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-		d3dPipelineDesc.DepthStencilState.DepthEnable = true;
-		d3dPipelineDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-		d3dPipelineDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-		d3dPipelineDesc.InputLayout.NumElements = 0;
-		d3dPipelineDesc.InputLayout.pInputElementDescs = nullptr;
-		d3dPipelineDesc.SampleMask = UINT_MAX;
-		d3dPipelineDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;	// GS가 점을 받음
-		d3dPipelineDesc.NumRenderTargets = 1;
-		d3dPipelineDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-		d3dPipelineDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		d3dPipelineDesc.SampleDesc.Count = 1;
-		d3dPipelineDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	}
-
-	HRESULT hr = pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dSkyboxPipelineState.GetAddressOf()));
-	if (FAILED(hr)) {
-		__debugbreak();
-	}
+	m_RenderGraph.BuildGraph();
 }
 
-void RenderManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
+void RenderManager::Render()
 {
-	/*
-			1. 기존 과제 방식대로 Map 과 vector를 병행
-			2. vector로 Pre-Pass 수행
-			3. Map에 보관된 인덱스를 따라 Forward, Differed 분할
-			4. std::span view 를 이용하여 Forward, Differed 렌더링 각각 수행
-			5. Post-Processing
-			+ Sprite
-	
-	*/
+	OnPrepareRender();
 
-	CUR_SCENE->GetCamera()->SetViewportsAndScissorRects(pd3dCommandList);
+	ComPtr<ID3D12GraphicsCommandList> pd3dCommandList = m_ppd3dCommandList[m_unCurrentContextIndex];
 
 	pd3dCommandList->SetGraphicsRootSignature(g_pd3dGlobalRootSignature.Get());
-	pd3dCommandList->SetDescriptorHeaps(1, m_DescriptorHeapForDraw.GetD3DDescriptorHeap().GetAddressOf());
+	pd3dCommandList->SetDescriptorHeaps(1, m_DescriptorHeapForDraw[m_unCurrentContextIndex].GetD3DDescriptorHeap().GetAddressOf());
 	
-	// Scene Data 바인딩
-	DescriptorHandle descHandle = m_DescriptorHeapForDraw.GetDescriptorHandleFromHeapStart();
+	auto pCamera = CUR_SCENE->GetCamera();
+	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+
+	DescriptorHandle descHandle = m_DescriptorHeapForDraw[m_unCurrentContextIndex].GetDescriptorHandleFromHeapStart();
+	BindPerSceneData(pd3dCommandList, descHandle);
+
+	RenderPassInput input{};
+	input.passResource.pResource = (void*)(&m_pRenderItems);
+	 
+	m_RenderGraph.Run(descHandle, pd3dCommandList, input);
+
+	GUI->Render(pd3dCommandList);
+
+	OnPostRender();
+	Present();
+}
+
+void RenderManager::Reset(uint32 unContextIndex)
+{
+	m_pRenderItems.clear();
+
+	m_ConstantBufferPool[unContextIndex].Reset();
+	m_StructuredBufferPool[unContextIndex].Reset();
+}
+
+void RenderManager::BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle)
+{
+	// descRange[0]  :  cbSceneData					1
+	// descRange[1]  :  gLightData					1
+	// descRange[2]  :  gtxtSkyboxDay / Night		2
+	// descRange[3]  :  gtxtShadows[8]				8 -> sum = 12
+
+
+	uint32 unDescIncrementSize = D3DCore::g_nCBVSRVDescriptorIncrementSize;
+
+	// Cache
+	const auto& pTerrain = CUR_SCENE->GetTerrain();
+
+	// descRange[0]
+	CB_SCENE_DATA sceneCBData;
+	{
+		sceneCBData.gSceneGlobal.fTotalTime = TIME->GetTotalTime();
+		sceneCBData.gSceneGlobal.fElapsedTime = TIME->GetTimeElapsed();
+		sceneCBData.gSceneGlobal.nNumLights = CUR_SCENE->GetLightsInScene().size();
+		sceneCBData.gSceneGlobal.v4GlobalAmbient = CUR_SCENE->GetGlobalAmbient();
+		sceneCBData.gCamera = CUR_SCENE->GetCamera()->MakeCBData();
+	}
+	auto perSceneCBuffer = AllocCBuffer<CB_SCENE_DATA>();
+	perSceneCBuffer.WriteData(&sceneCBData);
+	DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, perSceneCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	outDescHandle.cpuHandle.Offset(1, unDescIncrementSize);
+
+	// descRange[1]
+	std::vector<LightData> lightDatas;
+	lightDatas.reserve(sceneCBData.gSceneGlobal.nNumLights);
+	for (const auto& pLight : CUR_SCENE->GetLightsInScene()) {
+		lightDatas.push_back(pLight->MakeCBData());
+	}
+	auto lightSBuffer = AllocSBuffer<LightData>(lightDatas.size());
+	lightSBuffer.WriteData(lightDatas);
+	DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, lightSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	outDescHandle.cpuHandle.Offset(1, unDescIncrementSize);
+
+	// descRange[2] - not yet
+	outDescHandle.cpuHandle.Offset(2, unDescIncrementSize);
+
+	// descRange[3] - not yet
+	outDescHandle.cpuHandle.Offset(8, unDescIncrementSize);
+
+	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::PER_SCENE_DATA), outDescHandle.gpuHandle);
+	outDescHandle.gpuHandle.Offset(12, unDescIncrementSize);	// 1 + 1 + 2 + 8 = 20
+
+}
+
+const std::shared_ptr<RenderTargetTexture> RenderManager::GetCurrentBackBuffer() const
+{
+	return std::static_pointer_cast<RenderTargetTexture>(TEXTURE->GetTextureByID(m_BackBufferIDs[m_unBackBufferIndex].second, TEXTURE_RESOURCE_TYPE::RTV));
+}
+
+const std::shared_ptr<DepthStencilTexture> RenderManager::GetDepthStencilBuffer() const
+{
+	return std::static_pointer_cast<DepthStencilTexture>(TEXTURE->GetTextureByID(m_DepthStencilID.second, TEXTURE_RESOURCE_TYPE::DSV));
+}
+
+const CD3DX12_CPU_DESCRIPTOR_HANDLE RenderManager::GetCurrentBackBufferHandle() const
+{
+	auto p = TEXTURE->GetTextureByID(m_BackBufferIDs[m_unBackBufferIndex].second, TEXTURE_RESOURCE_TYPE::RTV);
+	return CD3DX12_CPU_DESCRIPTOR_HANDLE(static_pointer_cast<RenderTargetTexture>(p)->GetRTVHandle());
+}
+
+const CD3DX12_CPU_DESCRIPTOR_HANDLE RenderManager::GetDepthStencilBufferHandle() const
+{
+	auto p = TEXTURE->GetTextureByID(m_DepthStencilID.second, TEXTURE_RESOURCE_TYPE::DSV);
+	return CD3DX12_CPU_DESCRIPTOR_HANDLE(static_pointer_cast<DepthStencilTexture>(p)->GetDSVHandle());
+}
+
+void RenderManager::OnPrepareRender()
+{
+	ComPtr<ID3D12CommandAllocator> pd3dCommandAllocator = m_ppd3dCommandAllocator[m_unCurrentContextIndex];
+	ComPtr<ID3D12GraphicsCommandList> pd3dCommandList = m_ppd3dCommandList[m_unCurrentContextIndex];
+	HRESULT hr{};
+
+	hr = pd3dCommandAllocator->Reset();
+	if (FAILED(hr)) {
+		SHOW_ERROR("Faied to reset CommandAllocator");
+		__debugbreak();
+	}
+
+	hr = pd3dCommandList->Reset(pd3dCommandAllocator.Get(), NULL);
+	if (FAILED(hr)) {
+		SHOW_ERROR("Faied to reset CommandList");
+		__debugbreak();
+	}
+
+	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
+	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
+	{
+		d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		d3dResourceBarrier.Transition.pResource = GetCurrentBackBuffer()->GetResource().Get();
+		d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+		d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	}
+	pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = GetCurrentBackBufferHandle();
+	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dDSVDescriptorHandle = GetDepthStencilBufferHandle();
+
+	float pfClearColor[4] = { 0.f, 0.0f, 0.0f, 1.0f };
+	pd3dCommandList->ClearRenderTargetView(d3dRTVCPUDescriptorHandle, pfClearColor, 0, NULL);
+	pd3dCommandList->ClearDepthStencilView(d3dDSVDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, NULL);
 	
-	CB_CAMERA_DATA camData = CUR_SCENE->GetCamera()->MakeCBData();
-	CB_LIGHT_DATA lightData = CUR_SCENE->MakeLightData(); 
-	ConstantBuffer& camCBuffer = RESOURCE->AllocCBuffer<CB_CAMERA_DATA>();
-	ConstantBuffer& lightCBuffer = RESOURCE->AllocCBuffer<CB_LIGHT_DATA>();
+	pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, &d3dDSVDescriptorHandle);
+}
 
-	camCBuffer.WriteData(&camData);
-	lightCBuffer.WriteData(&lightData);
+void RenderManager::OnPostRender()
+{
+	ComPtr<ID3D12GraphicsCommandList> pd3dCommandList = m_ppd3dCommandList[m_unCurrentContextIndex];
+	HRESULT hr;
 
-	m_pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, camCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+	// Change rendered render target's resource state from D3D12_RESOURCE_STATE_RENDER_TARGET to D3D12_RESOURCE_STATE_PRESENT
+	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
+	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
+	{
+		d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		d3dResourceBarrier.Transition.pResource = GetCurrentBackBuffer()->GetResource().Get();
+		d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+		d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	}
+	pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
 
-	// 0
-	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::SCENE_CAM_DATA), descHandle.gpuHandle);
-	descHandle.gpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+	pd3dCommandList->Close();
 
-	// 1
-	pd3dCommandList->SetGraphicsRootConstantBufferView(std::to_underlying(ROOT_PARAMETER::SCENE_LIGHT_DATA), lightCBuffer.GPUAddress);
+	ID3D12CommandList* ppd3dCommandLists[] = { pd3dCommandList.Get() };
+	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+}
 
-	descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-	descHandle.gpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+void RenderManager::CreateFence()
+{
+	m_pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_pd3dFence.GetAddressOf()));
+	m_hFenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
+}
 
-	// Pass 수행
-	// Run 안에서 descHandle 의 offset 이 사용된만큼 움직임
-	m_pForwardPass->Run(m_pd3dDevice, pd3dCommandList, m_InstanceDatas, descHandle);
-	RenderAnimated(pd3dCommandList, descHandle);
+void RenderManager::CreateCommandQueueAndList()
+{
+	HRESULT hr{};
 
-	if (const auto& pTerrain =  CUR_SCENE->GetTerrain()) {
-		pTerrain->RenderImmediate(m_pd3dDevice, pd3dCommandList, descHandle);
+	D3D12_COMMAND_QUEUE_DESC d3dCommandQueueDesc{};
+	{
+		d3dCommandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		d3dCommandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 	}
 
-	RenderSkybox(pd3dCommandList, descHandle);
-}
+	hr = m_pd3dDevice->CreateCommandQueue(&d3dCommandQueueDesc, IID_PPV_ARGS(m_pd3dCommandQueue.GetAddressOf()));
+	if (FAILED(hr)) {
+		SHOW_ERROR("Failed to create CommandQueue");
+	}
 
-void RenderManager::RenderAnimated(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle)
-{
-	for (const auto& pObj : m_pAnimatedObjects) {
-		const auto& boneTransforms = pObj->GetComponent<AnimationController>()->GetFinalOutput();
-		ConstantBuffer& boneCBuffer = RESOURCE->AllocCBuffer<CB_BONE_TRANSFORM_DATA>();
-		boneCBuffer.WriteData(boneTransforms);
+	// Create Command Allocator
+	for (uint32 i = 0; i < g_unMaxPendingFrames; ++i) {
+		hr = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_ppd3dCommandAllocator[i].GetAddressOf()));
+		if (FAILED(hr)) {
+			SHOW_ERROR("Failed to create CommandAllocator");
+		}
 
-		m_pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, boneCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::OBJ_BONE_TRANSFORM_DATA), descHandle.gpuHandle);
-		descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-		descHandle.gpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-		pObj->RenderImmediate(m_pd3dDevice, pd3dCommandList, descHandle);
+		// Create Command List
+		hr = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_ppd3dCommandAllocator[i].Get(), NULL, IID_PPV_ARGS(m_ppd3dCommandList[i].GetAddressOf()));
+		if (FAILED(hr)) {
+			SHOW_ERROR("Failed to create CommandList");
+		}
+		// Close Command List(default is opened)
+		hr = m_ppd3dCommandList[i]->Close();
 	}
 
 }
 
-void RenderManager::RenderSkybox(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descriptorHandleFromPassStart)
+void RenderManager::CreateSwapChain()
 {
-	std::shared_ptr<Texture> pSkyboxTexture = TEXTURE->Get("Skybox");
-	if (!pSkyboxTexture) {
-		return;
+	DXGI_SWAP_CHAIN_DESC1 dxgiSwapChainDesc;
+	dxgiSwapChainDesc.Width = WinCore::g_dwClientWidth;
+	dxgiSwapChainDesc.Height = WinCore::g_dwClientHeight;
+	dxgiSwapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	dxgiSwapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	dxgiSwapChainDesc.BufferCount = g_unMaxPendingFrames;
+	dxgiSwapChainDesc.SampleDesc.Count = 1;
+	dxgiSwapChainDesc.SampleDesc.Quality = 0;
+	dxgiSwapChainDesc.Scaling = DXGI_SCALING_NONE;
+	dxgiSwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+	dxgiSwapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+	dxgiSwapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING | DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+
+	DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc;
+	fsSwapChainDesc.Windowed = TRUE;
+
+	ComPtr<IDXGISwapChain1> pSwapChain1;
+	HRESULT hr = DXGI_FACTORY->CreateSwapChainForHwnd(
+		m_pd3dCommandQueue.Get(),
+		WinCore::g_hWnd,
+		&dxgiSwapChainDesc,
+		&fsSwapChainDesc,
+		nullptr,
+		pSwapChain1.GetAddressOf());
+
+	if (FAILED(hr)) {
+		SHOW_ERROR("Failed to create SwapChain");
 	}
 
-	pd3dCommandList->SetPipelineState(m_pd3dSkyboxPipelineState.Get());
-	DescriptorHandle descHandle = m_DescriptorHeapForDraw.GetDescriptorHandleFromHeapStart();
-	descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-	descHandle.gpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+	pSwapChain1->QueryInterface(IID_PPV_ARGS(m_pdxgiSwapChain.GetAddressOf()));
+	if (FAILED(hr)) {
+		SHOW_ERROR("Failed to create SwapChain QueryInterface");
+	}
 
-	m_pd3dDevice->CopyDescriptorsSimple(1, descHandle.cpuHandle, pSkyboxTexture->GetHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	descHandle.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+	m_unBackBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
-	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::SCENE_SKYBOX), descHandle.gpuHandle);
-	descHandle.gpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-
-	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
-	pd3dCommandList->DrawInstanced(1, 1, 0, 0);
+	DXGI_FACTORY->MakeWindowAssociation(WinCore::g_hWnd, DXGI_MWA_NO_ALT_ENTER);
 }
 
-void RenderManager::Add(std::shared_ptr<MeshRenderer> pMeshRenderer, MeshRenderParameters renderParams)
+void RenderManager::CreateRenderTarget()
 {
-	const uint64_t& itemKey = pMeshRenderer->GetID();
+	HRESULT hr{};
+	for (UINT i = 0; i < g_unMaxPendingFrames; ++i)
+	{
+		ComPtr<ID3D12Resource> pd3dRenderTarget;
+		hr = m_pdxgiSwapChain->GetBuffer(i, IID_PPV_ARGS(pd3dRenderTarget.GetAddressOf()));
+		if (FAILED(hr)) {
+			SHOW_ERROR("Failed to get buffer from SwapChain");
+		}
 
-	auto it = m_InstanceIndexMap.find(itemKey);
-	if (it == m_InstanceIndexMap.end()) {
-		InstancePair instancePair{ pMeshRenderer, std::vector<MeshRenderParameters>{ renderParams } };
-
-		m_InstanceIndexMap[itemKey] = m_nInstanceIndex++;
-		m_InstanceDatas.push_back(instancePair);
-	}
-	else {
-		m_InstanceDatas[it->second].InstanceDatas.push_back(renderParams);
+		m_BackBufferIDs[i] = TEXTURE->LoadRenderTargetTexture(pd3dRenderTarget, DXGI_FORMAT_UNKNOWN, m_dxgiRenderTargetFormat);
 	}
 }
 
-
-void RenderManager::AddAnimatedObject(std::shared_ptr<IGameObject> pObj)
+void RenderManager::CreateDepthStencil()
 {
-	m_pAnimatedObjects.push_back(pObj);
+	m_DepthStencilID = TEXTURE->LoadDepthStencilTexture(
+		"DSV",
+		WinCore::g_dwClientWidth,
+		WinCore::g_dwClientHeight,
+		DXGI_FORMAT_R24_UNORM_X8_TYPELESS,
+		DXGI_FORMAT_D24_UNORM_S8_UINT
+	);
 }
 
-void RenderManager::Clear()
+void RenderManager::Present()
 {
-	m_InstanceIndexMap.clear();
-	m_InstanceDatas.clear();
-	m_nInstanceIndex = 0;
+	Fence();
 
-	m_pAnimatedObjects.clear();
+	// 0 : V-Sync OFF
+	// 1 : V-Sync ON
+	uint32 unSyncInterval = D3DCore::g_unSyncInterval;
+	uint32 unPresentFlags = 0;
+	if (!unSyncInterval) {
+		// if V-Sync is OFF
+		unPresentFlags |= DXGI_PRESENT_ALLOW_TEARING;
+	}
+
+	HRESULT hr{};
+	hr = m_pdxgiSwapChain->Present(unSyncInterval, unPresentFlags);
+
+	if (hr == DXGI_ERROR_DEVICE_REMOVED) {
+		__debugbreak();
+	}
+
+	m_unBackBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
+
+	// Prepare next frame
+	uint32 unNextContextIndex = (m_unCurrentContextIndex + 1) % g_unMaxPendingFrames;
+	WaitForFenceValue(m_un64LastFenceValues[unNextContextIndex]);
+
+	Reset(unNextContextIndex);
+	m_unCurrentContextIndex = unNextContextIndex;
 }
+
+uint64 RenderManager::Fence()
+{
+	m_un64FenceValues++;
+	m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), m_un64FenceValues);
+	m_un64LastFenceValues[m_unCurrentContextIndex] = m_un64FenceValues;
+	return m_un64FenceValues;
+}
+
+void RenderManager::WaitForFenceValue(uint64 un64ExpectedFenceValue)
+{
+	if (m_pd3dFence->GetCompletedValue() < un64ExpectedFenceValue)
+	{
+		m_pd3dFence->SetEventOnCompletion(un64ExpectedFenceValue, m_hFenceEvent);
+		WaitForSingleObject(m_hFenceEvent, INFINITE);
+	}
+}
+
+void RenderManager::WaitForGPUComplete()
+{
+	Fence();
+	for (uint32 i = 0; i < g_unMaxPendingFrames; ++i) {
+		WaitForFenceValue(m_un64LastFenceValues[i]);
+	}
+}
+
+void RenderManager::ChangeSwapChainState()
+{
+	// TODO : ResourceTable 에서 리소스 삭제 구현 후 구현
+}
+

@@ -15,7 +15,7 @@ public:
 	void Reset();
 
 	float GetTimeElapsed();
-	double GetTotalTime();
+	float GetTotalTime();
 
 	unsigned long GetFrameRate(const std::wstring& wsvGameName, std::wstring& wstrString);
 

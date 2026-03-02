@@ -110,6 +110,9 @@
     <Filter Include="02.Game\GameObject\GameObjects">
       <UniqueIdentifier>{bf0745fd-7c0f-4232-8a53-13a737f7c144}</UniqueIdentifier>
     </Filter>
+    <Filter Include="03.Engine\Rendering\RenderPasses">
+      <UniqueIdentifier>{47aadbd6-47a8-4b75-9667-086d83dc6c33}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h">
@@ -193,9 +196,6 @@
     <ClInclude Include="ConstantBuffer.h">
       <Filter>03.Engine\Resources\Buffer</Filter>
     </ClInclude>
-    <ClInclude Include="ConstantBufferPool.h">
-      <Filter>03.Engine\Resources\Buffer</Filter>
-    </ClInclude>
     <ClInclude Include="DescriptorHeap.h">
       <Filter>03.Engine\Resources\DescriptorHeap</Filter>
     </ClInclude>
@@ -216,9 +216,6 @@
     </ClInclude>
     <ClInclude Include="Sprite.h">
       <Filter>03.Engine\Graphic Components</Filter>
-    </ClInclude>
-    <ClInclude Include="StructuredBuffer.h">
-      <Filter>03.Engine\Resources\Buffer</Filter>
     </ClInclude>
     <ClInclude Include="ShaderResource.h">
       <Filter>03.Engine\Resources</Filter>
@@ -334,7 +331,6 @@
     <ClInclude Include="MeshRenderer.h">
       <Filter>02.Game\Components\Components</Filter>
     </ClInclude>
-    <ClInclude Include="Collider.h" />
     <ClInclude Include="DynamicObject.h">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClInclude>
@@ -344,9 +340,41 @@
     <ClInclude Include="StaticObject.h">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClInclude>
-    <ClInclude Include="Skeleton.h" />
     <ClInclude Include="BoundingCapsule.h">
       <Filter>99.Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="ResourceTable.h">
+      <Filter>99.Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="Skeleton.h">
+      <Filter>02.Game\Components\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Collider.h">
+      <Filter>02.Game\Components\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="CB_Types.h">
+      <Filter>03.Engine\Resources\Buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="ConstantBufferPool.h">
+      <Filter>03.Engine\Resources\Buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="StructuredBufferPool.h">
+      <Filter>03.Engine\Resources\Buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="MaterialManager.h">
+      <Filter>04.Managers\Resource Management</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderGraph.h">
+      <Filter>03.Engine\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="IDGenerator.h">
+      <Filter>99.Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="ForwardPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="TerrainPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -456,9 +484,6 @@
     <ClCompile Include="Sprite.cpp">
       <Filter>03.Engine\Graphic Components</Filter>
     </ClCompile>
-    <ClCompile Include="StructuredBuffer.cpp">
-      <Filter>03.Engine\Resources\Buffer</Filter>
-    </ClCompile>
     <ClCompile Include="ShaderResource.cpp">
       <Filter>03.Engine\Resources</Filter>
     </ClCompile>
@@ -564,7 +589,6 @@
     <ClCompile Include="MeshRenderer.cpp">
       <Filter>02.Game\Components\Components</Filter>
     </ClCompile>
-    <ClCompile Include="Collider.cpp" />
     <ClCompile Include="DynamicObject.cpp">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClCompile>
@@ -574,12 +598,38 @@
     <ClCompile Include="StaticObject.cpp">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClCompile>
-    <ClCompile Include="Skeleton.cpp" />
     <ClCompile Include="Defines.cpp">
       <Filter>99.Utility</Filter>
     </ClCompile>
     <ClCompile Include="BoundingCapsule.cpp">
       <Filter>99.Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="ResourceTable.cpp">
+      <Filter>99.Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="Skeleton.cpp">
+      <Filter>02.Game\Components\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Collider.cpp">
+      <Filter>02.Game\Components\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="StructuredBufferPool.cpp">
+      <Filter>03.Engine\Resources\Buffer</Filter>
+    </ClCompile>
+    <ClCompile Include="MaterialManager.cpp">
+      <Filter>04.Managers\Resource Management</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderGraph.cpp">
+      <Filter>03.Engine\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="IDGenerator.cpp">
+      <Filter>99.Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="ForwardPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="TerrainPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -621,6 +671,8 @@
     <FxCompile Include="..\HLSL\Shaders.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
-    <FxCompile Include="NewCommon.hlsl" />
+    <FxCompile Include="..\HLSL\NewCommon.hlsl">
+      <Filter>03.Engine\HLSL</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

@@ -162,6 +162,7 @@
     <ClInclude Include="AnimationStateMachine.h" />
     <ClInclude Include="BoundingCapsule.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="CB_Types.h" />
     <ClInclude Include="Collider.h" />
     <ClInclude Include="CommandListPool.h" />
     <ClInclude Include="Component.h" />
@@ -176,14 +177,17 @@
     <ClInclude Include="Effect.h" />
     <ClInclude Include="EffectManager.h" />
     <ClInclude Include="FirstPersonCamera.h" />
+    <ClInclude Include="ForwardPass.h" />
     <ClInclude Include="GameFramework.h" />
     <ClInclude Include="GameObject.h" />
     <ClInclude Include="GameTimer.h" />
     <ClInclude Include="GuiManager.h" />
     <ClInclude Include="HeightMapRawImage.h" />
+    <ClInclude Include="IDGenerator.h" />
     <ClInclude Include="InputManager.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="Material.h" />
+    <ClInclude Include="MaterialManager.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MeshRenderer.h" />
     <ClInclude Include="ModelManager.h" />
@@ -194,10 +198,12 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="RandomGenerator.h" />
+    <ClInclude Include="RenderGraph.h" />
     <ClInclude Include="RenderManager.h" />
     <ClInclude Include="RenderPass.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="ResourceManager.h" />
+    <ClInclude Include="ResourceTable.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="SceneManager.h" />
     <ClInclude Include="Shader.h" />
@@ -208,11 +214,12 @@
     <ClInclude Include="SoundManager.h" />
     <ClInclude Include="Sprite.h" />
     <ClInclude Include="StaticObject.h" />
-    <ClInclude Include="StructuredBuffer.h" />
+    <ClInclude Include="StructuredBufferPool.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="AnimationTestScene.h" />
     <ClInclude Include="TerrainComponent.h" />
     <ClInclude Include="TerrainObject.h" />
+    <ClInclude Include="TerrainPass.h" />
     <ClInclude Include="TestScene.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TextureManager.h" />
@@ -291,14 +298,17 @@
     <ClCompile Include="EffectManager.cpp" />
     <ClCompile Include="entry.cpp" />
     <ClCompile Include="FirstPersonCamera.cpp" />
+    <ClCompile Include="ForwardPass.cpp" />
     <ClCompile Include="GameFramework.cpp" />
     <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="GameTimer.cpp" />
     <ClCompile Include="GuiManager.cpp" />
     <ClCompile Include="HeightMapRawImage.cpp" />
+    <ClCompile Include="IDGenerator.cpp" />
     <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Material.cpp" />
+    <ClCompile Include="MaterialManager.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MeshRenderer.cpp" />
     <ClCompile Include="ModelManager.cpp" />
@@ -311,9 +321,11 @@
     </ClCompile>
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="RandomGenerator.cpp" />
+    <ClCompile Include="RenderGraph.cpp" />
     <ClCompile Include="RenderManager.cpp" />
     <ClCompile Include="RenderPass.cpp" />
     <ClCompile Include="ResourceManager.cpp" />
+    <ClCompile Include="ResourceTable.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="SceneManager.cpp" />
     <ClCompile Include="Shader.cpp" />
@@ -324,10 +336,11 @@
     <ClCompile Include="SoundManager.cpp" />
     <ClCompile Include="Sprite.cpp" />
     <ClCompile Include="StaticObject.cpp" />
-    <ClCompile Include="StructuredBuffer.cpp" />
     <ClCompile Include="AnimationTestScene.cpp" />
+    <ClCompile Include="StructuredBufferPool.cpp" />
     <ClCompile Include="TerrainComponent.cpp" />
     <ClCompile Include="TerrainObject.cpp" />
+    <ClCompile Include="TerrainPass.cpp" />
     <ClCompile Include="TestScene.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="TextureManager.cpp" />
@@ -363,6 +376,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
+    <FxCompile Include="..\HLSL\NewCommon.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="..\HLSL\RayShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -383,7 +400,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="NewCommon.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -20,20 +20,6 @@ void Scene::InitializeObjects()
 	}
 }
 
-void Scene::RenderObjects(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
-{
-	if (m_pPlayer)
-		m_pPlayer->Render(pd3dCommandList);
-
-	for (auto& pObj : m_pGameObjects) {
-		pObj->Render(pd3dCommandList);
-	}
-
-	for (auto& pSprite : m_pSprites) {
-		pSprite->AddToUI(pSprite->GetLayerIndex());
-	}
-}
-
 void Scene::PostInitialize()
 {
 	InitializeObjects();
@@ -149,6 +135,20 @@ void Scene::PostUpdate()
 	}
 }
 
+void Scene::PrepareRender()
+{
+	if (m_pPlayer)
+		m_pPlayer->Render();
+
+	for (auto& pObj : m_pGameObjects) {
+		pObj->Render();
+	}
+
+	for (auto& pSprite : m_pSprites) {
+		pSprite->AddToUI(pSprite->GetLayerIndex());
+	}
+}
+
 void Scene::CheckCollision() 
 {
 	// 1. Broad Phase
@@ -229,17 +229,14 @@ void Scene::CellPartition(const Vector2& v2OriginXZ, const Vector2& v2SizePerCel
 	}
 }
 
-CB_LIGHT_DATA Scene::MakeLightData()
+std::vector<LightData> Scene::MakeLightData() const
 {
-	CB_LIGHT_DATA lightData;
+	std::vector<LightData> lightData;
+	lightData.reserve(m_pLights.size());
 
-	for (int i = 0; i < m_pLights.size(); ++i) {
-		lightData.gLights[i] = m_pLights[i]->MakeLightData();
+	for (auto& pLight : m_pLights) {
+		lightData.push_back(pLight->MakeCBData());
 	}
-
-	lightData.gcGlobalAmbientLight = Vector4(1.f, 1.f, 1.f, 1.f);
-	lightData.gnLights = m_pLights.size();
-
 	return lightData;
 }
 

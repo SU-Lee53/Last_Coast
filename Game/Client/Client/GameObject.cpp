@@ -14,30 +14,22 @@ IGameObject::~IGameObject()
 {
 }
 
-void IGameObject::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
+void IGameObject::Render()
 {
-	// TODO : Render Logic Here
-	if (GetComponent<AnimationController>()) {
-		RENDER->AddAnimatedObject(shared_from_this());
-		return;
+	// TODO : PrepareRender Logic Here
+	if (auto p = GetComponent<MeshRenderer>()) {
+		RENDER->Add(shared_from_this());
 	}
 
 	for (auto& pChild : m_pChildren) {
-		pChild->Render(pd3dCommandList);
+		pChild->Render();
 	}
 }
 
-void IGameObject::RenderImmediate(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle)
+void IGameObject::SetRoot(std::shared_ptr<IGameObject> pRoot)
 {
-	auto pMeshRenderer = GetComponent<MeshRenderer>();
-	if (pMeshRenderer) {
-		int nInstanceBase = -1;
-		Matrix mtxWorld = GetTransform()->GetWorldMatrix();
-		pMeshRenderer->Render(pd3dDevice, pd3dCommandList, descHandle, 1, nInstanceBase, mtxWorld);
-	}
-
-	for (auto& pChild : m_pChildren) {
-		pChild->RenderImmediate(pd3dDevice, pd3dCommandList, descHandle);
+	if (pRoot) {
+		m_pParent = pRoot;
 	}
 }
 
@@ -50,12 +42,14 @@ void IGameObject::SetParent(std::shared_ptr<IGameObject> pParent)
 
 void IGameObject::SetChild(std::shared_ptr<IGameObject> pChild)
 {
-	if (pChild)
-	{
+	if (pChild) {
 		pChild->m_pParent = shared_from_this();
 		m_pChildren.push_back(pChild);
 	}
 
+	if (m_pParent.expired()) {	// Root 에 자식추가 -> 자식들에게 새로운 Root 를 전달 
+		pChild->PropagateRoot(shared_from_this());
+	}
 
 	// Skeleton 과 AnimationController 가 있다면 반드시 Root 로 옮겨와야 함
 	if (m_pParent.expired()) {
@@ -66,6 +60,14 @@ void IGameObject::SetChild(std::shared_ptr<IGameObject> pChild)
 		if (pChild->GetComponent<AnimationController>()) {
 			MoveComponent<AnimationController>(pChild);
 		}
+	}
+}
+
+void IGameObject::PropagateRoot(std::shared_ptr<IGameObject> pRoot)
+{
+	m_pRoot = pRoot;
+	for (auto pChild : m_pChildren) {
+		pChild->PropagateRoot(pRoot);
 	}
 }
 

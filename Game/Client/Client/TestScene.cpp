@@ -28,8 +28,3 @@ void TestScene::Update()
 
 
 }
-
-void TestScene::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList)
-{
-	Scene::RenderObjects(pd3dCommansList);
-}

@@ -27,7 +27,3 @@ void NetworkTestScene::Update()
 {
 	NETWORK->ConnectToServer();
 }
-
-void NetworkTestScene::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList)
-{
-}

@@ -21,6 +21,7 @@
 #include <string>
 #include <array>
 #include <vector>
+#include <list>
 #include <set>
 #include <unordered_set>
 #include <unordered_map>
@@ -47,7 +48,7 @@
 
 
 // D3DCompiler
-#include <d3dcompiler.h>
+#include <dxcapi.h>
 
 // DirectXMath
 #include <DirectXMath.h>
@@ -68,7 +69,7 @@ using namespace DirectX::PackedVector;
 using namespace Microsoft::WRL;
 
 // Import libraries
-#pragma comment(lib, "d3dcompiler.lib")
+#pragma comment(lib, "dxcompiler.lib")	// DXC
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "dxguid.lib")
@@ -96,6 +97,7 @@ using namespace Microsoft::WRL;
 #include "CommandListPool.h"
 #include "Typedef.h"
 #include "Defines.h"
+#include "CB_Types.h"
 #include "Concepts.h"
 #include "Utility.h"
 #include "ShaderResource.h"
@@ -113,6 +115,7 @@ using namespace Microsoft::WRL;
 #include "WinCore.h"
 #include "D3DCore.h"
 #include "GameFramework.h"
+#include "ResourceTable.h"
 
 // Managers
 #include "ResourceManager.h"
@@ -129,4 +132,4 @@ using namespace Microsoft::WRL;
 #include "SoundManager.h"
 #include "UIManager.h"
 #include "AnimationManager.h"
-//#include "CollisionManager.h"
+#include "MaterialManager.h"

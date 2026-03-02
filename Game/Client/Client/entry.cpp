@@ -5,8 +5,7 @@
 //#include <crtdbg.h>
 
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
-{
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd){
 #ifdef _DEBUG
 	//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 	//_CrtSetBreakAlloc(1084);
@@ -15,9 +14,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	WinCore* pApp = nullptr;
 
 #ifdef _DEBUG
-	pApp = new WinCore(hInstance, 800, 600, TRUE, TRUE);
+	pApp = new WinCore(hInstance, 800, 600, TRUE, TRUE, FALSE);
 #else
-	pApp = new WinCore(hInstance, 800, 600, FALSE, FALSE);
+	pApp = new WinCore(hInstance, 800, 600, FALSE, FALSE, FALSE);
 #endif
 
 	pApp->Run();

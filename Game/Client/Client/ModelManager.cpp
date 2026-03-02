@@ -60,7 +60,7 @@ std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& 
 	nlohmann::json j = nlohmann::json::from_bson(bson);;
 
 	std::shared_ptr<IGameObject> pGameObject;
-	pGameObject = LoadFrameHierarchyFromFile(nullptr, j["Hierarchy"]);
+	pGameObject = LoadFrameHierarchyFromFile(nullptr, nullptr, j["Hierarchy"]);
 
 	size_t nBones = j["nBones"].get<size_t>();
 	if (nBones != 0) {
@@ -93,7 +93,7 @@ std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& 
 	return pGameObject;
 }
 
-std::shared_ptr<IGameObject> ModelManager::LoadFrameHierarchyFromFile(std::shared_ptr<IGameObject> pParent, const nlohmann::json& inJson)
+std::shared_ptr<IGameObject> ModelManager::LoadFrameHierarchyFromFile(std::shared_ptr<IGameObject> pParent, std::shared_ptr<IGameObject> pRoot, const nlohmann::json& inJson)
 {
 	std::shared_ptr<IGameObject> pGameObject = std::make_shared<NodeObject>();
 
@@ -118,10 +118,17 @@ std::shared_ptr<IGameObject> ModelManager::LoadFrameHierarchyFromFile(std::share
 		pGameObject->SetParent(pParent);
 	}
 
+	if (!pRoot) {
+		pRoot = pGameObject;
+	}
+	else {
+		pGameObject->SetRoot(pRoot);
+	}
+
 	unsigned nChildren = inJson["nChildren"].get<unsigned>();
 	pGameObject->m_pChildren.reserve(nChildren);
 	for (int i = 0; i < nChildren; ++i) {
-		pGameObject->m_pChildren.push_back(LoadFrameHierarchyFromFile(pGameObject, inJson["Children"][i]));
+		pGameObject->m_pChildren.push_back(LoadFrameHierarchyFromFile(pGameObject, pRoot, inJson["Children"][i]));
 	}
 
 	return pGameObject;

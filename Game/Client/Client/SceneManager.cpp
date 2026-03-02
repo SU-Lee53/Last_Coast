@@ -33,7 +33,7 @@ void SceneManager::Update()
 	m_upCurrentScene->PostUpdate();
 }
 
-void SceneManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList)
+void SceneManager::PrepareRender()
 {
-	m_upCurrentScene->Render(pd3dCommansList);
+	m_upCurrentScene->PrepareRender();
 }

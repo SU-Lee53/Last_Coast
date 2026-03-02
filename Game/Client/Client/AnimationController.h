@@ -13,7 +13,7 @@ public:
 	virtual void Update() override;
 
 public:
-	const std::vector<Matrix> GetFinalOutput() const;
+	const std::vector<Matrix>& GetFinalOutput() const;
 	double GetElapsedTime() const { return m_fTotalTimeElapsed; }
 	double GetCurrentAnimationDuration() const;
 

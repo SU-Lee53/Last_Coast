@@ -4,7 +4,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mesh 
 
-Mesh::Mesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology)
+IMesh::IMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology)
 {
 	m_d3dPrimitiveTopology = d3dTopology;
 	m_nSlot = 0;
@@ -26,18 +26,19 @@ Mesh::Mesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopolog
 // FullScreenMesh
 
 FullScreenMesh::FullScreenMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology)
-	: Mesh(meshLoadInfo, d3dTopology)
+	: IMesh(meshLoadInfo, d3dTopology)
 {
 }
 
-void FullScreenMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount) const
+void FullScreenMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount, uint32 unStartIndex, int32 nIndexCount) const
 {
 	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
 	pd3dCommandList->IASetVertexBuffers(0, 1, &m_Positions.VertexBufferView);
 
 	if (m_IndexBuffer.nIndices != 0) {
+		uint32 unIndices = (nIndexCount == -1) ? m_IndexBuffer.nIndices : nIndexCount;
 		pd3dCommandList->IASetIndexBuffer(&m_IndexBuffer.IndexBufferView);
-		pd3dCommandList->DrawIndexedInstanced(m_IndexBuffer.nIndices, nInstanceCount, 0, 0, 0);
+		pd3dCommandList->DrawIndexedInstanced(unIndices, nInstanceCount, unStartIndex, 0, 0);
 	}
 	else {
 		pd3dCommandList->DrawInstanced(m_Positions.nVertices, nInstanceCount, 0, 0);
@@ -48,14 +49,14 @@ void FullScreenMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, u
 // StaticMesh
 
 StaticMesh::StaticMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology)
-	: Mesh(meshLoadInfo, d3dTopology)
+	: IMesh(meshLoadInfo, d3dTopology)
 {
 	m_Normals = RESOURCE->CreateVertexBuffer(meshLoadInfo.v3Tangents, std::to_underlying(MESH_ELEMENT_TYPE::NORMAL));
 	m_Tangents = RESOURCE->CreateVertexBuffer(meshLoadInfo.v3Tangents, std::to_underlying(MESH_ELEMENT_TYPE::TANGENT));
 	m_TexCoords = RESOURCE->CreateVertexBuffer(meshLoadInfo.v2TexCoord0, std::to_underlying(MESH_ELEMENT_TYPE::TEXCOORD0));
 }
 
-void StaticMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount) const
+void StaticMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount, uint32 unStartIndex, int32 nIndexCount) const
 {
 	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
 
@@ -68,8 +69,9 @@ void StaticMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint3
 	pd3dCommandList->IASetVertexBuffers(0, _countof(vertexBufferViews), vertexBufferViews);
 
 	if (m_IndexBuffer.nIndices != 0) {
+		uint32 unIndices = (nIndexCount == -1) ? m_IndexBuffer.nIndices : nIndexCount;
 		pd3dCommandList->IASetIndexBuffer(&m_IndexBuffer.IndexBufferView);
-		pd3dCommandList->DrawIndexedInstanced(m_IndexBuffer.nIndices, nInstanceCount, 0, 0, 0);
+		pd3dCommandList->DrawIndexedInstanced(unIndices, nInstanceCount, unStartIndex, 0, 0);
 	}
 	else {
 		pd3dCommandList->DrawInstanced(m_Positions.nVertices, nInstanceCount, 0, 0);
@@ -86,7 +88,7 @@ SkinnedMesh::SkinnedMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOL
 	m_BlendWeights = RESOURCE->CreateVertexBuffer(meshLoadInfo.v4BlendWeights, std::to_underlying(MESH_ELEMENT_TYPE::TEXCOORD0));
 }
 
-void SkinnedMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount) const
+void SkinnedMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount, uint32 unStartIndex, int32 nIndexCount) const
 {
 	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
 
@@ -101,8 +103,9 @@ void SkinnedMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint
 	pd3dCommandList->IASetVertexBuffers(0, _countof(vertexBufferViews), vertexBufferViews);
 
 	if (m_IndexBuffer.nIndices != 0) {
+		uint32 unIndices = (nIndexCount == -1) ? m_IndexBuffer.nIndices : nIndexCount;
 		pd3dCommandList->IASetIndexBuffer(&m_IndexBuffer.IndexBufferView);
-		pd3dCommandList->DrawIndexedInstanced(m_IndexBuffer.nIndices, nInstanceCount, 0, 0, 0);
+		pd3dCommandList->DrawIndexedInstanced(unIndices, nInstanceCount, unStartIndex, 0, 0);
 	}
 	else {
 		pd3dCommandList->DrawInstanced(m_Positions.nVertices, nInstanceCount, 0, 0);
@@ -111,13 +114,13 @@ void SkinnedMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint
 }
 
 TerrainMesh::TerrainMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology)
-	: Mesh(meshLoadInfo, d3dTopology)
+	: IMesh(meshLoadInfo, d3dTopology)
 {
 	m_Normals = RESOURCE->CreateVertexBuffer(meshLoadInfo.v3Tangents, std::to_underlying(MESH_ELEMENT_TYPE::NORMAL));
 	m_Tangents = RESOURCE->CreateVertexBuffer(meshLoadInfo.v3Tangents, std::to_underlying(MESH_ELEMENT_TYPE::TANGENT));
 }
 
-void TerrainMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 unStartIndex, uint32 unIndexCount, uint32 nInstanceCount) const
+void TerrainMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount, uint32 unStartIndex, int32 nIndexCount) const
 {
 	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
 
@@ -130,7 +133,7 @@ void TerrainMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint
 
 	if (m_IndexBuffer.nIndices != 0) {
 		pd3dCommandList->IASetIndexBuffer(&m_IndexBuffer.IndexBufferView);
-		pd3dCommandList->DrawIndexedInstanced(unIndexCount, nInstanceCount, unStartIndex, 0, 0);	// 확인 필요
+		pd3dCommandList->DrawIndexedInstanced(nIndexCount, nInstanceCount, unStartIndex, 0, 0);
 	}
 }
 
