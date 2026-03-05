@@ -3,6 +3,7 @@
 #include "ForwardPass.h"
 #include "TerrainPass.h"
 #include "GBufferPass.h"
+#include "ToneMappingPass.h"
 #include <queue>
 
 void RenderGraph::BuildGraph()
@@ -18,9 +19,20 @@ void RenderGraph::BuildGraph()
 	//	m_pAdjLists.push_back(pTerrainPass);
 	//}
 	
-	std::shared_ptr<IRenderPass> pForwardPass = std::make_shared<GBufferPass>();
-	pForwardPass->Initialize();
-	m_pAdjLists.push_back(pForwardPass);
+	std::shared_ptr<IRenderPass> pGBufferPass = std::make_shared<GBufferPass>();
+	pGBufferPass->Initialize();
+	m_pAdjLists.push_back(pGBufferPass);
+	
+	std::shared_ptr<IRenderPass> pLightingPass = std::make_shared<DefferedLightingPass>();
+	pLightingPass->Initialize();
+	m_pAdjLists.push_back(pLightingPass);
+	
+	std::shared_ptr<IRenderPass> pToneMappingPass = std::make_shared<ToneMappingPass>();
+	pToneMappingPass->Initialize();
+	m_pAdjLists.push_back(pToneMappingPass);
+
+	pGBufferPass->Connect(pLightingPass);
+	pLightingPass->Connect(pToneMappingPass);
 
 	m_unEntryNodeIndex = 0;
 }

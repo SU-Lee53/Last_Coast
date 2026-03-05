@@ -379,6 +379,7 @@
     <ClInclude Include="GBufferPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
+    <ClInclude Include="ToneMappingPass.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -637,6 +638,7 @@
     <ClCompile Include="GBufferPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
+    <ClCompile Include="ToneMappingPass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
@@ -681,6 +683,9 @@
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\DefferedShader.hlsl">
+      <Filter>03.Engine\HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\ToneMapping.hlsl">
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
   </ItemGroup>

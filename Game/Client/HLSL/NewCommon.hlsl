@@ -77,16 +77,27 @@ struct SceneGlobalData
 struct CameraData
 {
 	matrix	mtxView;
+	matrix	mtxInvView;
 	matrix	mtxProjection;
+	matrix	mtxInvProjection;
 	float3	v3CameraPosition;
 	float	pad0;
 };
 
+#define POINT_LIGHT			1
+#define SPOT_LIGHT			2
+#define DIRECTIONAL_LIGHT	3
+#define MAX_LIGHTS			16 
+
 struct LightData
 {
-	float4	cAmbient;					// c0
-	float4	cDiffuse;					// c1
-	float4	cSpecular;					// c2
+	//float4	cAmbient;					// c0
+	//float4	cDiffuse;					// c1
+	//float4	cSpecular;					// c2
+	
+	float3	vColor;						// c0.rgb
+	float	fIntensity;					// c0.a
+	
 	float3	vPosition;					// c3.xyz
 	float	fFalloff;					// c3.w
 	float3	vDirection;					// c4.xyz
@@ -105,6 +116,7 @@ cbuffer cbSceneData : register(b0, space0)
 {
 	CameraData gCamera;
 	SceneGlobalData gSceneGlobal;
+	int2 gnScreenSize;
 };
 
 // ============ StructuredBuffers ============
@@ -117,8 +129,8 @@ Texture2DArray gtxtSkyboxNIght : register(t2, space0);
 
 Texture2D gtxtShadows[8] : register(t3, space0);	// t3, t4, t5, t6, t7, t8, t9, t10
 
-Texture2D gtxtGBuffer[4] : register(t11, space0);
-
+Texture2D gtxtGBuffer[4] : register(t11, space0);	// t11, t12, t13, t14
+Texture2D gtxtHDRResult : register(t15);
 
 // ============ Samplers ============
 SamplerState gSkyboxSamplerState : register(s0, space0);
@@ -177,6 +189,7 @@ struct TerrainComponentData
 struct InstanceData
 {
 	float4x4 mtxWorld;
+	float4x4 mtxInvWorld;
 };
 
 #define MAX_BONES 100
@@ -234,56 +247,6 @@ Texture2D gtxtTerrainWeightMap : register(t10, space2);
 
 #define FLT_EPSILON 1e-8f
 
-// Octahedral encoding
-float2 EncodeNormalOcta(float3 n)
-{
-	float3 vNormal = normalize(n);
-	vNormal /= (abs(vNormal.x) + abs(vNormal.y) + abs(vNormal.z) + FLT_EPSILON);
-	
-	float2 vEncoded = vNormal.xy;
-	if (vNormal.z < 0.f)
-	{
-		vEncoded = (1.f - abs(vEncoded.yx)) * sign(vEncoded.xy);
-	}
-	
-	vEncoded *= 0.5f + 0.5f;	// [-1, 1] -> [0, 1]
-	return vEncoded;
-}
-
-float3 DecodeNormalOcta(float2 enc)
-{
-	float2 f = enc * 2.0f - 1.0f;
-	float3 n = float3(f.x, f.y, 1.0f - abs(f.x) - abs(f.y));
-	
-	float t = saturate(-n.z);
-	//n.xy += (n.xy > 0.f) ? -t : t;
-	n.xy += select((n.xy > 0.f), -t, t);
-	
-	return normalize(n);
-}
-
-void GetMaterialParams(out float fMetallic, out float fRoughness, out float fAO)
-{
-	MaterialData m = gMaterialData[gnMaterialIndex];
-	
-	fMetallic = m.fMetallic;
-	fRoughness = 1.0f - saturate(m.fSmoothness);
-	fAO = 1.0f;
-}
-
-float3 ComputeNormal(float3 normalW, float3 tangentW, float2 uv)
-{
-	float3 N = normalize(normalW);
-	float3 T = normalize(tangentW - dot(tangentW, N) * N);
-	float3 B = cross(N, T);
-	float3x3 TBN = float3x3(T, B, N);
-    
-	float3 normalFromMap = gtxtTextures[gnTextureIndex.y].Sample(gSamplerState, uv).rgb;
-	float3 normal = (normalFromMap * 2.0f) - 1.0f; // [0, 1] -> [-1, 1]
-    
-	return normalize(mul(normal, TBN));
-}
-
 float3 BlendTerrainNormal(float2 localXZ, float weights[MAX_LAYER], float3 normalW, float3 tangentW)
 {
 	float3 bitangentW = normalize(cross(normalW, tangentW));
@@ -300,7 +263,7 @@ float3 BlendTerrainNormal(float2 localXZ, float weights[MAX_LAYER], float3 norma
 		float2 uv = localXZ * gv4LayerTiling[layer];
 		float3 nTS = gtxtTerrainNormal[layer].Sample(gSamplerState, uv).xyz * 2 - 1;
 
-        // TBN 변환
+        // TBN
 		float3 nW =
             nTS.x * tangentW +
             nTS.y * bitangentW +
@@ -365,7 +328,120 @@ float4 BlendTerrainAlbedo(float2 localXZ, out float weights[MAX_LAYER])
 	return cFinalColor;
 }
 
+// Octahedral encoding
+float2 EncodeNormalOcta(float3 n)
+{
+	float3 vNormal = normalize(n);
+	vNormal /= (abs(vNormal.x) + abs(vNormal.y) + abs(vNormal.z) + FLT_EPSILON);
+	
+	float2 vEncoded = vNormal.xy;
+	if (vNormal.z < 0.f)
+	{
+		vEncoded = (1.f - abs(vEncoded.yx)) * sign(vEncoded.xy);
+	}
+	
+	vEncoded = vEncoded * 0.5f + 0.5f;	// [-1, 1] -> [0, 1]
+	return vEncoded;
+}
 
+float3 DecodeNormalOcta(float2 enc)
+{
+	float2 f = enc * 2.0f - 1.0f;
+	float3 n = float3(f.x, f.y, 1.0f - abs(f.x) - abs(f.y));
+	
+	float t = saturate(-n.z);
+	//n.xy += (n.xy > 0.f) ? -t : t;
+	n.x += (n.x >= 0.0f) ? -t : t;
+	n.y += (n.y >= 0.0f) ? -t : t;
+	
+	return normalize(n);
+}
 
+void GetMaterialParams(out float fMetallic, out float fRoughness, out float fAO)
+{
+	MaterialData m = gMaterialData[gnMaterialIndex];
+	
+	fMetallic = m.fMetallic;
+	fRoughness = 1.0f - saturate(m.fSmoothness);
+	fAO = 1.0f;
+}
+
+float3 ComputeNormal(float3 normalW, float3 tangentW, float2 uv)
+{
+	float3 N = normalize(normalW);
+	float3 T = normalize(tangentW - dot(tangentW, N) * N);
+	float3 B = -cross(N, T);
+	float3x3 TBN = float3x3(T, B, N);
+    
+	float3 normalFromMap = gtxtTextures[gnTextureIndex.y].Sample(gSamplerState, uv).rgb;
+	float3 normal = (normalFromMap * 2.0f) - 1.0f; // [0, 1] -> [-1, 1]
+    
+	return normalize(mul(normal, TBN));
+}
+
+struct GBufferData
+{
+	float3 albedo;		// RT0.rgb
+	float metallic;		// RT0.a
+
+	float3 normalW;		// RT1.rg
+	float roughness;	// RT1.b
+	float ao;			// RT1.a
+	
+	float3 emissive;	// RT2.rgb
+	float specular;		// RT2.a
+	
+	float depth;		// depth SRV
+};
+
+GBufferData LoadGBuffer(int2 pixel)
+{
+	GBufferData g;
+
+	float4 rt0 = gtxtGBuffer[0].Load(int3(pixel, 0));
+	float4 rt1 = gtxtGBuffer[1].Load(int3(pixel, 0));
+	float4 rt2 = gtxtGBuffer[2].Load(int3(pixel, 0));
+	float d = gtxtGBuffer[3].Load(int3(pixel, 0)).r;
+
+	g.albedo = rt0.rgb;
+	g.metallic = rt0.a;
+
+	g.normalW = DecodeNormalOcta(rt1.rg);
+	g.roughness = rt1.b;
+	g.ao = rt1.a;
+
+	g.emissive = rt2.rgb;
+	g.specular = rt2.a;
+
+	g.depth = d;
+	return g;
+}
+
+float3 ReconstructViewPos(float2 uv, float depth)
+{
+	float4 clip;
+	clip.x = uv.x * 2.0f - 1.0f;
+	clip.y = (1.0f - uv.y) * 2.0f - 1.0f;
+	clip.z = depth;
+	clip.w = 1.0f;
+
+	float4 view = mul(clip, gCamera.mtxInvProjection);
+	return view.xyz / view.w;
+}
+
+float3 ReconstructWorldPos(float2 uv, float depth)
+{
+	float4 clip;
+	clip.x = uv.x * 2.0f - 1.0f;
+	clip.y = (1.0f - uv.y) * 2.0f - 1.0f;
+	clip.z = depth;
+	clip.w = 1.0f;
+
+	float4 view = mul(clip, gCamera.mtxInvProjection);
+	view /= view.w;
+
+	float4 world = mul(view, gCamera.mtxInvView);
+	return world.xyz;
+}
 
 #endif 

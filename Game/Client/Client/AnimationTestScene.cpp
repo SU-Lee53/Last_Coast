@@ -6,8 +6,22 @@
 
 void AnimationTestScene::BuildObjects()
 {
+	auto pLight = std::make_shared<DirectionalLight>();
+	{
+		pLight->m_v3Color = Vector3{ 1.f, 1.f, 1.f };
+		pLight->m_v3Direction = Vector3{ 1.f, 1.f, 1.f };
+		pLight->m_v3Position = Vector3{ 100.f, 100.f, 100.f };
+		pLight->m_fIntensity = 5;
+
+		pLight->m_v3Direction.Normalize();
+	}
+
+	m_pLights.reserve(1);
+	m_pLights.push_back(pLight);
+
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
-	LoadFromFiles("TEST");
+	LoadFromFiles("LightTest");
+
 	//m_pTerrain = std::make_shared<TerrainObject>();
 	//m_pTerrain->LoadFromFiles("TEST");
 
@@ -104,6 +118,17 @@ void AnimationTestScene::Update()
 		}
 	}
 	ImGui::End();
+
+	ImGui::Begin("Lights Controller");
+	ImGui::Text("NumLights : %d", m_pLights.size());
+	for (uint32 i = 0; i < m_pLights.size(); ++i) {
+		if (ImGui::TreeNode(std::format("Index : {}", i).c_str())) {
+			m_pLights[i]->ShowControllImGui();
+			ImGui::TreePop();
+		}
+	}
+	ImGui::End();
+
 
 	//ImGui::Begin("Test");
 	//{

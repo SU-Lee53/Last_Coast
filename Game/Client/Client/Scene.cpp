@@ -274,7 +274,7 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 	}
 
 	//std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
-	//nlohmann::json j = nlohmann::json::from_bson(bson);;
+	//nlohmann::json j = nlohmann::json::from_bson(bson);
 
 	nlohmann::json jScene = nlohmann::json::parse(inFile);
 
@@ -296,6 +296,11 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 	}
 
 	// Lights 로드
+
+	auto ConvertUEToD3D = [](const Vector3& v) {
+		return Vector3(v.y, v.z, v.x);
+	};
+
 	if (jScene.contains("Lights")) {
 		for (const auto& jLight : jScene["Lights"]) {
 			std::string strType = jLight["Type"].get<std::string>();
@@ -315,10 +320,13 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 				float colorY = jLight["Color"]["Y"].get<float>();
 				float colorZ = jLight["Color"]["Z"].get<float>();
 
-				pLight->m_v4Diffuse.x = colorX * intensity;
-				pLight->m_v4Diffuse.y = colorY * intensity;
-				pLight->m_v4Diffuse.z = colorZ * intensity;
-				pLight->m_v4Diffuse.w = 1.0f;
+				//pLight->m_v4Diffuse.x = colorX * intensity;
+				//pLight->m_v4Diffuse.y = colorY * intensity;
+				//pLight->m_v4Diffuse.z = colorZ * intensity;
+				//pLight->m_v4Diffuse.w = 1.0f;
+
+				pLight->m_v3Color = Vector3(colorX, colorY, colorZ);
+				pLight->m_fIntensity = intensity;
 
 				// Range & Attenuation
 				pLight->m_fRange = jLight["Range"].get<float>();
@@ -341,7 +349,7 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 				float dirX = jLight["Direction"]["X"].get<float>();
 				float dirY = jLight["Direction"]["Y"].get<float>();
 				float dirZ = jLight["Direction"]["Z"].get<float>();
-				pLight->m_v3Direction = Vector3(dirX, dirY, dirZ);
+				pLight->m_v3Direction = ConvertUEToD3D(Vector3(dirX, dirY, dirZ));
 
 				// Color와 Intensity로 Diffuse 계산
 				float intensity = jLight["Intensity"].get<float>();
@@ -349,10 +357,13 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 				float colorY = jLight["Color"]["Y"].get<float>();
 				float colorZ = jLight["Color"]["Z"].get<float>();
 
-				pLight->m_v4Diffuse.x = colorX * intensity;
-				pLight->m_v4Diffuse.y = colorY * intensity;
-				pLight->m_v4Diffuse.z = colorZ * intensity;
-				pLight->m_v4Diffuse.w = 1.0f;
+				//pLight->m_v4Diffuse.x = colorX * intensity;
+				//pLight->m_v4Diffuse.y = colorY * intensity;
+				//pLight->m_v4Diffuse.z = colorZ * intensity;
+				//pLight->m_v4Diffuse.w = 1.0f;
+
+				pLight->m_v3Color = Vector3(colorX, colorY, colorZ);
+				pLight->m_fIntensity = intensity;
 
 				// Range & Attenuation
 				pLight->m_fRange = jLight["Range"].get<float>();
@@ -364,9 +375,8 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 				pLight->m_fFalloff = jLight["Falloff"].get<float>();
 
 				// Cone Angles
-				pLight->m_fTheta = jLight["Theta"].get<float>();
-				pLight->m_fPhi = jLight["Phi"].get<float>();
-
+				pLight->m_fPhi = jLight["Theta"].get<float>();
+				pLight->m_fTheta = jLight["Phi"].get<float>();
 				m_pLights.push_back(pLight);
 			}
 		}

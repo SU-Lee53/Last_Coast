@@ -7,39 +7,21 @@
 
 void GBufferPass::Initialize()
 {
+	const uint32 unRTVs = 3;
 	for (uint32 i = 0; i < RenderManager::g_unMaxPendingFrames; ++i) {
-		m_pRTVs[i].reserve(2);
+		m_pRTVs[i].reserve(unRTVs);
+		
+		for (uint32 j = 0; j < unRTVs; ++j) {
+			auto& [srvID, rtvID] = TEXTURE->LoadRenderTargetTexture(
+				"GBuffer_" + std::to_string(i) + "_" + std::to_string(j),
+				WinCore::g_dwClientWidth,
+				WinCore::g_dwClientHeight,
+				DXGI_FORMAT_R8G8B8A8_UNORM,
+				DXGI_FORMAT_R8G8B8A8_UNORM);
 
-		auto& [srvID0, rtvID0] = TEXTURE->LoadRenderTargetTexture(
-			"GBuffer_0" + std::to_string(i),
-			WinCore::g_dwClientWidth,
-			WinCore::g_dwClientHeight,
-			DXGI_FORMAT_R8G8B8A8_UNORM,
-			DXGI_FORMAT_R8G8B8A8_UNORM);
-
-		auto pRTV0 = std::static_pointer_cast<RenderTargetTexture>(TEXTURE->GetTextureByID(rtvID0, TEXTURE_RESOURCE_TYPE::RTV));
-		m_pRTVs[i].push_back(pRTV0);
-
-		auto& [srvID1, rtvID1] = TEXTURE->LoadRenderTargetTexture(
-			"G_Buffer_1" + std::to_string(i),
-			WinCore::g_dwClientWidth,
-			WinCore::g_dwClientHeight,
-			DXGI_FORMAT_R8G8B8A8_UNORM,
-			DXGI_FORMAT_R8G8B8A8_UNORM);
-
-		auto pRTV1 = std::static_pointer_cast<RenderTargetTexture>(TEXTURE->GetTextureByID(rtvID1, TEXTURE_RESOURCE_TYPE::RTV));
-		m_pRTVs[i].push_back(pRTV1);
-
-		auto& [srvID2, rtvID2] = TEXTURE->LoadRenderTargetTexture(
-			"G_Buffer_2" + std::to_string(i),
-			WinCore::g_dwClientWidth,
-			WinCore::g_dwClientHeight,
-			DXGI_FORMAT_R8G8B8A8_UNORM,
-			DXGI_FORMAT_R8G8B8A8_UNORM);
-
-		auto pRTV2 = std::static_pointer_cast<RenderTargetTexture>(TEXTURE->GetTextureByID(rtvID2, TEXTURE_RESOURCE_TYPE::RTV));
-		m_pRTVs[i].push_back(pRTV2);
-
+			auto pRTV = std::static_pointer_cast<RenderTargetTexture>(TEXTURE->GetTextureByID(rtvID, TEXTURE_RESOURCE_TYPE::RTV));
+			m_pRTVs[i].push_back(pRTV);
+		}
 	}
 }
 
@@ -190,7 +172,15 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 			// Set
 			renderParameter.cbInstanceData = instanceData;
 			for (const auto pObj : v) {
-				renderParameter.sbWorldTransformData.push_back(pObj->GetWorldMatrix().Transpose());
+				Matrix mtxWorld = pObj->GetWorldMatrix();
+				Matrix mtxInvWorld = mtxWorld.Invert();
+				
+				InstanceData data{
+					mtxWorld.Transpose(),
+					mtxInvWorld.Transpose(),
+				};
+
+				renderParameter.sbWorldTransformData.push_back(data);
 				if (auto pAnim = pObj->GetComponentFromRoot<AnimationController>().get()) {
 					renderParameter.pAnimationControllers.push_back(pAnim);
 				}
@@ -300,7 +290,7 @@ void GBufferPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList
 			pd3dCommandList->SetPipelineState(pd3dAnimatedPipelineState.Get());
 
 			for (size_t i = 0; i < v.pAnimationControllers.size(); ++i) {
-				StructuredBuffer sbWorldTransforms = RENDER->AllocSBuffer<Matrix>(1);
+				StructuredBuffer sbWorldTransforms = RENDER->AllocSBuffer<InstanceData>(1);
 				sbWorldTransforms.WriteData(v.sbWorldTransformData[i], 0);
 				pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamWorldTransform, sbWorldTransforms.GPUAddress);
 
@@ -317,7 +307,7 @@ void GBufferPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList
 			// Static
 			pd3dCommandList->SetPipelineState(pd3StaticPipelineState.Get());
 
-			StructuredBuffer sbWorldTransforms = RENDER->AllocSBuffer<Matrix>(v.sbWorldTransformData.size());
+			StructuredBuffer sbWorldTransforms = RENDER->AllocSBuffer<InstanceData>(v.sbWorldTransformData.size());
 			sbWorldTransforms.WriteData(v.sbWorldTransformData);
 			pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamWorldTransform, sbWorldTransforms.GPUAddress);
 
@@ -395,9 +385,118 @@ void GBufferPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList
 	gBufferHandle.Offset(1, unDescriptorInc);
 
 	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamGBuffer, outDescHandle.gpuHandle);
-	outDescHandle.cpuHandle.Offset(3, unDescriptorInc);
-	outDescHandle.gpuHandle.Offset(3, unDescriptorInc);
+	outDescHandle.cpuHandle.Offset(4, unDescriptorInc);
+	outDescHandle.gpuHandle.Offset(4, unDescriptorInc);
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dBackBufferHandle = RENDER->GetCurrentBackBufferHandle();
-	pd3dCommandList->OMSetRenderTargets(1, &d3dBackBufferHandle, TRUE, nullptr);
+}
+
+void DefferedLightingPass::Initialize()
+{
+	const uint32 unRTVs = 1;
+	for (uint32 i = 0; i < RenderManager::g_unMaxPendingFrames; ++i) {
+		m_pRTVs[i].reserve(unRTVs);
+
+		for (uint32 j = 0; j < unRTVs; ++j) {
+			auto& [srvID, rtvID] = TEXTURE->LoadRenderTargetTexture(
+				"HDR" + std::to_string(i) + "_" + std::to_string(j),
+				WinCore::g_dwClientWidth,
+				WinCore::g_dwClientHeight,
+				DXGI_FORMAT_R16G16B16A16_FLOAT,
+				DXGI_FORMAT_R16G16B16A16_FLOAT);
+
+			auto pRTV = std::static_pointer_cast<RenderTargetTexture>(TEXTURE->GetTextureByID(rtvID, TEXTURE_RESOURCE_TYPE::RTV));
+			m_pRTVs[i].push_back(pRTV);
+		}
+	}
+
+	CreatePipelineState();
+}
+
+void DefferedLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const
+{
+	// Set Render Targets
+	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
+	m_pRTVs[unCurrentContext][0]->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+	// Clear Render Targets
+	float pfClearColor[4] = { 0.f, 0.0f, 0.0f, 1.0f };
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = m_pRTVs[unCurrentContext][0]->GetRTVHandle();
+
+	for (int i = 0; i < m_pRTVs[unCurrentContext].size(); ++i) {
+		pd3dCommandList->ClearRenderTargetView(d3dRTVCPUDescriptorHandle, pfClearColor, 0, NULL);
+	}
+
+	//CD3DX12_CPU_DESCRIPTOR_HANDLE d3dDSVDescriptorHandle = RENDER->GetDepthStencilBufferHandle();
+	//pd3dCommandList->ClearDepthStencilView(d3dDSVDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, NULL);
+
+	pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, nullptr);
+}
+
+void DefferedLightingPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+{
+	pd3dCommandList->SetPipelineState(m_pd3dPipelineState.Get());
+
+	auto pQuadMesh = RENDER->GetQuadMesh();
+	pQuadMesh->Render(pd3dCommandList, 1);
+}
+
+void DefferedLightingPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const
+{
+	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
+	m_pRTVs[unCurrentContext][0]->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+
+	// Set HDR result
+	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE hdrHandle = outDescHandle.cpuHandle;
+	constexpr uint32 rootParamHDR = std::to_underlying(ROOT_PARAMETER::HDR_RESULT);
+
+	uint32 unNumHDRResults = m_pRTVs[unCurrentContext].size();
+	for (uint32 i = 0; i < unNumHDRResults; ++i) {
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtSRVHandle = m_pRTVs[unCurrentContext][i]->GetSRVHandle();
+		DEVICE->CopyDescriptorsSimple(1, hdrHandle, rtSRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		hdrHandle.Offset(1, unDescriptorInc);
+	}
+
+	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamHDR, outDescHandle.gpuHandle);
+	outDescHandle.cpuHandle.Offset(unNumHDRResults, unDescriptorInc);
+	outDescHandle.gpuHandle.Offset(unNumHDRResults, unDescriptorInc);
+}
+
+void DefferedLightingPass::CreatePipelineState()
+{
+	std::vector<D3D12_INPUT_ELEMENT_DESC> d3dInputElements = {
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+	};
+
+	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc;
+	inputLayoutDesc.NumElements = d3dInputElements.size();
+	inputLayoutDesc.pInputElementDescs = d3dInputElements.data();
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC d3dPipelineDesc{};
+	{
+		d3dPipelineDesc.pRootSignature = RenderManager::g_pd3dGlobalRootSignature.Get();
+		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("LightingVS");
+		d3dPipelineDesc.PS = SHADER->GetShaderByteCode("LightingPS");
+		d3dPipelineDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		d3dPipelineDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		d3dPipelineDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+		d3dPipelineDesc.DepthStencilState.DepthEnable = false;
+		d3dPipelineDesc.DepthStencilState.StencilEnable = false;
+
+		d3dPipelineDesc.InputLayout = inputLayoutDesc;
+		d3dPipelineDesc.SampleMask = UINT_MAX;
+		d3dPipelineDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		d3dPipelineDesc.NumRenderTargets = 1;
+		d3dPipelineDesc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		d3dPipelineDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+		d3dPipelineDesc.SampleDesc.Count = 1;
+		d3dPipelineDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	}
+
+	HRESULT hr = DEVICE->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dPipelineState.GetAddressOf()));
+	if (FAILED(hr)) {
+		__debugbreak();
+	}
 }

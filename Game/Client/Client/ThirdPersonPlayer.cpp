@@ -19,7 +19,7 @@ void ThirdPersonPlayer::Initialize()
 		m_pCamera->SetViewport(0, 0, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight, 0.f, 1.f);
 		m_pCamera->SetScissorRect(0, 0, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight);
 		m_pCamera->GenerateViewMatrix(XMFLOAT3(0.f, 0.f, -15.f), XMFLOAT3(0.f, 0.f, 1.f), XMFLOAT3(0.f, 1.f, 0.f));
-		m_pCamera->GenerateProjectionMatrix(1.01f, 500_m, ((float)WinCore::g_dwClientWidth / (float)WinCore::g_dwClientHeight), 60.0f);
+		m_pCamera->GenerateProjectionMatrix(10.f, 2000.f, ((float)WinCore::g_dwClientWidth / (float)WinCore::g_dwClientHeight), 60.0f);
 		m_pCamera->SetOwner(shared_from_this());
 
 		// Model
@@ -210,13 +210,13 @@ void ThirdPersonPlayer::PostUpdate()
 	//	}
 	//}
 
-	ImGui::Text("======= Ground Hit Result =======");
-	ImGui::Text("m_bGrounded : %s", m_bGrounded ? "TRUE" : "FALSE");
-	ImGui::Text("======= Terrain Hit Result =======");
-	ImGui::Text("hit.bGrounded : %s", hit.bGrounded ? "TRUE" : "FALSE");
-	ImGui::Text("hit.fHeight : %f", hit.fHeight);
-	ImGui::Text("hit.fPenetratioon : %f", hit.fPenetrationDepth);
-	ImGui::Text("hit.v3Normal : (%f, %f, %f)", hit.v3Normal.x, hit.v3Normal.y, hit.v3Normal.z);
+	//ImGui::Text("======= Ground Hit Result =======");
+	//ImGui::Text("m_bGrounded : %s", m_bGrounded ? "TRUE" : "FALSE");
+	//ImGui::Text("======= Terrain Hit Result =======");
+	//ImGui::Text("hit.bGrounded : %s", hit.bGrounded ? "TRUE" : "FALSE");
+	//ImGui::Text("hit.fHeight : %f", hit.fHeight);
+	//ImGui::Text("hit.fPenetratioon : %f", hit.fPenetrationDepth);
+	//ImGui::Text("hit.v3Normal : (%f, %f, %f)", hit.v3Normal.x, hit.v3Normal.y, hit.v3Normal.z);
 
 	ApplyGravity();
 

@@ -1,5 +1,5 @@
 #include "NewCommon.hlsl"
-//#include "Light.hlsl"
+#include "Light.hlsl"
 
 struct PS_GBUFFER_OUTPUT
 {
@@ -24,8 +24,9 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input, uint nInstanceID : SV_Ins
 	output.positionW = positionW;
 	output.position = mul(float4(output.positionW, 1.f), mtxViewProjection);
 	
-	output.normalW = mul(float4(input.normal, 0.f), mtxWorld).xyz;
-	output.tangentW = mul(float4(input.tangent, 0.f), mtxWorld).xyz;
+	float3x3 mtxNormal = (float3x3)transpose(gWorldTransforms[nInstanceID].mtxInvWorld);
+	output.normalW = normalize(mul(input.normal, mtxNormal));
+	output.tangentW = normalize(mul(input.tangent, mtxNormal));
 	output.uv = input.uv;
     
 	return output;
@@ -40,6 +41,7 @@ PS_GBUFFER_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
 	
 	// Normal
 	float3 vNormal = (gnTextureIndex.y != -1) ? ComputeNormal(input.normalW, input.tangentW, input.uv) : input.normalW;
+	//float3 vNormal = normalize(input.normalW);
 	float2 vNormalEnc = EncodeNormalOcta(vNormal);
 	
 	// Materials
@@ -52,11 +54,12 @@ PS_GBUFFER_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
 	
 	float fRoughness = 1.0f - saturate(m.fSmoothness);
 	float fAO = 1.0f;
-	float fSpecularPower = m.cSpecular.a;
+	float fSpecularPower = saturate(m.cSpecular.a);
 	
 	output.RT0 = float4(cAlbedo.rgb, fMetallic);
 	output.RT1 = float4(vNormalEnc, fRoughness, fAO);
 	output.RT2 = float4(cEmissive, fSpecularPower);
+	//output.RT2 = float4(input.positionW, 1.0f);
 	
 	return output;
 }
@@ -93,8 +96,9 @@ VS_SKINNED_OUTPUT VSAnimated(VS_SKINNED_INPUT input, uint nInstanceID : SV_Insta
 	output.positionW = positionW.xyz;
 	output.position = mul(positionW, mtxViewProjection);
 	
-	output.normalW = mul(float4(normal, 0.f), mtxWorld).xyz;
-	output.tangentW = mul(float4(tangent, 0.f), mtxWorld).xyz;
+	float3x3 mtxNormal = (float3x3) transpose(gWorldTransforms[nInstanceID].mtxInvWorld);
+	output.normalW = normalize(mul(normal, mtxNormal));
+	output.tangentW = normalize(mul(tangent, mtxNormal));
 	output.uv = input.uv;
     
 	return output;
@@ -109,6 +113,7 @@ PS_GBUFFER_OUTPUT PSAnimated(VS_SKINNED_OUTPUT input)
 	
 	// Normal
 	float3 vNormal = (gnTextureIndex.y != -1) ? ComputeNormal(input.normalW, input.tangentW, input.uv) : input.normalW;
+	//float3 vNormal = normalize(input.normalW);
 	float2 vNormalEnc = EncodeNormalOcta(vNormal);
 	
 	// Materials
@@ -122,11 +127,12 @@ PS_GBUFFER_OUTPUT PSAnimated(VS_SKINNED_OUTPUT input)
 	
 	float fRoughness = 1.0f - saturate(m.fSmoothness);
 	float fAO = 1.0f;
-	float fSpecularPower = m.cSpecular.a;
+	float fSpecularPower = saturate(m.cSpecular.a);
 	
 	output.RT0 = float4(cAlbedo.rgb, fMetallic);
 	output.RT1 = float4(vNormalEnc, fRoughness, fAO);
 	output.RT2 = float4(cEmissive, fSpecularPower);
+	//output.RT2 = float4(input.positionW, 1.0f);
 	
 	return output;
 }
@@ -179,6 +185,86 @@ PS_GBUFFER_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
 	output.RT0 = float4(cAlbedo.rgb, fMetallic);
 	output.RT1 = float4(vNormalEnc, fRoughness, fAO);
 	output.RT2 = float4(cEmissive, fSpecularPower);
+	//output.RT2 = float4(input.positionW, 1.0f);
 	
 	return output;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Deffered Lighting
+
+struct VS_QUAD_INPUT
+{
+	float3 position : POSITION;
+	float2 uv : TEXCOORD0;
+};
+
+struct VS_QUAD_OUTPUT
+{
+	float4 position : SV_POSITION;
+	float2 uv : TEXCOORD0;
+};
+
+VS_QUAD_OUTPUT VSDefferedLighting(VS_QUAD_INPUT input)
+{
+	VS_QUAD_OUTPUT output = (VS_QUAD_OUTPUT) 0;
+	
+	output.position = float4(input.position.xy, 0.f, 1.f);
+	output.uv = input.uv;
+	
+	return output;
+}
+
+float4 PSDefferedLighting(VS_QUAD_OUTPUT input) : SV_Target0
+{
+	int2 pixelPos = int2(input.position.xy);
+	float2 uv = (input.position.xy) / float2(gnScreenSize);
+	
+	GBufferData g = LoadGBuffer(pixelPos);
+	if (g.depth >= 0.9999f)
+	{
+		return float4(0, 0, 0, 1);
+	}
+	
+	float3 worldPos = ReconstructWorldPos(uv, g.depth);
+	float3 viewDir = normalize(gCamera.v3CameraPosition - worldPos);
+	
+	float specularIntensity = g.specular;
+	
+	float gloss = 1.0f - saturate(g.roughness);
+	float specularPower = lerp(8.f, 256.f, gloss * gloss);
+	
+	float3 finalColor = 0;
+	
+	[unroll(MAX_LIGHTS)]
+	for (int i = 0; i < gSceneGlobal.nNumLights; ++i)
+	{
+		LightData lightData = gLightData[i];
+		if (lightData.bEnable == 0)
+		{
+			continue;
+		}
+		
+		switch (lightData.nType)
+		{
+			case POINT_LIGHT:
+				finalColor += PointLight(worldPos, g.normalW, viewDir, g.albedo, specularPower, specularIntensity, i);
+				break;
+		
+			case SPOT_LIGHT:
+				finalColor += SpotLight(worldPos, g.normalW, viewDir, g.albedo, specularPower, specularIntensity, i);
+				break;
+			
+			case DIRECTIONAL_LIGHT:
+				finalColor += DirectionalLight(worldPos, g.normalW, viewDir, g.albedo, specularPower, specularIntensity, i);
+				break;
+		}
+	}
+	
+	finalColor *= g.ao;
+	//finalColor += g.emissive;
+	
+	//return float4(g.albedo, 1.0f);
+	//return float4(g.normalW, 1.0f);
+	return float4(finalColor, 1.0f);
 }

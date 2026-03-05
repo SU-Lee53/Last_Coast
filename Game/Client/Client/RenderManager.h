@@ -11,12 +11,13 @@
 enum class ROOT_PARAMETER : uint32 {
 	PER_SCENE_DATA							= 0,
 	G_BUFFER								= 1,
-	PER_PASS_DATA							= 2,
-	PER_INSTANCE_DATA						= 3,
-	WORLD_TRANSFORM_DATA					= 4,
-	BONE_TRANSFORM							= 5,
-	TERRAIN_LAYER							= 6,
-	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 7,
+	HDR_RESULT								= 2,
+	PER_PASS_DATA							= 3,
+	PER_INSTANCE_DATA						= 4,
+	WORLD_TRANSFORM_DATA					= 5,
+	BONE_TRANSFORM							= 6,
+	TERRAIN_LAYER							= 7,
+	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 8,
 };
 
 constexpr UINT DESCRIPTOR_PER_DRAW = 100'000;
@@ -38,6 +39,7 @@ public:
 	void Add(std::shared_ptr<T> pObj);
 	void Reset(uint32 unContextIndex);
 
+	const std::shared_ptr<IMesh> GetQuadMesh() const { return m_pQuadMesh; }
 
 public:
 	DescriptorHeap& GetDescriptorHeap() { return m_DescriptorHeapForDraw[m_unCurrentContextIndex]; }
@@ -72,6 +74,8 @@ public:
 	
 	// Objects Ready-To-Draw
 	std::vector<std::shared_ptr<IGameObject>> m_pRenderItems;
+
+	std::shared_ptr<IMesh> m_pQuadMesh;
 
 private:
 	// Frame Resources

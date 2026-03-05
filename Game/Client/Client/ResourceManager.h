@@ -80,7 +80,7 @@ inline VertexBuffer ResourceManager::CreateVertexBuffer(std::vector<T> vertices,
 	CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(VertexBufferSize);
 
 	hr = Buffer.Create(
-		m_pd3dDevice,
+		DEVICE.Get(),
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&resourceDesc,

@@ -22,7 +22,7 @@ IndexBuffer ResourceManager::CreateIndexBuffer(std::vector<UINT> Indices)
 	UINT IndexBufferSize = sizeof(UINT) * nIndices;
 
 	hr = Buffer.Create(
-		m_pd3dDevice,
+		DEVICE.Get(),
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer(IndexBufferSize),
@@ -38,7 +38,7 @@ IndexBuffer ResourceManager::CreateIndexBuffer(std::vector<UINT> Indices)
 		//ResetCommandList();
 		auto cmdList = AllocateCommandListSafe();
 
-		hr = m_pd3dDevice->CreateCommittedResource(
+		hr = DEVICE->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Buffer(IndexBufferSize),
@@ -92,7 +92,7 @@ ComPtr<ID3D12Resource> ResourceManager::CreateBufferResource(void* pData, UINT n
 	if (d3dHeapType == D3D12_HEAP_TYPE_UPLOAD) d3dResourceInitialStates = D3D12_RESOURCE_STATE_GENERIC_READ;
 	else if (d3dHeapType == D3D12_HEAP_TYPE_READBACK) d3dResourceInitialStates = D3D12_RESOURCE_STATE_COPY_DEST;
 
-	HRESULT hResult = m_pd3dDevice->CreateCommittedResource(
+	HRESULT hResult = DEVICE->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(d3dHeapType),
 		D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer(nBytes),
@@ -113,7 +113,7 @@ ComPtr<ID3D12Resource> ResourceManager::CreateBufferResource(void* pData, UINT n
 			ComPtr<ID3D12Resource> pUploadBuffer;
 
 			d3dHeapPropertiesDesc.Type = D3D12_HEAP_TYPE_UPLOAD;
-			m_pd3dDevice->CreateCommittedResource(
+			DEVICE->CreateCommittedResource(
 				&d3dHeapPropertiesDesc,
 				D3D12_HEAP_FLAG_NONE,
 				&d3dResourceDesc,

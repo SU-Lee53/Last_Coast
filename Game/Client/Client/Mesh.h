@@ -52,6 +52,7 @@ public:
 	using ID = uint64;
 
 public:
+	IMesh() = default;
 	IMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	virtual ~IMesh() {}
 	
@@ -147,3 +148,19 @@ protected:
 	VertexBuffer m_Tangents;
 };
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// QuadMesh
+
+class QuadMesh : public IMesh {
+public:
+	QuadMesh();
+
+	virtual void Render(
+		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
+		uint32 nInstanceCount = 1,
+		uint32 unStartIndex = 0,
+		int32 nIndexCount = -1) const override;
+
+public:
+	VertexBuffer m_TexCoords;
+};

@@ -31,13 +31,15 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 	for (uint32 i = 0; i < g_unMaxPendingFrames; ++i) {
 		m_DescriptorHeapForDraw[i].Initialize(pd3dDevice, d3dHeapDesc);
 		m_ConstantBufferPool[i].Initialize(1000);
-		m_StructuredBufferPool[i].Initialize(100'000, 1000);
+		m_StructuredBufferPool[i].Initialize(1'000'000, 1000);
 	}
+
+	m_pQuadMesh = std::make_shared<QuadMesh>();
 }
 
 void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 {
-	CD3DX12_DESCRIPTOR_RANGE1 d3dDescriptorRanges[12]; 
+	CD3DX12_DESCRIPTOR_RANGE1 d3dDescriptorRanges[13]; 
 	// space0 : Per Scene (Frame) 
 	d3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbSceneData 
 	d3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gLightData 
@@ -47,33 +49,37 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	// space0 : GBuffer
 	d3dDescriptorRanges[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 11, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0);
 
+	// space0 : HDR Result
+	d3dDescriptorRanges[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 15, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE, 0);
+
 	// space1 : Per Pass 
-	d3dDescriptorRanges[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 1, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // gMaterialData 
-	d3dDescriptorRanges[6].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, 1, 1, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTextures
+	d3dDescriptorRanges[6].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 1, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // gMaterialData 
+	d3dDescriptorRanges[7].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, 1, 1, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTextures
 
 	// space2 : cbTerrainLayerData
-	d3dDescriptorRanges[7].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbTerrainLayerData
-	d3dDescriptorRanges[8].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 2, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainAlbedo[4] 
-	d3dDescriptorRanges[9].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 6, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainNormal[4]
+	d3dDescriptorRanges[8].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbTerrainLayerData
+	d3dDescriptorRanges[9].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 2, 2, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainAlbedo[4] 
+	d3dDescriptorRanges[10].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 6, 2, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainNormal[4]
 
 	// space2 : cbTerrainComponentData
-	d3dDescriptorRanges[10].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbTerrainComponentData 
-	d3dDescriptorRanges[11].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 10, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainWeightMap
+	d3dDescriptorRanges[11].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbTerrainComponentData 
+	d3dDescriptorRanges[12].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 10, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainWeightMap
 
-	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[8];
+	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[9];
 	// Per Pass
-	d3dRootParameters[0].InitAsDescriptorTable(4, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);
-	d3dRootParameters[1].InitAsDescriptorTable(1, &d3dDescriptorRanges[4], D3D12_SHADER_VISIBILITY_ALL);
+	d3dRootParameters[0].InitAsDescriptorTable(4, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);	// Per Draw
+	d3dRootParameters[1].InitAsDescriptorTable(1, &d3dDescriptorRanges[4], D3D12_SHADER_VISIBILITY_ALL);	// G-Buffers
+	d3dRootParameters[2].InitAsDescriptorTable(1, &d3dDescriptorRanges[5], D3D12_SHADER_VISIBILITY_ALL);	// HDR Result
 	
 	// Per Pass
-	d3dRootParameters[2].InitAsDescriptorTable(2, &d3dDescriptorRanges[5], D3D12_SHADER_VISIBILITY_ALL);
+	d3dRootParameters[3].InitAsDescriptorTable(2, &d3dDescriptorRanges[6], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass
 
 	// Per Instance(Draw)
-	d3dRootParameters[3].InitAsConstantBufferView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// cbInstanceData
-	d3dRootParameters[4].InitAsShaderResourceView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gWorldTransforms
-	d3dRootParameters[5].InitAsShaderResourceView(1, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gBoneTransforms
-	d3dRootParameters[6].InitAsDescriptorTable(3, &d3dDescriptorRanges[7], D3D12_SHADER_VISIBILITY_ALL);	// TerrainLayer
-	d3dRootParameters[7].InitAsDescriptorTable(2, &d3dDescriptorRanges[10], D3D12_SHADER_VISIBILITY_ALL);	// TerrainComponent
+	d3dRootParameters[4].InitAsConstantBufferView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// cbInstanceData
+	d3dRootParameters[5].InitAsShaderResourceView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gWorldTransforms
+	d3dRootParameters[6].InitAsShaderResourceView(1, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gBoneTransforms
+	d3dRootParameters[7].InitAsDescriptorTable(3, &d3dDescriptorRanges[8], D3D12_SHADER_VISIBILITY_ALL);	// TerrainLayer
+	d3dRootParameters[8].InitAsDescriptorTable(2, &d3dDescriptorRanges[11], D3D12_SHADER_VISIBILITY_ALL);	// TerrainComponent
 
 	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[3];
 	// s0 : SkyboxSampler
@@ -195,6 +201,10 @@ void RenderManager::BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dComma
 		sceneCBData.gSceneGlobal.nNumLights = CUR_SCENE->GetLightsInScene().size();
 		sceneCBData.gSceneGlobal.v4GlobalAmbient = CUR_SCENE->GetGlobalAmbient();
 		sceneCBData.gCamera = CUR_SCENE->GetCamera()->MakeCBData();
+		sceneCBData.nScreenSize = XMINT2{ 
+			static_cast<int32>(WinCore::g_dwClientWidth), 
+			static_cast<int32>(WinCore::g_dwClientHeight)
+		};
 	}
 	auto perSceneCBuffer = AllocCBuffer<CB_SCENE_DATA>();
 	perSceneCBuffer.WriteData(&sceneCBData);
@@ -386,12 +396,20 @@ void RenderManager::CreateRenderTarget()
 
 void RenderManager::CreateDepthStencil()
 {
+	//m_DepthStencilID = TEXTURE->LoadDepthStencilTexture(
+	//	"DSV",
+	//	WinCore::g_dwClientWidth,
+	//	WinCore::g_dwClientHeight,
+	//	DXGI_FORMAT_R24_UNORM_X8_TYPELESS,
+	//	DXGI_FORMAT_D24_UNORM_S8_UINT
+	//);
+
 	m_DepthStencilID = TEXTURE->LoadDepthStencilTexture(
 		"DSV",
 		WinCore::g_dwClientWidth,
 		WinCore::g_dwClientHeight,
-		DXGI_FORMAT_R24_UNORM_X8_TYPELESS,
-		DXGI_FORMAT_D24_UNORM_S8_UINT
+		DXGI_FORMAT_R32_FLOAT,
+		DXGI_FORMAT_D32_FLOAT
 	);
 }
 

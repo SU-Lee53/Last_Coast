@@ -12,7 +12,9 @@ constexpr static UINT MAX_LIGHTS = 16;
 
 struct CameraData {
 	Matrix	mtxView;
+	Matrix	mtxInvView;
 	Matrix	mtxProjection;
+	Matrix	mtxInvProjection;
 	Vector3	v3CameraPosition;
 	float	pad0;
 };
@@ -27,19 +29,22 @@ struct SceneGlobalData {
 
 struct LightData
 {
-	Vector4		v4Ambient;					// c0
-	Vector4		v4Diffuse;					// c1
-	Vector4		v4Specular;					// c2
-	Vector3		v3Position;					// c3.xyz
-	float		fFalloff;					// c3.w
-	Vector3		v3Direction;					// c4.xyz
-	float		fTheta; //cos(m_fTheta)		// c4.w
-	Vector3		v3Attenuation;				// c5.xyz
-	float		fPhi; //cos(m_fPhi)			// c6.w
-	uint32		bEnable;					// c7.x
-	uint32		nType;						// c7.y
-	float		fRange;						// c7.z
-	float		pad0;						// c7.w
+	//Vector4		v4Ambient;
+	//Vector4		v4Diffuse;
+	//Vector4		v4Specular;
+
+	Vector3 v3Color;						// c0.xyz
+	float fIntensity;						// c0.w
+	Vector3		v3Position;					// c1.xyz
+	float		fFalloff;					// c1.w
+	Vector3		v3Direction;				// c2.xyz
+	float		fTheta; //cos(m_fTheta)		// c2.w
+	Vector3		v3Attenuation;				// c3.xyz
+	float		fPhi; //cos(m_fPhi)			// c4.w
+	uint32		bEnable;					// c5.x
+	uint32		nType;						// c5.y
+	float		fRange;						// c5.z
+	float		pad0;						// c5.w
 };
 
 // ============ cbuffers ============
@@ -48,6 +53,7 @@ struct alignas(16) CB_SCENE_DATA
 {
 	CameraData gCamera;
 	SceneGlobalData gSceneGlobal;
+	XMINT2 nScreenSize;
 };
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -74,6 +80,7 @@ struct MaterialData
 struct InstanceData
 {
 	Matrix mtxWorld;
+	Matrix mtxInvWorld;
 };
 
 //////////////////////////////////////////////////////////////////////////////////

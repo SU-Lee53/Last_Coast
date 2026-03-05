@@ -149,6 +149,8 @@ void Camera::GenerateViewMatrix()
 	m_mtxView._42 = -m_v3Position.Dot(m_v3Up);
 	m_mtxView._43 = -m_v3Position.Dot(m_v3Look);
 	m_mtxView._44 = 1.f;
+
+	m_mtxInverseView = m_mtxView.Invert();
 }
 
 void Camera::GenerateViewMatrix(Vector3 v3Position, Vector3 v3LookAt, Vector3 v3Up)
@@ -177,6 +179,8 @@ void Camera::GenerateProjectionMatrix(float fNearPlaneDistance, float fFarPlaneD
 			fFarPlaneDistance
 		)
 	);
+
+	m_mtxInverseProjection = m_mtxProjection.Invert();
 
 	BoundingFrustum::CreateFromMatrix(m_xmFrustumOrigin, XMLoadFloat4x4(&m_mtxProjection));
 }
@@ -210,7 +214,9 @@ CameraData Camera::MakeCBData() const
 	CameraData camData{};
 	{
 		camData.mtxView = m_mtxView.Transpose();
+		camData.mtxInvView = m_mtxInverseView.Transpose();
 		camData.mtxProjection = m_mtxProjection.Transpose();
+		camData.mtxInvProjection = m_mtxInverseProjection.Transpose();
 		camData.v3CameraPosition = m_v3Position;
 	}
 

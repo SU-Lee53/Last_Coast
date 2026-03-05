@@ -128,8 +128,8 @@ void TerrainObject::BuildTerrainMesh(const TERRAINLOADINFO& terrainInfo)
 
 			size_t unIndex = (z * unHeightMapWidth) + x;
 			meshLoadInfo.v3Positions[unIndex] = ConvertUEToD3D(v3UEPosition);
-			meshLoadInfo.v3Normals[unIndex] = ConvertUEToD3D(v3UENormal);
-			meshLoadInfo.v3Tangents[unIndex] = ConvertUEToD3D(v3UETangent);
+			meshLoadInfo.v3Normals[unIndex] = v3UENormal;
+			meshLoadInfo.v3Tangents[unIndex] = v3UETangent;
 		}
 	}
 

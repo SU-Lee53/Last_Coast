@@ -10,12 +10,12 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 	g_pD3DCore->Initialize();
 	
 	// Init managers
+	RESOURCE->Initialize(g_pD3DCore->GetDevice());
 	TEXTURE->Initialize(g_pD3DCore->GetDevice());
 	MATERIAL->Initialize();
 	RENDER->Initialize(g_pD3DCore->GetDevice());
 	SHADER->Initialize(g_pD3DCore->GetDevice());
 
-	RESOURCE->Initialize(g_pD3DCore->GetDevice());
 	MODEL->Initialize();
 	ANIMATION->Initialize();
 

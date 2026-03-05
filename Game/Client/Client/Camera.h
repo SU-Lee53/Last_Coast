@@ -67,6 +67,9 @@ protected:
 	Matrix m_mtxView;
 	Matrix m_mtxProjection;
 
+	Matrix m_mtxInverseView;
+	Matrix m_mtxInverseProjection;
+
 	float m_ffovY = 0.f;
 	float m_fAspectRatio = 0.f;
 	float m_fNear = 0.f;

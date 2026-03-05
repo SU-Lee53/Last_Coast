@@ -90,12 +90,12 @@ D3D12_SHADER_BYTECODE ShaderManager::CompileShaderDXC(const std::wstring& wstrFi
 		L"-Od",
 		L"-Zss",
 		L"-Zpc",
-		L"-Wall",
+		//L"-Wall",
 #else
 		L"-O3",
 		L"-Qstrip_debug",
 		L"-Qstrip_reflect",
-		L"-Wall",
+		//L"-Wall",
 #endif
 	};
 
@@ -200,6 +200,12 @@ void ShaderManager::CompileShaders()
 	
 	Compile("TerrainVS", L"DefferedShader.hlsl", L"VSTerrain", SHADER_TYPE::VS);
 	Compile("TerrainPS", L"DefferedShader.hlsl", L"PSTerrain", SHADER_TYPE::PS);
+	
+	Compile("LightingVS", L"DefferedShader.hlsl", L"VSDefferedLighting", SHADER_TYPE::VS);
+	Compile("LightingPS", L"DefferedShader.hlsl", L"PSDefferedLighting", SHADER_TYPE::PS);
+	
+	Compile("ToneMappingVS", L"ToneMapping.hlsl", L"VSToneMapping", SHADER_TYPE::VS);
+	Compile("ToneMappingPS", L"ToneMapping.hlsl", L"PSToneMapping", SHADER_TYPE::PS);
 
 	//// FullScreenShader.hlsl
 	//Compile("FullScreenVS", L"FullScreenShader.hlsl", L"VSFullScreen", SHADER_TYPE::VS);

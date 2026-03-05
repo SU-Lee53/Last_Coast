@@ -226,6 +226,7 @@
     <ClInclude Include="TextureManager.h" />
     <ClInclude Include="ThirdPersonCamera.h" />
     <ClInclude Include="ThirdPersonPlayer.h" />
+    <ClInclude Include="ToneMappingPass.h" />
     <ClInclude Include="Transform.h" />
     <ClInclude Include="Typedef.h" />
     <ClInclude Include="UIManager.h" />
@@ -348,6 +349,7 @@
     <ClCompile Include="TextureManager.cpp" />
     <ClCompile Include="ThirdPersonCamera.cpp" />
     <ClCompile Include="ThirdPersonPlayer.cpp" />
+    <ClCompile Include="ToneMappingPass.cpp" />
     <ClCompile Include="Transform.cpp" />
     <ClCompile Include="UIManager.cpp" />
     <ClCompile Include="Utility.cpp" />
@@ -403,6 +405,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="..\HLSL\Shaders.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\ToneMapping.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
