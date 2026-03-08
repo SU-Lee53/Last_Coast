@@ -36,16 +36,24 @@ Texture::ID TextureManager::LoadTexture(const std::string& strTextureName)
 			return TextureTable::InvalidID;
 		}
 
-		Texture::ID un64TexID = m_SRVTextureTable.Register(strTextureName, pTexture, (void*)&pTexture->GetSRVDesc(), sizeof(D3D12_SHADER_RESOURCE_VIEW_DESC));
-		if (un64TexID == TextureTable::InvalidID) {
+		TextureTable::ResourceDesc srvDesc;
+		srvDesc.eType = TextureTable::ResourceDesc::TYPE::SRV;
+		srvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
+		Texture::ID un64SRVTexID = m_SRVTextureTable.Register(
+			strTextureName,
+			pTexture,
+			&srvDesc);
+
+		if (un64SRVTexID == TextureTable::InvalidID) {
 			OutputDebugStringA(std::format("Failed to load texture SRV : {}", strTextureName).c_str());
 			return TextureTable::InvalidID;
 		}
 
-		pTexture->m_un64RuntimeSRVID = un64TexID;
+		pTexture->m_d3dSRVDesc = srvDesc.srv;
+		pTexture->m_un64RuntimeSRVID = un64SRVTexID;
 		pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByID(pTexture->m_un64RuntimeSRVID);
 
-		return un64TexID;
+		return un64SRVTexID;
 	}
 
 	return pFind;
@@ -61,16 +69,24 @@ Texture::ID TextureManager::LoadTextureFromRaw(const std::string& strTextureName
 			return TextureTable::InvalidID;
 		}
 
-		Texture::ID un64TexID = m_SRVTextureTable.Register(strTextureName, pTexture, (void*)&pTexture->GetSRVDesc(), sizeof(D3D12_SHADER_RESOURCE_VIEW_DESC));
-		if (un64TexID == TextureTable::InvalidID) {
+		TextureTable::ResourceDesc srvDesc;
+		srvDesc.eType = TextureTable::ResourceDesc::TYPE::SRV;
+		srvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
+		Texture::ID un64SRVTexID = m_SRVTextureTable.Register(
+			strTextureName,
+			pTexture,
+			&srvDesc);
+
+		if (un64SRVTexID == TextureTable::InvalidID) {
 			OutputDebugStringA(std::format("Failed to load texture SRV : {}", strTextureName).c_str());
 			return TextureTable::InvalidID;
 		}
 
-		pTexture->m_un64RuntimeSRVID = un64TexID;
+		pTexture->m_d3dSRVDesc = srvDesc.srv;
+		pTexture->m_un64RuntimeSRVID = un64SRVTexID;
 		pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByID(pTexture->m_un64RuntimeSRVID);
 
-		return un64TexID;
+		return un64SRVTexID;
 	}
 
 	return pFind;
@@ -86,16 +102,24 @@ Texture::ID TextureManager::LoadTextureArray(const std::string& strTextureName, 
 			return TextureTable::InvalidID;
 		}
 
-		Texture::ID un64TexID = m_SRVTextureTable.Register(strTextureName, pTexture, (void*)&pTexture->GetSRVDesc(), sizeof(D3D12_SHADER_RESOURCE_VIEW_DESC));
-		if (un64TexID == TextureTable::InvalidID) {
-			OutputDebugStringA(std::format("Failed to load texture : {}", strTextureName).c_str());
+		TextureTable::ResourceDesc srvDesc;
+		srvDesc.eType = TextureTable::ResourceDesc::TYPE::SRV;
+		srvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2DARRAY;
+		Texture::ID un64SRVTexID = m_SRVTextureTable.Register(
+			strTextureName,
+			pTexture,
+			&srvDesc);
+
+		if (un64SRVTexID == TextureTable::InvalidID) {
+			OutputDebugStringA(std::format("Failed to load texture SRV : {}", strTextureName).c_str());
 			return TextureTable::InvalidID;
 		}
 
-		pTexture->m_un64RuntimeSRVID = un64TexID;
+		pTexture->m_d3dSRVDesc = srvDesc.srv;
+		pTexture->m_un64RuntimeSRVID = un64SRVTexID;
 		pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByID(pTexture->m_un64RuntimeSRVID);
 
-		return un64TexID;
+		return un64SRVTexID;
 	}
 
 	return pFind;
@@ -113,32 +137,42 @@ std::pair<Texture::ID, Texture::ID> TextureManager::LoadRenderTargetTexture(cons
 
 
 		// SRV
+		TextureTable::ResourceDesc srvDesc;
+		srvDesc.eType = TextureTable::ResourceDesc::TYPE::SRV;
+		srvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
 		Texture::ID un64SRVTexID = m_SRVTextureTable.Register(
-			strTextureName, 
-			pTexture, 
-			(void*)&pTexture->GetSRVDesc(), sizeof(D3D12_SHADER_RESOURCE_VIEW_DESC), 
-			&dxgiSRVFormat, sizeof(DXGI_FORMAT));
+			strTextureName,
+			pTexture,
+			&srvDesc,
+			&dxgiSRVFormat,
+			sizeof(DXGI_FORMAT));
 
 		if (un64SRVTexID == TextureTable::InvalidID) {
 			OutputDebugStringA(std::format("Failed to load texture SRV : {}", strTextureName).c_str());
 			return { TextureTable::InvalidID, TextureTable::InvalidID };
 		}
 
+		pTexture->m_d3dSRVDesc = srvDesc.srv;
 		pTexture->m_un64RuntimeSRVID = un64SRVTexID;
 		pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByID(pTexture->m_un64RuntimeSRVID);
 
 		// RTV
+		TextureTable::ResourceDesc rtvDesc;
+		rtvDesc.eType = TextureTable::ResourceDesc::TYPE::RTV;
+		rtvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
 		Texture::ID un64RTVTexID = m_RTVTextureTable.Register(
 			strTextureName, 
 			pTexture, 
-			(void*)&pTexture->GetRTVDesc(), sizeof(D3D12_RENDER_TARGET_VIEW_DESC),
-			&dxgiRTVFormat, sizeof(DXGI_FORMAT));
+			&rtvDesc,
+			&dxgiRTVFormat, 
+			sizeof(DXGI_FORMAT));
 
 		if (un64RTVTexID == TextureTable::InvalidID) {
 			OutputDebugStringA(std::format("Failed to load texture RTV : {}", strTextureName).c_str());
 			return { TextureTable::InvalidID, TextureTable::InvalidID };
 		}
 
+		pTexture->m_d3dRTVDesc = rtvDesc.rtv;
 		pTexture->m_un64RuntimeRTVID = un64RTVTexID;
 		pTexture->m_d3dRTVHandle = m_RTVTextureTable.GetCPUHandleByID(pTexture->m_un64RuntimeRTVID);
 
@@ -158,32 +192,42 @@ std::pair<Texture::ID, Texture::ID> TextureManager::LoadRenderTargetTexture(ComP
 	bool bResult = pTexture->Initialize(pd3dRTVResourceFromSwapChain);
 
 	// SRV
+	TextureTable::ResourceDesc srvDesc;
+	srvDesc.eType = TextureTable::ResourceDesc::TYPE::SRV;
+	srvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
 	Texture::ID un64SRVTexID = m_SRVTextureTable.Register(
 		strTextureName,
 		pTexture,
-		(void*)&pTexture->GetSRVDesc(), sizeof(D3D12_SHADER_RESOURCE_VIEW_DESC),
-		&dxgiSRVFormat, sizeof(DXGI_FORMAT));
+		&srvDesc,
+		&dxgiSRVFormat,
+		sizeof(DXGI_FORMAT));
 
 	if (un64SRVTexID == TextureTable::InvalidID) {
 		OutputDebugStringA(std::format("Failed to load texture SRV : {}", strTextureName).c_str());
 		return { TextureTable::InvalidID, TextureTable::InvalidID };
 	}
 
+	pTexture->m_d3dSRVDesc = srvDesc.srv;
 	pTexture->m_un64RuntimeSRVID = un64SRVTexID;
 	pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByID(pTexture->m_un64RuntimeSRVID);
 
 	// RTV
+	TextureTable::ResourceDesc rtvDesc;
+	rtvDesc.eType = TextureTable::ResourceDesc::TYPE::RTV;
+	rtvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
 	Texture::ID un64RTVTexID = m_RTVTextureTable.Register(
 		strTextureName,
 		pTexture,
-		(void*)&pTexture->GetRTVDesc(), sizeof(D3D12_RENDER_TARGET_VIEW_DESC),
-		&dxgiRTVFormat, sizeof(DXGI_FORMAT));
+		&rtvDesc,
+		&dxgiRTVFormat,
+		sizeof(DXGI_FORMAT));
 
 	if (un64RTVTexID == TextureTable::InvalidID) {
 		OutputDebugStringA(std::format("Failed to load texture RTV : {}", strTextureName).c_str());
 		return { TextureTable::InvalidID, TextureTable::InvalidID };
 	}
 
+	pTexture->m_d3dRTVDesc = rtvDesc.rtv;
 	pTexture->m_un64RuntimeRTVID = un64RTVTexID;
 	pTexture->m_d3dRTVHandle = m_RTVTextureTable.GetCPUHandleByID(pTexture->m_un64RuntimeRTVID);
 
@@ -202,25 +246,34 @@ std::pair<Texture::ID, Texture::ID> TextureManager::LoadDepthStencilTexture(cons
 
 
 		// SRV
+		TextureTable::ResourceDesc srvDesc;
+		srvDesc.eType = TextureTable::ResourceDesc::TYPE::SRV;
+		srvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
 		Texture::ID un64SRVTexID = m_SRVTextureTable.Register(
 			strTextureName,
 			pTexture,
-			(void*)&pTexture->GetSRVDesc(), sizeof(D3D12_SHADER_RESOURCE_VIEW_DESC),
-			&dxgiSRVFormat, sizeof(DXGI_FORMAT));
+			&srvDesc,
+			&dxgiSRVFormat,
+			sizeof(DXGI_FORMAT));
 
 		if (un64SRVTexID == TextureTable::InvalidID) {
 			OutputDebugStringA(std::format("Failed to load texture SRV : {}", strTextureName).c_str());
 			return { TextureTable::InvalidID, TextureTable::InvalidID };
 		}
 
+		pTexture->m_d3dSRVDesc = srvDesc.srv;
 		pTexture->m_un64RuntimeSRVID = un64SRVTexID;
 		pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByID(pTexture->m_un64RuntimeSRVID);
+		
 
-		// RTV
+		// DSV
+		TextureTable::ResourceDesc dsvDesc;
+		dsvDesc.eType = TextureTable::ResourceDesc::TYPE::DSV;
+		dsvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
 		Texture::ID un64DSVTexID = m_DSVTextureTable.Register(
 			strTextureName,
 			pTexture,
-			(void*)&pTexture->GetDSVDesc(), sizeof(D3D12_RENDER_TARGET_VIEW_DESC),
+			&dsvDesc,
 			&dxgiDSVFormat, sizeof(DXGI_FORMAT));
 
 		if (un64DSVTexID == TextureTable::InvalidID) {
@@ -228,6 +281,7 @@ std::pair<Texture::ID, Texture::ID> TextureManager::LoadDepthStencilTexture(cons
 			return { TextureTable::InvalidID, TextureTable::InvalidID };
 		}
 
+		pTexture->m_d3dDSVDesc = dsvDesc.dsv;
 		pTexture->m_un64RuntimeDSVID = un64DSVTexID;
 		pTexture->m_d3dDSVHandle = m_DSVTextureTable.GetCPUHandleByID(pTexture->m_un64RuntimeDSVID);
 
@@ -237,6 +291,73 @@ std::pair<Texture::ID, Texture::ID> TextureManager::LoadDepthStencilTexture(cons
 	Texture::ID un64DSVFindID = m_DSVTextureTable.GetID(strTextureName);
 
 	return { un64SRVFindID, un64DSVFindID };
+}
+
+std::pair<Texture::ID, Texture::ID> TextureManager::LoadUnorderedAccessTexture(const std::string& strTextureName, uint32 unArraySize, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVUAVFormat)
+{
+	Texture::ID un64SRVFindID = m_SRVTextureTable.GetID(strTextureName);
+	if (un64SRVFindID == TextureTable::InvalidID) {
+		std::shared_ptr<UnorderedAccessTexture> pTexture = std::make_shared<UnorderedAccessTexture>();
+		bool bResult = (unArraySize == 1) ? pTexture->Initialize(unWidth, unHeight, dxgiSRVUAVFormat)
+			: pTexture->InitializeArray(unArraySize, unWidth, unHeight, dxgiSRVUAVFormat);
+		if (!bResult) {
+			return { TextureTable::InvalidID, TextureTable::InvalidID };
+		}
+
+
+		// SRV
+		TextureTable::ResourceDesc srvDesc;
+		srvDesc.eType = TextureTable::ResourceDesc::TYPE::SRV;
+		if (unArraySize == 1) {
+			srvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
+		}
+		else {
+			srvDesc.eDimension = (unArraySize == 6) ? TextureTable::ResourceDesc::DIMENSION::TEXTURECUBE
+				                                    : TextureTable::ResourceDesc::DIMENSION::TEXTURE2DARRAY;
+		}
+		Texture::ID un64SRVTexID = m_SRVTextureTable.Register(
+			strTextureName,
+			pTexture,
+			&srvDesc,
+			&dxgiSRVUAVFormat, 
+			sizeof(DXGI_FORMAT));
+
+		if (un64SRVTexID == TextureTable::InvalidID) {
+			OutputDebugStringA(std::format("Failed to load texture SRV : {}", strTextureName).c_str());
+			return { TextureTable::InvalidID, TextureTable::InvalidID };
+		}
+
+		pTexture->m_d3dSRVDesc = srvDesc.srv;
+		pTexture->m_un64RuntimeSRVID = un64SRVTexID;
+		pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByID(pTexture->m_un64RuntimeSRVID);
+
+		// UAV
+		TextureTable::ResourceDesc uavDesc;
+		uavDesc.eType = TextureTable::ResourceDesc::TYPE::UAV;
+		uavDesc.eDimension = (unArraySize == 1) ? TextureTable::ResourceDesc::DIMENSION::TEXTURE2D
+			                                    : TextureTable::ResourceDesc::DIMENSION::TEXTURE2DARRAY;
+		Texture::ID un64UAVTexID = m_UAVTextureTable.Register(
+			strTextureName,
+			pTexture,
+			&uavDesc,
+			&dxgiSRVUAVFormat,
+			sizeof(DXGI_FORMAT));
+
+		if (un64UAVTexID == TextureTable::InvalidID) {
+			OutputDebugStringA(std::format("Failed to load texture UAV : {}", strTextureName).c_str());
+			return { TextureTable::InvalidID, TextureTable::InvalidID };
+		}
+
+		pTexture->m_d3dUAVDesc = uavDesc.uav;
+		pTexture->m_un64RuntimeUAVID = un64UAVTexID;
+		pTexture->m_d3dUAVHandle = m_UAVTextureTable.GetCPUHandleByID(pTexture->m_un64RuntimeUAVID);
+
+		return { un64SRVTexID, un64UAVTexID };
+	}
+
+	Texture::ID un64UAVFindID = m_UAVTextureTable.GetID(strTextureName);
+
+	return { un64SRVFindID, un64UAVFindID };
 }
 
 std::shared_ptr<Texture> TextureManager::GetTextureByName(const std::string& strTextureName, TEXTURE_RESOURCE_TYPE eResourceType) const

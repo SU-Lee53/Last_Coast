@@ -52,7 +52,8 @@ PS_GBUFFER_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
 	float fMetallic = (gnTextureIndex.z != -1) ? gtxtTextures[gnTextureIndex.z].Sample(gSamplerState, input.uv).r
 	                                           : m.fMetallic;
 	
-	float fRoughness = 1.0f - saturate(m.fSmoothness);
+	//float fRoughness = 1.0f - saturate(m.fSmoothness);
+	float fRoughness = saturate(m.fSmoothness);
 	float fAO = 1.0f;
 	float fSpecularPower = saturate(m.cSpecular.a);
 	
@@ -125,7 +126,8 @@ PS_GBUFFER_OUTPUT PSAnimated(VS_SKINNED_OUTPUT input)
 	float fMetallic = (gnTextureIndex.z != -1) ? gtxtTextures[gnTextureIndex.z].Sample(gSamplerState, input.uv).r
 	                                           : m.fMetallic;
 	
-	float fRoughness = 1.0f - saturate(m.fSmoothness);
+	//float fRoughness = 1.0f - saturate(m.fSmoothness);
+	float fRoughness = saturate(m.fSmoothness);
 	float fAO = 1.0f;
 	float fSpecularPower = saturate(m.cSpecular.a);
 	

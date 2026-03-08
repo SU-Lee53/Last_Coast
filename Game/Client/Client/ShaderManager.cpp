@@ -206,6 +206,16 @@ void ShaderManager::CompileShaders()
 	
 	Compile("ToneMappingVS", L"ToneMapping.hlsl", L"VSToneMapping", SHADER_TYPE::VS);
 	Compile("ToneMappingPS", L"ToneMapping.hlsl", L"PSToneMapping", SHADER_TYPE::PS);
+	
+	Compile("SkyboxVS", L"Skybox.hlsl", L"VSSkybox", SHADER_TYPE::VS);
+	Compile("SkyboxPS", L"Skybox.hlsl", L"PSSkybox", SHADER_TYPE::PS);
+
+
+	// Compute
+	Compile("HDRIToCubeMapCS", L"HDRIToCubeMap.hlsl", L"CSHDRIToCubeMap", SHADER_TYPE::CS);
+
+
+
 
 	//// FullScreenShader.hlsl
 	//Compile("FullScreenVS", L"FullScreenShader.hlsl", L"VSFullScreen", SHADER_TYPE::VS);

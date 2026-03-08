@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "ForwardPass.h"
 
-void ForwardPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const
+void ForwardPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
 
@@ -193,7 +193,7 @@ void ForwardPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, cons
 	}
 }
 
-void ForwardPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const
+void ForwardPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
 	m_RenderQueueCached.clear();
 }

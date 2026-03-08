@@ -297,10 +297,6 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 
 	// Lights 로드
 
-	auto ConvertUEToD3D = [](const Vector3& v) {
-		return Vector3(v.y, v.z, v.x);
-	};
-
 	if (jScene.contains("Lights")) {
 		for (const auto& jLight : jScene["Lights"]) {
 			std::string strType = jLight["Type"].get<std::string>();
@@ -349,7 +345,7 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 				float dirX = jLight["Direction"]["X"].get<float>();
 				float dirY = jLight["Direction"]["Y"].get<float>();
 				float dirZ = jLight["Direction"]["Z"].get<float>();
-				pLight->m_v3Direction = ConvertUEToD3D(Vector3(dirX, dirY, dirZ));
+				pLight->m_v3Direction = Vector3(dirX, dirY, dirZ);
 
 				// Color와 Intensity로 Diffuse 계산
 				float intensity = jLight["Intensity"].get<float>();

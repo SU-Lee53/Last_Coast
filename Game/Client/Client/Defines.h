@@ -35,6 +35,7 @@ public:										\
 #define TIME			GET_SINGLE(GameTimer)
 #define ANIMATION		GET_SINGLE(AnimationManager)
 #define MATERIAL		GET_SINGLE(MaterialManager)
+#define COMPUTE			GET_SINGLE(ComputeManager)
 
 #define CUR_SCENE		SCENE->GetCurrentScene()
 #define DT				TIME->GetTimeElapsed()

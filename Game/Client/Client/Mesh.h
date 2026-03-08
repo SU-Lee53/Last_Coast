@@ -153,7 +153,24 @@ protected:
 
 class QuadMesh : public IMesh {
 public:
-	QuadMesh();
+	QuadMesh(float fMin, float fMax);
+
+	virtual void Render(
+		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
+		uint32 nInstanceCount = 1,
+		uint32 unStartIndex = 0,
+		int32 nIndexCount = -1) const override;
+
+public:
+	VertexBuffer m_TexCoords;
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// CubeMesh
+
+class CubeMesh : public IMesh {
+public:
+	CubeMesh(Vector3 v3Extents);
 
 	virtual void Render(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,

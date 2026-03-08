@@ -124,13 +124,14 @@ cbuffer cbSceneData : register(b0, space0)
 StructuredBuffer<LightData> gLightData : register(t0, space0);
 
 // ============ Textures ============
-Texture2DArray gtxtSkyboxDay : register(t1, space0);
-Texture2DArray gtxtSkyboxNIght : register(t2, space0);
+TextureCube gtxtSkyboxDay : register(t1, space0);
+TextureCube gtxtSkyboxNIght : register(t2, space0);
 
 Texture2D gtxtShadows[8] : register(t3, space0);	// t3, t4, t5, t6, t7, t8, t9, t10
 
-Texture2D gtxtGBuffer[4] : register(t11, space0);	// t11, t12, t13, t14
-Texture2D gtxtHDRResult : register(t15);
+Texture2D gtxtGBuffer[3] : register(t11, space0);	// t11, t12, t13
+Texture2D gtxtGBufferDepth : register(t14, space0);
+Texture2D gtxtHDRResult : register(t15, space0);
 
 // ============ Samplers ============
 SamplerState gSkyboxSamplerState : register(s0, space0);
@@ -401,7 +402,7 @@ GBufferData LoadGBuffer(int2 pixel)
 	float4 rt0 = gtxtGBuffer[0].Load(int3(pixel, 0));
 	float4 rt1 = gtxtGBuffer[1].Load(int3(pixel, 0));
 	float4 rt2 = gtxtGBuffer[2].Load(int3(pixel, 0));
-	float d = gtxtGBuffer[3].Load(int3(pixel, 0)).r;
+	float d = gtxtGBufferDepth.Load(int3(pixel, 0)).r;
 
 	g.albedo = rt0.rgb;
 	g.metallic = rt0.a;

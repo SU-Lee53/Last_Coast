@@ -164,13 +164,17 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="CB_Types.h" />
     <ClInclude Include="Collider.h" />
+    <ClInclude Include="CommandListAllocator.h" />
     <ClInclude Include="CommandListPool.h" />
     <ClInclude Include="Component.h" />
+    <ClInclude Include="ComputeManager.h" />
+    <ClInclude Include="ComputePass.h" />
     <ClInclude Include="Concepts.h" />
     <ClInclude Include="ConstantBuffer.h" />
     <ClInclude Include="ConstantBufferPool.h" />
     <ClInclude Include="D3DCore.h" />
     <ClInclude Include="DebugPlayer.h" />
+    <ClInclude Include="DefferedLightingPass.h" />
     <ClInclude Include="Defines.h" />
     <ClInclude Include="DescriptorHeap.h" />
     <ClInclude Include="DynamicObject.h" />
@@ -212,6 +216,8 @@
     <ClInclude Include="ShaderResource.h" />
     <ClInclude Include="SimpleMath.h" />
     <ClInclude Include="Skeleton.h" />
+    <ClInclude Include="Skybox.h" />
+    <ClInclude Include="SkyboxPass.h" />
     <ClInclude Include="SoundManager.h" />
     <ClInclude Include="Sprite.h" />
     <ClInclude Include="StaticObject.h" />
@@ -287,12 +293,16 @@
     <ClCompile Include="BoundingCapsule.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Collider.cpp" />
+    <ClCompile Include="CommandListAllocator.cpp" />
     <ClCompile Include="CommandListPool.cpp" />
     <ClCompile Include="Component.cpp" />
+    <ClCompile Include="ComputeManager.cpp" />
+    <ClCompile Include="ComputePass.cpp" />
     <ClCompile Include="ConstantBuffer.cpp" />
     <ClCompile Include="ConstantBufferPool.cpp" />
     <ClCompile Include="D3DCore.cpp" />
     <ClCompile Include="DebugPlayer.cpp" />
+    <ClCompile Include="DefferedLightingPass.cpp" />
     <ClCompile Include="Defines.cpp" />
     <ClCompile Include="DescriptorHeap.cpp" />
     <ClCompile Include="DynamicObject.cpp" />
@@ -336,6 +346,8 @@
     <ClCompile Include="ShaderResource.cpp" />
     <ClCompile Include="SimpleMath.cpp" />
     <ClCompile Include="Skeleton.cpp" />
+    <ClCompile Include="Skybox.cpp" />
+    <ClCompile Include="SkyboxPass.cpp" />
     <ClCompile Include="SoundManager.cpp" />
     <ClCompile Include="Sprite.cpp" />
     <ClCompile Include="StaticObject.cpp" />
@@ -380,6 +392,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
+    <FxCompile Include="..\HLSL\HDRIToCubeMap.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="..\HLSL\Light.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -389,6 +405,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="..\HLSL\RayShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\Skybox.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>

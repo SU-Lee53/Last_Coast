@@ -13,13 +13,15 @@ public:
 
 	virtual void OnPreRender(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-		const RenderPassInput& input,
+		const RenderPassInput& input, 
+		OUT RenderPassOutput& output, 
 		OUT DescriptorHandle& outDescHandle) const override;
 
 
 	virtual void OnPostRender(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-		const RenderPassInput& input,
+		const RenderPassInput& input, 
+		OUT RenderPassOutput& output, 
 		OUT DescriptorHandle& outDescHandle) const override;
 
 private:

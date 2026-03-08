@@ -46,10 +46,11 @@ public:
 		DXGI_FORMAT dxgiDSVFormat = DXGI_FORMAT_UNKNOWN);
 	
 	std::pair<Texture::ID, Texture::ID> LoadUnorderedAccessTexture(
-		const std::string& strTextureName, 
+		const std::string& strTextureName,
+		uint32 unArraySize,
 		uint32 unWidth,
 		uint32 unHeight,
-		DXGI_FORMAT dxgiSRVUAVFormat = DXGI_FORMAT_UNKNOWN) { }
+		DXGI_FORMAT dxgiSRVUAVFormat = DXGI_FORMAT_UNKNOWN);
 
 	std::shared_ptr<Texture> GetTextureByName(const std::string& strTextureName, TEXTURE_RESOURCE_TYPE eResourceType) const;
 	std::shared_ptr<Texture> GetTextureByID(uint64 unID, TEXTURE_RESOURCE_TYPE eResourceType) const;
@@ -64,7 +65,6 @@ public:
 		const std::vector<D3D12_SUBRESOURCE_DATA>& subResources,
 		uint32 unBytes,
 		ComPtr<ID3D12Resource> pd3dUploadBuffer = nullptr);
-
 
 private:
 	void ReleaseCompletedUploadBuffers();

@@ -10,6 +10,7 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 	g_pD3DCore->Initialize();
 	
 	// Init managers
+	COMPUTE->Initialize();
 	RESOURCE->Initialize(g_pD3DCore->GetDevice());
 	TEXTURE->Initialize(g_pD3DCore->GetDevice());
 	MATERIAL->Initialize();
@@ -40,13 +41,12 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 	RESOURCE->WaitForCopyComplete();
 	TEXTURE->WaitForCopyComplete();
 
+	COMPUTE->ExecuteIndirect();
+	COMPUTE->WaitForGPUComplete();
+	COMPUTE->Reset();
+	
 	TIMER->Initialize();
 	TIMER->Start();
-
-	// Init Scene
-	//m_pScene = std::make_shared<TestScene>();
-	//m_pScene->BuildObjects();
-	//g_pResourceManager->ExcuteCommandList();
 }
 
 GameFramework::~GameFramework()

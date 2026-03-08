@@ -113,6 +113,18 @@
     <Filter Include="03.Engine\Rendering\RenderPasses">
       <UniqueIdentifier>{47aadbd6-47a8-4b75-9667-086d83dc6c33}</UniqueIdentifier>
     </Filter>
+    <Filter Include="03.Engine\Compute">
+      <UniqueIdentifier>{2b4b277a-18f9-4a3a-aab0-aef577b2a3ee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Game\Skybox">
+      <UniqueIdentifier>{88d5134d-b3f4-4dce-975c-c321c60b510f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03.Engine\HLSL\Compute">
+      <UniqueIdentifier>{95f52740-376b-42bc-be7c-f9d9a04cdc2b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03.Engine\HLSL\Graphics">
+      <UniqueIdentifier>{828009b6-9e11-49d7-8085-9254128fa4a5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h">
@@ -379,7 +391,19 @@
     <ClInclude Include="GBufferPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
-    <ClInclude Include="ToneMappingPass.h" />
+    <ClInclude Include="ComputePass.h">
+      <Filter>03.Engine\Compute</Filter>
+    </ClInclude>
+    <ClInclude Include="ToneMappingPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="Skybox.h">
+      <Filter>02.Game\Skybox</Filter>
+    </ClInclude>
+    <ClInclude Include="ComputeManager.h" />
+    <ClInclude Include="CommandListAllocator.h" />
+    <ClInclude Include="DefferedLightingPass.h" />
+    <ClInclude Include="SkyboxPass.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -638,7 +662,19 @@
     <ClCompile Include="GBufferPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
-    <ClCompile Include="ToneMappingPass.cpp" />
+    <ClCompile Include="ComputePass.cpp">
+      <Filter>03.Engine\Compute</Filter>
+    </ClCompile>
+    <ClCompile Include="ToneMappingPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="Skybox.cpp">
+      <Filter>02.Game\Skybox</Filter>
+    </ClCompile>
+    <ClCompile Include="ComputeManager.cpp" />
+    <ClCompile Include="CommandListAllocator.cpp" />
+    <ClCompile Include="DefferedLightingPass.cpp" />
+    <ClCompile Include="SkyboxPass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
@@ -649,44 +685,50 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="..\HLSL\HDRIToCubeMap.hlsl">
+      <Filter>03.Engine\HLSL\Compute</Filter>
+    </FxCompile>
     <FxCompile Include="..\HLSL\Common.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\EffectCommon.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\EffectShader.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\FullScreenShader.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\Light.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\RayShader.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\SkyboxShader.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\Sprite.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\SpriteShader.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\Shaders.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\NewCommon.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
+      <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\DefferedShader.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\EffectCommon.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\EffectShader.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\FullScreenShader.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\Light.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\NewCommon.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\RayShader.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\Shaders.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\SkyboxShader.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\Sprite.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\SpriteShader.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\ToneMapping.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\Skybox.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

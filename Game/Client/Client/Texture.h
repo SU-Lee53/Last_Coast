@@ -55,6 +55,13 @@ private:
 		std::unique_ptr<uint8_t[]>& ddsData,
 		std::vector<D3D12_SUBRESOURCE_DATA>& subResources);
 
+	[[nodiscard]] 
+	HRESULT LoadHDRTexture(
+		ID3D12Resource** ppOutResource, 
+		const std::wstring& wstrTexturePath, 
+		std::unique_ptr<uint8_t[]>& ddsData,
+		std::vector<D3D12_SUBRESOURCE_DATA>& subResources);
+
 protected:
 	ComPtr<ID3D12Resource> m_pd3dResource;
 	D3D12_RESOURCE_STATES m_d3dCurrentState;
@@ -134,6 +141,12 @@ public:
 
 private:
 	bool Initialize(
+		UINT nWidth,
+		UINT nHeight,
+		DXGI_FORMAT dxgiSRVUAVFormat = DXGI_FORMAT_UNKNOWN);
+
+	bool InitializeArray(
+		UINT nArraySize,
 		UINT nWidth,
 		UINT nHeight,
 		DXGI_FORMAT dxgiSRVUAVFormat = DXGI_FORMAT_UNKNOWN);

@@ -5,6 +5,7 @@
 #include "Light.h"
 
 class TerrainObject;
+class Skybox;
 
 struct GridCell {
 	std::vector<std::shared_ptr<IGameObject>> pObjectsInCell;
@@ -112,6 +113,7 @@ public:
 public:
 	const std::shared_ptr<IPlayer>& GetPlayer() const { return m_pPlayer; }
 	const std::shared_ptr<TerrainObject>& GetTerrain() const { return m_pTerrain; }
+	const std::shared_ptr<Skybox>& GetSkybox() const { return m_pSkybox; }
 	const std::shared_ptr<Camera>& GetCamera() const { return m_pPlayer->GetCamera(); }
 	const std::vector<std::shared_ptr<IGameObject>>& GetObjectsInScene() const { return m_pGameObjects; }
 	const std::vector<std::shared_ptr<Light>>& GetLightsInScene() const { return m_pLights; }
@@ -133,6 +135,7 @@ protected:
 	
 	std::shared_ptr<IPlayer>					m_pPlayer = nullptr;
 	std::shared_ptr<TerrainObject>				m_pTerrain = nullptr;
+	std::shared_ptr<Skybox>						m_pSkybox = nullptr;
 
 	//std::vector<GridCell> m_GridCells;
 	SpacePartitionDesc m_SpacePartition{};

@@ -4,12 +4,12 @@
 
 void IRenderPass::Execute(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
-	OnPreRender(pd3dCommandList, input, outDescHandle);
+	OnPreRender(pd3dCommandList, input, output, outDescHandle);
 	Render(pd3dCommandList, input, output, outDescHandle);
-	OnPostRender(pd3dCommandList, input, outDescHandle);
+	OnPostRender(pd3dCommandList, input, output, outDescHandle);
 }
 
-void TerrainPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const
+void TerrainPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
 	const auto& pTerrain = CUR_SCENE->GetTerrain();
 	const auto& pTerrainComponents = pTerrain->GetTerrainComponents();
@@ -97,6 +97,6 @@ void TerrainPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, cons
 
 }
 
-void TerrainPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const
+void TerrainPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
 }

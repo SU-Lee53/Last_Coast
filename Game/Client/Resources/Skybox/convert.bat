@@ -1,0 +1,1 @@
+texconv -f R16G16B16A16_FLOAT Day_HDRI.hdr

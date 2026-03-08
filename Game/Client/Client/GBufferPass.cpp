@@ -58,7 +58,7 @@ void GBufferPass::SetRenderTargets(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 	pd3dCommandList->OMSetRenderTargets(_countof(pd3dRTVCPUDescriptorHandle), pd3dRTVCPUDescriptorHandle, FALSE, &d3dDSVDescriptorHandle);
 }
 
-void GBufferPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const
+void GBufferPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
 	// Set Render Target
 	SetRenderTargets(pd3dCommandList);
@@ -356,7 +356,7 @@ void GBufferPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 	}
 }
 
-void GBufferPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const
+void GBufferPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
 
@@ -388,115 +388,4 @@ void GBufferPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList
 	outDescHandle.cpuHandle.Offset(4, unDescriptorInc);
 	outDescHandle.gpuHandle.Offset(4, unDescriptorInc);
 
-}
-
-void DefferedLightingPass::Initialize()
-{
-	const uint32 unRTVs = 1;
-	for (uint32 i = 0; i < RenderManager::g_unMaxPendingFrames; ++i) {
-		m_pRTVs[i].reserve(unRTVs);
-
-		for (uint32 j = 0; j < unRTVs; ++j) {
-			auto& [srvID, rtvID] = TEXTURE->LoadRenderTargetTexture(
-				"HDR" + std::to_string(i) + "_" + std::to_string(j),
-				WinCore::g_dwClientWidth,
-				WinCore::g_dwClientHeight,
-				DXGI_FORMAT_R16G16B16A16_FLOAT,
-				DXGI_FORMAT_R16G16B16A16_FLOAT);
-
-			auto pRTV = std::static_pointer_cast<RenderTargetTexture>(TEXTURE->GetTextureByID(rtvID, TEXTURE_RESOURCE_TYPE::RTV));
-			m_pRTVs[i].push_back(pRTV);
-		}
-	}
-
-	CreatePipelineState();
-}
-
-void DefferedLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const
-{
-	// Set Render Targets
-	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
-	m_pRTVs[unCurrentContext][0]->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-	// Clear Render Targets
-	float pfClearColor[4] = { 0.f, 0.0f, 0.0f, 1.0f };
-
-	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = m_pRTVs[unCurrentContext][0]->GetRTVHandle();
-
-	for (int i = 0; i < m_pRTVs[unCurrentContext].size(); ++i) {
-		pd3dCommandList->ClearRenderTargetView(d3dRTVCPUDescriptorHandle, pfClearColor, 0, NULL);
-	}
-
-	//CD3DX12_CPU_DESCRIPTOR_HANDLE d3dDSVDescriptorHandle = RENDER->GetDepthStencilBufferHandle();
-	//pd3dCommandList->ClearDepthStencilView(d3dDSVDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, NULL);
-
-	pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, nullptr);
-}
-
-void DefferedLightingPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
-{
-	pd3dCommandList->SetPipelineState(m_pd3dPipelineState.Get());
-
-	auto pQuadMesh = RENDER->GetQuadMesh();
-	pQuadMesh->Render(pd3dCommandList, 1);
-}
-
-void DefferedLightingPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT DescriptorHandle& outDescHandle) const
-{
-	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
-	m_pRTVs[unCurrentContext][0]->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-
-	// Set HDR result
-	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
-	CD3DX12_CPU_DESCRIPTOR_HANDLE hdrHandle = outDescHandle.cpuHandle;
-	constexpr uint32 rootParamHDR = std::to_underlying(ROOT_PARAMETER::HDR_RESULT);
-
-	uint32 unNumHDRResults = m_pRTVs[unCurrentContext].size();
-	for (uint32 i = 0; i < unNumHDRResults; ++i) {
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtSRVHandle = m_pRTVs[unCurrentContext][i]->GetSRVHandle();
-		DEVICE->CopyDescriptorsSimple(1, hdrHandle, rtSRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		hdrHandle.Offset(1, unDescriptorInc);
-	}
-
-	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamHDR, outDescHandle.gpuHandle);
-	outDescHandle.cpuHandle.Offset(unNumHDRResults, unDescriptorInc);
-	outDescHandle.gpuHandle.Offset(unNumHDRResults, unDescriptorInc);
-}
-
-void DefferedLightingPass::CreatePipelineState()
-{
-	std::vector<D3D12_INPUT_ELEMENT_DESC> d3dInputElements = {
-		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-	};
-
-	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc;
-	inputLayoutDesc.NumElements = d3dInputElements.size();
-	inputLayoutDesc.pInputElementDescs = d3dInputElements.data();
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC d3dPipelineDesc{};
-	{
-		d3dPipelineDesc.pRootSignature = RenderManager::g_pd3dGlobalRootSignature.Get();
-		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("LightingVS");
-		d3dPipelineDesc.PS = SHADER->GetShaderByteCode("LightingPS");
-		d3dPipelineDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-		d3dPipelineDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-		d3dPipelineDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-		d3dPipelineDesc.DepthStencilState.DepthEnable = false;
-		d3dPipelineDesc.DepthStencilState.StencilEnable = false;
-
-		d3dPipelineDesc.InputLayout = inputLayoutDesc;
-		d3dPipelineDesc.SampleMask = UINT_MAX;
-		d3dPipelineDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		d3dPipelineDesc.NumRenderTargets = 1;
-		d3dPipelineDesc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
-		d3dPipelineDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-		d3dPipelineDesc.SampleDesc.Count = 1;
-		d3dPipelineDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	}
-
-	HRESULT hr = DEVICE->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dPipelineState.GetAddressOf()));
-	if (FAILED(hr)) {
-		__debugbreak();
-	}
 }

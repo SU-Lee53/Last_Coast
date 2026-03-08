@@ -332,6 +332,68 @@ bool DepthStencilTexture::Initialize(ComPtr<ID3D12Resource> pd3dDSVResource)
 
 bool UnorderedAccessTexture::Initialize(UINT nWidth, UINT nHeight, DXGI_FORMAT dxgiSRVUAVFormat)
 {
-	// TODO : 구현
+	D3D12_RESOURCE_DESC d3dResourceDesc{};
+	{
+		d3dResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		d3dResourceDesc.Width = nWidth;
+		d3dResourceDesc.Height = nHeight;
+		d3dResourceDesc.DepthOrArraySize = 1;
+		d3dResourceDesc.MipLevels = 1;
+		d3dResourceDesc.Format = dxgiSRVUAVFormat;
+		d3dResourceDesc.SampleDesc.Count = 1;
+		d3dResourceDesc.SampleDesc.Quality = 0;
+		d3dResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		d3dResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	}
+
+	HRESULT hr = DEVICE->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&d3dResourceDesc,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		nullptr,
+		IID_PPV_ARGS(m_pd3dResource.GetAddressOf())
+	);
+
+	if (FAILED(hr)) {
+		__debugbreak();
+		return false;
+	}
+
+	m_d3dCurrentState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+	return true;
+}
+
+bool UnorderedAccessTexture::InitializeArray(UINT nArraySize, UINT nWidth, UINT nHeight, DXGI_FORMAT dxgiSRVUAVFormat)
+{
+	D3D12_RESOURCE_DESC d3dResourceDesc{};
+	{
+		d3dResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		d3dResourceDesc.Width = nWidth;
+		d3dResourceDesc.Height = nHeight;
+		d3dResourceDesc.DepthOrArraySize = nArraySize;
+		d3dResourceDesc.MipLevels = 1;
+		d3dResourceDesc.Format = dxgiSRVUAVFormat;
+		d3dResourceDesc.SampleDesc.Count = 1;
+		d3dResourceDesc.SampleDesc.Quality = 0;
+		d3dResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		d3dResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	}
+
+	HRESULT hr = DEVICE->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&d3dResourceDesc,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		nullptr,
+		IID_PPV_ARGS(m_pd3dResource.GetAddressOf())
+	);
+
+	if (FAILED(hr)) {
+		__debugbreak();
+		return false;
+	}
+
+	m_d3dCurrentState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 	return true;
 }

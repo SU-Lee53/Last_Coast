@@ -3,15 +3,19 @@
 #include "DebugPlayer.h"
 #include "ThirdPersonPlayer.h"
 #include "TerrainObject.h"
+#include "Skybox.h"
 
 void AnimationTestScene::BuildObjects()
 {
+	m_pSkybox = std::make_shared<Skybox>();
+	m_pSkybox->Initialize("Day_HDRI.dds");
+
 	auto pLight = std::make_shared<DirectionalLight>();
 	{
 		pLight->m_v3Color = Vector3{ 1.f, 1.f, 1.f };
 		pLight->m_v3Direction = Vector3{ 1.f, 1.f, 1.f };
-		pLight->m_v3Position = Vector3{ 100.f, 100.f, 100.f };
-		pLight->m_fIntensity = 5;
+		pLight->m_v3Position = Vector3{ 100.f, 10000.f, 100.f };
+		pLight->m_fIntensity = 0.2;
 
 		pLight->m_v3Direction.Normalize();
 	}
@@ -20,10 +24,10 @@ void AnimationTestScene::BuildObjects()
 	m_pLights.push_back(pLight);
 
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
-	LoadFromFiles("LightTest");
+	//LoadFromFiles("LightTest");
 
-	//m_pTerrain = std::make_shared<TerrainObject>();
-	//m_pTerrain->LoadFromFiles("TEST");
+	m_pTerrain = std::make_shared<TerrainObject>();
+	m_pTerrain->LoadFromFiles("TEST");
 
 	//m_pPlayer = std::make_shared<DebugPlayer>();
 

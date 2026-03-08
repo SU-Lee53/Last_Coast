@@ -57,6 +57,7 @@
 #include <DirectXCollision.h>
 
 // DirectXTex
+#include <DirectXTex/DirectXTex.h>
 #include <DirectXTex/DDSTextureLoader12.h>
 #include <DirectXTex/WICTextureLoader12.h>
 
@@ -116,6 +117,7 @@ using namespace Microsoft::WRL;
 #include "D3DCore.h"
 #include "GameFramework.h"
 #include "ResourceTable.h"
+#include "CommandListAllocator.h"
 
 // Managers
 #include "ResourceManager.h"
@@ -133,3 +135,4 @@ using namespace Microsoft::WRL;
 #include "UIManager.h"
 #include "AnimationManager.h"
 #include "MaterialManager.h"
+#include "ComputeManager.h"
