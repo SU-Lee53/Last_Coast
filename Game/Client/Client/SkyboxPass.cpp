@@ -21,8 +21,10 @@ void SkyboxPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
 
 void SkyboxPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
-	pd3dCommandList->SetPipelineState(m_pd3dPipelineState.Get());
+	pd3dCommandList->SetPipelineState(m_pd3dSkyboxPipelineState.Get());
+	m_pCubeMesh->Render(pd3dCommandList, 1);
 
+	pd3dCommandList->SetPipelineState(m_pd3dDiskPipelineState.Get());
 	m_pCubeMesh->Render(pd3dCommandList, 1);
 }
 
@@ -69,6 +71,8 @@ void SkyboxPass::CreatePipelineState()
 		d3dPipelineDesc.RasterizerState.FrontCounterClockwise = false;
 		d3dPipelineDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 		d3dPipelineDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+		d3dPipelineDesc.DepthStencilState.DepthEnable = true;
+		d3dPipelineDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;	// No Depth Write
 		d3dPipelineDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 		d3dPipelineDesc.InputLayout = inputLayoutDesc;
 		d3dPipelineDesc.SampleMask = UINT_MAX;
@@ -80,8 +84,29 @@ void SkyboxPass::CreatePipelineState()
 		d3dPipelineDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	}
 
-	HRESULT hr = DEVICE->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dPipelineState.GetAddressOf()));
+	HRESULT hr = DEVICE->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dSkyboxPipelineState.GetAddressOf()));
 	if (FAILED(hr)) {
 		__debugbreak();
 	}
+
+	{
+		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("SkyboxVS");
+		d3dPipelineDesc.PS = SHADER->GetShaderByteCode("CelestialDiskPS");
+		d3dPipelineDesc.DepthStencilState.DepthEnable = true;
+		d3dPipelineDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;	// No Depth Write
+		d3dPipelineDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_FRONT;
+		d3dPipelineDesc.RasterizerState.FrontCounterClockwise = false;
+		d3dPipelineDesc.BlendState.RenderTarget[0].BlendEnable = true;
+		d3dPipelineDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
+		d3dPipelineDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
+		d3dPipelineDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+	}
+
+	hr = DEVICE->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dDiskPipelineState.GetAddressOf()));
+	if (FAILED(hr)) {
+		__debugbreak();
+	}
+
+
 }

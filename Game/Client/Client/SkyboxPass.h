@@ -24,7 +24,8 @@ private:
 	void CreatePipelineState();
 
 private:
-	ComPtr<ID3D12PipelineState> m_pd3dPipelineState;
+	ComPtr<ID3D12PipelineState> m_pd3dSkyboxPipelineState;
+	ComPtr<ID3D12PipelineState> m_pd3dDiskPipelineState;
 	std::shared_ptr<CubeMesh> m_pCubeMesh;
 
 };

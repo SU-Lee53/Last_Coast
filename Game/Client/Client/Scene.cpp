@@ -4,6 +4,7 @@
 #include "StaticObject.h"
 #include "NodeObject.h"
 #include "Collider.h"
+#include "Skybox.h"
 
 void Scene::InitializeObjects()
 {
@@ -133,6 +134,11 @@ void Scene::PostUpdate()
 	for (auto& obj : m_pGameObjects) {
 		obj->PostUpdate();
 	}
+
+	if (m_pSkybox) {
+		m_pSkybox->Update();
+	}
+
 }
 
 void Scene::PrepareRender()
@@ -160,10 +166,14 @@ void Scene::CheckCollision()
 		return;
 	}
 	
-	const PlayerCollider& playerCollider = *m_pPlayer->GetComponent<PlayerCollider>();
+	const std::shared_ptr<PlayerCollider> playerCollider = m_pPlayer->GetComponent<PlayerCollider>();
+	if (!playerCollider) {
+		return;
+	}
+
 	for (const auto& pObj : pBroadPhaseResult->pObjectsInCell) {
 		const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
-		bool bResult = playerCollider.CheckCollision(pCollider);
+		bool bResult = playerCollider->CheckCollision(pCollider);
 		if (bResult) {
 			CollisionResult result1(m_pPlayer , pObj);
 			CollisionResult result2(pObj, m_pPlayer);

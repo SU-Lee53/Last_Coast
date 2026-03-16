@@ -5,7 +5,7 @@ struct PS_GBUFFER_OUTPUT
 {
 	float4 RT0 : SV_Target0;	// Albedo.rgb + Metallic
 	float4 RT1 : SV_Target1;	// Normal.xy + Roughness + AO
-	float4 RT2 : SV_Target2;	// Emissive.rgb + Specular Power
+	float4 RT2 : SV_Target2; // Specular.rgb + Specular Power
 };
 
 
@@ -46,20 +46,20 @@ PS_GBUFFER_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
 	
 	// Materials
 	MaterialData m = gMaterialData[gnMaterialIndex];
-	float3 cEmissive = (gnTextureIndex.w != -1) ? gtxtTextures[gnTextureIndex.w].Sample(gSamplerState, input.uv).rgb
-	                                            : m.cEmissive.rgb;
+	float4 cEmissive = (gnTextureIndex.w != -1) ? gtxtTextures[gnTextureIndex.w].Sample(gSamplerState, input.uv)
+	                                            : m.cEmissive;
 	
 	float fMetallic = (gnTextureIndex.z != -1) ? gtxtTextures[gnTextureIndex.z].Sample(gSamplerState, input.uv).r
 	                                           : m.fMetallic;
 	
 	//float fRoughness = 1.0f - saturate(m.fSmoothness);
-	float fRoughness = saturate(m.fSmoothness);
+	float fRoughness = 1.0f - saturate(m.fSmoothness);
 	float fAO = 1.0f;
 	float fSpecularPower = saturate(m.cSpecular.a);
 	
 	output.RT0 = float4(cAlbedo.rgb, fMetallic);
 	output.RT1 = float4(vNormalEnc, fRoughness, fAO);
-	output.RT2 = float4(cEmissive, fSpecularPower);
+	output.RT2 = float4(cEmissive.rgb, cEmissive.a);
 	//output.RT2 = float4(input.positionW, 1.0f);
 	
 	return output;
@@ -265,6 +265,7 @@ float4 PSDefferedLighting(VS_QUAD_OUTPUT input) : SV_Target0
 	
 	finalColor *= g.ao;
 	//finalColor += g.emissive;
+	finalColor += gSceneGlobal.v4GlobalAmbient.rgb;
 	
 	//return float4(g.albedo, 1.0f);
 	//return float4(g.normalW, 1.0f);

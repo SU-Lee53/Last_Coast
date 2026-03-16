@@ -685,6 +685,7 @@ nlohmann::ordered_json AssimpConverter::StoreMaterialToJson(const aiMaterial* pM
 		aiTextureType_METALNESS,
 		aiTextureType_NORMALS,
 		aiTextureType_EMISSIVE,
+		// TODO : ALBEDO, NORMAL,  
 	};
 
 	for (aiTextureType eType : etextureTypes) {

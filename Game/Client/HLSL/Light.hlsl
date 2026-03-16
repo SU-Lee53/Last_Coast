@@ -47,8 +47,8 @@ float3 DirectionalLight(float3 worldPos, float3 normal, float3 viewDir, float3 a
 {
 	LightData lightData = gLightData[nLightIndex];
 	
-	//float3 lightDir = -normalize(lightData.vDirection);
-	float3 lightDir = -normalize(worldPos - lightData.vPosition);
+	float3 lightDir = -normalize(lightData.vDirection);
+	//float3 lightDir = -normalize(worldPos - lightData.vPosition);
 	float3 radiance = lightData.vColor * lightData.fIntensity;
 
 	float3 diffuse = DiffuseLambert(normal, lightDir, albedo, radiance);

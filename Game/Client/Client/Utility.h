@@ -34,7 +34,7 @@ inline std::string WStringToString(const std::wstring& wstr, UINT codePage = CP_
     return str;
 }
 
-inline float SmoothStep(float fX, float fMin, float fMax)
+inline constexpr float SmoothStep(float fX, float fMin, float fMax)
 {
 	if (fMin == fMax) return 0.f;
 	float t = (fX - fMin) / (fMax - fMin);
@@ -42,7 +42,7 @@ inline float SmoothStep(float fX, float fMin, float fMax)
 	return t * t * (3.0f - 2.0f * t);
 }
 
-inline float SmoothStep(double dX, double dMin, double dMax)
+inline constexpr float SmoothStep(double dX, double dMin, double dMax)
 {
 	if (dMin == dMax) return 0.f;
 	double t = (dX - dMin) / (dMax - dMin);
@@ -50,16 +50,26 @@ inline float SmoothStep(double dX, double dMin, double dMax)
 	return t * t * (3.0 - 2.0 * t);
 }
 
-inline float SmoothStep01(float fX)
+inline constexpr float SmoothStep01(float fX)
 {
 	fX = std::clamp(fX, 0.0f, 1.0f);
 	return fX* fX * (3.0f - 2.0f * fX);
 }
 
-inline float SmoothStep01(double dX)
+inline constexpr float SmoothStep01(double dX)
 {
 	dX = std::clamp(dX, 0.0, 1.0);
 	return dX * dX * (3.0 - 2.0 * dX);
+}
+
+inline constexpr float lerp(float t, float a, float b)
+{
+	return a + (b - a) * t;
+}
+
+inline constexpr double lerp(double t, double a, double b)
+{
+	return a + (b - a) * t;
 }
 
 template<typename T>

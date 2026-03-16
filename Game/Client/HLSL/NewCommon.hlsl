@@ -60,6 +60,13 @@ struct VS_TERRAIN_OUTPUT
 };
 
 // ================================================================================
+// Constants
+// ================================================================================
+
+#define PI 3.141592
+
+
+// ================================================================================
 // Per Scene (Frame)
 // ================================================================================
 
@@ -82,6 +89,42 @@ struct CameraData
 	matrix	mtxInvProjection;
 	float3	v3CameraPosition;
 	float	pad0;
+};
+
+struct SkyboxData
+{
+	float fDayNightBlend; // 0 : Night, 1 : Day
+	float3 v3SunDirection; // -v3SunDirection = v3MoonDirection
+
+	float fSunIntensity;
+	float fMoonIntensity;
+	float fSunDiskSize;
+	float fMoonDiskSize;
+
+	float fSunGlowSize;
+	float fMoonGlowSize;
+	float fTwilightWidth;
+	float fTwilightIntensity;
+
+	float fTwilightSunFocus;
+	float fCloudCoverage;
+	float fCloudDensity;
+	float fCloudSpeed;
+	
+	float fCloudScale;
+	float fCloudLightIntensity;
+	float fStarDensity;
+	float fStarScale;
+
+	float fSkyIntensity;
+	float3 v3TwilightColor; 
+	
+	float3 v3SunColor; float _pad0;
+	float3 v3MoonColor; float _pad1;
+	float3 v3DayZenithColor; float _pad2;
+	float3 v3DayHorizonColor; float _pad3;
+	float3 v3NightZenithColor; float _pad4;
+	float3 v3NightHorizonColor; float _pad5;
 };
 
 #define POINT_LIGHT			1
@@ -116,6 +159,7 @@ cbuffer cbSceneData : register(b0, space0)
 {
 	CameraData gCamera;
 	SceneGlobalData gSceneGlobal;
+	SkyboxData gSkybox;
 	int2 gnScreenSize;
 };
 
@@ -125,7 +169,7 @@ StructuredBuffer<LightData> gLightData : register(t0, space0);
 
 // ============ Textures ============
 TextureCube gtxtSkyboxDay : register(t1, space0);
-TextureCube gtxtSkyboxNIght : register(t2, space0);
+TextureCube gtxtSkyboxNight : register(t2, space0);
 
 Texture2D gtxtShadows[8] : register(t3, space0);	// t3, t4, t5, t6, t7, t8, t9, t10
 

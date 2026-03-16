@@ -53,7 +53,6 @@ public:
 	StructuredBuffer AllocSBuffer(uint32 unElementCount) {
 		if (unElementCount == 0) {
 			return m_StructuredBufferPool[m_unCurrentContextIndex].Allocate<T>(1);	// Temporary
-
 		}
 		return m_StructuredBufferPool[m_unCurrentContextIndex].Allocate<T>(unElementCount);
 	}

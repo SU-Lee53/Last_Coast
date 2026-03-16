@@ -47,12 +47,48 @@ struct LightData
 	float		pad0;						// c5.w
 };
 
+struct SkyboxData {
+	float fDayNightBlend;	// 0 : Night, 1 : Day
+	Vector3 v3SunDirection;	// -v3SunDirection = v3MoonDirection
+
+	float fSunIntensity;
+	float fMoonIntensity;
+	float fSunDiskSize;
+	float fMoonDiskSize;
+
+	float fSunGlowSize;
+	float fMoonGlowSize;
+	float fTwilightWidth;
+	float fTwilightIntensity;
+
+	float fTwilightSunFocus;
+	float fCloudCoverage;
+	float fCloudDensity;
+	float fCloudSpeed;
+
+	float fCloudScale;
+	float fCloudLightIntensity;
+	float fStarDensity;
+	float fStarScale;
+
+	float	fSkyIntensity;
+	Vector3 v3TwilightColor;
+
+	Vector3 v3SunColor;  float _pad0;
+	Vector3 v3MoonColor;  float _pad1;
+	Vector3 v3DayZenithColor; float _pad2;
+	Vector3 v3DayHorizonColor; float _pad3;
+	Vector3 v3NightZenithColor; float _pad4;
+	Vector3 v3NightHorizonColor; float _pad5;
+};
+
 // ============ cbuffers ============
 
 struct alignas(16) CB_SCENE_DATA
 {
 	CameraData gCamera;
 	SceneGlobalData gSceneGlobal;
+	SkyboxData gSkybox;
 	XMINT2 nScreenSize;
 };
 

@@ -203,6 +203,7 @@ void RenderManager::BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dComma
 		sceneCBData.gSceneGlobal.nNumLights = CUR_SCENE->GetLightsInScene().size();
 		sceneCBData.gSceneGlobal.v4GlobalAmbient = CUR_SCENE->GetGlobalAmbient();
 		sceneCBData.gCamera = CUR_SCENE->GetCamera()->MakeCBData();
+		sceneCBData.gSkybox = CUR_SCENE->GetSkybox()->MakeCBData();
 		sceneCBData.nScreenSize = XMINT2{ 
 			static_cast<int32>(WinCore::g_dwClientWidth), 
 			static_cast<int32>(WinCore::g_dwClientHeight)
@@ -228,7 +229,7 @@ void RenderManager::BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dComma
 	auto pSkybox = CUR_SCENE->GetSkybox();
 	if (pSkybox) {
 		Texture::ID DayID = pSkybox->GetDaySkyBoxTextureID();
-		Texture::ID NightID = pSkybox->GetDaySkyBoxTextureID();	// fix here to night later
+		Texture::ID NightID = pSkybox->GetNightSkyBoxTextureID();	// fix here to night later
 
 		auto pTexDay = TEXTURE->GetTextureByID(DayID, TEXTURE_RESOURCE_TYPE::SRV);
 		auto pTexNight = TEXTURE->GetTextureByID(NightID, TEXTURE_RESOURCE_TYPE::SRV);

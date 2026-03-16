@@ -8,7 +8,7 @@
 void AnimationTestScene::BuildObjects()
 {
 	m_pSkybox = std::make_shared<Skybox>();
-	m_pSkybox->Initialize("Day_HDRI.dds");
+	m_pSkybox->Initialize("Day_HDRI.dds", "Night_HDRI.dds");
 
 	auto pLight = std::make_shared<DirectionalLight>();
 	{
@@ -23,11 +23,12 @@ void AnimationTestScene::BuildObjects()
 	m_pLights.reserve(1);
 	m_pLights.push_back(pLight);
 
-	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
-	//LoadFromFiles("LightTest");
+	//m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	m_pPlayer = std::make_shared<DebugPlayer>();
+	LoadFromFiles("LightTest");
 
-	m_pTerrain = std::make_shared<TerrainObject>();
-	m_pTerrain->LoadFromFiles("TEST");
+	//m_pTerrain = std::make_shared<TerrainObject>();
+	//m_pTerrain->LoadFromFiles("TEST");
 
 	//m_pPlayer = std::make_shared<DebugPlayer>();
 
@@ -124,11 +125,27 @@ void AnimationTestScene::Update()
 	ImGui::End();
 
 	ImGui::Begin("Lights Controller");
-	ImGui::Text("NumLights : %d", m_pLights.size());
-	for (uint32 i = 0; i < m_pLights.size(); ++i) {
-		if (ImGui::TreeNode(std::format("Index : {}", i).c_str())) {
-			m_pLights[i]->ShowControllImGui();
-			ImGui::TreePop();
+	{
+		ImGui::Text("Elapsed TIme : %f", TIME->GetTimeElapsed());
+		ImGui::Text("Total TIme : %f", TIME->GetTotalTime());
+
+		float fAmbient = m_v4GlobalAmbient.x;
+		ImGui::DragFloat("GlobalAmbient", (float*)&fAmbient, 0.001f, 0.f, 1.f);
+		m_v4GlobalAmbient = XMVectorReplicate(fAmbient);
+		ImGui::Text("NumLights : %d", m_pLights.size());
+		for (uint32 i = 0; i < m_pLights.size(); ++i) {
+			if (ImGui::TreeNode(std::format("Index : {}", i).c_str())) {
+				m_pLights[i]->ShowControllImGui();
+				ImGui::TreePop();
+			}
+		}
+	}
+	ImGui::End();
+
+	ImGui::Begin("Skybox Controller");
+	{
+		if (m_pSkybox) {
+			m_pSkybox->ShowControllImGui();
 		}
 	}
 	ImGui::End();

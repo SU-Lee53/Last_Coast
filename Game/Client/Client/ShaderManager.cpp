@@ -209,6 +209,7 @@ void ShaderManager::CompileShaders()
 	
 	Compile("SkyboxVS", L"Skybox.hlsl", L"VSSkybox", SHADER_TYPE::VS);
 	Compile("SkyboxPS", L"Skybox.hlsl", L"PSSkybox", SHADER_TYPE::PS);
+	Compile("CelestialDiskPS", L"Skybox.hlsl", L"PSCelestialDisk", SHADER_TYPE::PS);
 
 
 	// Compute

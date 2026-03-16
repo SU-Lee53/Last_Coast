@@ -49,7 +49,7 @@ void CSHDRIToCubeMap(uint3 nDispatchID : SV_DispatchThreadID)
 	
 	dir = normalize(dir);
 	
-	float phi = atan2(dir.z, dir.x);
+	float phi = atan2(-dir.z, dir.x);
 	float theta = asin(dir.y);
 	
 	float2 hdrUV = float2(0, 0);
