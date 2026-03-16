@@ -22,7 +22,7 @@ public:
 	void LoadGameTextures();
 
 public:
-	Texture::ID LoadTexture(const std::string& strTextureName);
+	Texture::ID LoadTexture(const std::string& strTextureName, bool bCheckTransparent = false);
 	Texture::ID LoadTextureFromRaw(const std::string& strTextureName, uint32 unWidth, uint32 unHeight);
 	Texture::ID LoadTextureArray(const std::string& strTextureName, const std::wstring& wstrTexturePath);
 	

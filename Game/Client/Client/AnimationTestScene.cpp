@@ -23,12 +23,12 @@ void AnimationTestScene::BuildObjects()
 	m_pLights.reserve(1);
 	m_pLights.push_back(pLight);
 
-	//m_pPlayer = std::make_shared<ThirdPersonPlayer>();
-	m_pPlayer = std::make_shared<DebugPlayer>();
-	LoadFromFiles("LightTest");
+	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	//m_pPlayer = std::make_shared<DebugPlayer>();
+	///LoadFromFiles("LightTest");
 
-	//m_pTerrain = std::make_shared<TerrainObject>();
-	//m_pTerrain->LoadFromFiles("TEST");
+	m_pTerrain = std::make_shared<TerrainObject>();
+	m_pTerrain->LoadFromFiles("TEST");
 
 	//m_pPlayer = std::make_shared<DebugPlayer>();
 

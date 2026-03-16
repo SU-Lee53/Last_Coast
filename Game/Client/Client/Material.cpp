@@ -43,10 +43,10 @@ void StandardMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 	InitializeColors(materialLoadInfo);
 
 	m_TextureIDs.resize(4);
-	m_TextureIDs[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName);			// Diffused
-	m_TextureIDs[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName);			// Normal
-	m_TextureIDs[2] = TEXTURE->LoadTexture(materialLoadInfo.strMetallicMapName);		// Metallic
-	m_TextureIDs[3] = TEXTURE->LoadTexture(materialLoadInfo.strSpecularMapName);		// Specular
+	m_TextureIDs[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName, true);			// Diffused
+	m_TextureIDs[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName, false);			// Normal
+	m_TextureIDs[2] = TEXTURE->LoadTexture(materialLoadInfo.strMetallicMapName, false);		// Metallic
+	m_TextureIDs[3] = TEXTURE->LoadTexture(materialLoadInfo.strSpecularMapName, false);		// Specular
 	m_pShader = SHADER->Get<StandardShader>();
 }
 
@@ -58,10 +58,10 @@ void SkinnedMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 	InitializeColors(materialLoadInfo);
 
 	m_TextureIDs.resize(4);
-	m_TextureIDs[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName);			// Diffused
-	m_TextureIDs[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName);			// Normal
-	m_TextureIDs[2] = TEXTURE->LoadTexture(materialLoadInfo.strMetallicMapName);		// Metallic
-	m_TextureIDs[3] = TEXTURE->LoadTexture(materialLoadInfo.strSpecularMapName);		// Specular
+	m_TextureIDs[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName, true);			// Diffused
+	m_TextureIDs[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName, false);			// Normal
+	m_TextureIDs[2] = TEXTURE->LoadTexture(materialLoadInfo.strMetallicMapName, false);		// Metallic
+	m_TextureIDs[3] = TEXTURE->LoadTexture(materialLoadInfo.strSpecularMapName, false);		// Specular
 	m_pShader = SHADER->Get<AnimatedShader>();
 }
 
@@ -77,8 +77,8 @@ void TerrainMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 	m_fTiling = materialLoadInfo.fUVTiling;
 
 	m_TextureIDs.resize(2);
-	m_TextureIDs[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName);		// Diffused
-	m_TextureIDs[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName);		// Normal
+	m_TextureIDs[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName, false);		// Diffused
+	m_TextureIDs[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName, false);		// Normal
 
 	m_pShader = SHADER->Get<TerrainShader>();
 }

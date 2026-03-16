@@ -26,12 +26,12 @@ void TextureManager::LoadGameTextures()
 	LoadTexture("font");
 }
 
-Texture::ID TextureManager::LoadTexture(const std::string& strTextureName)
+Texture::ID TextureManager::LoadTexture(const std::string& strTextureName, bool bCheckTransparent)
 {
 	Texture::ID pFind = m_SRVTextureTable.GetID(strTextureName);
 	if (pFind == TextureTable::InvalidID) {
 		std::shared_ptr<Texture> pTexture = std::make_shared<Texture>();
-		bool bResult = pTexture->CreateTextureFromFile(::StringToWString(strTextureName));
+		bool bResult = pTexture->CreateTextureFromFile(::StringToWString(strTextureName), bCheckTransparent);
 		if (!bResult) {
 			return TextureTable::InvalidID;
 		}

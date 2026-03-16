@@ -61,6 +61,12 @@
 #include <DirectXTex/DDSTextureLoader12.h>
 #include <DirectXTex/WICTextureLoader12.h>
 
+#ifdef _DEBUG
+#pragma comment(lib, "DirectXTex/Debug/DirectXTex.lib")
+#else
+#pragma comment(lib, "DirectXTex/Release/DirectXTex.lib")
+#endif
+
 #include "SimpleMath.h"
 using namespace DirectX::SimpleMath;
 

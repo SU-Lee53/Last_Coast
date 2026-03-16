@@ -12,11 +12,17 @@ bool D3DCore::g_bEnableGBV = false;
 bool D3DCore::g_bMsaa4xEnable = false;
 bool D3DCore::g_nMsaa4xQualityLevels = 0;
 
+bool D3DCore::g_bSupportSSE2 = false;
+bool D3DCore::g_bSupportAVX2 = false;
+
 D3DCore::D3DCore(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnableVSync)
 {
 	g_bEnableDebugLayer = bEnableDebugLayer;
 	g_bEnableGBV = bEnableGBV;
 	g_unSyncInterval = (bEnableVSync) ? 1 : 0;
+
+	g_bSupportSSE2 = CheckSupportSSE2();
+	g_bSupportAVX2 = CheckSupportAVX2();
 }
 
 D3DCore::~D3DCore()
@@ -130,6 +136,29 @@ void D3DCore::CreateD3DDevice()
 	//	
 	//	m_hFenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
 
+}
+
+bool D3DCore::CheckSupportSSE2()
+{
+#if defined(_M_X64)
+	return true;
+#else
+	int cpuInfo[4] = {};
+	__cpuid(cpuInfo, 1);
+	return (cpuInfo[3] & (1 << 26)) != 0; // EDX bit 26 = SSE2
+#endif
+}
+
+bool D3DCore::CheckSupportAVX2()
+{
+	int cpuInfo[4] = {};
+	__cpuid(cpuInfo, 0);
+
+	if (cpuInfo[0] < 7)
+		return false;
+
+	__cpuidex(cpuInfo, 7, 0);
+	return (cpuInfo[1] & (1 << 5)) != 0; // EBX bit 5 = AVX2
 }
 
 ComPtr<ID3D12Device> D3DCore::GetDevice() const

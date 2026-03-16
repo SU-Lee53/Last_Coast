@@ -1,7 +1,10 @@
 ﻿#include "pch.h"
 #include "Texture.h"
+#include <xmmintrin.h>
+#include <emmintrin.h>
 
-bool Texture::CreateTextureFromFile(const std::wstring& wstrTextureName)
+
+bool Texture::CreateTextureFromFile(const std::wstring& wstrTextureName, bool bCheckTransparent)
 {
 	namespace fs = std::filesystem;
 
@@ -31,7 +34,15 @@ bool Texture::CreateTextureFromFile(const std::wstring& wstrTextureName)
 		return false;
 	}
 
-	D3D12_RESOURCE_DESC d3dTextureResourceDesc = m_pd3dResource->GetDesc();
+	if (bCheckTransparent) {
+		bool bResult = AnalyzeTransparencyFromFile(wstrTexturePath, g_fAlphaThreshold);
+		if (!bResult)
+		{
+			OutputDebugStringA(std::format("{} - {} : {} : {}\n", __FILE__, __LINE__, "Transparency analysis failed", texPath.string()).c_str());
+			m_bHasTransparentPixel = false;
+		}
+	}
+
 	UINT nSubResources = (UINT)subResources.size();
 	UINT64 nBytes = GetRequiredIntermediateSize(m_pd3dResource.Get(), 0, nSubResources);
 	nBytes = (nBytes == 0) ? 1 : nBytes;
@@ -202,6 +213,275 @@ HRESULT Texture::LoadFromWICFile(ID3D12Resource** ppOutResource, const std::wstr
 	}
 
 	return hr;
+}
+
+bool Texture::AnalyzeTransparencyFromFile(const std::wstring& wstrTexturePath, float fThreshold)
+{
+	namespace fs = std::filesystem;
+	
+	m_bHasTransparentPixel = false;
+
+	TexMetadata metaData{};
+	ScratchImage image;
+	HRESULT hr{};
+
+	auto isDDS = [](const fs::path& path) -> bool {return path.extension().string() == ".dds" || path.extension().string() == ".DDS"; };
+	const fs::path p(wstrTexturePath);
+
+	// Read DDS/WIC from file again using DirectXTex
+	if (isDDS(p)) {
+		hr = ::LoadFromDDSFile(
+			wstrTexturePath.c_str(),
+			DDS_FLAGS_NONE,
+			&metaData,
+			image
+		);
+	}
+	else {
+		hr = ::LoadFromWICFile(
+			wstrTexturePath.c_str(),
+			WIC_FLAGS_IGNORE_SRGB,
+			&metaData,
+			image
+		);
+	}
+
+	if (FAILED(hr)) {
+		return false;
+	}
+
+	// Check format first and end if no possibility of alpha channel
+	if (!::HasAlpha(metaData.format)) {
+		m_bHasTransparentPixel = false;
+		return true;
+	}
+
+	ScratchImage workingImage;
+	const Image* pScanImage = nullptr;
+
+	// Decompress if texture is BC compressed format
+	if (::IsCompressed(metaData.format)) {
+		hr = ::Decompress(
+			image.GetImages(),
+			image.GetImageCount(),
+			metaData,
+			DXGI_FORMAT_UNKNOWN,
+			workingImage
+		);
+
+		if (FAILED(hr)) {
+			return false;
+		}
+
+		pScanImage = workingImage.GetImage(0, 0, 0);	// miplevel = 0
+	}
+	else {
+		pScanImage = image.GetImage(0, 0, 0);
+	}
+
+	if (!pScanImage) {
+		return false;
+	}
+
+	ScratchImage convertedImage;
+	const Image* pFinalImage = pScanImage;
+
+	// Convert to RGBA8 if format is not 8-bit
+	if (!Texture::IsRGBA8Like(pScanImage->format)) {
+		hr = ::Convert(
+			*pScanImage,
+			DXGI_FORMAT_R8G8B8A8_UNORM,
+			TEX_FILTER_DEFAULT,
+			TEX_THRESHOLD_DEFAULT,
+			convertedImage
+		);
+
+		if (FAILED(hr)) {
+			return false;
+		}
+
+		pFinalImage = convertedImage.GetImage(0, 0, 0);
+		if (!pFinalImage) {
+			return false;
+		}
+	}
+
+	// Check alpha byte using SIMD
+	m_bHasTransparentPixel = Texture::HasTransparentPixel_RGBA8(
+		pFinalImage->pixels,
+		pFinalImage->rowPitch,
+		pFinalImage->width,
+		pFinalImage->height,
+		fThreshold
+	);
+
+	return true;
+}
+
+bool Texture::HasTransparentPixel_RGBA8(const uint8* pixels, size_t unRowPitch, size_t unWidth, size_t unHeight, float fThreshold)
+{
+	float t = std::clamp(fThreshold, 0.f, 1.f);
+	const uint8 threshold = static_cast<uint8>(std::lround(t * 255.0f));
+
+	bool bResult = false;
+	bResult = D3DCore::g_bSupportAVX2 ? HasTransparentPixel_RGBA8_AVX2(pixels, unRowPitch, unWidth, unHeight, threshold) 
+		                              : HasTransparentPixel_RGBA8_SSE2(pixels, unRowPitch, unWidth, unHeight, threshold);
+
+	return bResult;
+}
+
+bool Texture::HasTransparentPixel_RGBA8_SSE2(const uint8* pixels, size_t unRowPitch, size_t unWidth, size_t unHeight, uint8 threshold)
+{
+	if (!pixels || unWidth == 0 || unHeight == 0) {
+		return false;
+	}
+
+	const __m128i thresholdVector = _mm_set1_epi32(static_cast<int>(threshold));
+
+	for (size_t y = 0; y < unHeight; ++y) {
+		const uint8_t* pRow = pixels + (y * unRowPitch);
+		size_t x = 0;
+		
+		// Processing 4 pixels at a time
+		for (; x + 4 <= unWidth; x += 4) {
+			const __m128i px = _mm_loadu_si128(reinterpret_cast<const __m128i*>(pRow + (x * 4)));
+
+			// 각 픽셀의 alpha 바이트를 32비트 lane 으로 추출
+			// Extract each pixel's alpha byte to 32 bit lane
+			const uint32_t a0 = static_cast<uint32_t>(_mm_extract_epi16(px, 1) >> 8);
+			const uint32_t a1 = static_cast<uint32_t>(_mm_extract_epi16(px, 3) >> 8);
+			const uint32_t a2 = static_cast<uint32_t>(_mm_extract_epi16(px, 5) >> 8);
+			const uint32_t a3 = static_cast<uint32_t>(_mm_extract_epi16(px, 7) >> 8);
+
+			const __m128i alphaVector = _mm_setr_epi32(a0, a1, a2, a3);
+
+			// threshold > alpha
+			const __m128i cmp = _mm_cmpgt_epi32(thresholdVector, alphaVector);
+			if (_mm_movemask_ps(_mm_castsi128_ps(cmp)) != 0) {
+				return true;
+			}
+		}
+
+		// remainder
+		for (; x < unWidth; ++x) {
+			const uint8 alpha = pRow[(x * 4) + 3];
+			if (alpha < threshold) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+bool Texture::HasTransparentPixel_RGBA8_AVX2(const uint8* pixels, size_t unRowPitch, size_t unWidth, size_t unHeight, uint8 threshold)
+{
+	if (!pixels || unWidth == 0 || unHeight == 0) {
+		return false;
+	}
+
+	// 32 Bytes = 8 pixel RGBA
+	// Alpha of each pixel is a byte index of 3, 7, 11, 15, 19, 23, 27, 31
+	// _mm256_shuffle_epi8 operates on a 128-bit lane basis
+	// Four are collected from the first 128 bits and four from the second 128 bits
+
+	const __m256i alphaShuffleMask = _mm256_setr_epi8(
+		3, 7, 11, 15, static_cast<char>(0x80), static_cast<char>(0x80), static_cast<char>(0x80), static_cast<char>(0x80),
+		static_cast<char>(0x80), static_cast<char>(0x80), static_cast<char>(0x80), static_cast<char>(0x80),
+		static_cast<char>(0x80), static_cast<char>(0x80), static_cast<char>(0x80), static_cast<char>(0x80),
+
+		3, 7, 11, 15, static_cast<char>(0x80), static_cast<char>(0x80), static_cast<char>(0x80), static_cast<char>(0x80),
+		static_cast<char>(0x80), static_cast<char>(0x80), static_cast<char>(0x80), static_cast<char>(0x80),
+		static_cast<char>(0x80), static_cast<char>(0x80), static_cast<char>(0x80), static_cast<char>(0x80)
+	);
+
+	const __m256i thresholdVector = _mm256_set1_epi32(static_cast<int>(threshold));
+
+	for (size_t y = 0; y < unHeight; ++y) {
+		const uint8* pRow = pixels + y * unRowPitch;
+		size_t x = 0;
+
+		// Processing 8 pixels at a time
+		for (; x + 8 <= unWidth; x += 8) {
+			const __m256i px = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(pRow + (x * 4)));
+
+
+			// Move four alpha byte from each 128-bit lane to forward
+			const __m256i shuffled = _mm256_shuffle_epi8(px, alphaShuffleMask);
+
+			// Shuffled byte deployment is now approximately:
+			// low lane :  [a0 a1 a2 a3 0 0 0 0 0 ...]
+			// high lane : [a4 a5 a6 a7 0 0 0 0 0 ...]
+			// Take out low/high 128 separately and make 8 uint8 alpha
+			const __m128i low128 = _mm256_castsi256_si128(shuffled);
+			const __m128i high128 = _mm256_extracti128_si256(shuffled, 1);
+
+			// Four alphas are packed in low 32bit in lach lane
+			const uint32 lowPacked = static_cast<uint32>(_mm_cvtsi128_si32(low128));
+			const uint32 highPacked = static_cast<uint32>(_mm_cvtsi128_si32(high128));
+
+			const uint32 alphas[8] = {
+				(lowPacked >> 0)	& 0xFF,
+				(lowPacked >> 8)	& 0xFF,
+				(lowPacked >> 16)	& 0xFF,
+				(lowPacked >> 24)	& 0xFF,
+
+				(highPacked >> 0)	& 0xFF,
+				(highPacked >> 8)	& 0xFF,
+				(highPacked >> 16)	& 0xFF,
+				(highPacked >> 24)	& 0xFF,
+			};
+
+			const __m256i alphaVector = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(alphas));
+
+			// threshold > alpha ?
+			const __m256i cmp = _mm256_cmpgt_epi32(thresholdVector, alphaVector);
+			if (_mm256_movemask_ps(_mm256_castsi256_ps(cmp)) != 0) {
+				return true;
+			}
+		}
+
+		// remainder
+		for (; x < unWidth; ++x) {
+			const uint8 alpha = pRow[x * 4 + 3];
+			if (alpha < threshold) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+bool Texture::HasTransparentPixel_RGBA8_Scalar(const uint8* pixels, size_t unRowPitch, size_t unWidth, size_t unHeight, uint8 threshold)
+{
+	if (!pixels || unWidth == 0 || unHeight == 0) {
+		return false;
+	}
+
+	for (size_t y = 0; y < unHeight; ++y) {
+		const uint8_t* row = pixels + y * unRowPitch;
+		for (size_t x = 0; x < unWidth; ++x) {
+			if (row[x * 4 + 3] < threshold)
+				return true;
+		}
+	}
+
+	return false;
+}
+
+bool Texture::IsRGBA8Like(DXGI_FORMAT dxgiFormat)
+{
+	switch (dxgiFormat) {
+	case DXGI_FORMAT_R8G8B8A8_UNORM:
+	case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+	case DXGI_FORMAT_B8G8R8A8_UNORM:
+	case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+		return true;
+
+	default:
+		return false;
+	}
 }
 
 void Texture::StateTransition(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, D3D12_RESOURCE_STATES d3dAfterState)

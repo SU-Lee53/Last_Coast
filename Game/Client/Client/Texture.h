@@ -34,10 +34,12 @@ public:
 	ComPtr<ID3D12Resource> GetResource() const { return m_pd3dResource; }
 	CD3DX12_CPU_DESCRIPTOR_HANDLE GetSRVHandle() { return m_d3dSRVHandle; }
 	const D3D12_SHADER_RESOURCE_VIEW_DESC& GetSRVDesc() const { return m_d3dSRVDesc; }
-	TEXTURE_TYPE GetType() const { return m_eType; }
+
+	bool HasTransparentPixel() const { return m_bHasTransparentPixel; }
+	bool HasAlphaChannel() const { return m_bHasAlphaChannel; }
 
 private:
-	bool CreateTextureFromFile(const std::wstring& wstrTexturePath);
+	bool CreateTextureFromFile(const std::wstring& wstrTexturePath, bool bCheckTransparent);
 	bool CreateTextureArrayFromFile(const std::wstring& wstrTexturePath);
 	bool CreateTextureFromRawFile(const std::wstring& wstrTexturePath, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM);
 	
@@ -55,25 +57,57 @@ private:
 		std::unique_ptr<uint8_t[]>& ddsData,
 		std::vector<D3D12_SUBRESOURCE_DATA>& subResources);
 
-	[[nodiscard]] 
-	HRESULT LoadHDRTexture(
-		ID3D12Resource** ppOutResource, 
-		const std::wstring& wstrTexturePath, 
-		std::unique_ptr<uint8_t[]>& ddsData,
-		std::vector<D3D12_SUBRESOURCE_DATA>& subResources);
+	bool AnalyzeTransparencyFromFile(const std::wstring& wstrTexturePath, float fThreshold);
 
 protected:
-	ComPtr<ID3D12Resource> m_pd3dResource;
+	ComPtr<ID3D12Resource> m_pd3dResource = nullptr;
 	D3D12_RESOURCE_STATES m_d3dCurrentState;
+	bool m_bHasTransparentPixel = false;
+	bool m_bHasAlphaChannel = true;
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE m_d3dSRVHandle;
-	D3D12_SHADER_RESOURCE_VIEW_DESC m_d3dSRVDesc;
-	TEXTURE_TYPE m_eType;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE m_d3dSRVHandle{};
+	D3D12_SHADER_RESOURCE_VIEW_DESC m_d3dSRVDesc{};
 
 	uint64 m_un64RuntimeSRVID;
 
 private:
 	inline static std::wstring g_wstrTextureBasePath = L"../Resources/Textures";
+	const float g_fAlphaThreshold = 0.98f;
+
+	static bool HasTransparentPixel_RGBA8(
+		const uint8* pixels,
+		size_t unRowPitch,
+		size_t unWidth,
+		size_t unHeight,
+		float fThreshold
+	);
+
+	static bool HasTransparentPixel_RGBA8_SSE2(
+		const uint8* pixels,
+		size_t unRowPitch,
+		size_t unWidth,
+		size_t unHeight,
+		uint8 threshold
+	);
+
+	static bool HasTransparentPixel_RGBA8_AVX2(
+		const uint8* pixels,
+		size_t unRowPitch,
+		size_t unWidth,
+		size_t unHeight,
+		uint8 threshold
+	);
+
+	static bool HasTransparentPixel_RGBA8_Scalar(
+		const uint8* pixels,
+		size_t unRowPitch,
+		size_t unWidth,
+		size_t unHeight,
+		uint8 threshold
+	);
+
+	static bool IsRGBA8Like(DXGI_FORMAT dxgiFormat);
+
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////

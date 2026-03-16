@@ -11,6 +11,9 @@ public:
 private:
 	void CreateD3DDevice();
 
+	bool CheckSupportSSE2();
+	bool CheckSupportAVX2();
+
 public:
 	ComPtr<ID3D12Device> GetDevice() const;
 	ComPtr<IDXGIFactory4> GetDXGIFactory() const;
@@ -34,5 +37,8 @@ public:
 	static bool g_bEnableGBV;
 	static bool g_bMsaa4xEnable;
 	static bool g_nMsaa4xQualityLevels;
+
+	static bool g_bSupportSSE2;
+	static bool g_bSupportAVX2;
 
 };

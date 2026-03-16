@@ -151,12 +151,6 @@
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_textedit.h">
       <Filter>99.Library\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="..\Dependencies\Includes\DirectXTex\DDSTextureLoader12.h">
-      <Filter>99.Library\DirectXTex</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Dependencies\Includes\DirectXTex\WICTextureLoader12.h">
-      <Filter>99.Library\DirectXTex</Filter>
-    </ClInclude>
     <ClInclude Include="Camera.h">
       <Filter>02.Game\Camera</Filter>
     </ClInclude>
@@ -404,6 +398,12 @@
     <ClInclude Include="CommandListAllocator.h" />
     <ClInclude Include="DefferedLightingPass.h" />
     <ClInclude Include="SkyboxPass.h" />
+    <ClInclude Include="..\Dependencies\Includes\DirectXTex\DDSTextureLoader12.h">
+      <Filter>99.Library\DirectXTex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\Includes\DirectXTex\WICTextureLoader12.h">
+      <Filter>99.Library\DirectXTex</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -439,12 +439,6 @@
     </ClCompile>
     <ClCompile Include="..\Dependencies\Includes\ImGui\imgui_widgets.cpp">
       <Filter>99.Library\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Dependencies\Includes\DirectXTex\WICTextureLoader12.cpp">
-      <Filter>99.Library\DirectXTex</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Dependencies\Includes\DirectXTex\DDSTextureLoader12.cpp">
-      <Filter>99.Library\DirectXTex</Filter>
     </ClCompile>
     <ClCompile Include="entry.cpp">
       <Filter>00.Entry</Filter>
@@ -675,6 +669,12 @@
     <ClCompile Include="CommandListAllocator.cpp" />
     <ClCompile Include="DefferedLightingPass.cpp" />
     <ClCompile Include="SkyboxPass.cpp" />
+    <ClCompile Include="..\Dependencies\Includes\DirectXTex\WICTextureLoader12.cpp">
+      <Filter>99.Library\DirectXTex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\Includes\DirectXTex\DDSTextureLoader12.cpp">
+      <Filter>99.Library\DirectXTex</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
