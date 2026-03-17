@@ -7,33 +7,34 @@
 
 void GBufferPass::Initialize()
 {
-	const uint32 unRTVs = 3;
-	for (uint32 i = 0; i < RenderManager::g_unMaxPendingFrames; ++i) {
-		m_pRTVs[i].reserve(unRTVs);
-		
-		for (uint32 j = 0; j < unRTVs; ++j) {
-			auto& [srvID, rtvID] = TEXTURE->LoadRenderTargetTexture(
-				"GBuffer_" + std::to_string(i) + "_" + std::to_string(j),
-				WinCore::g_dwClientWidth,
-				WinCore::g_dwClientHeight,
-				DXGI_FORMAT_R8G8B8A8_UNORM,
-				DXGI_FORMAT_R8G8B8A8_UNORM);
-
-			auto pRTV = std::static_pointer_cast<RenderTargetTexture>(TEXTURE->GetTextureByID(rtvID, TEXTURE_RESOURCE_TYPE::RTV));
-			m_pRTVs[i].push_back(pRTV);
-		}
-	}
+	//const uint32 unRTVs = 3;
+	//for (uint32 i = 0; i < RenderManager::g_unMaxPendingFrames; ++i) {
+	//	m_pRTVs[i].reserve(unRTVs);
+	//	
+	//	for (uint32 j = 0; j < unRTVs; ++j) {
+	//		auto& [srvID, rtvID] = TEXTURE->LoadRenderTargetTexture(
+	//			"GBuffer_" + std::to_string(i) + "_" + std::to_string(j),
+	//			WinCore::g_dwClientWidth,
+	//			WinCore::g_dwClientHeight,
+	//			DXGI_FORMAT_R8G8B8A8_UNORM,
+	//			DXGI_FORMAT_R8G8B8A8_UNORM);
+	//
+	//		auto pRTV = std::static_pointer_cast<RenderTargetTexture>(TEXTURE->GetTextureByID(rtvID, TEXTURE_RESOURCE_TYPE::RTV));
+	//		m_pRTVs[i].push_back(pRTV);
+	//	}
+	//}
 }
 
 void GBufferPass::SetRenderTargets(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList) const
 {
 	// Set Render Targets
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
+	const auto& currentGBuffer = RENDER->GetCurrentGBuffer();
 
 	CD3DX12_RESOURCE_BARRIER pd3dResourceBarriers[] = {
-		m_pRTVs[unCurrentContext][0]->GetResourceBarrier(D3D12_RESOURCE_STATE_RENDER_TARGET, true),
-		m_pRTVs[unCurrentContext][1]->GetResourceBarrier(D3D12_RESOURCE_STATE_RENDER_TARGET, true),
-		m_pRTVs[unCurrentContext][2]->GetResourceBarrier(D3D12_RESOURCE_STATE_RENDER_TARGET, true)
+		currentGBuffer.GBuffers[0]->GetResourceBarrier(D3D12_RESOURCE_STATE_RENDER_TARGET, true),
+		currentGBuffer.GBuffers[1]->GetResourceBarrier(D3D12_RESOURCE_STATE_RENDER_TARGET, true),
+		currentGBuffer.GBuffers[2]->GetResourceBarrier(D3D12_RESOURCE_STATE_RENDER_TARGET, true)
 	};
 
 	pd3dCommandList->ResourceBarrier(_countof(pd3dResourceBarriers), pd3dResourceBarriers);
@@ -43,12 +44,12 @@ void GBufferPass::SetRenderTargets(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE pd3dRTVCPUDescriptorHandle[] = {
-		m_pRTVs[unCurrentContext][0]->GetRTVHandle(),
-		m_pRTVs[unCurrentContext][1]->GetRTVHandle(),
-		m_pRTVs[unCurrentContext][2]->GetRTVHandle()
+		currentGBuffer.GBuffers[0]->GetRTVHandle(),
+		currentGBuffer.GBuffers[1]->GetRTVHandle(),
+		currentGBuffer.GBuffers[2]->GetRTVHandle()
 	};
 
-	for (int i = 0; i < m_pRTVs[unCurrentContext].size(); ++i) {
+	for (int i = 0; i < GBuffer::g_unNumGBuffers; ++i) {
 		pd3dCommandList->ClearRenderTargetView(pd3dRTVCPUDescriptorHandle[i], pfClearColor, 0, NULL);
 	}
 
@@ -68,14 +69,14 @@ void GBufferPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 	// Frustum Culling
 	std::vector<std::shared_ptr<IGameObject>> frustumCulled;
 	{
-		const std::vector<std::shared_ptr<IGameObject>>& inputResource = *(input.passResource.Get<std::vector<std::shared_ptr<IGameObject>>>());
+		const std::vector<std::shared_ptr<IGameObject>>& inputResource = RENDER->GetRenderItems();
 		frustumCulled.reserve(inputResource.size());
 
 		const BoundingFrustum& xmFrustumWorld = CUR_SCENE->GetCamera()->GetFrustumWorld();
 		std::copy_if(inputResource.begin(), inputResource.end(), std::back_inserter(frustumCulled), [&xmFrustumWorld](const auto& pObj) {
 			const auto pCollider = pObj->GetComponentFromRoot<ICollider>();
 			return (pCollider) ? pCollider->IsInFrustum(xmFrustumWorld) : true;
-			});
+		});
 	}
 
 	// Gather draw unit
@@ -359,12 +360,13 @@ void GBufferPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 void GBufferPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
-
+	const auto& currentGBuffer = RENDER->GetCurrentGBuffer();
 	auto pDepthBuffer = RENDER->GetDepthStencilBuffer();
+
 	CD3DX12_RESOURCE_BARRIER d3dResourceBarriers[] = {
-		m_pRTVs[unCurrentContext][0]->GetResourceBarrier(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, true),
-		m_pRTVs[unCurrentContext][1]->GetResourceBarrier(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, true),
-		m_pRTVs[unCurrentContext][2]->GetResourceBarrier(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, true),
+		currentGBuffer.GBuffers[0]->GetResourceBarrier(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, true),
+		currentGBuffer.GBuffers[1]->GetResourceBarrier(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, true),
+		currentGBuffer.GBuffers[2]->GetResourceBarrier(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, true),
 		pDepthBuffer->GetResourceBarrier(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, true)
 	};
 
@@ -374,8 +376,8 @@ void GBufferPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList
 	CD3DX12_CPU_DESCRIPTOR_HANDLE gBufferHandle = outDescHandle.cpuHandle;
 	constexpr uint32 rootParamGBuffer = std::to_underlying(ROOT_PARAMETER::G_BUFFER);
 
-	for (uint32 i = 0; i < m_pRTVs[unCurrentContext].size(); ++i) {
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtSRVHandle = m_pRTVs[unCurrentContext][i]->GetSRVHandle();
+	for (const auto& gBuffer : currentGBuffer.GBuffers) {
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtSRVHandle = gBuffer->GetSRVHandle();
 		DEVICE->CopyDescriptorsSimple(1, gBufferHandle, rtSRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		gBufferHandle.Offset(1, unDescriptorInc);
 	}
@@ -387,5 +389,4 @@ void GBufferPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList
 	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamGBuffer, outDescHandle.gpuHandle);
 	outDescHandle.cpuHandle.Offset(4, unDescriptorInc);
 	outDescHandle.gpuHandle.Offset(4, unDescriptorInc);
-
 }

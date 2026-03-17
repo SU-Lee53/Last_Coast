@@ -396,14 +396,19 @@
     </ClInclude>
     <ClInclude Include="ComputeManager.h" />
     <ClInclude Include="CommandListAllocator.h" />
-    <ClInclude Include="DefferedLightingPass.h" />
-    <ClInclude Include="SkyboxPass.h" />
     <ClInclude Include="..\Dependencies\Includes\DirectXTex\DDSTextureLoader12.h">
       <Filter>99.Library\DirectXTex</Filter>
     </ClInclude>
     <ClInclude Include="..\Dependencies\Includes\DirectXTex\WICTextureLoader12.h">
       <Filter>99.Library\DirectXTex</Filter>
     </ClInclude>
+    <ClInclude Include="SkyboxPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="DefferedLightingPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="TransparentForwardLightingPass.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -667,14 +672,19 @@
     </ClCompile>
     <ClCompile Include="ComputeManager.cpp" />
     <ClCompile Include="CommandListAllocator.cpp" />
-    <ClCompile Include="DefferedLightingPass.cpp" />
-    <ClCompile Include="SkyboxPass.cpp" />
     <ClCompile Include="..\Dependencies\Includes\DirectXTex\WICTextureLoader12.cpp">
       <Filter>99.Library\DirectXTex</Filter>
     </ClCompile>
     <ClCompile Include="..\Dependencies\Includes\DirectXTex\DDSTextureLoader12.cpp">
       <Filter>99.Library\DirectXTex</Filter>
     </ClCompile>
+    <ClCompile Include="DefferedLightingPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="SkyboxPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="TransparentForwardLightingPass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">

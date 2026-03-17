@@ -33,6 +33,32 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 		m_DescriptorHeapForDraw[i].Initialize(pd3dDevice, d3dHeapDesc);
 		m_ConstantBufferPool[i].Initialize(1000);
 		m_StructuredBufferPool[i].Initialize(1'000'000, 1000);
+		m_GBuffers[i].Initialize(i);
+
+		{
+			auto& [srvID, rtvID] = TEXTURE->LoadRenderTargetTexture(
+				"HDR" + std::to_string(i),
+				WinCore::g_dwClientWidth,
+				WinCore::g_dwClientHeight,
+				DXGI_FORMAT_R16G16B16A16_FLOAT,
+				DXGI_FORMAT_R16G16B16A16_FLOAT);
+
+			m_pHDRRenderTargetIDs[i].first = srvID;
+			m_pHDRRenderTargetIDs[i].second = rtvID;
+		}
+
+		{
+			auto& [srvID, rtvID] = TEXTURE->LoadRenderTargetTexture(
+				"LDR" + std::to_string(i),
+				WinCore::g_dwClientWidth,
+				WinCore::g_dwClientHeight,
+				m_dxgiRenderTargetFormat,
+				m_dxgiRenderTargetFormat);
+
+			m_pLDRRenderTargetIDs[i].first = srvID;
+			m_pLDRRenderTargetIDs[i].second = rtvID;
+		}
+
 	}
 
 	m_pQuadMesh = std::make_shared<QuadMesh>(-1, 1);
@@ -164,8 +190,6 @@ void RenderManager::Render()
 	BindPerSceneData(pd3dCommandList, descHandle);
 
 	RenderPassInput input{};
-	input.passResource.pResource = (void*)(&m_pRenderItems);
-	 
 	m_RenderGraph.Run(descHandle, pd3dCommandList, input);
 
 	GUI->Render(pd3dCommandList);
@@ -269,6 +293,33 @@ const CD3DX12_CPU_DESCRIPTOR_HANDLE RenderManager::GetDepthStencilBufferHandle()
 {
 	auto p = TEXTURE->GetTextureByID(m_DepthStencilID.second, TEXTURE_RESOURCE_TYPE::DSV);
 	return CD3DX12_CPU_DESCRIPTOR_HANDLE(static_pointer_cast<DepthStencilTexture>(p)->GetDSVHandle());
+}
+
+const GBuffer& RenderManager::GetCurrentGBuffer() const
+{
+	return m_GBuffers[m_unCurrentContextIndex];
+}
+
+const std::shared_ptr<RenderTargetTexture> RenderManager::GetCurrentHDRBuffer() const
+{
+	return std::static_pointer_cast<RenderTargetTexture>(TEXTURE->GetTextureByID(m_pHDRRenderTargetIDs[m_unBackBufferIndex].second, TEXTURE_RESOURCE_TYPE::RTV));
+}
+
+const std::shared_ptr<RenderTargetTexture> RenderManager::GetCurrentLDRBuffer() const
+{
+	return std::static_pointer_cast<RenderTargetTexture>(TEXTURE->GetTextureByID(m_pLDRRenderTargetIDs[m_unBackBufferIndex].second, TEXTURE_RESOURCE_TYPE::RTV));
+}
+
+const CD3DX12_CPU_DESCRIPTOR_HANDLE RenderManager::GetCurrentHDRBufferHandle() const
+{
+	auto p = TEXTURE->GetTextureByID(m_pHDRRenderTargetIDs[m_unBackBufferIndex].second, TEXTURE_RESOURCE_TYPE::RTV);
+	return CD3DX12_CPU_DESCRIPTOR_HANDLE(static_pointer_cast<RenderTargetTexture>(p)->GetRTVHandle());
+}
+
+const CD3DX12_CPU_DESCRIPTOR_HANDLE RenderManager::GetCurrentLDRBufferHandle() const
+{
+	auto p = TEXTURE->GetTextureByID(m_pLDRRenderTargetIDs[m_unBackBufferIndex].second, TEXTURE_RESOURCE_TYPE::RTV);
+	return CD3DX12_CPU_DESCRIPTOR_HANDLE(static_pointer_cast<RenderTargetTexture>(p)->GetRTVHandle());
 }
 
 void RenderManager::OnPrepareRender()
@@ -489,3 +540,16 @@ void RenderManager::ChangeSwapChainState()
 	// TODO : ResourceTable 에서 리소스 삭제 구현 후 구현
 }
 
+void GBuffer::Initialize(uint32 nPendingFrameIndex)
+{
+	for (uint32 i = 0; i < g_unNumGBuffers; ++i) {
+		auto& [srvID, rtvID] = TEXTURE->LoadRenderTargetTexture(
+			"GBuffer_" + std::to_string(i) + "_" + std::to_string(nPendingFrameIndex),
+			WinCore::g_dwClientWidth,
+			WinCore::g_dwClientHeight,
+			DXGI_FORMAT_R8G8B8A8_UNORM,
+			DXGI_FORMAT_R8G8B8A8_UNORM);
+
+		GBuffers[i] = std::static_pointer_cast<RenderTargetTexture>(TEXTURE->GetTextureByID(rtvID, TEXTURE_RESOURCE_TYPE::RTV));
+	}
+}

@@ -273,6 +273,11 @@ cbuffer cbTerrainComponentData : register(b2, space2)
 	int2 pad1;
 };
 
+cbuffer cbWorldTransformIndexData : register(b3, space2)
+{
+	int gnWorldTransformIndex;
+};
+
 // ============ StructuredBuffers ============
 
 StructuredBuffer<InstanceData> gWorldTransforms : register(t0, space2);

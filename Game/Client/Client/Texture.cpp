@@ -3,6 +3,7 @@
 #include <xmmintrin.h>
 #include <emmintrin.h>
 
+const float Texture::g_fAlphaThreshold = 0.98f;
 
 bool Texture::CreateTextureFromFile(const std::wstring& wstrTextureName, bool bCheckTransparent)
 {

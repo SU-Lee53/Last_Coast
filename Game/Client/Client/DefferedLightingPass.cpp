@@ -3,7 +3,7 @@
 
 void DefferedLightingPass::Initialize()
 {
-	const uint32 unRTVs = 1;
+	/*const uint32 unRTVs = 1;
 	for (uint32 i = 0; i < RenderManager::g_unMaxPendingFrames; ++i) {
 		m_pRTVs[i].reserve(unRTVs);
 
@@ -18,7 +18,7 @@ void DefferedLightingPass::Initialize()
 			auto pRTV = std::static_pointer_cast<RenderTargetTexture>(TEXTURE->GetTextureByID(rtvID, TEXTURE_RESOURCE_TYPE::RTV));
 			m_pRTVs[i].push_back(pRTV);
 		}
-	}
+	}*/
 
 	CreatePipelineState();
 }
@@ -27,16 +27,14 @@ void DefferedLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCom
 {
 	// Set Render Targets
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
-	m_pRTVs[unCurrentContext][0]->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	auto pHDRRenderTarget = RENDER->GetCurrentHDRBuffer();
+	pHDRRenderTarget->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	// Clear Render Targets
 	float pfClearColor[4] = { 0.f, 0.0f, 0.0f, 1.0f };
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = m_pRTVs[unCurrentContext][0]->GetRTVHandle();
-
-	for (int i = 0; i < m_pRTVs[unCurrentContext].size(); ++i) {
-		pd3dCommandList->ClearRenderTargetView(d3dRTVCPUDescriptorHandle, pfClearColor, 0, NULL);
-	}
+	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = pHDRRenderTarget->GetRTVHandle();
+	pd3dCommandList->ClearRenderTargetView(d3dRTVCPUDescriptorHandle, pfClearColor, 0, NULL);
 
 	//CD3DX12_CPU_DESCRIPTOR_HANDLE d3dDSVDescriptorHandle = RENDER->GetDepthStencilBufferHandle();
 	//pd3dCommandList->ClearDepthStencilView(d3dDSVDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, NULL);
@@ -54,8 +52,8 @@ void DefferedLightingPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 
 void DefferedLightingPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
-	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
-	output.pRenderTargets.push_back(m_pRTVs[unCurrentContext][0]);
+	//const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
+	//output.pRenderTargets.push_back(m_pRTVs[unCurrentContext][0]);
 }
 
 void DefferedLightingPass::CreatePipelineState()

@@ -47,6 +47,7 @@ void WinCore::Run()
         }
     }
 
+	RENDER->WaitForGPUComplete();
 
 	// ImGui Clean Up
 	ImGui_ImplDX12_Shutdown();

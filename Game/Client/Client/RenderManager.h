@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "DescriptorHeap.h"
-#include "RenderPass.h"
 #include "MeshRenderer.h"
 
 #include "ConstantBufferPool.h"
@@ -18,6 +17,15 @@ enum class ROOT_PARAMETER : uint32 {
 	BONE_TRANSFORM							= 6,
 	TERRAIN_LAYER							= 7,
 	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 8,
+};
+
+struct GBuffer {
+	const static uint32 g_unNumGBuffers = 3;
+
+	std::array<std::shared_ptr<RenderTargetTexture>, GBuffer::g_unNumGBuffers> GBuffers;
+
+	void Initialize(uint32 nPendingFrameIndex);
+
 };
 
 constexpr UINT DESCRIPTOR_PER_DRAW = 100'000;
@@ -57,6 +65,11 @@ public:
 		return m_StructuredBufferPool[m_unCurrentContextIndex].Allocate<T>(unElementCount);
 	}
 
+public:
+	// Renderable Items Getter
+	const std::vector<std::shared_ptr<IGameObject>>& GetRenderItems() const { return m_pRenderItems; }
+	const std::vector<std::shared_ptr<IGameObject>>& GetTransparentItems() const { return m_pTransparentItems; }
+
 private:
 	void BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle);
 
@@ -73,6 +86,7 @@ public:
 	
 	// Objects Ready-To-Draw
 	std::vector<std::shared_ptr<IGameObject>> m_pRenderItems;
+	std::vector<std::shared_ptr<IGameObject>> m_pTransparentItems;
 
 	std::shared_ptr<IMesh> m_pQuadMesh;
 
@@ -81,6 +95,12 @@ private:
 	DescriptorHeap			m_DescriptorHeapForDraw[g_unMaxPendingFrames];
 	ConstantBufferPool		m_ConstantBufferPool[g_unMaxPendingFrames];
 	StructuredBufferPool	m_StructuredBufferPool[g_unMaxPendingFrames];
+
+	GBuffer									m_GBuffers[g_unMaxPendingFrames];
+	std::pair<Texture::ID, Texture::ID>		m_pHDRRenderTargetIDs[g_unMaxPendingFrames];
+	std::pair<Texture::ID, Texture::ID>		m_pLDRRenderTargetIDs[g_unMaxPendingFrames];
+
+
 
 #pragma region D3D
 public:
@@ -91,6 +111,14 @@ public:
 	
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferHandle() const;
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetDepthStencilBufferHandle() const;
+
+	const GBuffer& GetCurrentGBuffer() const;
+
+	const std::shared_ptr<RenderTargetTexture> GetCurrentHDRBuffer() const;
+	const std::shared_ptr<RenderTargetTexture> GetCurrentLDRBuffer() const;
+
+	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentHDRBufferHandle() const;
+	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentLDRBufferHandle() const;
 
 	ComPtr<ID3D12GraphicsCommandList> GetCommandList() const { return m_ppd3dCommandList[m_unCurrentContextIndex]; }
 
@@ -141,5 +169,9 @@ private:
 template<typename T> requires std::derived_from<T, IGameObject>
 inline void RenderManager::Add(std::shared_ptr<T> pObj)
 {
-	m_pRenderItems.push_back(pObj);
+	auto pMeshRenderer = pObj->GetComponent<MeshRenderer>();
+	auto pBaseColorTexure = MATERIAL->GetMaterialByID(pMeshRenderer->GetMaterialID(0))->GetTexture(0);
+	
+	(pBaseColorTexure->HasTransparentPixel()) ? m_pTransparentItems.push_back(pObj)
+		                                      : m_pRenderItems.push_back(pObj);
 }

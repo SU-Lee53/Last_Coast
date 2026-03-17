@@ -36,7 +36,6 @@ public:
 	const D3D12_SHADER_RESOURCE_VIEW_DESC& GetSRVDesc() const { return m_d3dSRVDesc; }
 
 	bool HasTransparentPixel() const { return m_bHasTransparentPixel; }
-	bool HasAlphaChannel() const { return m_bHasAlphaChannel; }
 
 private:
 	bool CreateTextureFromFile(const std::wstring& wstrTexturePath, bool bCheckTransparent);
@@ -61,18 +60,18 @@ private:
 
 protected:
 	ComPtr<ID3D12Resource> m_pd3dResource = nullptr;
-	D3D12_RESOURCE_STATES m_d3dCurrentState;
-	bool m_bHasTransparentPixel = false;
-	bool m_bHasAlphaChannel = true;
-
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_d3dSRVHandle{};
 	D3D12_SHADER_RESOURCE_VIEW_DESC m_d3dSRVDesc{};
 
 	uint64 m_un64RuntimeSRVID;
+	
+	D3D12_RESOURCE_STATES m_d3dCurrentState;
+	
+	bool m_bHasTransparentPixel = false;
 
 private:
 	inline static std::wstring g_wstrTextureBasePath = L"../Resources/Textures";
-	const float g_fAlphaThreshold = 0.98f;
+	const static float g_fAlphaThreshold;
 
 	static bool HasTransparentPixel_RGBA8(
 		const uint8* pixels,

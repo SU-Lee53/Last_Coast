@@ -49,6 +49,7 @@ public:
 public:
 	const std::vector<std::shared_ptr<IMesh>>& GetMeshes() const { return m_pMeshes; }
 	const std::vector<IMaterial::ID>& GetMaterialIDs() const { return m_MaterialIDs; };
+	const IMaterial::ID GetMaterialID(size_t idx) const { return m_MaterialIDs[idx]; };
 	BoundingOrientedBox GetOBBMerged() const;
 
 	MeshRenderer::ID GetID() const { return m_RuntimeID; }

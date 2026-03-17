@@ -47,7 +47,7 @@ protected:
 
 
 protected:
-	RenderTargetArray m_pRTVs;			// for MRT
+	//RenderTargetArray m_pRTVs;			// for MRT
 
 	std::list<std::shared_ptr<IRenderPass>> m_pEdgeList;
 };
