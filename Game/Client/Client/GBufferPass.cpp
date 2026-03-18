@@ -69,7 +69,7 @@ void GBufferPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 	// Frustum Culling
 	std::vector<std::shared_ptr<IGameObject>> frustumCulled;
 	{
-		const std::vector<std::shared_ptr<IGameObject>>& inputResource = RENDER->GetRenderItems();
+		const std::vector<std::shared_ptr<IGameObject>>& inputResource = RENDER->GetObjectsToRender();
 		frustumCulled.reserve(inputResource.size());
 
 		const BoundingFrustum& xmFrustumWorld = CUR_SCENE->GetCamera()->GetFrustumWorld();
@@ -89,7 +89,6 @@ void GBufferPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 
 void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<std::shared_ptr<IGameObject>>& frustumCulled, OUT DescriptorHandle& outDescHandle) const
 {
-	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
 
 	std::unordered_map<MeshRenderer::ID, size_t> renderItemIndex;
 	renderItemIndex.reserve(frustumCulled.size());
@@ -176,7 +175,7 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 				Matrix mtxWorld = pObj->GetWorldMatrix();
 				Matrix mtxInvWorld = mtxWorld.Invert();
 				
-				InstanceData data{
+				WorldTransformData data{
 					mtxWorld.Transpose(),
 					mtxInvWorld.Transpose(),
 				};
@@ -192,11 +191,14 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 	}
 
 	// Bind Material
+	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
+
 	std::vector<MaterialData> materialDatas;
 	materialDatas.reserve(materialIDForBind.size());
-	for (IMaterial::ID id : materialIDForBind) {
-		materialDatas.push_back(MATERIAL->GetMaterialByID(id)->GetMaterialData());
-	}
+	std::transform(materialIDForBind.begin(), materialIDForBind.end(), std::back_inserter(materialDatas), [](const Texture::ID id) {
+		return MATERIAL->GetMaterialByID(id)->GetMaterialData();
+	});
+
 
 	auto materialSBuffer = RENDER->AllocSBuffer<MaterialData>(materialDatas.size());
 	materialSBuffer.WriteData(materialDatas);
@@ -215,6 +217,7 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 	// Set
 	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::PER_PASS_DATA), outDescHandle.gpuHandle);
 	outDescHandle.gpuHandle.Offset(1 + unNumTextures, unDescriptorInc);
+
 }
 
 void GBufferPass::BindTerrainData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) const
@@ -291,7 +294,7 @@ void GBufferPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList
 			pd3dCommandList->SetPipelineState(pd3dAnimatedPipelineState.Get());
 
 			for (size_t i = 0; i < v.pAnimationControllers.size(); ++i) {
-				StructuredBuffer sbWorldTransforms = RENDER->AllocSBuffer<InstanceData>(1);
+				StructuredBuffer sbWorldTransforms = RENDER->AllocSBuffer<WorldTransformData>(1);
 				sbWorldTransforms.WriteData(v.sbWorldTransformData[i], 0);
 				pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamWorldTransform, sbWorldTransforms.GPUAddress);
 
@@ -308,7 +311,7 @@ void GBufferPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList
 			// Static
 			pd3dCommandList->SetPipelineState(pd3StaticPipelineState.Get());
 
-			StructuredBuffer sbWorldTransforms = RENDER->AllocSBuffer<InstanceData>(v.sbWorldTransformData.size());
+			StructuredBuffer sbWorldTransforms = RENDER->AllocSBuffer<WorldTransformData>(v.sbWorldTransformData.size());
 			sbWorldTransforms.WriteData(v.sbWorldTransformData);
 			pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamWorldTransform, sbWorldTransforms.GPUAddress);
 

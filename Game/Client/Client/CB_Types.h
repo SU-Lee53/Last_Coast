@@ -110,10 +110,11 @@ struct MaterialData
 	float fMetallic;						// c4.w
 	float fGlossyReflection;				// c5.x
 
-	Vector3 pad0;							// c6.yzw
+	uint32 eAlphaMode;						// c5.y
+	Vector2 pad0;							// c5.zw
 };
 
-struct InstanceData
+struct WorldTransformData
 {
 	Matrix mtxWorld;
 	Matrix mtxInvWorld;

@@ -20,6 +20,12 @@ class Texture {
 	friend class TextureManager;
 
 public:
+	enum class ALPHA_MODE : uint32 {
+		Opaque = 0,
+		Masked = 1,
+		Transparent = 2
+	};
+
 	using ID = uint64;
 
 public:
@@ -35,7 +41,8 @@ public:
 	CD3DX12_CPU_DESCRIPTOR_HANDLE GetSRVHandle() { return m_d3dSRVHandle; }
 	const D3D12_SHADER_RESOURCE_VIEW_DESC& GetSRVDesc() const { return m_d3dSRVDesc; }
 
-	bool HasTransparentPixel() const { return m_bHasTransparentPixel; }
+	//bool HasTransparentPixel() const { return m_bHasTransparentPixel; }
+	Texture::ALPHA_MODE GetAlphaMode() const { return m_eAlphaMode; }
 
 private:
 	bool CreateTextureFromFile(const std::wstring& wstrTexturePath, bool bCheckTransparent);
@@ -63,15 +70,41 @@ protected:
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_d3dSRVHandle{};
 	D3D12_SHADER_RESOURCE_VIEW_DESC m_d3dSRVDesc{};
 
-	uint64 m_un64RuntimeSRVID;
+	Texture::ID m_un64RuntimeSRVID;
 	
 	D3D12_RESOURCE_STATES m_d3dCurrentState;
 	
-	bool m_bHasTransparentPixel = false;
+	//bool m_bHasTransparentPixel = false;
+	Texture::ALPHA_MODE m_eAlphaMode = ALPHA_MODE::Opaque;
 
 private:
 	inline static std::wstring g_wstrTextureBasePath = L"../Resources/Textures";
 	const static float g_fAlphaThreshold;
+
+	struct AlphaAnalysisResult
+	{
+		bool bHasAnyNonOpaqueAlpha = false;
+		bool bHasZeroAlpha = false;
+		bool bHasMidAlpha = false;
+
+		size_t unZeroCount = 0;
+		size_t unOneCount = 0;
+		size_t unMidCount = 0;
+		size_t unTotalCount = 0;
+
+		float fZeroRatio = 0.f;
+		float fOneRatio = 0.f;
+		float fMidRatio = 0.f;
+
+		Texture::ALPHA_MODE eSuggestedMode = Texture::ALPHA_MODE::Opaque;
+	};
+
+	static Texture::AlphaAnalysisResult AnalyzeAlphaRGBA8_Scalar(
+		const uint8* pixels,
+		size_t unRowPitch,
+		size_t unWidth,
+		size_t unHeight
+	);
 
 	static bool HasTransparentPixel_RGBA8(
 		const uint8* pixels,
@@ -82,14 +115,6 @@ private:
 	);
 
 	static bool HasTransparentPixel_RGBA8_SSE2(
-		const uint8* pixels,
-		size_t unRowPitch,
-		size_t unWidth,
-		size_t unHeight,
-		uint8 threshold
-	);
-
-	static bool HasTransparentPixel_RGBA8_AVX2(
 		const uint8* pixels,
 		size_t unRowPitch,
 		size_t unWidth,

@@ -38,6 +38,10 @@ PS_GBUFFER_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
 	
 	// Albedo
 	float4 cAlbedo = gtxtTextures[gnTextureIndex.x].Sample(gSamplerState, input.uv);
+	if (gMaterialData[gnMaterialIndex].eAlphaMode == ALPHA_MODE_MASKED)
+	{
+		clip(cAlbedo.a - gfAlphaMaskCutoff);
+	}
 	
 	// Normal
 	float3 vNormal = (gnTextureIndex.y != -1) ? ComputeNormal(input.normalW, input.tangentW, input.uv) : input.normalW;
@@ -68,9 +72,9 @@ PS_GBUFFER_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // AnimatedShader
 
-VS_SKINNED_OUTPUT VSAnimated(VS_SKINNED_INPUT input, uint nInstanceID : SV_InstanceID)
+VS_STANDARD_OUTPUT VSAnimated(VS_SKINNED_INPUT input, uint nInstanceID : SV_InstanceID)
 {
-	VS_SKINNED_OUTPUT output = (VS_SKINNED_OUTPUT) 0;
+	VS_STANDARD_OUTPUT output = (VS_STANDARD_OUTPUT) 0;
 
 	float fWeights[4] = { 0.f, 0.f, 0.f, 0.f };
 	fWeights[0] = input.blendWeights.x;
@@ -105,12 +109,16 @@ VS_SKINNED_OUTPUT VSAnimated(VS_SKINNED_INPUT input, uint nInstanceID : SV_Insta
 	return output;
 }
 
-PS_GBUFFER_OUTPUT PSAnimated(VS_SKINNED_OUTPUT input)
+PS_GBUFFER_OUTPUT PSAnimated(VS_STANDARD_OUTPUT input)
 {
 	PS_GBUFFER_OUTPUT output = (PS_GBUFFER_OUTPUT) 0;
 	
 	// Albedo
 	float4 cAlbedo = gtxtTextures[gnTextureIndex.x].Sample(gSamplerState, input.uv);
+	if (gMaterialData[gnMaterialIndex].eAlphaMode == ALPHA_MODE_MASKED)
+	{
+		clip(cAlbedo.a - gfAlphaMaskCutoff);
+	}
 	
 	// Normal
 	float3 vNormal = (gnTextureIndex.y != -1) ? ComputeNormal(input.normalW, input.tangentW, input.uv) : input.normalW;

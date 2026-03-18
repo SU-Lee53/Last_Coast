@@ -190,6 +190,12 @@ SamplerState gSamplerState : register(s2, space0);
 
 // ============ Structs ============
 
+#define ALPHA_MODE_OPAQUE 0
+#define ALPHA_MODE_MASKED 1
+#define ALPHA_MODE_TRANSPARENT 2
+
+const static float gfAlphaMaskCutoff = 0.5f;
+
 struct MaterialData
 {
 	float4 cAmbient; // c0
@@ -203,7 +209,8 @@ struct MaterialData
 	float fMetallic; // c4.w
 	float fGlossyReflection; // c5.x
 	
-	float3 pad0; // c6.yzw
+	uint eAlphaMode;	// c5.y
+	float2 pad0; // c5.zw
 };
 
 // ============ StructuredBuffers ============

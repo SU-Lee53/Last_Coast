@@ -17,6 +17,7 @@ enum class ROOT_PARAMETER : uint32 {
 	BONE_TRANSFORM							= 6,
 	TERRAIN_LAYER							= 7,
 	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 8,
+	WORLE_TRANSFORM_INDEX					= 9,
 };
 
 struct GBuffer {
@@ -67,8 +68,8 @@ public:
 
 public:
 	// Renderable Items Getter
-	const std::vector<std::shared_ptr<IGameObject>>& GetRenderItems() const { return m_pRenderItems; }
-	const std::vector<std::shared_ptr<IGameObject>>& GetTransparentItems() const { return m_pTransparentItems; }
+	const std::vector<std::shared_ptr<IGameObject>>& GetObjectsToRender() const { return m_pObjectsToRender; }
+	const std::vector<std::shared_ptr<IGameObject>>& GetTransparentObjectsToRender() const { return m_pTransparentObjectsToRender; }
 
 private:
 	void BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle);
@@ -85,8 +86,8 @@ public:
 	static ComPtr<ID3D12RootSignature> g_pd3dGlobalRootSignature;
 	
 	// Objects Ready-To-Draw
-	std::vector<std::shared_ptr<IGameObject>> m_pRenderItems;
-	std::vector<std::shared_ptr<IGameObject>> m_pTransparentItems;
+	std::vector<std::shared_ptr<IGameObject>> m_pObjectsToRender;
+	std::vector<std::shared_ptr<IGameObject>> m_pTransparentObjectsToRender;
 
 	std::shared_ptr<IMesh> m_pQuadMesh;
 
@@ -172,6 +173,7 @@ inline void RenderManager::Add(std::shared_ptr<T> pObj)
 	auto pMeshRenderer = pObj->GetComponent<MeshRenderer>();
 	auto pBaseColorTexure = MATERIAL->GetMaterialByID(pMeshRenderer->GetMaterialID(0))->GetTexture(0);
 	
-	(pBaseColorTexure->HasTransparentPixel()) ? m_pTransparentItems.push_back(pObj)
-		                                      : m_pRenderItems.push_back(pObj);
+	(pBaseColorTexure->GetAlphaMode() == Texture::ALPHA_MODE::Transparent) 
+		? m_pTransparentObjectsToRender.push_back(pObj)
+	    : m_pObjectsToRender.push_back(pObj);
 }

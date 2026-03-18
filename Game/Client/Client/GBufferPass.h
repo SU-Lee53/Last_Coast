@@ -4,7 +4,7 @@
 class GBufferPass : public IRenderPass {
 	struct RenderParameter {
 		CB_INSTANCE_DATA cbInstanceData;
-		std::vector<InstanceData> sbWorldTransformData;
+		std::vector<WorldTransformData> sbWorldTransformData;
 		std::vector<AnimationController*> pAnimationControllers;
 	};
 

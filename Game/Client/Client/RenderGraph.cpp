@@ -4,6 +4,7 @@
 #include "TerrainPass.h"
 #include "GBufferPass.h"
 #include "DefferedLightingPass.h"
+#include "TransparentForwardLightingPass.h"
 #include "ToneMappingPass.h"
 #include "SkyboxPass.h"
 #include <queue>
@@ -25,20 +26,25 @@ void RenderGraph::BuildGraph()
 	pGBufferPass->Initialize();
 	m_pAdjLists.push_back(pGBufferPass);
 	
-	std::shared_ptr<IRenderPass> pLightingPass = std::make_shared<DefferedLightingPass>();
-	pLightingPass->Initialize();
-	m_pAdjLists.push_back(pLightingPass);
+	std::shared_ptr<IRenderPass> pDefferedLightingPass = std::make_shared<DefferedLightingPass>();
+	pDefferedLightingPass->Initialize();
+	m_pAdjLists.push_back(pDefferedLightingPass);
 	
-	std::shared_ptr<IRenderPass> pToneMappingPass = std::make_shared<ToneMappingPass>();
-	pToneMappingPass->Initialize();
-	m_pAdjLists.push_back(pToneMappingPass);
-	
+	std::shared_ptr<IRenderPass> pTransparentForwardPass = std::make_shared<TransparentForwardLightingPass>();
+	pTransparentForwardPass->Initialize();
+	m_pAdjLists.push_back(pTransparentForwardPass);
+
 	std::shared_ptr<IRenderPass> pSkyboxPass = std::make_shared<SkyboxPass>();
 	pSkyboxPass->Initialize();
 	m_pAdjLists.push_back(pSkyboxPass);
 
-	pGBufferPass->Connect(pLightingPass);
-	pLightingPass->Connect(pSkyboxPass);
+	std::shared_ptr<IRenderPass> pToneMappingPass = std::make_shared<ToneMappingPass>();
+	pToneMappingPass->Initialize();
+	m_pAdjLists.push_back(pToneMappingPass);
+	
+	pGBufferPass->Connect(pDefferedLightingPass);
+	pDefferedLightingPass->Connect(pTransparentForwardPass);
+	pTransparentForwardPass->Connect(pSkyboxPass);
 	pSkyboxPass->Connect(pToneMappingPass);
 
 	m_unEntryNodeIndex = 0;

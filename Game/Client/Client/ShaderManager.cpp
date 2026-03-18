@@ -211,6 +211,10 @@ void ShaderManager::CompileShaders()
 	Compile("SkyboxPS", L"Skybox.hlsl", L"PSSkybox", SHADER_TYPE::PS);
 	Compile("CelestialDiskPS", L"Skybox.hlsl", L"PSCelestialDisk", SHADER_TYPE::PS);
 
+	Compile("ForwardStandardVS", L"ForwardShader.hlsl", L"VSForwardStandard", SHADER_TYPE::VS);
+	Compile("ForwardAnimatedVS", L"ForwardShader.hlsl", L"VSForwardAnimated", SHADER_TYPE::VS);
+	Compile("ForwardLightingPS", L"ForwardShader.hlsl", L"PSForwardLighting", SHADER_TYPE::PS);
+
 
 	// Compute
 	Compile("HDRIToCubeMapCS", L"HDRIToCubeMap.hlsl", L"CSHDRIToCubeMap", SHADER_TYPE::CS);

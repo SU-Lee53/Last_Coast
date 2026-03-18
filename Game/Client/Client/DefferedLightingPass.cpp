@@ -26,7 +26,6 @@ void DefferedLightingPass::Initialize()
 void DefferedLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
 	// Set Render Targets
-	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
 	auto pHDRRenderTarget = RENDER->GetCurrentHDRBuffer();
 	pHDRRenderTarget->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 

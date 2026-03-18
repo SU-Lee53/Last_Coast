@@ -47,6 +47,9 @@ void StandardMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 	m_TextureIDs[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName, false);			// Normal
 	m_TextureIDs[2] = TEXTURE->LoadTexture(materialLoadInfo.strMetallicMapName, false);		// Metallic
 	m_TextureIDs[3] = TEXTURE->LoadTexture(materialLoadInfo.strSpecularMapName, false);		// Specular
+
+	m_MaterialData.eAlphaMode = std::to_underlying(TEXTURE->GetTextureByID(m_TextureIDs[0], TEXTURE_RESOURCE_TYPE::SRV)->GetAlphaMode());
+
 	m_pShader = SHADER->Get<StandardShader>();
 }
 
@@ -62,6 +65,9 @@ void SkinnedMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 	m_TextureIDs[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName, false);			// Normal
 	m_TextureIDs[2] = TEXTURE->LoadTexture(materialLoadInfo.strMetallicMapName, false);		// Metallic
 	m_TextureIDs[3] = TEXTURE->LoadTexture(materialLoadInfo.strSpecularMapName, false);		// Specular
+
+	m_MaterialData.eAlphaMode = std::to_underlying(TEXTURE->GetTextureByID(m_TextureIDs[0], TEXTURE_RESOURCE_TYPE::SRV)->GetAlphaMode());
+
 	m_pShader = SHADER->Get<AnimatedShader>();
 }
 

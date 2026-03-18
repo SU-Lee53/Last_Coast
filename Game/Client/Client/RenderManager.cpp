@@ -93,7 +93,7 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	d3dDescriptorRanges[12].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbTerrainComponentData 
 	d3dDescriptorRanges[13].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 10, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainWeightMap
 
-	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[9];
+	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[10];
 	// Per Pass
 	d3dRootParameters[0].InitAsDescriptorTable(4, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);	// Per Draw
 	d3dRootParameters[1].InitAsDescriptorTable(2, &d3dDescriptorRanges[4], D3D12_SHADER_VISIBILITY_ALL);	// G-Buffers
@@ -108,6 +108,7 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	d3dRootParameters[6].InitAsShaderResourceView(1, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gBoneTransforms
 	d3dRootParameters[7].InitAsDescriptorTable(3, &d3dDescriptorRanges[9], D3D12_SHADER_VISIBILITY_ALL);	// TerrainLayer
 	d3dRootParameters[8].InitAsDescriptorTable(2, &d3dDescriptorRanges[12], D3D12_SHADER_VISIBILITY_ALL);	// TerrainComponent
+	d3dRootParameters[9].InitAsConstants(1, 3, 2, D3D12_SHADER_VISIBILITY_ALL);	// gnWorldTransformIndex
 
 	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[3];
 	// s0 : SkyboxSampler
@@ -200,7 +201,7 @@ void RenderManager::Render()
 
 void RenderManager::Reset(uint32 unContextIndex)
 {
-	m_pRenderItems.clear();
+	m_pObjectsToRender.clear();
 
 	m_ConstantBufferPool[unContextIndex].Reset();
 	m_StructuredBufferPool[unContextIndex].Reset();
