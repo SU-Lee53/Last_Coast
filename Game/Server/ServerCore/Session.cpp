@@ -15,6 +15,14 @@ Session::~Session()
 
 void Session::Disconnect(const WCHAR* cause)
 {
+	if (_connected.exchange(false) == false)
+		return;
+
+	std::wcout << "Disconnect : " << cause << std::endl;
+
+	OnDisconnected();	//	컨텐츠 코드에서 오버로딩
+	SocketUtils::Close(_socket);
+	GetService()->ReleaseSession(GetSessionRef());
 }
 
 HANDLE Session::GetHandle()

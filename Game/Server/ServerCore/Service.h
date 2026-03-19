@@ -39,7 +39,7 @@ public:
 
 protected:
 	USE_LOCK
-		ServiceType				_type;
+	ServiceType				_type;
 	NetAddress				_netAddress = {};
 	IocpCoreRef				_iocpCore;
 
