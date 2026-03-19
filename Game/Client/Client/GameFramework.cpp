@@ -38,13 +38,6 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 
 	SHADER->ReleaseBlobs();
 
-	RESOURCE->WaitForCopyComplete();
-	TEXTURE->WaitForCopyComplete();
-
-	COMPUTE->ExecuteIndirect();
-	COMPUTE->WaitForGPUComplete();
-	COMPUTE->Reset();
-	
 	TIMER->Initialize();
 	TIMER->Start();
 }
@@ -72,6 +65,10 @@ void GameFramework::Update()
 	// 리소스 생성될게 없으면 바로 리턴함
 	RESOURCE->WaitForCopyComplete();
 	TEXTURE->WaitForCopyComplete();
+
+	COMPUTE->ExecuteIndirect();
+	COMPUTE->WaitForGPUComplete();
+	COMPUTE->Reset();
 }
 
 void GameFramework::Render()

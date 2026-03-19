@@ -91,6 +91,7 @@ public:
 public:
 	virtual void ProcessInput() = 0;
 	virtual void Update() = 0;
+	void CleanUp();
 
 	virtual void OnEnterScene() = 0;
 	virtual void OnLeaveScene() = 0;

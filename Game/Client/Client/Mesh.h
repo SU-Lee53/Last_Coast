@@ -58,7 +58,14 @@ public:
 	
 	const BoundingOrientedBox& GetBoundingBox() const { return m_xmOBB; }
 
-	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
+	virtual void RenderPosition(
+		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
+		uint32 nInstanceCount = 1,
+		uint32 unStartIndex = 0,
+		int32 nIndexCount = -1) const;
+
+	virtual void Render(
+		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
 		uint32 nInstanceCount = 1, 
 		uint32 unStartIndex = 0, 
 		int32 nIndexCount = -1) const = 0;
@@ -118,6 +125,12 @@ protected:
 class SkinnedMesh : public StaticMesh {
 public:
 	SkinnedMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	virtual void RenderPosition(
+		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
+		uint32 nInstanceCount = 1,
+		uint32 unStartIndex = 0,
+		int32 nIndexCount = -1) const override;
 
 	virtual void Render(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,

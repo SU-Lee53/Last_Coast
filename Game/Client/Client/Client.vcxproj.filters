@@ -408,7 +408,18 @@
     <ClInclude Include="DefferedLightingPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
-    <ClInclude Include="TransparentForwardLightingPass.h" />
+    <ClInclude Include="DirectionalCascadeShadowMapPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="TransparentForwardLightingPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="MapTestScene.h">
+      <Filter>02.Game\Scene\Test</Filter>
+    </ClInclude>
+    <ClInclude Include="TerrainTestScene.h">
+      <Filter>02.Game\Scene\Test</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -672,19 +683,30 @@
     </ClCompile>
     <ClCompile Include="ComputeManager.cpp" />
     <ClCompile Include="CommandListAllocator.cpp" />
-    <ClCompile Include="..\Dependencies\Includes\DirectXTex\WICTextureLoader12.cpp">
-      <Filter>99.Library\DirectXTex</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Dependencies\Includes\DirectXTex\DDSTextureLoader12.cpp">
-      <Filter>99.Library\DirectXTex</Filter>
-    </ClCompile>
     <ClCompile Include="DefferedLightingPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
     <ClCompile Include="SkyboxPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
-    <ClCompile Include="TransparentForwardLightingPass.cpp" />
+    <ClCompile Include="DirectionalCascadeShadowMapPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="TransparentForwardLightingPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\Includes\DirectXTex\WICTextureLoader12.cpp">
+      <Filter>99.Library\DirectXTex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\Includes\DirectXTex\DDSTextureLoader12.cpp">
+      <Filter>99.Library\DirectXTex</Filter>
+    </ClCompile>
+    <ClCompile Include="TerrainTestScene.cpp">
+      <Filter>02.Game\Scene\Test</Filter>
+    </ClCompile>
+    <ClCompile Include="MapTestScene.cpp">
+      <Filter>02.Game\Scene\Test</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
@@ -738,6 +760,12 @@
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\Skybox.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\ForwardShader.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\ShadowMapShader.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
   </ItemGroup>

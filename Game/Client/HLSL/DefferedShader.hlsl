@@ -97,9 +97,9 @@ VS_STANDARD_OUTPUT VSAnimated(VS_SKINNED_INPUT input, uint nInstanceID : SV_Inst
 	matrix mtxViewProjection = mul(gCamera.mtxView, gCamera.mtxProjection);
 	matrix mtxWorld = gWorldTransforms[nInstanceID].mtxWorld;
 	
-	float4 positionW = mul(float4(position, 1.f), mtxWorld);
-	output.positionW = positionW.xyz;
-	output.position = mul(positionW, mtxViewProjection);
+	float3 positionW = mul(float4(position, 1.f), mtxWorld).xyz;
+	output.positionW = positionW;
+	output.position = mul(float4(positionW, 1.f), mtxViewProjection);
 	
 	float3x3 mtxNormal = (float3x3) transpose(gWorldTransforms[nInstanceID].mtxInvWorld);
 	output.normalW = normalize(mul(normal, mtxNormal));

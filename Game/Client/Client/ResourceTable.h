@@ -117,7 +117,38 @@ public:
 		}
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE handle(m_pd3dDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-		handle.Offset(m_ResourceEntries[id].un64DescriptorIndex, D3DCore::g_nCBVSRVDescriptorIncrementSize);
+
+		uint32 nDescriptorInc = 0;
+		switch (m_d3dHeapType)
+		{
+		case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
+		{
+			nDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
+			break;
+		}
+		case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
+		{
+			nDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::SAMPLER);
+			break;
+		}
+		case D3D12_DESCRIPTOR_HEAP_TYPE_RTV:
+		{
+			nDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::RTV);
+			break;
+		}
+		case D3D12_DESCRIPTOR_HEAP_TYPE_DSV:
+		{
+			nDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::DSV);
+			break;
+		}
+		default:
+		{
+			__debugbreak();
+			break;
+		}
+		}
+
+		handle.Offset(m_ResourceEntries[id].un64DescriptorIndex, nDescriptorInc);
 		return handle;
 	}
 

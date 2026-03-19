@@ -25,7 +25,7 @@ void AnimationTestScene::BuildObjects()
 
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 	//m_pPlayer = std::make_shared<DebugPlayer>();
-	///LoadFromFiles("LightTest");
+	//LoadFromFiles("LightTest");
 
 	m_pTerrain = std::make_shared<TerrainObject>();
 	m_pTerrain->LoadFromFiles("TEST");

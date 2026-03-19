@@ -61,9 +61,6 @@ void GBufferPass::SetRenderTargets(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 
 void GBufferPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
-	// Set Render Target
-	SetRenderTargets(pd3dCommandList);
-	
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
 
 	// Frustum Culling
@@ -85,11 +82,13 @@ void GBufferPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 	if (CUR_SCENE->GetTerrain() != nullptr) {
 		BindTerrainData(pd3dCommandList, outDescHandle);
 	}
+
+	// Set Render Target
+	SetRenderTargets(pd3dCommandList);
 }
 
 void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<std::shared_ptr<IGameObject>>& frustumCulled, OUT DescriptorHandle& outDescHandle) const
 {
-
 	std::unordered_map<MeshRenderer::ID, size_t> renderItemIndex;
 	renderItemIndex.reserve(frustumCulled.size());
 	std::vector<std::pair<MeshRenderer*, std::vector<const IGameObject*>>> renderItems;

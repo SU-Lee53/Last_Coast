@@ -39,22 +39,22 @@ void Camera::Update()
 	m_xmFrustumOrigin.Transform(m_xmFrustumWorld, m_mtxWorld);
 }
 
-Vector3 Camera::GetPosition() const
+const Vector3& Camera::GetPosition() const
 {
 	return m_v3Position;
 }
 
-Vector3 Camera::GetRight() const
+const Vector3& Camera::GetRight() const
 {
 	return m_v3Right;
 }
 
-Vector3 Camera::GetUp() const
+const Vector3& Camera::GetUp() const
 {
 	return m_v3Up;
 }
 
-Vector3 Camera::GetLook() const
+const Vector3& Camera::GetLook() const
 {
 	return m_v3Look;
 }
@@ -72,6 +72,16 @@ float Camera::GetYaw() const
 float Camera::GetRoll() const
 {
 	return m_fRoll;
+}
+
+float Camera::GetFovYInRadian() const
+{
+	return XMConvertToRadians(m_ffovY);
+}
+
+float Camera::GetAspectRatio() const
+{
+	return m_fAspectRatio;
 }
 
 void Camera::SetPosition(float x, float y, float z)
@@ -234,14 +244,19 @@ Matrix Camera::GetViewProjectMatrix() const
 	return ret;
 }
 
-Matrix Camera::GetProjectionMatrix() const
+const Matrix& Camera::GetProjectionMatrix() const
 {
 	return m_mtxProjection;
 }
 
-Matrix Camera::GetViewMatrix() const
+const Matrix& Camera::GetViewMatrix() const
 {
 	return m_mtxView;
+}
+
+const Matrix& Camera::GetCameraWorldTransfromMatrix() const
+{
+	return m_mtxWorld;
 }
 
 float Camera::GetNearPlaneDistance() const

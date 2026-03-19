@@ -23,13 +23,23 @@ public:
 private:
 	std::unique_ptr<Scene> m_upCurrentScene;
 
+	bool m_bSceneChanged = false;
+
+
 };
 
 template<typename T> requires std::derived_from<T, Scene>
 inline void SceneManager::ChangeScene()
 {
 	m_upCurrentScene->OnLeaveScene();
+	RENDER->WaitForGPUComplete();
+
 	m_upCurrentScene.reset(new T());
-	m_upCurrentScene->BuildObjects();
 	m_upCurrentScene->OnEnterScene();
+	m_upCurrentScene->BuildObjects();
+	m_upCurrentScene->PostInitialize();
+
+	Update();
+
+	m_bSceneChanged = true;
 }

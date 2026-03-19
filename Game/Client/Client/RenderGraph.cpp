@@ -1,10 +1,9 @@
 ﻿#include "pch.h"
 #include "RenderGraph.h"
-#include "ForwardPass.h"
-#include "TerrainPass.h"
 #include "GBufferPass.h"
 #include "DefferedLightingPass.h"
 #include "TransparentForwardLightingPass.h"
+#include "DirectionalCascadeShadowMapPass.h"
 #include "ToneMappingPass.h"
 #include "SkyboxPass.h"
 #include <queue>
@@ -21,6 +20,10 @@ void RenderGraph::BuildGraph()
 	//	pForwardPass->Connect(pTerrainPass);
 	//	m_pAdjLists.push_back(pTerrainPass);
 	//}
+	
+	std::shared_ptr<IRenderPass> pDirectionalCascadeShadowMapPass = std::make_shared<DirectionalCascadeShadowMapPass>();
+	pDirectionalCascadeShadowMapPass->Initialize();
+	m_pAdjLists.push_back(pDirectionalCascadeShadowMapPass);
 	
 	std::shared_ptr<IRenderPass> pGBufferPass = std::make_shared<GBufferPass>();
 	pGBufferPass->Initialize();
@@ -42,6 +45,7 @@ void RenderGraph::BuildGraph()
 	pToneMappingPass->Initialize();
 	m_pAdjLists.push_back(pToneMappingPass);
 	
+	pDirectionalCascadeShadowMapPass->Connect(pGBufferPass);
 	pGBufferPass->Connect(pDefferedLightingPass);
 	pDefferedLightingPass->Connect(pTransparentForwardPass);
 	pTransparentForwardPass->Connect(pSkyboxPass);

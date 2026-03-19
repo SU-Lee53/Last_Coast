@@ -215,6 +215,8 @@ void ShaderManager::CompileShaders()
 	Compile("ForwardAnimatedVS", L"ForwardShader.hlsl", L"VSForwardAnimated", SHADER_TYPE::VS);
 	Compile("ForwardLightingPS", L"ForwardShader.hlsl", L"PSForwardLighting", SHADER_TYPE::PS);
 
+	Compile("ShadowStandardVS", L"ShadowMapShader.hlsl", L"VSShadowStandard", SHADER_TYPE::VS);
+	Compile("ShadowAnimatedVS", L"ShadowMapShader.hlsl", L"VSShadowAnimated", SHADER_TYPE::VS);
 
 	// Compute
 	Compile("HDRIToCubeMapCS", L"HDRIToCubeMap.hlsl", L"CSHDRIToCubeMap", SHADER_TYPE::CS);

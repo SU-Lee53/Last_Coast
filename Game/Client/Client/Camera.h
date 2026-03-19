@@ -16,20 +16,24 @@ public:
 public:
 	Matrix GetViewProjectMatrix() const;
 
-	Matrix GetProjectionMatrix() const;
-	Matrix GetViewMatrix() const;
+	const Matrix& GetProjectionMatrix() const;
+	const Matrix& GetViewMatrix() const;
+	const Matrix& GetCameraWorldTransfromMatrix() const;
 
 	float GetNearPlaneDistance() const;
 	float GetFarPlaneDistance() const;
 
-	Vector3 GetPosition() const;
-	Vector3 GetRight() const;
-	Vector3 GetUp() const;
-	Vector3 GetLook() const;
+	const Vector3& GetPosition() const;
+	const Vector3& GetRight() const;
+	const Vector3& GetUp() const;
+	const Vector3& GetLook() const;
 	
 	float GetPitch() const;
 	float GetYaw() const;
 	float GetRoll() const;
+	
+	float GetFovYInRadian() const;
+	float GetAspectRatio() const;
 
 	const BoundingFrustum& GetFrustumOrigin() const { return m_xmFrustumOrigin; }
 	const BoundingFrustum& GetFrustumWorld() const { return m_xmFrustumWorld; }

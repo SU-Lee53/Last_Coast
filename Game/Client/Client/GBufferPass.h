@@ -32,10 +32,9 @@ public:
 		OUT RenderPassOutput& output, 
 		OUT DescriptorHandle& outDescHandle) const override;
 
-public:
+private:
 	void SetRenderTargets(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList) const;
 
-private:
 	void BindGeometryData(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const std::vector<std::shared_ptr<IGameObject>>& frustumCulled, 

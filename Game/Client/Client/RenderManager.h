@@ -9,15 +9,18 @@
 
 enum class ROOT_PARAMETER : uint32 {
 	PER_SCENE_DATA							= 0,
-	G_BUFFER								= 1,
-	HDR_RESULT								= 2,
-	PER_PASS_DATA							= 3,
-	PER_INSTANCE_DATA						= 4,
-	WORLD_TRANSFORM_DATA					= 5,
-	BONE_TRANSFORM							= 6,
-	TERRAIN_LAYER							= 7,
-	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 8,
-	WORLE_TRANSFORM_INDEX					= 9,
+	CASCADE_SHADOW_MAPS						= 1,
+	SHADOW_MAPS								= 2,
+	G_BUFFER								= 3,
+	HDR_RESULT								= 4,
+	PER_PASS_DATA							= 5,
+	PER_INSTANCE_DATA						= 6,
+	LIGHT_CAMERA_DATA						= 7,
+	WORLD_TRANSFORM_DATA					= 8,
+	BONE_TRANSFORM							= 9,
+	TERRAIN_LAYER							= 10,
+	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 11,
+	WORLE_TRANSFORM_INDEX					= 12,
 };
 
 struct GBuffer {

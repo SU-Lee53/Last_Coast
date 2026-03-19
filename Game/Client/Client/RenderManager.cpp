@@ -70,15 +70,19 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	// space0 : Per Scene (Frame) 
 	d3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbSceneData 
 	d3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gLightData 
-	d3dDescriptorRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtSkyboxDay / Night 
-	d3dDescriptorRanges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 8, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtShadows[8]
+
+	// space0 : Cascade shadow maps
+	d3dDescriptorRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, 0); // gtxtCascadeShadowMaps[NUM_CASCADES]
+	
+	// space0 : Shadow maps
+	d3dDescriptorRanges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 5, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, 0); // gtxtShadows[4]
 
 	// space0 : GBuffer[3] + Depth[1]
-	d3dDescriptorRanges[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 11, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0);
-	d3dDescriptorRanges[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 14, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
+	d3dDescriptorRanges[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 9, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0);
+	d3dDescriptorRanges[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 12, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
 
 	// space0 : HDR Result
-	d3dDescriptorRanges[6].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 15, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE, 0);
+	d3dDescriptorRanges[6].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 13, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE, 0);
 
 	// space1 : Per Pass 
 	d3dDescriptorRanges[7].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 1, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // gMaterialData 
@@ -93,22 +97,25 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	d3dDescriptorRanges[12].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbTerrainComponentData 
 	d3dDescriptorRanges[13].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 10, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainWeightMap
 
-	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[10];
-	// Per Pass
-	d3dRootParameters[0].InitAsDescriptorTable(4, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);	// Per Draw
-	d3dRootParameters[1].InitAsDescriptorTable(2, &d3dDescriptorRanges[4], D3D12_SHADER_VISIBILITY_ALL);	// G-Buffers
-	d3dRootParameters[2].InitAsDescriptorTable(1, &d3dDescriptorRanges[6], D3D12_SHADER_VISIBILITY_ALL);	// HDR Result
+	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[13];
+	// Per Scene
+	d3dRootParameters[0].InitAsDescriptorTable(2, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);	// Per Draw
+	d3dRootParameters[1].InitAsDescriptorTable(1, &d3dDescriptorRanges[2], D3D12_SHADER_VISIBILITY_ALL);	// Cascade Shadow maps
+	d3dRootParameters[2].InitAsDescriptorTable(1, &d3dDescriptorRanges[3], D3D12_SHADER_VISIBILITY_ALL);	// Shadow maps
+	d3dRootParameters[3].InitAsDescriptorTable(2, &d3dDescriptorRanges[4], D3D12_SHADER_VISIBILITY_ALL);	// G-Buffers
+	d3dRootParameters[4].InitAsDescriptorTable(1, &d3dDescriptorRanges[6], D3D12_SHADER_VISIBILITY_ALL);	// HDR Result
 	
 	// Per Pass
-	d3dRootParameters[3].InitAsDescriptorTable(2, &d3dDescriptorRanges[7], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass
+	d3dRootParameters[5].InitAsDescriptorTable(2, &d3dDescriptorRanges[7], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass
 
 	// Per Instance(Draw)
-	d3dRootParameters[4].InitAsConstantBufferView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// cbInstanceData
-	d3dRootParameters[5].InitAsShaderResourceView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gWorldTransforms
-	d3dRootParameters[6].InitAsShaderResourceView(1, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gBoneTransforms
-	d3dRootParameters[7].InitAsDescriptorTable(3, &d3dDescriptorRanges[9], D3D12_SHADER_VISIBILITY_ALL);	// TerrainLayer
-	d3dRootParameters[8].InitAsDescriptorTable(2, &d3dDescriptorRanges[12], D3D12_SHADER_VISIBILITY_ALL);	// TerrainComponent
-	d3dRootParameters[9].InitAsConstants(1, 3, 2, D3D12_SHADER_VISIBILITY_ALL);	// gnWorldTransformIndex
+	d3dRootParameters[6].InitAsConstantBufferView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// cbInstanceData
+	d3dRootParameters[7].InitAsConstantBufferView(4, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// cbLightCameraData
+	d3dRootParameters[8].InitAsShaderResourceView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gWorldTransforms
+	d3dRootParameters[9].InitAsShaderResourceView(1, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gBoneTransforms
+	d3dRootParameters[10].InitAsDescriptorTable(3, &d3dDescriptorRanges[9], D3D12_SHADER_VISIBILITY_ALL);	// TerrainLayer
+	d3dRootParameters[11].InitAsDescriptorTable(2, &d3dDescriptorRanges[12], D3D12_SHADER_VISIBILITY_ALL);	// TerrainComponent
+	d3dRootParameters[12].InitAsConstants(1, 3, 2, D3D12_SHADER_VISIBILITY_ALL);	// gnWorldTransformIndex
 
 	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[3];
 	// s0 : SkyboxSampler
@@ -211,8 +218,6 @@ void RenderManager::BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dComma
 {
 	// descRange[0]  :  cbSceneData					1
 	// descRange[1]  :  gLightData					1
-	// descRange[2]  :  gtxtSkyboxDay / Night		2
-	// descRange[3]  :  gtxtShadows[8]				8 -> sum = 12
 
 
 	uint32 unDescIncrementSize = D3DCore::g_nCBVSRVDescriptorIncrementSize;
@@ -250,27 +255,8 @@ void RenderManager::BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dComma
 	DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, lightSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	outDescHandle.cpuHandle.Offset(1, unDescIncrementSize);
 
-	// descRange[2] - not yet
-	auto pSkybox = CUR_SCENE->GetSkybox();
-	if (pSkybox) {
-		Texture::ID DayID = pSkybox->GetDaySkyBoxTextureID();
-		Texture::ID NightID = pSkybox->GetNightSkyBoxTextureID();	// fix here to night later
-
-		auto pTexDay = TEXTURE->GetTextureByID(DayID, TEXTURE_RESOURCE_TYPE::SRV);
-		auto pTexNight = TEXTURE->GetTextureByID(NightID, TEXTURE_RESOURCE_TYPE::SRV);
-
-		auto cpuHandle = outDescHandle.cpuHandle;
-		DEVICE->CopyDescriptorsSimple(1, cpuHandle, pTexDay->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		cpuHandle.Offset(1, unDescIncrementSize);
-		DEVICE->CopyDescriptorsSimple(1, cpuHandle, pTexNight->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	}
-	outDescHandle.cpuHandle.Offset(2, unDescIncrementSize);
-
-	// descRange[3] - not yet
-	outDescHandle.cpuHandle.Offset(8, unDescIncrementSize);
-
 	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::PER_SCENE_DATA), outDescHandle.gpuHandle);
-	outDescHandle.gpuHandle.Offset(12, unDescIncrementSize);	// 1 + 1 + 2 + 8 = 20
+	outDescHandle.gpuHandle.Offset(2, unDescIncrementSize);	// 1 + 1
 
 }
 

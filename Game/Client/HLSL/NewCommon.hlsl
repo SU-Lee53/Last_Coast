@@ -168,14 +168,13 @@ cbuffer cbSceneData : register(b0, space0)
 StructuredBuffer<LightData> gLightData : register(t0, space0);
 
 // ============ Textures ============
-TextureCube gtxtSkyboxDay : register(t1, space0);
-TextureCube gtxtSkyboxNight : register(t2, space0);
+#define NUM_CASCADES 4
+Texture2D gtxtCascadeShadowMaps[NUM_CASCADES] : register(t1, space0);	// t1, t2, t3, t4
+Texture2D gtxtShadowss[4] : register(t5, space0);						// t5, t6, t7, t8
 
-Texture2D gtxtShadows[8] : register(t3, space0);	// t3, t4, t5, t6, t7, t8, t9, t10
-
-Texture2D gtxtGBuffer[3] : register(t11, space0);	// t11, t12, t13
-Texture2D gtxtGBufferDepth : register(t14, space0);
-Texture2D gtxtHDRResult : register(t15, space0);
+Texture2D gtxtGBuffer[3] : register(t9, space0);	// t9, t10, t11
+Texture2D gtxtGBufferDepth : register(t12, space0);
+Texture2D gtxtHDRResult : register(t13, space0);
 
 // ============ Samplers ============
 SamplerState gSkyboxSamplerState : register(s0, space0);
@@ -284,6 +283,11 @@ cbuffer cbWorldTransformIndexData : register(b3, space2)
 {
 	int gnWorldTransformIndex;
 };
+
+cbuffer cbLightCameraData : register(b4, space2)
+{
+	matrix gmtxLightViewProj;
+}
 
 // ============ StructuredBuffers ============
 

@@ -8,6 +8,7 @@ void TransparentForwardLightingPass::Initialize()
 
 void TransparentForwardLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
+	m_RenderQueueCached.clear();
 	std::vector<TransparentForwardLightingPass::RenderParameter> renderParameters;
 
 	const auto& pTransparentObjs = RENDER->GetTransparentObjectsToRender();

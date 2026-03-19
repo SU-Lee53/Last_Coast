@@ -21,6 +21,17 @@ void Scene::InitializeObjects()
 	}
 }
 
+void Scene::CleanUp()
+{
+	m_pGameObjects.clear();
+	m_pSprites.clear();
+	m_pLights.clear();
+
+	m_pPlayer.reset();
+	m_pTerrain.reset();
+	m_pSkybox.reset();
+}
+
 void Scene::PostInitialize()
 {
 	InitializeObjects();

@@ -22,6 +22,22 @@ IMesh::IMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopol
 	}
 }
 
+void IMesh::RenderPosition(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount, uint32 unStartIndex, int32 nIndexCount) const
+{
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+
+	pd3dCommandList->IASetVertexBuffers(0, 1, &m_Positions.VertexBufferView);
+
+	if (m_IndexBuffer.nIndices != 0) {
+		uint32 unIndices = (nIndexCount == -1) ? m_IndexBuffer.nIndices : nIndexCount;
+		pd3dCommandList->IASetIndexBuffer(&m_IndexBuffer.IndexBufferView);
+		pd3dCommandList->DrawIndexedInstanced(unIndices, nInstanceCount, unStartIndex, 0, 0);
+	}
+	else {
+		pd3dCommandList->DrawInstanced(m_Positions.nVertices, nInstanceCount, 0, 0);
+	}
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FullScreenMesh
 
@@ -88,6 +104,27 @@ SkinnedMesh::SkinnedMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOL
 	m_BlendWeights = RESOURCE->CreateVertexBuffer(meshLoadInfo.v4BlendWeights, std::to_underlying(MESH_ELEMENT_TYPE::TEXCOORD0));
 }
 
+void SkinnedMesh::RenderPosition(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount, uint32 unStartIndex, int32 nIndexCount) const
+{
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+
+	D3D12_VERTEX_BUFFER_VIEW vertexBufferViews[6] = {
+		m_Positions.VertexBufferView,
+		m_BlendIndices.VertexBufferView,
+		m_BlendWeights.VertexBufferView
+	};
+	pd3dCommandList->IASetVertexBuffers(0, _countof(vertexBufferViews), vertexBufferViews);
+
+	if (m_IndexBuffer.nIndices != 0) {
+		uint32 unIndices = (nIndexCount == -1) ? m_IndexBuffer.nIndices : nIndexCount;
+		pd3dCommandList->IASetIndexBuffer(&m_IndexBuffer.IndexBufferView);
+		pd3dCommandList->DrawIndexedInstanced(unIndices, nInstanceCount, unStartIndex, 0, 0);
+	}
+	else {
+		pd3dCommandList->DrawInstanced(m_Positions.nVertices, nInstanceCount, 0, 0);
+	}
+}
+
 void SkinnedMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount, uint32 unStartIndex, int32 nIndexCount) const
 {
 	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
@@ -110,7 +147,6 @@ void SkinnedMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint
 	else {
 		pd3dCommandList->DrawInstanced(m_Positions.nVertices, nInstanceCount, 0, 0);
 	}
-
 }
 
 TerrainMesh::TerrainMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology)
