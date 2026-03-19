@@ -1,17 +1,29 @@
 ﻿#include "pch.h"
-#include "ThreadManager.h"
-#include "NetworkManager.h"
+#include "Service.h"
 #include "Session.h"
-#include "Server.h"
+#include "ThreadManager.h"
+
+class GameSession : public Session
+{
+
+};
 
 int main()
 {
-	Server server;
+	ServerServiceRef service = std::make_shared<ServerService>(NetAddress(L"127.0.0.1", 7777),std::make_shared<IocpCore>(), std::make_shared<GameSession>, 100);
 
-	server.Init();
-	server.Start();
+	service->Start();
 
-	GThreadManager->Join();
-
-	::WSACleanup();
+		for (int32 i = 0; i < 5; ++i)
+		{
+			GThreadManager->Launch([=]()
+				{
+					while (true)
+					{
+						service->GetIocpCore()->Dispatch();
+					}
+				});
+		}
+	
+		GThreadManager->Join();
 }
