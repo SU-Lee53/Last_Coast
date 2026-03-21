@@ -10,6 +10,8 @@ public:
 		const RenderPassInput& input, 
 		void* pAdditionalContext = nullptr);
 
+	void ShowDebugInfo() const;
+
 private:
 	std::vector<std::shared_ptr<IRenderPass>> m_pAdjLists;
 	uint32 m_unEntryNodeIndex = 0;

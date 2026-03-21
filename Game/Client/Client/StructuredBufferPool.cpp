@@ -62,3 +62,12 @@ void StructuredBufferPool::Reset()
 	m_unOffset = 0;
 	m_unViewCount = 0;
 }
+
+void StructuredBufferPool::ShowDebugInfo()
+{
+	ImGui::Text("Total bytes : %d", m_unTotalBytes);
+	ImGui::Text("Total offset in this frame: %d", m_unOffset);
+
+	ImGui::Text("Max views: %d", m_unMaxViews);
+	ImGui::Text("View count: %d", m_unViewCount);
+}

@@ -32,6 +32,8 @@ public:
 		OUT RenderPassOutput& output, 
 		OUT DescriptorHandle& outDescHandle) const override;
 
+	virtual void ShowDebugInfo() const;
+
 private:
 	void SetRenderTargets(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList) const;
 
@@ -54,5 +56,6 @@ private:
 
 private:
 	mutable RenderQueue m_RenderQueueCached;
+	mutable uint32 m_unFrustumCulled = 0;
 
 };

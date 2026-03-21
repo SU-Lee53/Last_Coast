@@ -12,7 +12,6 @@ void ModelManager::LoadGameModels()
 {
 	LoadModelFromFile("Ch33_nonPBR");
 	LoadModelFromFile("vintage_wooden_sniper_optimized_for_fpstps");
-	LoadModelFromFile("Cube");
 }
 
 void ModelManager::Add(const std::string& strModelName, std::shared_ptr<IGameObject> pObj)

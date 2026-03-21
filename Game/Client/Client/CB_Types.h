@@ -15,6 +15,7 @@ struct CameraData {
 	Matrix	mtxInvView;
 	Matrix	mtxProjection;
 	Matrix	mtxInvProjection;
+	Vector4 v4CascadeSplits;
 	Vector3	v3CameraPosition;
 	float	pad0;
 };
@@ -90,6 +91,11 @@ struct alignas(16) CB_SCENE_DATA
 	SceneGlobalData gSceneGlobal;
 	SkyboxData gSkybox;
 	XMINT2 nScreenSize;
+};
+
+struct CB_TO_SHADOW_MATRICES_DATA 
+{
+	Matrix mtxToShadows[4];
 };
 
 //////////////////////////////////////////////////////////////////////////////////

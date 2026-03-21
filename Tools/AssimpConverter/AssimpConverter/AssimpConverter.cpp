@@ -313,10 +313,11 @@ void AssimpConverter::SerializeModel(const std::string& strPath, const std::stri
 	}
 
 	strSave = std::format("{}\\Models\\{}.bin", m_strSavePath, strName);
-	std::ofstream out{ strSave, std::ios::binary };
 
+	//std::ofstream out{ strSave };
 	//out << hierarchyJson.dump(2);
 
+	std::ofstream out{ strSave, std::ios::binary };
 	std::vector<uint8_t> bson = nlohmann::json::to_bson(hierarchyJson);
 	out.write(reinterpret_cast<const char*>(bson.data()), bson.size());
 

@@ -11,19 +11,6 @@ void TerrainTestScene::BuildObjects()
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize("Day_HDRI.dds", "Night_HDRI.dds");
 
-	auto pLight = std::make_shared<DirectionalLight>();
-	{
-		pLight->m_v3Color = Vector3{ 1.f, 1.f, 1.f };
-		pLight->m_v3Direction = Vector3{ 1.f, 1.f, 1.f };
-		pLight->m_v3Position = Vector3{ 100.f, 10000.f, 100.f };
-		pLight->m_fIntensity = 0.2;
-
-		pLight->m_v3Direction.Normalize();
-	}
-
-	m_pLights.reserve(1);
-	m_pLights.push_back(pLight);
-
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 
 	m_pTerrain = std::make_shared<TerrainObject>();

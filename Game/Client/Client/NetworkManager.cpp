@@ -3,7 +3,6 @@
 
 #include "Packets.h"
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 2025.11.03
 // NetworkManager() By 이승욱
@@ -87,13 +86,6 @@ void NetworkManager::ConnectToServer()
 		if (m_bConnected) {
 			ImGui::Text("Wait for game start...");
 		}
-
-		// 하지 말것
-		//if (m_bConnected) {
-		//	if (ImGui::Button("Start")) {
-		//		SCENE->ChangeScene<TestScene>();
-		//	}
-		//}
 
 	}
 	ImGui::End();

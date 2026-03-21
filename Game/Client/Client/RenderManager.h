@@ -40,16 +40,19 @@ class RenderManager {
 
 public:
 	constexpr static uint32 g_unMaxPendingFrames = 3;
+	constexpr static uint32 g_unMaxSpriteLayers = 3;
 
 public:
 	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
 	void CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice);
 	void BuildRenderGraph();
 	void Render();
+	void ShowDebugOptions();
 
 	template<typename T> requires std::derived_from<T, IGameObject>
 	void Add(std::shared_ptr<T> pObj);
-	void Reset(uint32 unContextIndex);
+	void AddSprite(std::shared_ptr<Sprite> pSprite, RECT rect, uint32 unLayer);
+	void Reset();
 
 	const std::shared_ptr<IMesh> GetQuadMesh() const { return m_pQuadMesh; }
 
@@ -71,28 +74,39 @@ public:
 
 public:
 	// Renderable Items Getter
-	const std::vector<std::shared_ptr<IGameObject>>& GetObjectsToRender() const { return m_pObjectsToRender; }
-	const std::vector<std::shared_ptr<IGameObject>>& GetTransparentObjectsToRender() const { return m_pTransparentObjectsToRender; }
+	const auto& GetObjectsToRender() const { return m_pObjectsToRender; }
+	const auto& GetTransparentObjectsToRender() const { return m_pTransparentObjectsToRender; }
+	const auto& GetSprites() const { return m_pSpritesToRender; }
 
 private:
 	void BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle);
 
-private:
+public:
 	//std::vector<std::shared_ptr<RenderPass>> m_pRenderPasses = {};
 	//std::shared_ptr<ForwardPass> m_pForwardPass;
 	RenderGraph m_RenderGraph;
 
-public:
 	ComPtr<ID3D12Device> m_pd3dDevice; // ref of D3DCore::m_pd3dDevice
 	
 	// Mesh
 	static ComPtr<ID3D12RootSignature> g_pd3dGlobalRootSignature;
-	
+
+private:
 	// Objects Ready-To-Draw
 	std::vector<std::shared_ptr<IGameObject>> m_pObjectsToRender;
 	std::vector<std::shared_ptr<IGameObject>> m_pTransparentObjectsToRender;
 
 	std::shared_ptr<IMesh> m_pQuadMesh;
+
+private:
+	// Sprite
+	struct SpriteRenderParameter {
+		std::shared_ptr<Sprite> pSprite;
+		RECT Rect;
+
+		SpriteRenderParameter(std::shared_ptr<Sprite> p, RECT r) : pSprite{ p }, Rect{ r } {}
+	};
+	std::array<std::vector<std::shared_ptr<Sprite>>, g_unMaxSpriteLayers> m_pSpritesToRender;
 
 private:
 	// Frame Resources
@@ -101,8 +115,8 @@ private:
 	StructuredBufferPool	m_StructuredBufferPool[g_unMaxPendingFrames];
 
 	GBuffer									m_GBuffers[g_unMaxPendingFrames];
-	std::pair<Texture::ID, Texture::ID>		m_pHDRRenderTargetIDs[g_unMaxPendingFrames];
-	std::pair<Texture::ID, Texture::ID>		m_pLDRRenderTargetIDs[g_unMaxPendingFrames];
+	std::pair<Texture::ID, Texture::ID>		m_HDRRenderTargetIDs[g_unMaxPendingFrames];
+	std::pair<Texture::ID, Texture::ID>		m_LDRRenderTargetIDs[g_unMaxPendingFrames];
 
 
 

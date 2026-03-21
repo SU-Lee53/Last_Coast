@@ -222,6 +222,7 @@
     <ClInclude Include="SkyboxPass.h" />
     <ClInclude Include="SoundManager.h" />
     <ClInclude Include="Sprite.h" />
+    <ClInclude Include="SpritePass.h" />
     <ClInclude Include="StaticObject.h" />
     <ClInclude Include="StructuredBufferPool.h" />
     <ClInclude Include="targetver.h" />
@@ -356,6 +357,7 @@
     <ClCompile Include="SkyboxPass.cpp" />
     <ClCompile Include="SoundManager.cpp" />
     <ClCompile Include="Sprite.cpp" />
+    <ClCompile Include="SpritePass.cpp" />
     <ClCompile Include="StaticObject.cpp" />
     <ClCompile Include="AnimationTestScene.cpp" />
     <ClCompile Include="StructuredBufferPool.cpp" />

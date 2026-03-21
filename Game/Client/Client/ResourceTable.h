@@ -5,19 +5,105 @@ template <typename T>
 struct ResourceEntry {
 	using ResourcePtr = std::shared_ptr<T>;
 	ResourcePtr pResource;
+};
+
+template <>
+struct ResourceEntry<Texture> {
+	using ResourcePtr = std::shared_ptr<Texture>;
+	ResourcePtr pResource;
 	uint64 un64DescriptorIndex = std::numeric_limits<uint32>::max();
 };
 
-template<
-	typename KeyType,
-	typename ResourceType,
-	typename Hash = std::hash<KeyType>,
-	typename KeyEqual = std::equal_to<KeyType>
->
+template<typename KeyType, typename ResourceType>
 class ResourceTable {
 public:
 	using ResourcePtr = ResourceEntry<ResourceType>::ResourcePtr;
 	using ID = ResourceType::ID;
+	constexpr static ID InvalidID = std::numeric_limits<ID>::max();
+
+public:
+	// Initialize
+	void Initialize(size_t nMaxSize, bool bUseDescriptorHeap, D3D12_DESCRIPTOR_HEAP_TYPE d3dHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES, D3D12_DESCRIPTOR_HEAP_FLAGS d3dHeapFlags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE) {
+		m_unMaxSize = nMaxSize;
+		m_ResourceEntries.reserve(nMaxSize);
+		m_KeyIDMap.reserve(nMaxSize);
+
+	}
+
+	// Register
+	ID Register(const KeyType& key, ResourcePtr pResource) {
+		auto it = m_KeyIDMap.find(key);
+		if (it != m_KeyIDMap.end()) {
+			return it->second;
+		}
+
+		ID id = static_cast<ID>(m_ResourceEntries.size());
+		if (id > m_unMaxSize) {
+			return InvalidID;
+		}
+
+		ResourceEntry<ResourceType> entry;
+		entry.pResource = pResource;
+
+		m_ResourceEntries.push_back(entry);
+		m_KeyIDMap.emplace(key, id);
+		return id;
+	}
+	
+	// Look Up
+	ID GetID(const KeyType& key) const {
+		auto it = m_KeyIDMap.find(key);
+		if (it == m_KeyIDMap.end()) {
+			return InvalidID;
+		}
+		return it->second;
+	}
+
+	ResourcePtr GetResourceByID(ID id) const {
+		if (id >= m_ResourceEntries.size()) {
+			return nullptr;
+		}
+
+		return m_ResourceEntries[id].pResource;
+	}
+
+	ResourcePtr GetResourceByName(const KeyType& key) const {
+		auto it = m_KeyIDMap.find(key);
+		if (it == m_KeyIDMap.end())
+			return nullptr;
+
+		return m_ResourceEntries[it->second].pResource;
+	}
+
+	// Iteration
+	auto begin() { return m_ResourceEntries.begin(); }
+	auto end() { return m_ResourceEntries.end(); }
+	
+	auto begin() const { return m_ResourceEntries.begin(); }
+	auto end() const { return m_ResourceEntries.end(); }
+	
+	size_t size() const { return m_ResourceEntries.size(); }
+
+private:
+	ComPtr<ID3D12DescriptorHeap> m_pd3dDescriptorHeap;
+	std::vector<ResourceEntry<ResourceType>> m_ResourceEntries;
+	std::unordered_map<KeyType, ID> m_KeyIDMap;
+	size_t m_unMaxSize = 0;
+
+};
+
+using MaterialTable = ResourceTable<std::string, IMaterial>;
+using RenderItemTable = ResourceTable<MeshRenderer::ID, MeshRenderer>;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Specialized TextureTable
+
+template<typename KeyType>
+class ResourceTable<KeyType, Texture> {
+public:
+	using ResourceType = Texture;
+	using ResourcePtr = ResourceEntry<ResourceType>::ResourcePtr;
+	using ID = Texture::ID;
 	constexpr static ID InvalidID = std::numeric_limits<ID>::max();
 
 	struct ResourceDesc {
@@ -54,7 +140,7 @@ public:
 		m_KeyIDMap.reserve(nMaxSize);
 
 		m_bShaderVisible = (d3dHeapFlags & D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE) ? true : false;
-	
+
 		m_d3dHeapType = d3dHeapType;
 	}
 
@@ -84,31 +170,6 @@ public:
 		m_KeyIDMap.emplace(key, id);
 		return id;
 	}
-	
-	// Look Up
-	ID GetID(const KeyType& key) const {
-		auto it = m_KeyIDMap.find(key);
-		if (it == m_KeyIDMap.end()) {
-			return InvalidID;
-		}
-		return it->second;
-	}
-
-	ResourcePtr GetResourceByID(ID id) const {
-		if (id >= m_ResourceEntries.size()) {
-			return nullptr;
-		}
-
-		return m_ResourceEntries[id].pResource;
-	}
-
-	ResourcePtr GetResourceByName(const KeyType& key) const {
-		auto it = m_KeyIDMap.find(key);
-		if (it == m_KeyIDMap.end())
-			return nullptr;
-
-		return m_ResourceEntries[it->second].pResource;
-	}
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCPUHandleByID(ID id) const {
 		if (id >= m_ResourceEntries.size()) {
@@ -124,11 +185,6 @@ public:
 		case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
 		{
 			nDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
-			break;
-		}
-		case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
-		{
-			nDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::SAMPLER);
 			break;
 		}
 		case D3D12_DESCRIPTOR_HEAP_TYPE_RTV:
@@ -162,27 +218,52 @@ public:
 		return handle;
 	}
 
+	// Look Up
+	ID GetID(const KeyType& key) const {
+		auto it = m_KeyIDMap.find(key);
+		if (it == m_KeyIDMap.end()) {
+			return InvalidID;
+		}
+		return it->second;
+	}
+
+	ResourcePtr GetResourceByID(ID id) const {
+		if (id >= m_ResourceEntries.size()) {
+			return nullptr;
+		}
+
+		return m_ResourceEntries[id].pResource;
+	}
+
+	ResourcePtr GetResourceByName(const KeyType& key) const {
+		auto it = m_KeyIDMap.find(key);
+		if (it == m_KeyIDMap.end())
+			return nullptr;
+
+		return m_ResourceEntries[it->second].pResource;
+	}
+
 	// Iteration
 	auto begin() { return m_ResourceEntries.begin(); }
 	auto end() { return m_ResourceEntries.end(); }
-	
+
 	auto begin() const { return m_ResourceEntries.begin(); }
 	auto end() const { return m_ResourceEntries.end(); }
-	
+
 	size_t size() const { return m_ResourceEntries.size(); }
 
 private:
 	void RegisterView(
-		ComPtr<ID3D12Resource> pd3dResource, 
-		uint64 id, 
+		ComPtr<ID3D12Resource> pd3dResource,
+		uint64 id,
 		OUT ResourceDesc* pResourceDesc,
-		const void* pContext = nullptr, 
+		const void* pContext = nullptr,
 		size_t nContextSize = 0);
 
 private:
 	ComPtr<ID3D12DescriptorHeap> m_pd3dDescriptorHeap;
-	std::vector<ResourceEntry<ResourceType>> m_ResourceEntries;
-	std::unordered_map<KeyType, ID, Hash, KeyEqual> m_KeyIDMap;
+	std::vector<ResourceEntry<Texture>> m_ResourceEntries;
+	std::unordered_map<KeyType, ID> m_KeyIDMap;
 
 	size_t m_unMaxSize = 0;
 	D3D12_DESCRIPTOR_HEAP_TYPE m_d3dHeapType;
@@ -190,12 +271,8 @@ private:
 
 };
 
-using TextureTable = ResourceTable<std::string, Texture>;
-using MaterialTable = ResourceTable<std::string, IMaterial>;
-using RenderItemTable = ResourceTable<MeshRenderer::ID, MeshRenderer>;
-
-template<typename KeyType, typename ResourceType, typename Hash, typename KeyEqual>
-inline void ResourceTable<KeyType, ResourceType, Hash, KeyEqual>::RegisterView(ComPtr<ID3D12Resource> pd3dResource, uint64 id, OUT ResourceDesc* pResourceDesc, const void* pContext, size_t nContextSize)
+template<typename KeyType>
+inline void ResourceTable<KeyType, Texture>::RegisterView(ComPtr<ID3D12Resource> pd3dResource, uint64 id, OUT ResourceDesc* pResourceDesc, const void* pContext, size_t nContextSize)
 {
 	D3D12_RESOURCE_DESC d3dResourceDesc = pd3dResource->GetDesc();
 	switch (m_d3dHeapType) {
@@ -317,5 +394,7 @@ inline void ResourceTable<KeyType, ResourceType, Hash, KeyEqual>::RegisterView(C
 	}
 	}
 
-
 }
+
+
+using TextureTable = ResourceTable<std::string, Texture>;

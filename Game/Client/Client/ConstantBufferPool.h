@@ -34,6 +34,8 @@ public:
 	ConstantBuffer& Allocate();
 	void Reset();
 
+	void ShowDebugInfo();
+
 private:
 	//std::vector<ConstantBuffer>		m_CBuffers = {};
 	

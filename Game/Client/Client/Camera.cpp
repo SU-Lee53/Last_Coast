@@ -1,6 +1,6 @@
 ﻿#include "pch.h"
 #include "Camera.h"
-
+#include "DirectionalCascadeShadowMapPass.h"
 
 Camera::Camera()
 {
@@ -193,6 +193,7 @@ void Camera::GenerateProjectionMatrix(float fNearPlaneDistance, float fFarPlaneD
 	m_mtxInverseProjection = m_mtxProjection.Invert();
 
 	BoundingFrustum::CreateFromMatrix(m_xmFrustumOrigin, XMLoadFloat4x4(&m_mtxProjection));
+	ComputeCascadeSplits();
 }
 
 void Camera::SetViewport(int xTopLeft, int yTopLeft, int nWidth, int nHeight, float fMinZ, float fMaxZ)
@@ -221,16 +222,31 @@ void Camera::SetViewportsAndScissorRects(ComPtr<ID3D12GraphicsCommandList> pd3dC
 
 CameraData Camera::MakeCBData() const
 {
-	CameraData camData{};
-	{
-		camData.mtxView = m_mtxView.Transpose();
-		camData.mtxInvView = m_mtxInverseView.Transpose();
-		camData.mtxProjection = m_mtxProjection.Transpose();
-		camData.mtxInvProjection = m_mtxInverseProjection.Transpose();
-		camData.v3CameraPosition = m_v3Position;
-	}
+	CameraData camData{
+		.mtxView = m_mtxView.Transpose(),
+		.mtxInvView = m_mtxInverseView.Transpose(),
+		.mtxProjection = m_mtxProjection.Transpose(),
+		.mtxInvProjection = m_mtxInverseProjection.Transpose(),
+		.v4CascadeSplits = m_v4CascadeSplits,
+		.v3CameraPosition = m_v3Position
+	};
 
 	return camData;
+}
+
+void Camera::ComputeCascadeSplits()
+{
+	constexpr uint32 unNumCascade = DirectionalCascadeShadowMapPass::g_unNumCascade;
+
+	float fNearToFar = m_fFar - m_fNear;
+	float fDistancePerCascade = fNearToFar / static_cast<float>(unNumCascade);
+
+	float fSplits[4] = {0.f, 0.f, 0.f, 0.f};
+	for (auto i = 0; i < unNumCascade; ++i) {
+		fSplits[i] = m_fNear + ((i + 1) * fDistancePerCascade);
+	}
+
+	m_v4CascadeSplits = Vector4(fSplits);
 }
 
 Matrix Camera::GetViewProjectMatrix() const

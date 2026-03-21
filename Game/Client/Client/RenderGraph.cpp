@@ -48,6 +48,7 @@ void RenderGraph::BuildGraph()
 	pDirectionalCascadeShadowMapPass->Connect(pGBufferPass);
 	pGBufferPass->Connect(pDefferedLightingPass);
 	pDefferedLightingPass->Connect(pTransparentForwardPass);
+	//pDefferedLightingPass->Connect(pSkyboxPass);
 	pTransparentForwardPass->Connect(pSkyboxPass);
 	pSkyboxPass->Connect(pToneMappingPass);
 
@@ -76,6 +77,16 @@ void RenderGraph::Run(OUT DescriptorHandle& outDescHandle, ComPtr<ID3D12Graphics
 		const auto& pEdges = pCurPass->GetEdges();
 		for (auto& pEdge : pEdges) {
 			pBFSQueue.push(pEdge);
+		}
+	}
+}
+
+void RenderGraph::ShowDebugInfo() const
+{
+	for (const auto& pPass : m_pAdjLists) {
+		if (ImGui::TreeNode(typeid(*pPass).name())) {
+			pPass->ShowDebugInfo();
+			ImGui::TreePop();
 		}
 	}
 }

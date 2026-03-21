@@ -284,6 +284,23 @@ TerrainHit Scene::QueryTerrainHit(const Vector3& v3WorldPos)
 	return result;
 }
 
+void Scene::BuildLights()
+{
+	m_pLights.reserve(1);
+
+	auto pLight = std::make_shared<DirectionalLight>();
+	{
+		pLight->m_v3Color = Vector3{ 1.f, 1.f, 1.f };
+		pLight->m_v3Direction = Vector3{ 1.f, 1.f, 1.f };
+		pLight->m_v3Position = Vector3{ 100.f, 10000.f, 100.f };
+		pLight->m_fIntensity = 0.2;
+
+		pLight->m_v3Direction.Normalize();
+	}
+
+	m_pLights.push_back(pLight);
+}
+
 HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 {
 	std::string strFilePath = std::format("{}/{}.json", g_strSceneBasePath, strFileName);

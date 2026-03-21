@@ -76,6 +76,7 @@ void GBufferPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		});
 	}
 
+	m_unFrustumCulled = frustumCulled.size();
 	// Gather draw unit
 	BindGeometryData(pd3dCommandList, frustumCulled, outDescHandle);
 
@@ -391,4 +392,34 @@ void GBufferPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList
 	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamGBuffer, outDescHandle.gpuHandle);
 	outDescHandle.cpuHandle.Offset(4, unDescriptorInc);
 	outDescHandle.gpuHandle.Offset(4, unDescriptorInc);
+}
+
+void GBufferPass::ShowDebugInfo() const
+{
+	ImGui::Text("Frustum Culled : %d", m_unFrustumCulled);
+	
+	for (const auto& param : m_RenderQueueCached) {
+		std::string str = std::format(
+			"IMesh {} - Instance : {}, Anim? : {}", 
+			(void*)param.first, 
+			param.second.sbWorldTransformData.size(), 
+			(param.second.pAnimationControllers.size() != 0) ? "TRUE" : "FALSE");
+
+		if (ImGui::TreeNode(str.c_str())) {
+			ImGui::Indent(20.f);
+			{
+				ImGui::Text("cbInstanceData.Material Index : %d", param.second.cbInstanceData.gnMaterialIndex);
+				ImGui::Text("cbInstanceData.Albedo Index : %d", param.second.cbInstanceData.gnTextureIndex[0]);
+				ImGui::Text("cbInstanceData.Normal Index : %d", param.second.cbInstanceData.gnTextureIndex[1]);
+				ImGui::Text("cbInstanceData.Metaillic Index : %d", param.second.cbInstanceData.gnTextureIndex[2]);
+				ImGui::Text("cbInstanceData.Emissive Index : %d", param.second.cbInstanceData.gnTextureIndex[3]);
+
+				ImGui::Text("pAnimationControllers.size() : %d", param.second.pAnimationControllers.size());
+				ImGui::Text("sbWorldTransformData.size() : %d", param.second.sbWorldTransformData.size());
+			}
+			ImGui::Unindent(20.f);
+
+			ImGui::TreePop();
+		}
+	}
 }

@@ -40,11 +40,12 @@ public:
 	void Connect(std::shared_ptr<IRenderPass> pNode);
 	const std::list<std::shared_ptr<IRenderPass>>& GetEdges() const { return m_pEdgeList; }
 
+	virtual void ShowDebugInfo() const { ImGui::Text("Undefined"); }
+
 protected:
 	virtual void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const = 0;
 	virtual void OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const = 0;
 	virtual void OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const = 0;
-
 
 protected:
 	//RenderTargetArray m_pRTVs;			// for MRT

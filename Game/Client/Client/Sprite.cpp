@@ -70,6 +70,11 @@ bool Sprite::IsCursorInSprite(float x, float y) const
 	return false;
 }
 
+std::shared_ptr<Texture> Sprite::GetImage()
+{
+	return TEXTURE->GetTextureByID(m_ImageID, TEXTURE_RESOURCE_TYPE::SRV);
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TextSprite
 

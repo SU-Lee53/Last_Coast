@@ -104,6 +104,4 @@ float3 SpotLight(float3 worldPos, float3 normal, float3 viewDir, float3 albedo, 
 }
 
 
-
-
 #endif

@@ -78,6 +78,8 @@ void GameFramework::Render()
 	//EFFECT->Render(g_pD3DCore->GetCommandList());
 	//UI->Render(g_pD3DCore->GetCommandList());
 
+	RENDER->Reset();
+
 	SCENE->PrepareRender();
 	RENDER->Render();
 	

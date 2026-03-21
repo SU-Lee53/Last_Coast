@@ -16,7 +16,3 @@ std::shared_ptr<IMaterial> MaterialManager::GetMaterialByID(uint64 unID) const
 	return m_MaterialTable.GetResourceByID(unID);
 }
 
-CD3DX12_CPU_DESCRIPTOR_HANDLE MaterialManager::GetCPUHandleByID(uint64 unID) const
-{
-	return m_MaterialTable.GetCPUHandleByID(unID);
-}

@@ -13,7 +13,7 @@ public:
 
 	std::shared_ptr<IMaterial> GetMaterialByName(const std::string& strTextureName) const;
 	std::shared_ptr<IMaterial> GetMaterialByID(uint64 unID) const;
-	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCPUHandleByID(uint64 unID) const;
+	//CD3DX12_CPU_DESCRIPTOR_HANDLE GetCPUHandleByID(uint64 unID) const;
 
 private:
 	MaterialTable m_MaterialTable;

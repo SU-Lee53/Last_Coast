@@ -13,6 +13,10 @@ void TransparentForwardLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandLis
 
 	const auto& pTransparentObjs = RENDER->GetTransparentObjectsToRender();
 
+	if (pTransparentObjs.size() == 0) {
+		return;
+	}
+
 	// Frustum culling
 	std::vector<std::shared_ptr<IGameObject>> pFrustumCulled;
 	pFrustumCulled.reserve(pTransparentObjs.size());
@@ -30,6 +34,10 @@ void TransparentForwardLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandLis
 		return fDistLhs > fDistRhs;
 		});
 
+	auto temp = m_RenderQueueCached.size();
+	if (temp != 0) {
+		__debugbreak();
+	}
 	BindGeometryData(pd3dCommandList, pFrustumCulled, outDescHandle);
 
 	// Set Render Target
@@ -50,9 +58,6 @@ void TransparentForwardLightingPass::Render(ComPtr<ID3D12GraphicsCommandList> pd
 	constexpr uint32 rootParamBoneTransform = std::to_underlying(ROOT_PARAMETER::BONE_TRANSFORM);
 	constexpr uint32 rootParamWorldIndex = std::to_underlying(ROOT_PARAMETER::WORLE_TRANSFORM_INDEX);
 
-	auto pd3dAnimatedPipelineState = SHADER->Get<AnimatedShader>()->GetPipelineStates()[0];
-	auto pd3StaticPipelineState = SHADER->Get<StandardShader>()->GetPipelineStates()[0];
-
 	for (auto& [k, v] : m_RenderQueueCached) {
 		ConstantBuffer cbInstanceData = RENDER->AllocCBuffer<CB_INSTANCE_DATA>();
 		cbInstanceData.WriteData(&v.cbInstanceData);
@@ -60,7 +65,7 @@ void TransparentForwardLightingPass::Render(ComPtr<ID3D12GraphicsCommandList> pd
 
 		if (v.pAnimationController) {
 			// Animated
-			pd3dCommandList->SetPipelineState(pd3dAnimatedPipelineState.Get());
+			pd3dCommandList->SetPipelineState(m_pd3dAnimatedPipelineState.Get());
 
 			// Set World Index
 			pd3dCommandList->SetGraphicsRoot32BitConstant(rootParamWorldIndex, v.sbWorldTransformIndex, 0);
@@ -74,7 +79,7 @@ void TransparentForwardLightingPass::Render(ComPtr<ID3D12GraphicsCommandList> pd
 		}
 		else {
 			// Static
-			pd3dCommandList->SetPipelineState(pd3StaticPipelineState.Get());
+			pd3dCommandList->SetPipelineState(m_pd3dStandardPipelineState.Get());
 
 			// Set World Index
 			pd3dCommandList->SetGraphicsRoot32BitConstant(rootParamWorldIndex, v.sbWorldTransformIndex, 0);
@@ -126,6 +131,7 @@ void TransparentForwardLightingPass::BindGeometryData(ComPtr<ID3D12GraphicsComma
 
 				auto pMaterial = MATERIAL->GetMaterialByID(materialID);
 				for (auto texID : pMaterial->GetTextureIDs()) {
+					if (texID == INVALID_ID) continue;
 					auto texIt = textureIdxMap.find(texID);
 					if (texIt == textureIdxMap.end()) {
 						textureIdxMap.insert({ texID, unTextureBindIndex++ });
@@ -151,17 +157,22 @@ void TransparentForwardLightingPass::BindGeometryData(ComPtr<ID3D12GraphicsComma
 
 	}
 
-	// Bind Material
+	// Bind
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
 	constexpr uint32 rootParamWorldTransform = std::to_underlying(ROOT_PARAMETER::WORLD_TRANSFORM_DATA);
 	constexpr uint32 rootParamPerPass = std::to_underlying(ROOT_PARAMETER::PER_PASS_DATA);
 
+	// Bind World Transforms
+	auto worldSBuffer = RENDER->AllocSBuffer<WorldTransformData>(sbWorldTransformData.size());
+	worldSBuffer.WriteData(sbWorldTransformData);
+	pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamWorldTransform, worldSBuffer.GPUAddress);
+
+	// Bind Material
 	std::vector<MaterialData> sbMaterialDatas;
 	sbMaterialDatas.reserve(materialIDForBind.size());
 	std::transform(materialIDForBind.begin(), materialIDForBind.end(), std::back_inserter(sbMaterialDatas), [](const Texture::ID id) {
 		return MATERIAL->GetMaterialByID(id)->GetMaterialData();
-		});
-
+	});
 
 	auto materialSBuffer = RENDER->AllocSBuffer<MaterialData>(sbMaterialDatas.size());
 	materialSBuffer.WriteData(sbMaterialDatas);
@@ -180,11 +191,6 @@ void TransparentForwardLightingPass::BindGeometryData(ComPtr<ID3D12GraphicsComma
 	// Set
 	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamPerPass, outDescHandle.gpuHandle);
 	outDescHandle.gpuHandle.Offset(1 + unNumTextures, unDescriptorInc);
-
-	// Bind World Transforms
-	auto worldSBuffer = RENDER->AllocSBuffer<WorldTransformData>(sbWorldTransformData.size());
-	worldSBuffer.WriteData(sbMaterialDatas);
-	pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamWorldTransform, worldSBuffer.GPUAddress);
 }
 
 void TransparentForwardLightingPass::CreatePipelineState()
@@ -194,8 +200,6 @@ void TransparentForwardLightingPass::CreatePipelineState()
 		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 		{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 3, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-		{"BLENDINDICES", 0, DXGI_FORMAT_R32G32B32A32_UINT, 4, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-		{"BLENDWEIGHTS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 5, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 	};
 
 	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc;
@@ -232,6 +236,28 @@ void TransparentForwardLightingPass::CreatePipelineState()
 	}
 
 	HRESULT hr = DEVICE->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dStandardPipelineState.GetAddressOf()));
+	if (FAILED(hr)) {
+		__debugbreak();
+	}
+
+	std::vector<D3D12_INPUT_ELEMENT_DESC> d3dAnimatedInputElements = {
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 3, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"BLENDINDICES", 0, DXGI_FORMAT_R32G32B32A32_UINT, 4, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"BLENDWEIGHTS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 5, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+	};
+
+	inputLayoutDesc.NumElements = d3dAnimatedInputElements.size();
+	inputLayoutDesc.pInputElementDescs = d3dAnimatedInputElements.data();
+
+	{
+		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("ForwardAnimatedVS");
+		d3dPipelineDesc.InputLayout = inputLayoutDesc;
+	}
+
+	hr = DEVICE->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dAnimatedPipelineState.GetAddressOf()));
 	if (FAILED(hr)) {
 		__debugbreak();
 	}

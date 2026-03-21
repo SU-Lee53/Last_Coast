@@ -72,7 +72,7 @@ class Scene {
 
 public:
 	virtual void BuildObjects() = 0;
-	virtual void BuildLights() {}
+	virtual void BuildLights();
 
 public:
 	void AddObject(std::shared_ptr<IGameObject> pObj) {

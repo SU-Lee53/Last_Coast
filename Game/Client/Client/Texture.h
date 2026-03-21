@@ -44,6 +44,8 @@ public:
 	//bool HasTransparentPixel() const { return m_bHasTransparentPixel; }
 	Texture::ALPHA_MODE GetAlphaMode() const { return m_eAlphaMode; }
 
+	virtual void ShowDebugInfo() const;
+
 private:
 	bool CreateTextureFromFile(const std::wstring& wstrTexturePath, bool bCheckTransparent);
 	bool CreateTextureArrayFromFile(const std::wstring& wstrTexturePath);
@@ -132,6 +134,17 @@ private:
 
 	static bool IsRGBA8Like(DXGI_FORMAT dxgiFormat);
 
+	static std::string AlphaModeToString(ALPHA_MODE m) {
+		switch (m)
+		{
+		case Texture::ALPHA_MODE::Opaque: return "ALPHA_MODE::Opaque";
+		case Texture::ALPHA_MODE::Masked: return "ALPHA_MODE::Masked";
+		case Texture::ALPHA_MODE::Transparent: return "ALPHA_MODE::Transparent";
+		}
+
+		return {};
+	}
+
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -143,6 +156,7 @@ class RenderTargetTexture : public Texture {
 public:
 	const D3D12_RENDER_TARGET_VIEW_DESC& GetRTVDesc() const { return m_d3dRTVDesc; }
 	CD3DX12_CPU_DESCRIPTOR_HANDLE GetRTVHandle() { return m_d3dRTVHandle; }
+	virtual void ShowDebugInfo() const;
 
 private:
 	bool Initialize(
@@ -169,6 +183,7 @@ class DepthStencilTexture : public Texture {
 public:
 	const D3D12_DEPTH_STENCIL_VIEW_DESC& GetDSVDesc() const { return m_d3dDSVDesc; }
 	CD3DX12_CPU_DESCRIPTOR_HANDLE GetDSVHandle() { return m_d3dDSVHandle; }
+	virtual void ShowDebugInfo() const;
 
 private:
 	bool Initialize(
@@ -196,6 +211,7 @@ class UnorderedAccessTexture : public Texture {
 public:
 	const D3D12_UNORDERED_ACCESS_VIEW_DESC& GetUAVDesc() const { return m_d3dUAVDesc; }
 	CD3DX12_CPU_DESCRIPTOR_HANDLE GetUAVHandle() { return m_d3dUAVHandle; }
+	virtual void ShowDebugInfo() const;
 
 private:
 	bool Initialize(

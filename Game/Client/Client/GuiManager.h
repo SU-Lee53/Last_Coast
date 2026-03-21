@@ -4,6 +4,15 @@ class GuiManager {
 
 	DECLARE_SINGLE(GuiManager)
 
+	enum class MANAGER_DEBUG {
+		RENDER_MANAGER = 0,
+		TEXTURE_MANAGER,
+		MATERIAL_MANAGER,
+		MODEL_MANAGER,
+
+		NONE
+	};
+
 public:
 	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
 	void Update();
@@ -15,5 +24,7 @@ private:
 public:
 	static HANDLE g_NewFrameEvent;
 
+	bool m_bShowDebugMenu = true;
+	MANAGER_DEBUG m_eManagerDebug = MANAGER_DEBUG::NONE;
 };
 

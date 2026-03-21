@@ -105,18 +105,29 @@ void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandL
 	}
 
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
-	CD3DX12_CPU_DESCRIPTOR_HANDLE gBufferHandle = outDescHandle.cpuHandle;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE bindHandle = outDescHandle.cpuHandle;
 	constexpr uint32 rootParamCascadeShadowMap = std::to_underlying(ROOT_PARAMETER::CASCADE_SHADOW_MAPS);
+
+	// Set toShadow matrix
+	std::vector<Matrix> mtxToShadows;
+	mtxToShadows.reserve(4);
+	std::transform(m_CascadeCached.begin(), m_CascadeCached.end(), std::back_inserter(mtxToShadows), [](const CascadeCameraData& data) {return data.mtxToShadowMap.Transpose(); });
+	
+	auto toShadowCBuffer = RENDER->AllocCBuffer<CB_TO_SHADOW_MATRICES_DATA>();
+	toShadowCBuffer.WriteData(mtxToShadows);
+	DEVICE->CopyDescriptorsSimple(1, bindHandle, toShadowCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	bindHandle.Offset(1, unDescriptorInc);
+
 
 	for (const auto& shadowMap : pDSVTextures) {
 		CD3DX12_CPU_DESCRIPTOR_HANDLE dsSRVHandle = shadowMap->GetSRVHandle();
-		DEVICE->CopyDescriptorsSimple(1, gBufferHandle, dsSRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		gBufferHandle.Offset(1, unDescriptorInc);
+		DEVICE->CopyDescriptorsSimple(1, bindHandle, dsSRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		bindHandle.Offset(1, unDescriptorInc);
 	}
 
 	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamCascadeShadowMap, outDescHandle.gpuHandle);
-	outDescHandle.cpuHandle.Offset(g_unNumCascade, unDescriptorInc);
-	outDescHandle.gpuHandle.Offset(g_unNumCascade, unDescriptorInc);
+	outDescHandle.cpuHandle.Offset(1 + g_unNumCascade, unDescriptorInc);
+	outDescHandle.gpuHandle.Offset(1 + g_unNumCascade, unDescriptorInc);
 
 	// Viewport & Scissor rect 복구
 	auto pCamera = CUR_SCENE->GetCamera();
@@ -138,7 +149,17 @@ void DirectionalCascadeShadowMapPass::CreatePipelineState()
 		d3dPipelineDesc.pRootSignature = RenderManager::g_pd3dGlobalRootSignature.Get();
 		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("ShadowStandardVS");
 		d3dPipelineDesc.PS = { nullptr, 0 };
-		d3dPipelineDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		d3dPipelineDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+		d3dPipelineDesc.RasterizerState.FrontCounterClockwise = FALSE;
+		d3dPipelineDesc.RasterizerState.DepthBias = 8000;
+		d3dPipelineDesc.RasterizerState.DepthBiasClamp = 0.0f;
+		d3dPipelineDesc.RasterizerState.SlopeScaledDepthBias = 1.0f;
+		d3dPipelineDesc.RasterizerState.DepthClipEnable = TRUE;
+		d3dPipelineDesc.RasterizerState.MultisampleEnable = FALSE;
+		d3dPipelineDesc.RasterizerState.AntialiasedLineEnable = FALSE;
+		d3dPipelineDesc.RasterizerState.ForcedSampleCount = 0;
+		d3dPipelineDesc.RasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 		d3dPipelineDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 		d3dPipelineDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
 		d3dPipelineDesc.InputLayout = inputLayoutDesc;
@@ -369,7 +390,7 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 		float fBackoff = *std::ranges::max_element(r);
 		fBackoff = std::sqrt(fBackoff);
 
-		Vector3 v3LightPos = v3FrustumCenter - (v3LightDir * fBackoff);
+		Vector3 v3LightPos = v3FrustumCenter - (v3LightDir * fBackoff * ((g_unNumCascade - i) * 2.f));
 		Matrix mtxLightView = XMMatrixLookToLH(v3LightPos, v3LightDir, v3LightUpReal);
 
 		// 5. Calculate bounds using corners transformed into light space
@@ -382,11 +403,10 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 		float fMinX = v3MinX->x, fMinY = v3MinY->y, fMinZ = v3MinZ->z;
 		float fMaxX = v3MaxX->x, fMaxY = v3MaxY->y, fMaxZ = v3MaxZ->z;
 
-
 		// 6. Add z-margin
-		float fMargin = 50.0f;
-		fMinZ -= fMargin;
-		fMaxZ += fMargin;
+		//float fMargin = 50.0f;
+		//fMinZ -= fMargin;
+		//fMaxZ += fMargin;
 
 		// 7. off-center orthographic project
 		const float fShadowMapSize = static_cast<float>(g_unCascadeShadowMapSize[i]);
@@ -428,7 +448,7 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 		};
 
 		// Test world
-		Matrix mtxInvView = mtxLightView.Invert();
+		//Matrix mtxInvView = mtxLightView.Invert();
 
 		// 8. cache
 		BoundingFrustum xmFrustumLight;

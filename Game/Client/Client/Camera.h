@@ -38,6 +38,8 @@ public:
 	const BoundingFrustum& GetFrustumOrigin() const { return m_xmFrustumOrigin; }
 	const BoundingFrustum& GetFrustumWorld() const { return m_xmFrustumWorld; }
 
+	const Vector4& GetCascadeSplits() const { return m_v4CascadeSplits; }
+
 public:
 	void SetPosition(float x, float y, float z);
 	void SetPosition(const Vector3& v3Position);
@@ -63,6 +65,9 @@ public:
 
 	CameraData MakeCBData() const;
 
+private:
+	void ComputeCascadeSplits();
+
 protected:
 	BoundingFrustum m_xmFrustumOrigin = {};
 	BoundingFrustum m_xmFrustumWorld = {};
@@ -87,6 +92,8 @@ protected:
 	float	m_fPitch = 0.f;
 	float	m_fRoll = 0.f;
 	float	m_fYaw = 0.f;
+
+	Vector4 m_v4CascadeSplits;
 
 	D3D12_VIEWPORT	m_d3dViewport = {};
 	D3D12_RECT		m_d3dScissorRect = {};

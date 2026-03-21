@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "D3DCore.h"
 
 struct DescriptorHandle {
@@ -24,6 +24,8 @@ struct DescriptorHandle {
 };
 
 class DescriptorHeap {
+	friend class RenderManager;
+
 public:
 	DescriptorHeap() = default;
 	DescriptorHeap(ComPtr<ID3D12Device> pd3dDevice, D3D12_DESCRIPTOR_HEAP_DESC d3dHeapDesc);

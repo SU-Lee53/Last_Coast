@@ -36,6 +36,7 @@ inline void SceneManager::ChangeScene()
 
 	m_upCurrentScene.reset(new T());
 	m_upCurrentScene->OnEnterScene();
+	m_upCurrentScene->BuildLights();
 	m_upCurrentScene->BuildObjects();
 	m_upCurrentScene->PostInitialize();
 

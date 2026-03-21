@@ -86,7 +86,8 @@ struct CameraData
 	matrix	mtxView;
 	matrix	mtxInvView;
 	matrix	mtxProjection;
-	matrix	mtxInvProjection;
+	matrix mtxInvProjection;
+	float4 gvCascadeSplits; // x, y, z, w
 	float3	v3CameraPosition;
 	float	pad0;
 };
@@ -163,12 +164,22 @@ cbuffer cbSceneData : register(b0, space0)
 	int2 gnScreenSize;
 };
 
+#define NUM_CASCADES 4
+cbuffer cbCascadeShadowMatrix : register(b1, space0)
+{
+	float4x4 gmtxCascadeShadows[NUM_CASCADES];
+}
+
+cbuffer cbShadowMatrix : register(b2, space0)
+{
+	float4x4 gmtxShadows[4];
+}
+
 // ============ StructuredBuffers ============
 
 StructuredBuffer<LightData> gLightData : register(t0, space0);
 
 // ============ Textures ============
-#define NUM_CASCADES 4
 Texture2D gtxtCascadeShadowMaps[NUM_CASCADES] : register(t1, space0);	// t1, t2, t3, t4
 Texture2D gtxtShadowss[4] : register(t5, space0);						// t5, t6, t7, t8
 
@@ -180,6 +191,7 @@ Texture2D gtxtHDRResult : register(t13, space0);
 SamplerState gSkyboxSamplerState : register(s0, space0);
 SamplerState gWeightMapSamplerState : register(s1, space0);
 SamplerState gSamplerState : register(s2, space0);
+SamplerComparisonState gShadowMapSamplerState : register(s3, space0);
 
 
 

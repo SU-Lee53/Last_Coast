@@ -3,16 +3,14 @@
 #include "AnimationTestScene.h"
 #include "NetworkTestScene.h"
 #include "TerrainTestScene.h"
+#include "MapTestScene.h"
 #include "TestScene.h"
 
 void SceneManager::Initialize()
 {
-	m_upCurrentScene = std::make_unique<TerrainTestScene>();
+	m_upCurrentScene = std::make_unique<NetworkTestScene>();
+	m_upCurrentScene->BuildLights();
 	m_upCurrentScene->BuildObjects();
-	
-	//m_upCurrentScene = std::make_unique<TestScene>();
-	//m_upCurrentScene->BuildObjects();
-
 	m_upCurrentScene->PostInitialize();
 
 	//RESOURCE->WaitForCopyComplete();

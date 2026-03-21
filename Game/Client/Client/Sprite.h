@@ -14,7 +14,12 @@ public:
 
 	bool IsCursorInSprite(float x, float y) const;
 
+	Texture::ID GetImageID() { return m_ImageID; }
+	std::shared_ptr<Texture> GetImage();
+
 protected:
+	Texture::ID m_ImageID;
+
 	SpriteRect m_Rect;	// 윈도우 좌표계를 기준
 	bool m_bClickable;
 	UINT m_nLayerIndex;

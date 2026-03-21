@@ -8,16 +8,16 @@ public:
 
 private:
 	T m_Base = 0;
-	std::set<T> m_FreeIndex;
+	std::vector<T> m_FreeIDs;
 };
 
 template<std::integral T>
 inline T IDGenerator<T>::Generate()
 {
-	if (m_FreeIndex.size() != 0) {
-		T ret = *m_FreeIndex.begin();
-		m_FreeIndex.erase(m_FreeIndex.begin());
-		return ret;
+	if (m_FreeIDs.size() != 0) {
+		T id = m_FreeIDs.back();
+		m_FreeIDs.pop_back;
+		return id;
 	}
 
 	return m_Base++;
@@ -26,10 +26,5 @@ inline T IDGenerator<T>::Generate()
 template<std::integral T>
 inline void IDGenerator<T>::Free(T id)
 {
-	if (id >= m_Base) {
-		--m_Base;
-	}
-	else {
-		m_FreeIndex.insert(id);
-	}
+	m_FreeIDs.push_back(id);
 }

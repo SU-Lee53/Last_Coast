@@ -116,3 +116,18 @@ void ConstantBufferPool::Reset()
 		CBVAllocated = 0;
 	}
 }
+
+void ConstantBufferPool::ShowDebugInfo()
+{
+	ImGui::Text("Max size : %d", m_nMaxCBVSize);
+
+	ImGui::SeparatorText("CBV count");
+	for (const auto& [size, count] : m_nCBVCount) {
+		ImGui::Text("Size : %d - Count : %d", size, count);
+	}
+
+	ImGui::SeparatorText("CBV Allocated");
+	for (const auto& [size, count] : m_nAllocated) {
+		ImGui::Text("Size : %d - Allocated : %d", size, count);
+	}
+}
