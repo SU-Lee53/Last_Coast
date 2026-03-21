@@ -51,4 +51,3 @@ private:
 	std::atomic<int32>	_useCount = 0;
 	std::atomic<int32>	_reserveCount = 0;
 };
-

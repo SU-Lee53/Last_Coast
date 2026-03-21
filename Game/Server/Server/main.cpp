@@ -1,10 +1,6 @@
 ﻿#include "pch.h"
 #include <iostream>
-#include "CorePch.h"
-#include <atomic>
-#include <mutex>
-#include <windows.h>
-#include <future>
+
 #include "ThreadManager.h"
 
 #include "Service.h"
@@ -12,7 +8,19 @@
 
 class GameSession : public Session
 {
+public:
+	virtual int32 OnRecv(BYTE* buffer, int32 len) override
+	{
+		//	Echo
+		std::cout << "OnRecv Len = " << len << std::endl;
+		Send(buffer, len);
+		return len;
+	}
 
+	virtual void OnSend(int32 len) override
+	{
+		std::cout << "OnSend Len = " << len << std::endl;
+	}
 };
 
 int main()

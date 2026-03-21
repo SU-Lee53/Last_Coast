@@ -16,6 +16,8 @@ public:
 	virtual ~Session();
 
 public:
+	void						Send(BYTE* buffer, int32 len);
+	bool						Connect();
 	void						Disconnect(const WCHAR* cause);
 
 	std::shared_ptr<Service>	GetService() { return _service.lock(); }
@@ -36,26 +38,31 @@ private:
 
 private:
 	//	전송 관련
-	void						RegisterConnect();
+	bool						RegisterConnect();
+	bool						RegisterDisconnect();
 	void						RegisterRecv();
-	void						RegisterSend();
+	void						RegisterSend(SendEvent* sendEvent);
 
 	void						ProcessConnect();
+	void						ProcessDisconnect();
 	void						ProcessRecv(int32 numOfBytes);
-	void						ProcessSend(int32 numOfBytes);
+	void						ProcessSend(SendEvent* sendEvent, int32 numOfBytes);
 
 	void						HandleError(int32 errorCode);
 
 protected:
-	//	컨텐츠 코드에서 오버로딩
-	virtual void				OnConnected() { }
+	//	컨텐츠 코드에서 재정의
+	virtual void				OnConnected() {}
 	virtual int32				OnRecv(BYTE* buffer, int32 len) { return len; }
-	virtual void				OnSend(int32 len) { }
-	virtual void				OnDisconnected() { }
+	virtual void				OnSend(int32 len) {}
+	virtual void				OnDisconnected() {}
 
 public:
 	//	TEMP
-	char						_recvBuffer[1000];
+	BYTE						_recvBuffer[1000];
+
+	//char						_sendBuffer[1000];
+	//int32						_sendLen = 0;
 
 private:
 	std::weak_ptr<Service>		_service;
@@ -67,6 +74,8 @@ private:
 	USE_LOCK;
 
 private:
+	ConnectEvent				_connectEvent;
+	DisconnectEvent				_disconnectEvent;
 	RecvEvent					_recvEvent;
 };
 

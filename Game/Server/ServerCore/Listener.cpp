@@ -16,6 +16,7 @@ Listener::~Listener()
 	for (AcceptEvent* acceptEvent : _acceptEvents)
 	{
 
+		xdelete(acceptEvent);
 	}
 }
 
@@ -53,7 +54,7 @@ bool Listener::StartAccept(ServerServiceRef service)
 		RegisterAccept(acceptEvent);
 	}
 
-	return false;
+	return true;
 }
 
 void Listener::CloseSocket()
