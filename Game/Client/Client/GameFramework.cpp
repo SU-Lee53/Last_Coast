@@ -8,8 +8,10 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 {
 	g_pD3DCore = std::make_unique<D3DCore>(bEnableDebugLayer, bEnableGBV, bEnableVSync);
 	g_pD3DCore->Initialize();
-	
+
+	std::string strNavMesh = "TEST";
 	// Init managers
+	AI->Initialize(strNavMesh);
 	COMPUTE->Initialize();
 	RESOURCE->Initialize(g_pD3DCore->GetDevice());
 	TEXTURE->Initialize(g_pD3DCore->GetDevice());
@@ -18,15 +20,14 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 	SHADER->Initialize(g_pD3DCore->GetDevice());
 
 	MODEL->Initialize();
+	ANIMATION->Initialize();
 
 	SCENE->Initialize();
 
 	INPUT->Initialize(WinCore::g_hWnd);
 	GUI->Initialize(g_pD3DCore->GetDevice());
-	//NETWORK->Initialize();
-	TIME->Initialize();
-	ANIMATION->Initialize();
-	AI->Initialize("TEST");
+	NETWORK->Initialize();
+	EFFECT->Initialize(g_pD3DCore->GetDevice());
 	//UI->Initialize(g_pD3DCore->GetDevice());
 
 	RENDER->BuildRenderGraph();
@@ -39,8 +40,8 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 
 	SHADER->ReleaseBlobs();
 
-	TIMER->Initialize();
-	TIMER->Start();
+	TIME->Initialize();
+	TIME->Start();
 }
 
 GameFramework::~GameFramework()
@@ -50,7 +51,7 @@ GameFramework::~GameFramework()
 
 void GameFramework::Update()
 {
-	TIMER->Tick();
+	TIME->Tick();
 	GUI->Update();
 	SOUND->Update();
 
@@ -86,7 +87,7 @@ void GameFramework::Render()
 	RENDER->Render();
 	
 	std::wstring tstrFrameRate;
-	TIMER->GetFrameRate(L"Game", tstrFrameRate);
+	TIME->GetFrameRate(L"Game", tstrFrameRate);
 	tstrFrameRate = std::format(L"{}", tstrFrameRate);
 	::SetWindowText(WinCore::g_hWnd, tstrFrameRate.data());
 

@@ -32,7 +32,7 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 	for (uint32 i = 0; i < g_unMaxPendingFrames; ++i) {
 		m_DescriptorHeapForDraw[i].Initialize(pd3dDevice, d3dHeapDesc);
 		m_ConstantBufferPool[i].Initialize(1000);
-		m_StructuredBufferPool[i].Initialize(1'000'000, 1000);
+		m_StructuredBufferPool[i].Initialize(5'000'000, 1000);
 		m_GBuffers[i].Initialize(i);
 
 		{
@@ -641,21 +641,21 @@ void GBuffer::Initialize(uint32 nPendingFrameIndex)
 	}
 }
 
-void RenderManager::RenderNavMeshDebug(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
-{
-	if (!m_pNavMeshDebugRenderer) {
-		return;
-	}
-
-	// 1. 폴리곤 외곽선 렌더링 (녹색)
-	pd3dCommandList->SetPipelineState(m_pd3dDebugLineGreenPipelineState.Get());
-	m_pNavMeshDebugRenderer->RenderPolygonEdges(pd3dCommandList);
-
-	// 2. 인접성 그래프 렌더링 (빨간색)
-	pd3dCommandList->SetPipelineState(m_pd3dDebugLineRedPipelineState.Get());
-	m_pNavMeshDebugRenderer->RenderAdjacencyEdges(pd3dCommandList);
-
-	// 3. 경로 노드 렌더링 (파란색)
-	pd3dCommandList->SetPipelineState(m_pd3dDebugLineBluePipelineState.Get());
-	m_pNavMeshDebugRenderer->RenderPathNodes(pd3dCommandList);
-}
+//void RenderManager::RenderNavMeshDebug(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
+//{
+//	if (!m_pNavMeshDebugRenderer) {
+//		return;
+//	}
+//
+//	// 1. 폴리곤 외곽선 렌더링 (녹색)
+//	pd3dCommandList->SetPipelineState(m_pd3dDebugLineGreenPipelineState.Get());
+//	m_pNavMeshDebugRenderer->RenderPolygonEdges(pd3dCommandList);
+//
+//	// 2. 인접성 그래프 렌더링 (빨간색)
+//	pd3dCommandList->SetPipelineState(m_pd3dDebugLineRedPipelineState.Get());
+//	m_pNavMeshDebugRenderer->RenderAdjacencyEdges(pd3dCommandList);
+//
+//	// 3. 경로 노드 렌더링 (파란색)
+//	pd3dCommandList->SetPipelineState(m_pd3dDebugLineBluePipelineState.Get());
+//	m_pNavMeshDebugRenderer->RenderPathNodes(pd3dCommandList);
+//}

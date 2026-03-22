@@ -99,7 +99,11 @@ using namespace Microsoft::WRL;
 // AI
 #include "AI.h"
 using namespace AIDLL;
-
+#ifdef _DEBUG
+#pragma comment(lib, "AI/AI_dbg.lib")
+#else
+#pragma comment(lib, "AI/AI.lib")
+#endif
 // WinSock
 #include "WinSockCommon.h"
 

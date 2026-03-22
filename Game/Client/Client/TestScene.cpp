@@ -3,9 +3,13 @@
 #include "DebugPlayer.h"
 #include "ThirdPersonPlayer.h"
 #include "Zombie.h"
+#include "Skybox.h"
 
 void TestScene::BuildObjects()
 {
+	m_pSkybox = std::make_shared<Skybox>();
+	m_pSkybox->Initialize("Day_HDRI.dds", "Night_HDRI.dds");
+
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 
 	for (int i = 0; i < 10; ++i) {
@@ -18,12 +22,12 @@ void TestScene::BuildObjects()
 	//Scene::InitializeObjects();
 
 	// NavMesh 디버그 렌더러 초기화
-	m_pNavMeshDebugRenderer = std::make_unique<NavMeshDebugRenderer>();
-	if (AI->IsInitialized()) {
-		m_pNavMeshDebugRenderer->Initialize(AI->GetNavMesh());
-		// RenderManager에 등록
-		RENDER->SetNavMeshDebugRenderer(m_pNavMeshDebugRenderer.get());
-	}
+	//m_pNavMeshDebugRenderer = std::make_unique<NavMeshDebugRenderer>();
+	//if (AI->IsInitialized()) {
+	//	m_pNavMeshDebugRenderer->Initialize(AI->GetNavMesh());
+	//	// RenderManager에 등록
+	//	RENDER->SetNavMeshDebugRenderer(m_pNavMeshDebugRenderer.get());
+	//}
 }
 
 void TestScene::OnEnterScene()

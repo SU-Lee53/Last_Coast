@@ -72,14 +72,14 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LibraryPath>$(SolutionDir)Dependencies\Libraries\;$(LibraryPath)</LibraryPath>
-    <ExternalIncludePath>$(SolutionDir)Dependencies\Includes\;$(ExternalIncludePath)</ExternalIncludePath>
+    <ExternalIncludePath>$(SolutionDir)AI\;$(SolutionDir)Dependencies\Includes\;$(ExternalIncludePath)</ExternalIncludePath>
     <OutDir>$(SolutionDir)Executables\</OutDir>
     <TargetName>$(ProjectName)_dbg</TargetName>
     <IntDir>$(SolutionDir)Intermediates\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>$(SolutionDir)Dependencies\Libraries\;$(LibraryPath)</LibraryPath>
-    <ExternalIncludePath>$(SolutionDir)Dependencies\Includes\;$(ExternalIncludePath)</ExternalIncludePath>
+    <ExternalIncludePath>$(SolutionDir)AI\;$(SolutionDir)Dependencies\Includes\;$(ExternalIncludePath)</ExternalIncludePath>
     <OutDir>$(SolutionDir)Executables\</OutDir>
     <IntDir>$(SolutionDir)Intermediates\</IntDir>
   </PropertyGroup>
@@ -154,6 +154,7 @@
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_rectpack.h" />
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_textedit.h" />
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h" />
+    <ClInclude Include="AIManagerWrapper.h" />
     <ClInclude Include="Animation.h" />
     <ClInclude Include="AnimationController.h" />
     <ClInclude Include="AnimationHelper.h" />
@@ -197,6 +198,7 @@
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MeshRenderer.h" />
     <ClInclude Include="ModelManager.h" />
+    <ClInclude Include="NavMeshDebugRenderer.h" />
     <ClInclude Include="NetworkManager.h" />
     <ClInclude Include="NetworkTestScene.h" />
     <ClInclude Include="NodeObject.h" />
@@ -242,6 +244,8 @@
     <ClInclude Include="Utility.h" />
     <ClInclude Include="WinCore.h" />
     <ClInclude Include="WInSockCommon.h" />
+    <ClInclude Include="Zombie.h" />
+    <ClInclude Include="ZombieAnimationController.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc" />
@@ -287,6 +291,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="AIManagerWrapper.cpp" />
     <ClCompile Include="Animation.cpp" />
     <ClCompile Include="AnimationController.cpp" />
     <ClCompile Include="AnimationHelper.cpp" />
@@ -329,6 +334,7 @@
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MeshRenderer.cpp" />
     <ClCompile Include="ModelManager.cpp" />
+    <ClCompile Include="NavMeshDebugRenderer.cpp" />
     <ClCompile Include="NetworkManager.cpp" />
     <ClCompile Include="NetworkTestScene.cpp" />
     <ClCompile Include="NodeObject.cpp" />
@@ -372,6 +378,8 @@
     <ClCompile Include="UIManager.cpp" />
     <ClCompile Include="Utility.cpp" />
     <ClCompile Include="WinCore.cpp" />
+    <ClCompile Include="Zombie.cpp" />
+    <ClCompile Include="ZombieAnimationController.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui.ini" />

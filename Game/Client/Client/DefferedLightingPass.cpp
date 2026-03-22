@@ -4,23 +4,6 @@
 
 void DefferedLightingPass::Initialize()
 {
-	/*const uint32 unRTVs = 1;
-	for (uint32 i = 0; i < RenderManager::g_unMaxPendingFrames; ++i) {
-		m_pRTVs[i].reserve(unRTVs);
-
-		for (uint32 j = 0; j < unRTVs; ++j) {
-			auto& [srvID, rtvID] = TEXTURE->LoadRenderTargetTexture(
-				"HDR" + std::to_string(i) + "_" + std::to_string(j),
-				WinCore::g_dwClientWidth,
-				WinCore::g_dwClientHeight,
-				DXGI_FORMAT_R16G16B16A16_FLOAT,
-				DXGI_FORMAT_R16G16B16A16_FLOAT);
-
-			auto pRTV = std::static_pointer_cast<RenderTargetTexture>(TEXTURE->GetTextureByID(rtvID, TEXTURE_RESOURCE_TYPE::RTV));
-			m_pRTVs[i].push_back(pRTV);
-		}
-	}*/
-
 	CreatePipelineState();
 }
 

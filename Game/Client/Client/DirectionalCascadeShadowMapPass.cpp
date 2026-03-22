@@ -32,7 +32,6 @@ void DirectionalCascadeShadowMapPass::OnPreRender(ComPtr<ID3D12GraphicsCommandLi
 	}
 
 	ComputeCascade();
-
 }
 
 void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
