@@ -27,7 +27,7 @@ public:
 	MeshRenderer::ID GetID() const { return m_RuntimeID; }
 	MESH_TYPE GetMeshType() { return m_eMeshType; }
 
-	void SetTexture(const TextureHandle& texHandle, UINT nMaterialIndex, TEXTURE_TYPE eTextureType);
+	void SetTexture(const TextureRef<Texture>& texHandle, UINT nMaterialIndex, TEXTURE_TYPE eTextureType);
 
 protected:
 	std::vector<std::shared_ptr<IMesh>> m_pMeshes;

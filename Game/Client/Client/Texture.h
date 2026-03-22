@@ -147,6 +147,26 @@ private:
 
 };
 
+template <typename T> requires std::derived_from<T, Texture>
+struct TextureRef;
+
+template<>
+struct TextureRef<Texture> {
+	TextureHandle srvHandle;
+
+	bool IsValid() const {
+		return srvHandle.IsValid();
+	}
+
+	uint64_t GetID() const {
+		return srvHandle.GetID();
+	}
+
+	std::shared_ptr<Texture> GetResource() const {
+		return srvHandle.GetResource();
+	}
+};
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // RenderTargetTexture
 
@@ -172,6 +192,24 @@ private:
 	D3D12_RENDER_TARGET_VIEW_DESC m_d3dRTVDesc;
 
 	uint64 m_un64RuntimeRTVID;
+};
+
+template<>
+struct TextureRef<RenderTargetTexture> {
+	TextureHandle srvHandle;
+	TextureHandle rtvHandle;
+
+	bool IsValid() const {
+		return srvHandle.IsValid() && rtvHandle.IsValid();
+	}
+
+	uint64_t GetID() const {
+		return srvHandle.GetID();
+	}
+
+	std::shared_ptr<RenderTargetTexture> GetResource() const {
+		return std::static_pointer_cast<RenderTargetTexture>(rtvHandle.GetResource());
+	}
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -202,6 +240,24 @@ private:
 	uint64 m_un64RuntimeDSVID;
 };
 
+template<>
+struct TextureRef<DepthStencilTexture> {
+	TextureHandle srvHandle;
+	TextureHandle dsvHandle;
+
+	bool IsValid() const {
+		return srvHandle.IsValid() && dsvHandle.IsValid();
+	}
+
+	uint64_t GetID() const {
+		return srvHandle.GetID();
+	}
+
+	std::shared_ptr<DepthStencilTexture> GetResource() const {
+		return std::static_pointer_cast<DepthStencilTexture>(dsvHandle.GetResource());
+	}
+};
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // UnorderedAccessTexture
 
@@ -230,4 +286,22 @@ private:
 	D3D12_UNORDERED_ACCESS_VIEW_DESC m_d3dUAVDesc;
 
 	uint64 m_un64RuntimeUAVID;
+};
+
+template<>
+struct TextureRef<UnorderedAccessTexture> {
+	TextureHandle srvHandle;
+	TextureHandle uavHandle;
+
+	bool IsValid() const {
+		return srvHandle.IsValid() && uavHandle.IsValid();
+	}
+
+	uint64_t GetID() const {
+		return srvHandle.GetID();
+	}
+
+	std::shared_ptr<UnorderedAccessTexture> GetResource() const {
+		return std::static_pointer_cast<UnorderedAccessTexture>(uavHandle.GetResource());
+	}
 };

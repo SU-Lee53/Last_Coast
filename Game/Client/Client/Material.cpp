@@ -20,7 +20,7 @@ void IMaterial::SetShader(std::shared_ptr<Shader> pShader)
 	m_pShader = pShader;
 }
 
-void IMaterial::SetTexture(const TextureHandle& texHandle, TEXTURE_TYPE eTextureType)
+void IMaterial::SetTexture(const TextureRef<Texture>& texHandle, TEXTURE_TYPE eTextureType)
 {
 	if (m_TextureIDs.size() < std::to_underlying(eTextureType) + 1) {
 		m_TextureIDs.resize(std::to_underlying(eTextureType) + 1);

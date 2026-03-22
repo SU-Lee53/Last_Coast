@@ -122,7 +122,7 @@ BoundingOrientedBox MeshRenderer::GetOBBMerged() const
 	return xmOBBResult;
 }
 
-void MeshRenderer::SetTexture(const TextureHandle& texHandle, UINT nMaterialIndex, TEXTURE_TYPE eTextureType)
+void MeshRenderer::SetTexture(const TextureRef<Texture>& texHandle, UINT nMaterialIndex, TEXTURE_TYPE eTextureType)
 {
 	assert(texHandle.IsValid());
 	auto pMaterial = m_MaterialIDs[nMaterialIndex].GetResource();

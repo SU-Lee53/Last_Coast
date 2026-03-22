@@ -42,17 +42,17 @@ public:
 	const std::shared_ptr<Shader>& GetShader() const { return m_pShader; }
 	void SetShader(std::shared_ptr<Shader> pShader);
 
-	void SetTexture(const TextureHandle& texID, TEXTURE_TYPE eTextureType);
+	void SetTexture(const TextureRef<Texture>& texID, TEXTURE_TYPE eTextureType);
 	std::shared_ptr<Texture> GetTexture(int nIndex);
 
-	const std::vector<TextureHandle>& GetTextureHandles() const { return m_TextureIDs; }
+	const std::vector<TextureRef<Texture>>& GetTextureRefs() const { return m_TextureIDs; }
 
 protected:
 	void InitializeColors(const MATERIALLOADINFO& materialLoadInfo);
 
 protected:
 	MaterialData m_MaterialData{};
-	std::vector<TextureHandle> m_TextureIDs;
+	std::vector<TextureRef<Texture>> m_TextureIDs;
 
 	std::shared_ptr<Shader> m_pShader;
 };

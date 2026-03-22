@@ -20,7 +20,7 @@ public:
 	void Initialize(const TERRAINCOMPONENTLOADINFO& componentLoadInfo, const Vector3& v3TerrainScale, const TerrainIndexRange& indexRange);
 	CB_TERRAIN_COMPONENT_DATA MakeCBData() const;
 	const TerrainIndexRange& GetIndexRange() const { return m_IndexRange; };
-	TextureHandle GetWeightMapID() const { return m_WeightMapHandles; }
+	TextureRef<Texture> GetWeightMapRefs() const { return m_WeightMapHandles; }
 
 	Vector2 GetComponentSize() const { return Vector2{ (m_xmi2NumQuadsXZ.x) * m_v3TerrainScale.x, (m_xmi2NumQuadsXZ.y) * m_v3TerrainScale.z }; }
 
@@ -29,7 +29,7 @@ private:
 	XMINT2 m_xmi2NumQuadsXZ = XMINT2{ 0,0 };
 	XMINT4 m_xmi4LayerIndices = XMINT4{ 0,0,0,0 };
 	Vector3 m_v3TerrainScale;
-	TextureHandle m_WeightMapHandles;
+	TextureRef<Texture> m_WeightMapHandles;
 	
 	TerrainIndexRange m_IndexRange{};
 

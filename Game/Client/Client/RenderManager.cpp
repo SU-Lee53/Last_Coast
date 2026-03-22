@@ -36,27 +36,21 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 		m_GBuffers[i].Initialize(i);
 
 		{
-			auto& [srvID, rtvID] = TEXTURE->LoadRenderTargetTexture(
+			m_HDRRenderTargetIDs[i] = TEXTURE->LoadRenderTargetTexture(
 				"HDR" + std::to_string(i),
 				WinCore::g_dwClientWidth,
 				WinCore::g_dwClientHeight,
 				DXGI_FORMAT_R16G16B16A16_FLOAT,
 				DXGI_FORMAT_R16G16B16A16_FLOAT);
-
-			m_HDRRenderTargetIDs[i].first = srvID;
-			m_HDRRenderTargetIDs[i].second = rtvID;
 		}
 
 		{
-			auto& [srvID, rtvID] = TEXTURE->LoadRenderTargetTexture(
+			m_LDRRenderTargetIDs[i] = TEXTURE->LoadRenderTargetTexture(
 				"LDR" + std::to_string(i),
 				WinCore::g_dwClientWidth,
 				WinCore::g_dwClientHeight,
 				m_dxgiRenderTargetFormat,
 				m_dxgiRenderTargetFormat);
-
-			m_LDRRenderTargetIDs[i].first = srvID;
-			m_LDRRenderTargetIDs[i].second = rtvID;
 		}
 
 	}
@@ -260,14 +254,14 @@ void RenderManager::ShowDebugOptions()
 
 		if (ImGui::TreeNode("Render Targets")) {
 			if (ImGui::TreeNode("Back Buffer")) {
-				auto pBackBuffer = m_BackBufferIDs[0].second.GetResource();
+				auto pBackBuffer = m_BackBufferIDs[0].GetResource();
 				pBackBuffer->ShowDebugInfo();
 
 				ImGui::TreePop();
 			}
 			
 			if (ImGui::TreeNode("Main Depth Buffer")) {
-				auto pDepthBuffer = m_DepthStencilID.second.GetResource();
+				auto pDepthBuffer = m_DepthStencilID.GetResource();
 				pDepthBuffer->ShowDebugInfo();
 
 				ImGui::TreePop();
@@ -275,7 +269,7 @@ void RenderManager::ShowDebugOptions()
 			
 			if (ImGui::TreeNode("G-Buffers")) {
 				ImGui::Text("GBuffer[0][0] Info. Rest is same");
-				auto pRTV = m_GBuffers[0].GBuffers[0].second.GetResource();
+				auto pRTV = m_GBuffers[0].GBuffers[0].GetResource();
 				pRTV->ShowDebugInfo();
 
 				ImGui::TreePop();
@@ -283,7 +277,7 @@ void RenderManager::ShowDebugOptions()
 			
 			if (ImGui::TreeNode("HDR")) {
 				ImGui::Text("HDR[0][0] Info. Rest is same");
-				auto pHDR = m_HDRRenderTargetIDs[0].second.GetResource();
+				auto pHDR = m_HDRRenderTargetIDs[0].GetResource();
 				pHDR->ShowDebugInfo();
 
 				ImGui::TreePop();
@@ -291,7 +285,7 @@ void RenderManager::ShowDebugOptions()
 			
 			if (ImGui::TreeNode("LDR")) {
 				ImGui::Text("HDR[0][0] Info. Rest is same");
-				auto pLDR = m_LDRRenderTargetIDs[0].second.GetResource();
+				auto pLDR = m_LDRRenderTargetIDs[0].GetResource();
 				pLDR->ShowDebugInfo();
 
 				ImGui::TreePop();
@@ -372,24 +366,24 @@ void RenderManager::BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dComma
 
 }
 
-const TextureHandle RenderManager::GetCurrentBackBuffer() const
+const TextureRef<RenderTargetTexture>& RenderManager::GetCurrentBackBuffer() const
 {
-	return m_BackBufferIDs[m_unBackBufferIndex].second;
+	return m_BackBufferIDs[m_unBackBufferIndex];
 }
 
-const TextureHandle RenderManager::GetDepthStencilBuffer() const
+const TextureRef<DepthStencilTexture>& RenderManager::GetDepthStencilBuffer() const
 {
-	return m_DepthStencilID.second;
+	return m_DepthStencilID;
 }
 
 const CD3DX12_CPU_DESCRIPTOR_HANDLE RenderManager::GetCurrentBackBufferHandle() const
 {
-	return static_pointer_cast<RenderTargetTexture>(m_BackBufferIDs[m_unBackBufferIndex].second.GetResource())->GetRTVHandle();
+	return static_pointer_cast<RenderTargetTexture>(m_BackBufferIDs[m_unBackBufferIndex].GetResource())->GetRTVHandle();
 }
 
 const CD3DX12_CPU_DESCRIPTOR_HANDLE RenderManager::GetDepthStencilBufferHandle() const
 {
-	return static_pointer_cast<DepthStencilTexture>(m_DepthStencilID.second.GetResource())->GetDSVHandle();
+	return static_pointer_cast<DepthStencilTexture>(m_DepthStencilID.GetResource())->GetDSVHandle();
 }
 
 const GBuffer& RenderManager::GetCurrentGBuffer() const
@@ -397,24 +391,24 @@ const GBuffer& RenderManager::GetCurrentGBuffer() const
 	return m_GBuffers[m_unCurrentContextIndex];
 }
 
-const TextureHandle RenderManager::GetCurrentHDRBuffer() const
+const TextureRef<RenderTargetTexture>& RenderManager::GetCurrentHDRBuffer() const
 {
-	return m_HDRRenderTargetIDs[m_unBackBufferIndex].second;
+	return m_HDRRenderTargetIDs[m_unBackBufferIndex];
 }
 
-const TextureHandle RenderManager::GetCurrentLDRBuffer() const
+const TextureRef<RenderTargetTexture>& RenderManager::GetCurrentLDRBuffer() const
 {
-	return m_LDRRenderTargetIDs[m_unBackBufferIndex].second;
+	return m_LDRRenderTargetIDs[m_unBackBufferIndex];
 }
 
 const CD3DX12_CPU_DESCRIPTOR_HANDLE RenderManager::GetCurrentHDRBufferHandle() const
 {
-	return static_pointer_cast<RenderTargetTexture>(m_HDRRenderTargetIDs[m_unBackBufferIndex].second.GetResource())->GetRTVHandle();
+	return static_pointer_cast<RenderTargetTexture>(m_HDRRenderTargetIDs[m_unBackBufferIndex].GetResource())->GetRTVHandle();
 }
 
 const CD3DX12_CPU_DESCRIPTOR_HANDLE RenderManager::GetCurrentLDRBufferHandle() const
 {
-	return static_pointer_cast<RenderTargetTexture>(m_LDRRenderTargetIDs[m_unBackBufferIndex].second.GetResource())->GetRTVHandle();
+	return static_pointer_cast<RenderTargetTexture>(m_LDRRenderTargetIDs[m_unBackBufferIndex].GetResource())->GetRTVHandle();
 }
 
 void RenderManager::OnPrepareRender()

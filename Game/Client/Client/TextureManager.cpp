@@ -26,7 +26,7 @@ void TextureManager::LoadGameTextures()
 	//LoadTexture("font");
 }
 
-TextureHandle TextureManager::LoadTexture(const std::string& strTextureName, bool bCheckTransparent)
+TextureRef<Texture> TextureManager::LoadTexture(const std::string& strTextureName, bool bCheckTransparent)
 {
 	TextureHandle findHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!findHandle.IsValid()) {
@@ -53,13 +53,13 @@ TextureHandle TextureManager::LoadTexture(const std::string& strTextureName, boo
 		pTexture->m_un64RuntimeSRVID = SRVHandle.GetID();
 		pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByHandle(SRVHandle);
 
-		return SRVHandle;
+		return { SRVHandle };
 	}
 
-	return findHandle;
+	return { findHandle };
 }
 
-TextureHandle TextureManager::LoadTextureFromRaw(const std::string& strTextureName, uint32 unWidth, uint32 unHeight)
+TextureRef<Texture> TextureManager::LoadTextureFromRaw(const std::string& strTextureName, uint32 unWidth, uint32 unHeight)
 {
 	TextureHandle findHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!findHandle.IsValid()) {
@@ -86,13 +86,13 @@ TextureHandle TextureManager::LoadTextureFromRaw(const std::string& strTextureNa
 		pTexture->m_un64RuntimeSRVID = SRVHandle.GetID();
 		pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByHandle(SRVHandle);
 
-		return SRVHandle;
+		return { SRVHandle };
 	}
 
-	return findHandle;
+	return { findHandle };
 }
 
-TextureHandle TextureManager::LoadTextureArray(const std::string& strTextureName, const std::wstring& wstrTexturePath)
+TextureRef<Texture> TextureManager::LoadTextureArray(const std::string& strTextureName, const std::wstring& wstrTexturePath)
 {
 	TextureHandle findHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!findHandle.IsValid()) {
@@ -119,13 +119,13 @@ TextureHandle TextureManager::LoadTextureArray(const std::string& strTextureName
 		pTexture->m_un64RuntimeSRVID = SRVHandle.GetID();
 		pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByHandle(SRVHandle);
 
-		return SRVHandle;
+		return { SRVHandle };
 	}
 
-	return findHandle;
+	return { findHandle };
 }
 
-std::pair<TextureHandle, TextureHandle> TextureManager::LoadRenderTargetTexture(const std::string& strTextureName, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat)
+TextureRef<RenderTargetTexture> TextureManager::LoadRenderTargetTexture(const std::string& strTextureName, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat)
 {
 	TextureHandle SRVFindHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!SRVFindHandle.IsValid()) {
@@ -184,7 +184,7 @@ std::pair<TextureHandle, TextureHandle> TextureManager::LoadRenderTargetTexture(
 	return { SRVFindHandle, RTVFindHandle };
 }
 
-std::pair<TextureHandle, TextureHandle> TextureManager::LoadRenderTargetTexture(ComPtr<ID3D12Resource> pd3dRTVResourceFromSwapChain, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat)
+TextureRef<RenderTargetTexture> TextureManager::LoadRenderTargetTexture(ComPtr<ID3D12Resource> pd3dRTVResourceFromSwapChain, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat)
 {
 	std::string strTextureName = "RTV_" + std::to_string(g_unRTVFromCoreCount++);
 
@@ -234,7 +234,7 @@ std::pair<TextureHandle, TextureHandle> TextureManager::LoadRenderTargetTexture(
 	return { SRVHandle, RTVHandle };
 }
 
-std::pair<TextureHandle, TextureHandle> TextureManager::LoadDepthStencilTexture(const std::string& strTextureName, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiDSVFormat)
+TextureRef<DepthStencilTexture> TextureManager::LoadDepthStencilTexture(const std::string& strTextureName, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiDSVFormat)
 {
 	TextureHandle SRVFindHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!SRVFindHandle.IsValid()) {
@@ -292,7 +292,7 @@ std::pair<TextureHandle, TextureHandle> TextureManager::LoadDepthStencilTexture(
 	return { SRVFindHandle, DSVFindHandle };
 }
 
-std::pair<TextureHandle, TextureHandle> TextureManager::LoadUnorderedAccessTexture(const std::string& strTextureName, uint32 unArraySize, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVUAVFormat)
+TextureRef<UnorderedAccessTexture> TextureManager::LoadUnorderedAccessTexture(const std::string& strTextureName, uint32 unArraySize, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVUAVFormat)
 {
 	TextureHandle SRVFindHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!SRVFindHandle.IsValid()) {

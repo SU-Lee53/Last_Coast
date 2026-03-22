@@ -28,7 +28,7 @@ void DefferedLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCom
 {
 	// Set Render Targets
 	auto pHDRRenderTarget = std::static_pointer_cast<RenderTargetTexture>(RENDER->GetCurrentHDRBuffer().GetResource());
-	pHDRRenderTarget->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);	// TODO : 이거 왜 시작부터 ALL_SHADER_RESOURCE 로 되있는거임?
+	pHDRRenderTarget->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);	
 
 	// Clear Render Targets
 	float pfClearColor[4] = { 0.f, 0.0f, 0.0f, 1.0f };

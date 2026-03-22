@@ -22,30 +22,30 @@ public:
 	void LoadGameTextures();
 
 public:
-	TextureHandle LoadTexture(const std::string& strTextureName, bool bCheckTransparent = false);
-	TextureHandle LoadTextureFromRaw(const std::string& strTextureName, uint32 unWidth, uint32 unHeight);
-	TextureHandle LoadTextureArray(const std::string& strTextureName, const std::wstring& wstrTexturePath);
+	TextureRef<Texture> LoadTexture(const std::string& strTextureName, bool bCheckTransparent = false);
+	TextureRef<Texture> LoadTextureFromRaw(const std::string& strTextureName, uint32 unWidth, uint32 unHeight);
+	TextureRef<Texture> LoadTextureArray(const std::string& strTextureName, const std::wstring& wstrTexturePath);
 	
-	std::pair<TextureHandle, TextureHandle> LoadRenderTargetTexture(
+	TextureRef<RenderTargetTexture> LoadRenderTargetTexture(
 		const std::string& strTextureName, 
 		uint32 unWidth,
 		uint32 unHeight,
 		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN,
 		DXGI_FORMAT dxgiRTVFormat = DXGI_FORMAT_UNKNOWN);
 	
-	std::pair<TextureHandle, TextureHandle> LoadRenderTargetTexture(
+	TextureRef<RenderTargetTexture> LoadRenderTargetTexture(
 		ComPtr<ID3D12Resource> pd3dRTVResourceFromSwapChain,
 		DXGI_FORMAT dxgiSRVFormat,
 		DXGI_FORMAT dxgiRTVFormat);
 
-	std::pair<TextureHandle, TextureHandle> LoadDepthStencilTexture(
+	TextureRef<DepthStencilTexture> LoadDepthStencilTexture(
 		const std::string& strTextureName,
 		uint32 unWidth,
 		uint32 unHeight,
 		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN,
 		DXGI_FORMAT dxgiDSVFormat = DXGI_FORMAT_UNKNOWN);
 	
-	std::pair<TextureHandle, TextureHandle> LoadUnorderedAccessTexture(
+	TextureRef<UnorderedAccessTexture> LoadUnorderedAccessTexture(
 		const std::string& strTextureName,
 		uint32 unArraySize,
 		uint32 unWidth,

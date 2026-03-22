@@ -102,7 +102,7 @@ void TransparentForwardLightingPass::BindGeometryData(ComPtr<ID3D12GraphicsComma
 
 	std::unordered_map<uint64_t, size_t> textureIdxMap;
 	textureIdxMap.reserve(frustumCulled.size() * 4);
-	std::vector<const TextureHandle*> pTextureHandleForBind;
+	std::vector<const TextureRef<Texture>*> pTextureHandleForBind;
 	pTextureHandleForBind.reserve(frustumCulled.size() * 4);
 
 	std::unordered_set<std::shared_ptr<IMesh>> pMeshes;
@@ -130,7 +130,7 @@ void TransparentForwardLightingPass::BindGeometryData(ComPtr<ID3D12GraphicsComma
 				pMaterialHandleForBind.push_back(&materialHandle);
 
 				auto pMaterial = materialHandle.GetResource();
-				for (auto texHandle : pMaterial->GetTextureHandles()) {
+				for (const auto& texHandle : pMaterial->GetTextureRefs()) {
 					if (!texHandle.IsValid()) continue;
 					auto texIt = textureIdxMap.find(texHandle.GetID());
 					if (texIt == textureIdxMap.end()) {
@@ -143,7 +143,7 @@ void TransparentForwardLightingPass::BindGeometryData(ComPtr<ID3D12GraphicsComma
 			renderParameter.cbInstanceData.gnMaterialIndex = materialIdxMap[materialHandle.GetID()];
 
 			auto pMaterial = materialHandle.GetResource();
-			const auto& texHandles = pMaterial->GetTextureHandles();
+			const auto& texHandles = pMaterial->GetTextureRefs();
 			for (uint32 i = 0; i < 4; ++i) {
 				auto pTex = pMaterial->GetTexture(i);
 				renderParameter.cbInstanceData.gnTextureIndex[i] = (pTex) ? textureIdxMap[texHandles[i].GetID()] : -1;

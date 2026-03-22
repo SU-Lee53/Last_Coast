@@ -25,7 +25,7 @@ enum class ROOT_PARAMETER : uint32 {
 struct GBuffer {
 	const static uint32 g_unNumGBuffers = 3;
 
-	std::array<std::pair<TextureHandle, TextureHandle>, GBuffer::g_unNumGBuffers> GBuffers;
+	std::array<TextureRef<RenderTargetTexture>, GBuffer::g_unNumGBuffers> GBuffers;
 
 	void Initialize(uint32 nPendingFrameIndex);
 
@@ -116,8 +116,8 @@ private:
 	StructuredBufferPool	m_StructuredBufferPool[g_unMaxPendingFrames];
 
 	GBuffer									m_GBuffers[g_unMaxPendingFrames];
-	std::pair<TextureHandle, TextureHandle>		m_HDRRenderTargetIDs[g_unMaxPendingFrames];
-	std::pair<TextureHandle, TextureHandle>		m_LDRRenderTargetIDs[g_unMaxPendingFrames];
+	TextureRef<RenderTargetTexture>			m_HDRRenderTargetIDs[g_unMaxPendingFrames];
+	TextureRef<RenderTargetTexture>			m_LDRRenderTargetIDs[g_unMaxPendingFrames];
 
 
 
@@ -125,16 +125,16 @@ private:
 public:
 	uint32 GetCurrentContextIndex() const { return m_unCurrentContextIndex; }
 
-	const TextureHandle GetCurrentBackBuffer() const;
-	const TextureHandle GetDepthStencilBuffer() const;
+	const TextureRef<RenderTargetTexture>& GetCurrentBackBuffer() const;
+	const TextureRef<DepthStencilTexture>& GetDepthStencilBuffer() const;
 	
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferHandle() const;
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetDepthStencilBufferHandle() const;
 
 	const GBuffer& GetCurrentGBuffer() const;
 
-	const TextureHandle GetCurrentHDRBuffer() const;
-	const TextureHandle GetCurrentLDRBuffer() const;
+	const TextureRef<RenderTargetTexture>& GetCurrentHDRBuffer() const;
+	const TextureRef<RenderTargetTexture>& GetCurrentLDRBuffer() const;
 
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentHDRBufferHandle() const;
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentLDRBufferHandle() const;
@@ -179,8 +179,8 @@ private:
 	uint32 m_unCurrentContextIndex = 0;
 
 	// SRV - RTV/DSV
-	std::pair<TextureHandle, TextureHandle> m_BackBufferIDs[g_unMaxPendingFrames];
-	std::pair<TextureHandle, TextureHandle> m_DepthStencilID;
+	TextureRef<RenderTargetTexture> m_BackBufferIDs[g_unMaxPendingFrames];
+	TextureRef<DepthStencilTexture> m_DepthStencilID;
 
 #pragma endregion D3D
 };
