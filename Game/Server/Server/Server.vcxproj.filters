@@ -21,40 +21,16 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Session.cpp">
-      <Filter>Session</Filter>
-    </ClCompile>
     <ClCompile Include="pch.cpp">
       <Filter>Pch</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="NetworkManager.cpp">
-      <Filter>Network</Filter>
-    </ClCompile>
-    <ClCompile Include="SessionManager.cpp">
-      <Filter>Session</Filter>
-    </ClCompile>
-    <ClCompile Include="Server.cpp">
-      <Filter>Server</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Session.h">
-      <Filter>Session</Filter>
-    </ClInclude>
     <ClInclude Include="pch.h">
       <Filter>Pch</Filter>
-    </ClInclude>
-    <ClInclude Include="NetworkManager.h">
-      <Filter>Network</Filter>
-    </ClInclude>
-    <ClInclude Include="SessionManager.h">
-      <Filter>Session</Filter>
-    </ClInclude>
-    <ClInclude Include="Server.h">
-      <Filter>Server</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
