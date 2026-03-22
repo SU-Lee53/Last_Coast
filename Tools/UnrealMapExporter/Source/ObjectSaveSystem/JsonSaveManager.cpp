@@ -354,7 +354,12 @@ TSharedPtr<FJsonObject> UJsonSaveManager::DirectionToJson(const FTransform& Tran
 
 TSharedPtr<FJsonObject> UJsonSaveManager::Vector3ToJson(const FVector& UnrealVector)
 {
-    // TransformToJson과 동일한 변환 행렬 사용
+    // 벡터를 Translation 행렬로 구성
+    FMatrix UnrealWorldMatrix = FMatrix::Identity;
+    UnrealWorldMatrix.M[3][0] = UnrealVector.X;
+    UnrealWorldMatrix.M[3][1] = UnrealVector.Y;
+    UnrealWorldMatrix.M[3][2] = UnrealVector.Z;
+
     FMatrix ConversionMatrix = FMatrix(
         FPlane(0, 1, 0, 0),
         FPlane(0, 0, 1, 0),
@@ -362,16 +367,15 @@ TSharedPtr<FJsonObject> UJsonSaveManager::Vector3ToJson(const FVector& UnrealVec
         FPlane(0, 0, 0, 1)
     );
 
-    FVector DirectXVector = ConversionMatrix.TransformPosition(UnrealVector);
+    FMatrix DirectXWorldMatrix = ConversionMatrix * UnrealWorldMatrix * ConversionMatrix.GetTransposed();
 
+    // WorldMatrix의 Translation 행(M[3])에서 추출
     TSharedPtr<FJsonObject> VectorJson = MakeShareable(new FJsonObject);
-    VectorJson->SetNumberField(TEXT("X"), DirectXVector.X);
-    VectorJson->SetNumberField(TEXT("Y"), DirectXVector.Y);
-    VectorJson->SetNumberField(TEXT("Z"), DirectXVector.Z);
-
+    VectorJson->SetNumberField(TEXT("X"), DirectXWorldMatrix.M[3][0]);
+    VectorJson->SetNumberField(TEXT("Y"), DirectXWorldMatrix.M[3][1]);
+    VectorJson->SetNumberField(TEXT("Z"), DirectXWorldMatrix.M[3][2]);
     return VectorJson;
 }
-
 #if WITH_EDITOR
 bool UJsonSaveManager::ExportMeshToFBX(UStaticMesh* Mesh, const FString& FileName, bool bShowOptions)
 {
@@ -1798,6 +1802,124 @@ bool UJsonSaveManager::ExportNavMeshToJson(UWorld* World, const FString& FileNam
     return bSuccess;
 }
 
+//TSharedPtr<FJsonObject> UJsonSaveManager::NavMeshToJson(ARecastNavMesh* NavMesh)
+//{
+//    TSharedPtr<FJsonObject> RootJson = MakeShareable(new FJsonObject);
+//
+//    if (!NavMesh)
+//    {
+//        return RootJson;
+//    }
+//
+//    // Config
+//    TSharedPtr<FJsonObject> ConfigJson = MakeShareable(new FJsonObject);
+//    ConfigJson->SetNumberField(TEXT("CellSize"), NavMesh->CellSize);
+//    ConfigJson->SetNumberField(TEXT("CellHeight"), NavMesh->CellHeight);
+//    ConfigJson->SetNumberField(TEXT("AgentRadius"), NavMesh->AgentRadius);
+//    ConfigJson->SetNumberField(TEXT("AgentHeight"), NavMesh->AgentHeight);
+//    ConfigJson->SetNumberField(TEXT("AgentMaxSlope"), NavMesh->AgentMaxSlope);
+//    ConfigJson->SetNumberField(TEXT("AgentMaxStepHeight"), NavMesh->AgentMaxStepHeight);
+//    RootJson->SetObjectField(TEXT("Config"), ConfigJson);
+//
+//    // Detour NavMesh 가져오기
+//    const dtNavMesh* DetourNavMesh = NavMesh->GetRecastMesh();
+//    if (!DetourNavMesh)
+//    {
+//        UE_LOG(LogTemp, Warning, TEXT("Detour NavMesh is null"));
+//        return RootJson;
+//    }
+//
+//    UE_LOG(LogTemp, Log, TEXT("✅ Detour NavMesh accessed successfully"));
+//
+//    // Tiles 처리
+//    TArray<TSharedPtr<FJsonValue>> TilesArray;
+//
+//    int32 MaxTiles = DetourNavMesh->getMaxTiles();
+//    int32 ValidTileCount = 0;
+//
+//    UE_LOG(LogTemp, Log, TEXT("Processing tiles (Max: %d)..."), MaxTiles);
+//
+//    for (int32 i = 0; i < MaxTiles; i++)
+//    {
+//        const dtMeshTile* Tile = DetourNavMesh->getTile(i);
+//
+//        if (!Tile || !Tile->header || Tile->header->vertCount == 0)
+//        {
+//            continue;
+//        }
+//
+//        ValidTileCount++;
+//        TSharedPtr<FJsonObject> TileJson = MakeShareable(new FJsonObject);
+//
+//        // Tile 위치
+//        TileJson->SetNumberField(TEXT("X"), Tile->header->x);
+//        TileJson->SetNumberField(TEXT("Y"), Tile->header->y);
+//        TileJson->SetNumberField(TEXT("Layer"), Tile->header->layer);
+//
+//        // Tile Bounding Box
+//        TSharedPtr<FJsonObject> BoundsJson = MakeShareable(new FJsonObject);
+//        FVector BoundsMin(Tile->header->bmin[0], Tile->header->bmin[1], Tile->header->bmin[2]);
+//        FVector BoundsMax(Tile->header->bmax[0], Tile->header->bmax[1], Tile->header->bmax[2]);
+//        BoundsJson->SetObjectField(TEXT("Min"), Vector3ToJson(BoundsMin));
+//        BoundsJson->SetObjectField(TEXT("Max"), Vector3ToJson(BoundsMax));
+//        TileJson->SetObjectField(TEXT("Bounds"), BoundsJson);
+//
+//        // ✅ Vertices (Vector3ToJson 사용)
+//        TArray<TSharedPtr<FJsonValue>> VerticesArray;
+//        for (int32 v = 0; v < Tile->header->vertCount; v++)
+//        {
+//            const dtReal* Vert = &Tile->verts[v * 3];
+//
+//            FVector UnrealVertex((float)Vert[0], (float)Vert[1], (float)Vert[2]);
+//
+//            VerticesArray.Add(MakeShareable(new FJsonValueObject(
+//                Vector3ToJson(UnrealVertex)
+//            )));
+//        }
+//        TileJson->SetArrayField(TEXT("Vertices"), VerticesArray);
+//
+//        // Polygons
+//        TArray<TSharedPtr<FJsonValue>> PolygonsArray;
+//        for (int32 p = 0; p < Tile->header->polyCount; p++)
+//        {
+//            const dtPoly* Poly = &Tile->polys[p];
+//
+//            TSharedPtr<FJsonObject> PolyJson = MakeShareable(new FJsonObject);
+//
+//            TArray<TSharedPtr<FJsonValue>> IndicesArray;
+//            for (int32 j = 0; j < Poly->vertCount; j++)
+//            {
+//                IndicesArray.Add(MakeShareable(new FJsonValueNumber(Poly->verts[j])));
+//            }
+//            PolyJson->SetArrayField(TEXT("Indices"), IndicesArray);
+//            PolyJson->SetNumberField(TEXT("AreaType"), Poly->getArea());
+//            PolyJson->SetNumberField(TEXT("Flags"), Poly->flags);
+//
+//            PolygonsArray.Add(MakeShareable(new FJsonValueObject(PolyJson)));
+//        }
+//        TileJson->SetArrayField(TEXT("Polygons"), PolygonsArray);
+//
+//        TilesArray.Add(MakeShareable(new FJsonValueObject(TileJson)));
+//
+//        if (ValidTileCount % 10 == 0)
+//        {
+//            UE_LOG(LogTemp, Log, TEXT("  Processed %d tiles..."), ValidTileCount);
+//        }
+//    }
+//
+//    RootJson->SetArrayField(TEXT("Tiles"), TilesArray);
+//    RootJson->SetNumberField(TEXT("TileCount"), ValidTileCount);
+//
+//    UE_LOG(LogTemp, Log, TEXT("✅ Exported %d valid tiles with full mesh data"), ValidTileCount);
+//
+//    return RootJson;
+//}
+
+
+
+
+
+
 TSharedPtr<FJsonObject> UJsonSaveManager::NavMeshToJson(ARecastNavMesh* NavMesh)
 {
     TSharedPtr<FJsonObject> RootJson = MakeShareable(new FJsonObject);
@@ -1825,24 +1947,38 @@ TSharedPtr<FJsonObject> UJsonSaveManager::NavMeshToJson(ARecastNavMesh* NavMesh)
         return RootJson;
     }
 
-    UE_LOG(LogTemp, Log, TEXT("✅ Detour NavMesh accessed successfully"));
+    // Detour 좌표 → DirectX 좌표 변환 람다
+    // Detour 저장 형식: (-UE.X, UE.Z, -UE.Y)
+    // 프로젝트: X=오른쪽, Y=위, Z=앞
+    auto DetourToDX = [](float d0, float d1, float d2, float& outX, float& outY, float& outZ)
+        {
+            float UE_X = -d0;  // 언리얼 X (앞)
+            float UE_Y = -d2;  // 언리얼 Y (오른쪽)
+            float UE_Z = d1;  // 언리얼 Z (위)
+            outX = UE_Y;       // DX.X = UE.Y (오른쪽)
+            outY = UE_Z;       // DX.Y = UE.Z (위)
+            outZ = UE_X;       // DX.Z = UE.X (앞)
+        };
+
+    auto MakeVec3Json = [](float x, float y, float z) -> TSharedPtr<FJsonObject>
+        {
+            TSharedPtr<FJsonObject> Json = MakeShareable(new FJsonObject);
+            Json->SetNumberField(TEXT("X"), x);
+            Json->SetNumberField(TEXT("Y"), y);
+            Json->SetNumberField(TEXT("Z"), z);
+            return Json;
+        };
 
     // Tiles 처리
     TArray<TSharedPtr<FJsonValue>> TilesArray;
-
     int32 MaxTiles = DetourNavMesh->getMaxTiles();
     int32 ValidTileCount = 0;
-
-    UE_LOG(LogTemp, Log, TEXT("Processing tiles (Max: %d)..."), MaxTiles);
 
     for (int32 i = 0; i < MaxTiles; i++)
     {
         const dtMeshTile* Tile = DetourNavMesh->getTile(i);
-
         if (!Tile || !Tile->header || Tile->header->vertCount == 0)
-        {
             continue;
-        }
 
         ValidTileCount++;
         TSharedPtr<FJsonObject> TileJson = MakeShareable(new FJsonObject);
@@ -1853,28 +1989,36 @@ TSharedPtr<FJsonObject> UJsonSaveManager::NavMeshToJson(ARecastNavMesh* NavMesh)
         TileJson->SetNumberField(TEXT("Layer"), Tile->header->layer);
 
         // Tile Bounding Box
+        // 좌표 변환 후 실제 Min/Max를 다시 계산 (변환 시 부호 반전으로 Min/Max 뒤집힘 방지)
+        float bminX, bminY, bminZ, bmaxX, bmaxY, bmaxZ;
+        DetourToDX(Tile->header->bmin[0], Tile->header->bmin[1], Tile->header->bmin[2],
+            bminX, bminY, bminZ);
+        DetourToDX(Tile->header->bmax[0], Tile->header->bmax[1], Tile->header->bmax[2],
+            bmaxX, bmaxY, bmaxZ);
+
         TSharedPtr<FJsonObject> BoundsJson = MakeShareable(new FJsonObject);
-        FVector BoundsMin(Tile->header->bmin[0], Tile->header->bmin[1], Tile->header->bmin[2]);
-        FVector BoundsMax(Tile->header->bmax[0], Tile->header->bmax[1], Tile->header->bmax[2]);
-        BoundsJson->SetObjectField(TEXT("Min"), Vector3ToJson(BoundsMin));
-        BoundsJson->SetObjectField(TEXT("Max"), Vector3ToJson(BoundsMax));
+        BoundsJson->SetObjectField(TEXT("Min"), MakeVec3Json(
+            std::min(bminX, bmaxX),
+            std::min(bminY, bmaxY),
+            std::min(bminZ, bmaxZ)));
+        BoundsJson->SetObjectField(TEXT("Max"), MakeVec3Json(
+            std::max(bminX, bmaxX),
+            std::max(bminY, bmaxY),
+            std::max(bminZ, bmaxZ)));
         TileJson->SetObjectField(TEXT("Bounds"), BoundsJson);
 
-        // ✅ Vertices (Vector3ToJson 사용)
+        // Vertices
         TArray<TSharedPtr<FJsonValue>> VerticesArray;
         for (int32 v = 0; v < Tile->header->vertCount; v++)
         {
             const dtReal* Vert = &Tile->verts[v * 3];
-
-            FVector UnrealVertex((float)Vert[0], (float)Vert[1], (float)Vert[2]);
-
-            VerticesArray.Add(MakeShareable(new FJsonValueObject(
-                Vector3ToJson(UnrealVertex)
-            )));
+            float vx, vy, vz;
+            DetourToDX((float)Vert[0], (float)Vert[1], (float)Vert[2], vx, vy, vz);
+            VerticesArray.Add(MakeShareable(new FJsonValueObject(MakeVec3Json(vx, vy, vz))));
         }
         TileJson->SetArrayField(TEXT("Vertices"), VerticesArray);
 
-        // Polygons
+        // Polygons (인덱스 역순으로 저장 → winding order DirectX 기준으로 보정)
         TArray<TSharedPtr<FJsonValue>> PolygonsArray;
         for (int32 p = 0; p < Tile->header->polyCount; p++)
         {
@@ -1883,7 +2027,11 @@ TSharedPtr<FJsonObject> UJsonSaveManager::NavMeshToJson(ARecastNavMesh* NavMesh)
             TSharedPtr<FJsonObject> PolyJson = MakeShareable(new FJsonObject);
 
             TArray<TSharedPtr<FJsonValue>> IndicesArray;
-            for (int32 j = 0; j < Poly->vertCount; j++)
+            //for (int32 j = Poly->vertCount - 1; j >= 0; j--)  // 역순
+            //{
+            //    IndicesArray.Add(MakeShareable(new FJsonValueNumber(Poly->verts[j])));
+            //}
+            for (int32 j = 0; j < Poly-> vertCount; ++j)  // 역순
             {
                 IndicesArray.Add(MakeShareable(new FJsonValueNumber(Poly->verts[j])));
             }
@@ -1896,17 +2044,12 @@ TSharedPtr<FJsonObject> UJsonSaveManager::NavMeshToJson(ARecastNavMesh* NavMesh)
         TileJson->SetArrayField(TEXT("Polygons"), PolygonsArray);
 
         TilesArray.Add(MakeShareable(new FJsonValueObject(TileJson)));
-
-        if (ValidTileCount % 10 == 0)
-        {
-            UE_LOG(LogTemp, Log, TEXT("  Processed %d tiles..."), ValidTileCount);
-        }
     }
 
     RootJson->SetArrayField(TEXT("Tiles"), TilesArray);
     RootJson->SetNumberField(TEXT("TileCount"), ValidTileCount);
 
-    UE_LOG(LogTemp, Log, TEXT("✅ Exported %d valid tiles with full mesh data"), ValidTileCount);
+    UE_LOG(LogTemp, Log, TEXT("✅ Exported %d valid tiles"), ValidTileCount);
 
     return RootJson;
 }

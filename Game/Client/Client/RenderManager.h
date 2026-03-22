@@ -3,6 +3,8 @@
 #include "RenderPass.h"
 #include "MeshRenderer.h"
 
+class NavMeshDebugRenderer;
+
 // 2월에 전부 갈아엎을 예정
 
 enum class ROOT_PARAMETER : uint32 {
@@ -37,16 +39,21 @@ public:
 	void Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
 	void CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
 	void CreateSkyboxPipelineState(ComPtr<ID3D12Device> pd3dDevice);
+	void CreateDebugLinePipelineState(ComPtr<ID3D12Device> pd3dDevice);
 	void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
 
 private:
 	void RenderAnimated(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descriptorHandleFromPassStart);
 	void RenderSkybox(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descriptorHandleFromPassStart);
+	void RenderNavMeshDebug(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
 
 public:
 	void Add(std::shared_ptr<MeshRenderer> pRenderItem, MeshRenderParameters renderParam);
 	void AddAnimatedObject(std::shared_ptr<IGameObject> pObj);
 	void Clear();
+
+	// NavMesh 디버그 렌더러 설정
+	void SetNavMeshDebugRenderer(NavMeshDebugRenderer* pRenderer) { m_pNavMeshDebugRenderer = pRenderer; }
 
 public:
 	DescriptorHeap& GetDescriptorHeap() { return m_DescriptorHeapForDraw; }
@@ -66,6 +73,11 @@ public:
 	// Skybox
 	ComPtr<ID3D12PipelineState> m_pd3dSkyboxPipelineState;
 
+	// Debug Line (NavMesh 등)
+	ComPtr<ID3D12PipelineState> m_pd3dDebugLineGreenPipelineState;  // 폴리곤 외곽선 (녹색)
+	ComPtr<ID3D12PipelineState> m_pd3dDebugLineRedPipelineState;    // 인접성 그래프 (빨간색)
+	ComPtr<ID3D12PipelineState> m_pd3dDebugLineBluePipelineState;    // 찾은 경로 그래프 (파란색)
+
 	// Pass 별 분리 필요 ( Forward / Differed ) -> 그냥 분리 안한다 이제
 	// 나중에 GameObject를 직접 담아 그자리에서 컬링 + 분류를 수행하도록 수정할 예정
 	std::unordered_map<uint64, uint32> m_InstanceIndexMap;
@@ -73,6 +85,9 @@ public:
 
 	// 키프레임 애니메이션 GameObjects (인스턴싱 불가)
 	std::vector<std::shared_ptr<IGameObject>> m_pAnimatedObjects;
+
+	// NavMesh 디버그 렌더러 (Scene에서 설정)
+	NavMeshDebugRenderer* m_pNavMeshDebugRenderer = nullptr;
 
 	uint32 m_nInstanceIndex = 0;
 };

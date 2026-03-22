@@ -1,10 +1,11 @@
-#include "pch.h"
+ï»¿#include "pch.h"
 #include "AI.h"
+#include "AIManagerImpl.h"
 
-extern "C" AI_API int Add(int a, int b) {
-    return a + b;
-}
-
-extern "C" AI_API void SayHello() {
-    // ÇÔ¼ö ±¸Çö
+namespace AIDLL
+{
+	std::shared_ptr<IAIManager> CreateAIManager()
+	{
+		return std::make_shared<AIManagerImpl>();
+	}
 }

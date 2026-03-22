@@ -73,10 +73,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(SolutionDir)Dependencies\Includes\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)Dependencies\Libraries\;$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)Executables\</OutDir>
+    <IntDir>$(SolutionDir)obj\$(ProjectName)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(SolutionDir)Dependencies\Includes\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)Dependencies\Libraries\;$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)Executables\</OutDir>
+    <IntDir>$(SolutionDir)obj\$(ProjectName)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -114,16 +118,21 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;AI_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <PreprocessorDefinitions>AI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
     </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -131,29 +140,72 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;AI_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <PreprocessorDefinitions>AI_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
     </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AI.h" />
     <ClInclude Include="AIAgentImpl.h" />
     <ClInclude Include="AIManagerImpl.h" />
+    <ClInclude Include="AIPathPlanner.h" />
+    <ClInclude Include="Defines.h" />
+    <ClInclude Include="Goal.h" />
+    <ClInclude Include="GoalComposite.h" />
+    <ClInclude Include="GoalMoveToPosition.h" />
+    <ClInclude Include="GoalWander.h" />
+    <ClInclude Include="GoalAlert.h" />
+    <ClInclude Include="GoalInvestigate.h" />
+    <ClInclude Include="GoalChase.h" />
+    <ClInclude Include="GoalAttack.h" />
+    <ClInclude Include="GoalZombieThink.h" />
+    <ClInclude Include="GoalEvaluator.h" />
+    <ClInclude Include="EvaluatorWander.h" />
+    <ClInclude Include="EvaluatorInvestigate.h" />
+    <ClInclude Include="EvaluatorChase.h" />
+    <ClInclude Include="EvaluatorAttack.h" />
+    <ClInclude Include="SensoryMemory.h" />
+    <ClInclude Include="IndexedPriorityQueue.h" />
+    <ClInclude Include="NavMeshGraph.h" />
     <ClInclude Include="NavMeshImpl.h" />
+    <ClInclude Include="PathEdge.h" />
+    <ClInclude Include="PathManager.h" />
+    <ClInclude Include="TimeSlicedGraphAlgorithms.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="SimpleMath.h" />
+    <ClInclude Include="Typedef.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AIAgentImpl.cpp" />
     <ClCompile Include="AIManagerImpl.cpp" />
+    <ClCompile Include="AIPathPlanner.cpp" />
+    <ClCompile Include="Defines.cpp" />
     <ClCompile Include="NavMeshImpl.cpp" />
+    <ClCompile Include="PathManager.cpp" />
+    <ClCompile Include="SensoryMemory.cpp" />
+    <ClCompile Include="GoalMoveToPosition.cpp" />
+    <ClCompile Include="GoalWander.cpp" />
+    <ClCompile Include="GoalAlert.cpp" />
+    <ClCompile Include="GoalInvestigate.cpp" />
+    <ClCompile Include="GoalChase.cpp" />
+    <ClCompile Include="GoalAttack.cpp" />
+    <ClCompile Include="GoalZombieThink.cpp" />
+    <ClCompile Include="EvaluatorWander.cpp" />
+    <ClCompile Include="EvaluatorInvestigate.cpp" />
+    <ClCompile Include="EvaluatorChase.cpp" />
+    <ClCompile Include="EvaluatorAttack.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

@@ -4,6 +4,7 @@
 #include "StaticObject.h"
 #include "NodeObject.h"
 #include "Collider.h"
+#include "Zombie.h"
 
 void Scene::InitializeObjects()
 {
@@ -85,6 +86,15 @@ void Scene::PostInitialize()
 	if (m_pPlayer) {
 		m_pPlayer->GetTransform()->SetPosition(m_xmSceneBound.Center);
 	}
+
+
+	for (auto& obj : m_pGameObjects) {
+		auto pZombie = std::dynamic_pointer_cast<Zombie>(obj);
+		if (pZombie) {
+			pZombie->SetPosition(AI->GetNavMesh()->GetRandomPoint()); // Transform + AIAgent 동시에
+			pZombie->SetTarget(m_pPlayer);  // shared_ptr 전달
+		}
+	}
 }
 
 void Scene::PreProcessInput()
@@ -149,51 +159,92 @@ void Scene::PostUpdate()
 	}
 }
 
-void Scene::CheckCollision() 
+void Scene::CheckCollision()
 {
-	// 1. Broad Phase
+	// ── 플레이어 vs 정적 오브젝트 ──────────────────────────────────────────
 	Vector3 v3PlayerPos = m_pPlayer->GetTransform()->GetPosition();
 	SpacePartitionDesc::CellCoord cdPlayer = m_SpacePartition.WorldToCellXZ(v3PlayerPos);
-	int32 cellIndex = m_SpacePartition.CellToIndex(cdPlayer.x, cdPlayer.y);
 	const GridCell* pBroadPhaseResult = m_SpacePartition.GetCellData(cdPlayer);
-	if (!pBroadPhaseResult) {
-		return;
-	}
-	
-	const PlayerCollider& playerCollider = *m_pPlayer->GetComponent<PlayerCollider>();
-	for (const auto& pObj : pBroadPhaseResult->pObjectsInCell) {
-		const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
-		bool bResult = playerCollider.CheckCollision(pCollider);
-		if (bResult) {
-			CollisionResult result1(m_pPlayer , pObj);
-			CollisionResult result2(pObj, m_pPlayer);
-			if (!m_pCollisionPairs.contains(result1) || !m_pCollisionPairs.contains(result2)) {
-				// Begin Overlap
-				m_pPlayer->OnBeginCollision(result1);
-				pObj->OnBeginCollision(result2);
-
-				m_pCollisionPairs.insert(result1);
-				m_pCollisionPairs.insert(result2);
+	if (pBroadPhaseResult) {
+		const PlayerCollider& playerCollider = *m_pPlayer->GetComponent<PlayerCollider>();
+		for (const auto& pObj : pBroadPhaseResult->pObjectsInCell) {
+			const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
+			bool bResult = playerCollider.CheckCollision(pCollider);
+			if (bResult) {
+				CollisionResult result1(m_pPlayer, pObj);
+				CollisionResult result2(pObj, m_pPlayer);
+				if (!m_pCollisionPairs.contains(result1) || !m_pCollisionPairs.contains(result2)) {
+					m_pPlayer->OnBeginCollision(result1);
+					pObj->OnBeginCollision(result2);
+					m_pCollisionPairs.insert(result1);
+					m_pCollisionPairs.insert(result2);
+				}
+				else {
+					m_pPlayer->OnWhileCollision(CollisionResult(m_pPlayer, pObj));
+					pObj->OnWhileCollision(CollisionResult(pObj, m_pPlayer));
+				}
 			}
 			else {
-				// While Overlap
-				m_pPlayer->OnWhileCollision(CollisionResult(m_pPlayer, pObj));
-				pObj->OnWhileCollision(CollisionResult(pObj, m_pPlayer));
+				CollisionResult result1(m_pPlayer, pObj);
+				CollisionResult result2(pObj, m_pPlayer);
+				if (m_pCollisionPairs.contains(result1) || m_pCollisionPairs.contains(result2)) {
+					m_pPlayer->OnEndCollision(result1);
+					pObj->OnEndCollision(result2);
+					m_pCollisionPairs.erase(result1);
+					m_pCollisionPairs.erase(result2);
+				}
 			}
 		}
-		else {
-			// End Overlap
-			CollisionResult result1(m_pPlayer, pObj);
-			CollisionResult result2(pObj, m_pPlayer);
-			if (m_pCollisionPairs.contains(result1) || m_pCollisionPairs.contains(result2)) {
-				m_pPlayer->OnEndCollision(result1);
-				pObj->OnEndCollision(result2);
+	}
 
-				m_pCollisionPairs.erase(result1);
-				m_pCollisionPairs.erase(result2);
+	// ── 좀비 vs 정적 오브젝트 ──────────────────────────────────────────────
+	for (auto& obj : m_pGameObjects) {
+		auto pZombie = std::dynamic_pointer_cast<Zombie>(obj);
+		if (!pZombie)
+			continue;
+
+		auto pZombieCollider = pZombie->GetComponent<PlayerCollider>();
+		if (!pZombieCollider)
+			continue;
+
+		Vector3 v3ZombiePos = pZombie->GetTransform()->GetPosition();
+		SpacePartitionDesc::CellCoord cdZombie = m_SpacePartition.WorldToCellXZ(v3ZombiePos);
+		const GridCell* pZombieBroadPhase = m_SpacePartition.GetCellData(cdZombie);
+		if (!pZombieBroadPhase)
+			continue;
+
+		const PlayerCollider& zombieCollider = *pZombieCollider;
+		for (const auto& pObj : pZombieBroadPhase->pObjectsInCell) {
+			const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
+			if (!pCollider)
+				continue;
+
+			bool bResult = zombieCollider.CheckCollision(pCollider);
+			if (bResult) {
+				CollisionResult result1(pZombie, pObj);
+				CollisionResult result2(pObj, pZombie);
+				if (!m_pCollisionPairs.contains(result1) || !m_pCollisionPairs.contains(result2)) {
+					pZombie->OnBeginCollision(result1);
+					pObj->OnBeginCollision(result2);
+					m_pCollisionPairs.insert(result1);
+					m_pCollisionPairs.insert(result2);
+				}
+				else {
+					pZombie->OnWhileCollision(CollisionResult(pZombie, pObj));
+					pObj->OnWhileCollision(CollisionResult(pObj, pZombie));
+				}
+			}
+			else {
+				CollisionResult result1(pZombie, pObj);
+				CollisionResult result2(pObj, pZombie);
+				if (m_pCollisionPairs.contains(result1) || m_pCollisionPairs.contains(result2)) {
+					pZombie->OnEndCollision(result1);
+					pObj->OnEndCollision(result2);
+					m_pCollisionPairs.erase(result1);
+					m_pCollisionPairs.erase(result2);
+				}
 			}
 		}
-
 	}
 }
 
@@ -287,8 +338,8 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 			pObj->SetName(jObject["ActorName"].get<std::string>());
 
 			auto matrixData = jObject["Transform"]["WorldMatrix"].get<std::vector<float>>();
-			Matrix M4x4WorldMatrix(matrixData.data());
-			pObj->GetTransform()->SetWorldMatrix(M4x4WorldMatrix);
+			Matrix mtxWorldMatrix(matrixData.data());
+			pObj->GetTransform()->SetWorldMatrix(mtxWorldMatrix);
 
 			std::string strMeshName = jObject["MeshName"].get<std::string>();
 			auto pMeshObject = MODEL->LoadOrGet(strMeshName)->CopyObject<NodeObject>();
@@ -308,8 +359,8 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 				std::shared_ptr<PointLight> pLight = std::make_shared<PointLight>();
 				// Transform (Position)
 				auto matrixData = jLight["Transform"]["WorldMatrix"].get<std::vector<float>>();
-				Matrix M4x4WorldMatrix(matrixData.data());
-				Vector3 v3Position(M4x4WorldMatrix._41, M4x4WorldMatrix._42, M4x4WorldMatrix._43);
+				Matrix mtxWorldMatrix(matrixData.data());
+				Vector3 v3Position(mtxWorldMatrix._41, mtxWorldMatrix._42, mtxWorldMatrix._43);
 				pLight->m_v3Position = v3Position;
 
 				// Color와 Intensity로 Diffuse 계산
@@ -336,8 +387,8 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 				std::shared_ptr<SpotLight> pLight = std::make_shared<SpotLight>();
 				// Transform (Position)
 				auto matrixData = jLight["Transform"]["WorldMatrix"].get<std::vector<float>>();
-				Matrix M4x4WorldMatrix(matrixData.data());
-				Vector3 v3Position(M4x4WorldMatrix._41, M4x4WorldMatrix._42, M4x4WorldMatrix._43);
+				Matrix mtxWorldMatrix(matrixData.data());
+				Vector3 v3Position(mtxWorldMatrix._41, mtxWorldMatrix._42, mtxWorldMatrix._43);
 				pLight->m_v3Position = v3Position;
 
 				// Direction
