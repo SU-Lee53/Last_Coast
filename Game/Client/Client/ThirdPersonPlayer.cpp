@@ -150,7 +150,6 @@ void ThirdPersonPlayer::Update()
 	for (const auto& pChild : m_pChildren) {
 		pChild->Update();
 	}
-
 }
 
 void ThirdPersonPlayer::OnBeginCollision(const CollisionResult& collisionResult)

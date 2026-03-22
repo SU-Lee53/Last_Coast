@@ -129,8 +129,7 @@ protected:
 	std::vector<std::shared_ptr<IGameObject>>	m_pGameObjects = {};
 	std::vector<std::shared_ptr<Sprite>>		m_pSprites;
 	std::vector<std::shared_ptr<Light>>			m_pLights = {};
-	
-	std::shared_ptr<IPlayer>						m_pPlayer = nullptr;
+	std::shared_ptr<IPlayer>					m_pPlayer = nullptr;
 	std::shared_ptr<TerrainObject>				m_pTerrain = nullptr;
 
 	//std::vector<GridCell> m_GridCells;

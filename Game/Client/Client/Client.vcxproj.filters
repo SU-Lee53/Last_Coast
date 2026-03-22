@@ -292,9 +292,6 @@
     <ClInclude Include="Player.h">
       <Filter>02.Game\GameObject\Player</Filter>
     </ClInclude>
-    <ClInclude Include="TestScene.h">
-      <Filter>02.Game\Scene</Filter>
-    </ClInclude>
     <ClInclude Include="ThirdPersonPlayer.h">
       <Filter>02.Game\GameObject\Player</Filter>
     </ClInclude>
@@ -347,6 +344,21 @@
     <ClInclude Include="Skeleton.h" />
     <ClInclude Include="BoundingCapsule.h">
       <Filter>99.Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="TestScene.h">
+      <Filter>02.Game\Scene\Test</Filter>
+    </ClInclude>
+    <ClInclude Include="AIManagerWrapper.h">
+      <Filter>04.Managers\Game Management</Filter>
+    </ClInclude>
+    <ClInclude Include="Zombie.h">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="ZombieAnimationController.h">
+      <Filter>02.Game\Components\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="NavMeshDebugRenderer.h">
+      <Filter>02.Game\Scene\Test</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -525,9 +537,6 @@
     <ClCompile Include="Player.cpp">
       <Filter>02.Game\GameObject\Player</Filter>
     </ClCompile>
-    <ClCompile Include="TestScene.cpp">
-      <Filter>02.Game\Scene</Filter>
-    </ClCompile>
     <ClCompile Include="ThirdPersonPlayer.cpp">
       <Filter>02.Game\GameObject\Player</Filter>
     </ClCompile>
@@ -581,6 +590,21 @@
     <ClCompile Include="BoundingCapsule.cpp">
       <Filter>99.Utility</Filter>
     </ClCompile>
+    <ClCompile Include="TestScene.cpp">
+      <Filter>02.Game\Scene\Test</Filter>
+    </ClCompile>
+    <ClCompile Include="AIManagerWrapper.cpp">
+      <Filter>04.Managers\Game Management</Filter>
+    </ClCompile>
+    <ClCompile Include="Zombie.cpp">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="ZombieAnimationController.cpp">
+      <Filter>02.Game\Components\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="NavMeshDebugRenderer.cpp">
+      <Filter>02.Game\Scene\Test</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
@@ -622,5 +646,8 @@
       <Filter>03.Engine\HLSL</Filter>
     </FxCompile>
     <FxCompile Include="NewCommon.hlsl" />
+    <FxCompile Include="..\HLSL\DebugLineShader.hlsl">
+      <Filter>03.Engine\HLSL</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

@@ -4,6 +4,7 @@
 
 void DynamicObject::PreUpdate()
 {
+
 }
 
 void DynamicObject::PostUpdate()

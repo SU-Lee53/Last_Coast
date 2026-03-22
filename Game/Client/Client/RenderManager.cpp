@@ -2,6 +2,7 @@
 #include "RenderManager.h"
 #include "MeshRenderer.h"
 #include "TerrainObject.h"
+#include "NavMeshDebugRenderer.h"
 
 ComPtr<ID3D12RootSignature> RenderManager::g_pd3dGlobalRootSignature = nullptr;
 
@@ -9,6 +10,7 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Gra
 {
 	CreateGlobalRootSignature(pd3dDevice, pd3dCommandList);
 	CreateSkyboxPipelineState(pd3dDevice);
+	CreateDebugLinePipelineState(pd3dDevice);
 
 	m_pForwardPass = std::make_shared<ForwardPass>(pd3dDevice, pd3dCommandList);
 
@@ -155,6 +157,58 @@ void RenderManager::CreateSkyboxPipelineState(ComPtr<ID3D12Device> pd3dDevice)
 	}
 }
 
+void RenderManager::CreateDebugLinePipelineState(ComPtr<ID3D12Device> pd3dDevice)
+{
+	ComPtr<ID3DBlob> pd3dVertexShaderBlob = nullptr;
+	ComPtr<ID3DBlob> pd3dPixelShaderGreenBlob = nullptr;
+	ComPtr<ID3DBlob> pd3dPixelShaderRedBlob = nullptr;
+
+	// Input Layout: POSITION만 사용
+	D3D12_INPUT_ELEMENT_DESC d3dInputElementDescs[] = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+
+	// 공통 설정
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC d3dPipelineDesc{};
+	d3dPipelineDesc.pRootSignature = g_pd3dGlobalRootSignature.Get();
+	d3dPipelineDesc.VS = Shader::CompileShader(L"../HLSL/DebugLineShader.hlsl", "VSDebugLine", "vs_5_1", pd3dVertexShaderBlob.GetAddressOf());
+	d3dPipelineDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+	d3dPipelineDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	d3dPipelineDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	d3dPipelineDesc.DepthStencilState.DepthEnable = true;
+	d3dPipelineDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	d3dPipelineDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	d3dPipelineDesc.InputLayout.NumElements = _countof(d3dInputElementDescs);
+	d3dPipelineDesc.InputLayout.pInputElementDescs = d3dInputElementDescs;
+	d3dPipelineDesc.SampleMask = UINT_MAX;
+	d3dPipelineDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+	d3dPipelineDesc.NumRenderTargets = 1;
+	d3dPipelineDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	d3dPipelineDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	d3dPipelineDesc.SampleDesc.Count = 1;
+	d3dPipelineDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+
+	// 1. 녹색 PSO (폴리곤 외곽선)
+	d3dPipelineDesc.PS = Shader::CompileShader(L"../HLSL/DebugLineShader.hlsl", "PSDebugLineGreen", "ps_5_1", pd3dPixelShaderGreenBlob.GetAddressOf());
+	HRESULT hr = pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dDebugLineGreenPipelineState.GetAddressOf()));
+	if (FAILED(hr)) {
+		__debugbreak();
+	}
+
+	// 2. 빨간색 PSO (인접성 그래프)
+	d3dPipelineDesc.PS = Shader::CompileShader(L"../HLSL/DebugLineShader.hlsl", "PSDebugLineRed", "ps_5_1", pd3dPixelShaderRedBlob.GetAddressOf());
+	hr = pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dDebugLineRedPipelineState.GetAddressOf()));
+	if (FAILED(hr)) {
+		__debugbreak();
+	}
+	d3dPipelineDesc.PS = Shader::CompileShader(L"../HLSL/DebugLineShader.hlsl", "PSDebugLineBlue", "ps_5_1", pd3dPixelShaderRedBlob.GetAddressOf());
+	hr = pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dDebugLineBluePipelineState.GetAddressOf()));
+	if (FAILED(hr)) {
+		__debugbreak();
+	}
+}
+
 void RenderManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 {
 	/*
@@ -206,6 +260,7 @@ void RenderManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 	}
 
 	RenderSkybox(pd3dCommandList, descHandle);
+	RenderNavMeshDebug(pd3dCommandList);
 }
 
 void RenderManager::RenderAnimated(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle)
@@ -277,4 +332,23 @@ void RenderManager::Clear()
 	m_nInstanceIndex = 0;
 
 	m_pAnimatedObjects.clear();
+}
+
+void RenderManager::RenderNavMeshDebug(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
+{
+	if (!m_pNavMeshDebugRenderer) {
+		return;
+	}
+
+	// 1. 폴리곤 외곽선 렌더링 (녹색)
+	pd3dCommandList->SetPipelineState(m_pd3dDebugLineGreenPipelineState.Get());
+	m_pNavMeshDebugRenderer->RenderPolygonEdges(pd3dCommandList);
+
+	// 2. 인접성 그래프 렌더링 (빨간색)
+	pd3dCommandList->SetPipelineState(m_pd3dDebugLineRedPipelineState.Get());
+	m_pNavMeshDebugRenderer->RenderAdjacencyEdges(pd3dCommandList);
+
+	// 3. 경로 노드 렌더링 (파란색)
+	pd3dCommandList->SetPipelineState(m_pd3dDebugLineBluePipelineState.Get());
+	m_pNavMeshDebugRenderer->RenderPathNodes(pd3dCommandList);
 }

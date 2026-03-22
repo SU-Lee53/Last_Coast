@@ -17,6 +17,8 @@ public:										\
 	}										\
 
 
+
+
 #define GET_SINGLE(classname)	classname::GetInstance()
 
 #define RESOURCE		GET_SINGLE(ResourceManager)
@@ -34,6 +36,7 @@ public:										\
 #define UI				GET_SINGLE(UIManager)
 #define TIME			GET_SINGLE(GameTimer)
 #define ANIMATION		GET_SINGLE(AnimationManager)
+#define AI				GET_SINGLE(AIManagerWrapper)
 
 #define CUR_SCENE		SCENE->GetCurrentScene()
 #define DT				TIME->GetTimeElapsed()

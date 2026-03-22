@@ -88,6 +88,9 @@ using namespace Microsoft::WRL;
 #include <nlohmann_json/json.hpp>
 #include <nlohmann_json/json_fwd.hpp>
 
+// AI
+#include "AI.h"
+using namespace AIDLL;
 
 // WinSock
 #include "WinSockCommon.h"
@@ -129,4 +132,5 @@ using namespace Microsoft::WRL;
 #include "SoundManager.h"
 #include "UIManager.h"
 #include "AnimationManager.h"
+#include "AIManagerWrapper.h"
 //#include "CollisionManager.h"

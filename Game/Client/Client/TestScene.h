@@ -1,5 +1,7 @@
 ﻿#pragma once
 #include "Scene.h"
+#include "NavMeshDebugRenderer.h"
+
 class TestScene : public Scene {
 public:
 	void BuildObjects() override;
@@ -8,5 +10,8 @@ public:
 	void ProcessInput() override;
 	void Update() override;
 	void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList) override;
+
+private:
+	std::unique_ptr<NavMeshDebugRenderer> m_pNavMeshDebugRenderer;
 };
 

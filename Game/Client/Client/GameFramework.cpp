@@ -22,7 +22,7 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV)
 	EFFECT->Initialize(g_pD3DCore->GetDevice(), g_pD3DCore->GetCommandList());
 	UI->Initialize(g_pD3DCore->GetDevice());
 	ANIMATION->Initialize();
-
+	AI->Initialize("TEST");
 	TEXTURE->LoadGameTextures();
 	MODEL->LoadGameModels();
 	ANIMATION->LoadGameAnimations();
@@ -51,10 +51,10 @@ void GameFramework::Update()
 
 	INPUT->Update();
 	SCENE->ProcessInput();
+	AI->UpdateAll(DT);   // 에이전트 이동 먼저 → Zombie::PostUpdate에서 최신 위치 사용
 	SCENE->Update();
 
 	EFFECT->Update(DT);
-
 
 	// 게임 중간에 리소스 생성이 필요할 수 있으므로 대기
 	// 리소스 생성될게 없으면 바로 리턴함

@@ -25,14 +25,19 @@
 #include <deque>
 #include <span>
 #include <algorithm>
+#include <queue>
+#include <list>
 #include <type_traits>
 #include <ranges>
 #include <concepts>
 #include <utility>
 #include <filesystem>
 #include <typeindex>
+#include <random>
 
 
+#include "Typedef.h"
+#include "Defines.h"
 
 // DirectXMath
 #include <DirectXMath.h>

@@ -14,25 +14,112 @@
     <Filter Include="99.Utillity">
       <UniqueIdentifier>{c54cfa67-21ea-418d-a3aa-6402c8f5d248}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02.Agent">
+      <UniqueIdentifier>{78a239f4-0797-4c01-ad69-6e32fc399134}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.Manager">
+      <UniqueIdentifier>{7edc8998-40f0-4f97-b427-12ecccd8d70d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03.Goal">
+      <UniqueIdentifier>{0fa8c563-bf4f-468b-93ea-6dbcd4b5f469}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="04.Navigation">
+      <UniqueIdentifier>{89e84e7b-c196-47f5-95aa-c71860fb9828}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="05.Sensory">
+      <UniqueIdentifier>{d2a8b3c1-5f67-4e89-a012-7c3d4e5f6789}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="06.Evaluator">
+      <UniqueIdentifier>{a1b2c3d4-e5f6-4789-abcd-ef0123456789}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="pch.h">
-      <Filter>99.pch</Filter>
-    </ClInclude>
     <ClInclude Include="AI.h">
       <Filter>00.AI</Filter>
     </ClInclude>
     <ClInclude Include="SimpleMath.h">
       <Filter>99.Utillity</Filter>
     </ClInclude>
-    <ClInclude Include="NavMeshImpl.h">
-      <Filter>00.AI</Filter>
+    <ClInclude Include="AIPathPlanner.h">
+      <Filter>04.Navigation</Filter>
     </ClInclude>
-    <ClInclude Include="AIAgentImpl.h">
-      <Filter>00.AI</Filter>
+    <ClInclude Include="NavMeshGraph.h">
+      <Filter>04.Navigation</Filter>
+    </ClInclude>
+    <ClInclude Include="NavMeshImpl.h">
+      <Filter>04.Navigation</Filter>
+    </ClInclude>
+    <ClInclude Include="PathEdge.h">
+      <Filter>04.Navigation</Filter>
+    </ClInclude>
+    <ClInclude Include="PathManager.h">
+      <Filter>04.Navigation</Filter>
     </ClInclude>
     <ClInclude Include="AIManagerImpl.h">
-      <Filter>00.AI</Filter>
+      <Filter>01.Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="IndexedPriorityQueue.h">
+      <Filter>99.Utillity</Filter>
+    </ClInclude>
+    <ClInclude Include="TimeSlicedGraphAlgorithms.h">
+      <Filter>99.Utillity</Filter>
+    </ClInclude>
+    <ClInclude Include="Defines.h">
+      <Filter>99.Utillity</Filter>
+    </ClInclude>
+    <ClInclude Include="Typedef.h">
+      <Filter>99.Utillity</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>99.pch</Filter>
+    </ClInclude>
+    <ClInclude Include="Goal.h">
+      <Filter>03.Goal</Filter>
+    </ClInclude>
+    <ClInclude Include="GoalComposite.h">
+      <Filter>03.Goal</Filter>
+    </ClInclude>
+    <ClInclude Include="GoalMoveToPosition.h">
+      <Filter>03.Goal</Filter>
+    </ClInclude>
+    <ClInclude Include="GoalWander.h">
+      <Filter>03.Goal</Filter>
+    </ClInclude>
+    <ClInclude Include="GoalAlert.h">
+      <Filter>03.Goal</Filter>
+    </ClInclude>
+    <ClInclude Include="GoalInvestigate.h">
+      <Filter>03.Goal</Filter>
+    </ClInclude>
+    <ClInclude Include="GoalChase.h">
+      <Filter>03.Goal</Filter>
+    </ClInclude>
+    <ClInclude Include="GoalAttack.h">
+      <Filter>03.Goal</Filter>
+    </ClInclude>
+    <ClInclude Include="GoalZombieThink.h">
+      <Filter>03.Goal</Filter>
+    </ClInclude>
+    <ClInclude Include="SensoryMemory.h">
+      <Filter>05.Sensory</Filter>
+    </ClInclude>
+    <ClInclude Include="GoalEvaluator.h">
+      <Filter>06.Evaluator</Filter>
+    </ClInclude>
+    <ClInclude Include="EvaluatorWander.h">
+      <Filter>06.Evaluator</Filter>
+    </ClInclude>
+    <ClInclude Include="EvaluatorInvestigate.h">
+      <Filter>06.Evaluator</Filter>
+    </ClInclude>
+    <ClInclude Include="EvaluatorChase.h">
+      <Filter>06.Evaluator</Filter>
+    </ClInclude>
+    <ClInclude Include="EvaluatorAttack.h">
+      <Filter>06.Evaluator</Filter>
+    </ClInclude>
+    <ClInclude Include="AIAgentImpl.h">
+      <Filter>02.Agent</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -45,14 +132,59 @@
     <ClCompile Include="SimpleMath.cpp">
       <Filter>99.Utillity</Filter>
     </ClCompile>
-    <ClCompile Include="NavMeshImpl.cpp">
-      <Filter>00.AI</Filter>
+    <ClCompile Include="AIPathPlanner.cpp">
+      <Filter>04.Navigation</Filter>
     </ClCompile>
-    <ClCompile Include="AIAgentImpl.cpp">
-      <Filter>00.AI</Filter>
+    <ClCompile Include="NavMeshImpl.cpp">
+      <Filter>04.Navigation</Filter>
     </ClCompile>
     <ClCompile Include="AIManagerImpl.cpp">
-      <Filter>00.AI</Filter>
+      <Filter>01.Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="Defines.cpp">
+      <Filter>99.Utillity</Filter>
+    </ClCompile>
+    <ClCompile Include="PathManager.cpp">
+      <Filter>04.Navigation</Filter>
+    </ClCompile>
+    <ClCompile Include="SensoryMemory.cpp">
+      <Filter>05.Sensory</Filter>
+    </ClCompile>
+    <ClCompile Include="GoalMoveToPosition.cpp">
+      <Filter>03.Goal</Filter>
+    </ClCompile>
+    <ClCompile Include="GoalWander.cpp">
+      <Filter>03.Goal</Filter>
+    </ClCompile>
+    <ClCompile Include="GoalAlert.cpp">
+      <Filter>03.Goal</Filter>
+    </ClCompile>
+    <ClCompile Include="GoalInvestigate.cpp">
+      <Filter>03.Goal</Filter>
+    </ClCompile>
+    <ClCompile Include="GoalChase.cpp">
+      <Filter>03.Goal</Filter>
+    </ClCompile>
+    <ClCompile Include="GoalAttack.cpp">
+      <Filter>03.Goal</Filter>
+    </ClCompile>
+    <ClCompile Include="GoalZombieThink.cpp">
+      <Filter>03.Goal</Filter>
+    </ClCompile>
+    <ClCompile Include="EvaluatorWander.cpp">
+      <Filter>06.Evaluator</Filter>
+    </ClCompile>
+    <ClCompile Include="EvaluatorInvestigate.cpp">
+      <Filter>06.Evaluator</Filter>
+    </ClCompile>
+    <ClCompile Include="EvaluatorChase.cpp">
+      <Filter>06.Evaluator</Filter>
+    </ClCompile>
+    <ClCompile Include="EvaluatorAttack.cpp">
+      <Filter>06.Evaluator</Filter>
+    </ClCompile>
+    <ClCompile Include="AIAgentImpl.cpp">
+      <Filter>02.Agent</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
