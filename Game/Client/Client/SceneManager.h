@@ -18,10 +18,13 @@ public:
 public:
 	void ProcessInput();
 	void Update();
-	void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList);
+	void PrepareRender();
 	
 private:
 	std::unique_ptr<Scene> m_upCurrentScene;
+
+	bool m_bSceneChanged = false;
+
 
 };
 
@@ -29,7 +32,15 @@ template<typename T> requires std::derived_from<T, Scene>
 inline void SceneManager::ChangeScene()
 {
 	m_upCurrentScene->OnLeaveScene();
+	RENDER->WaitForGPUComplete();
+
 	m_upCurrentScene.reset(new T());
-	m_upCurrentScene->BuildObjects();
 	m_upCurrentScene->OnEnterScene();
+	m_upCurrentScene->BuildLights();
+	m_upCurrentScene->BuildObjects();
+	m_upCurrentScene->PostInitialize();
+	m_upCurrentScene->PreUpdate();
+	m_upCurrentScene->Update();
+
+	m_bSceneChanged = true;
 }

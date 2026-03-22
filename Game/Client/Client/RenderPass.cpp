@@ -1,37 +1,14 @@
 ﻿#include "pch.h"
 #include "RenderPass.h"
-#include "Mesh.h"
-#include "Transform.h"
-#include "RenderManager.h"	// for InstancePair
 
-ForwardPass::ForwardPass(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommmandList)
+void IRenderPass::Execute(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
-	m_InstanceSBuffer.Create(pd3dDevice, pd3dCommmandList, 100000, sizeof(Matrix), true);
+	OnPreRender(pd3dCommandList, input, output, outDescHandle);
+	Render(pd3dCommandList, input, output, outDescHandle);
+	OnPostRender(pd3dCommandList, input, output, outDescHandle);
 }
 
-void ForwardPass::Run(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<InstancePair>& instances, DescriptorHandle& descHandleFromPassStart)
+void IRenderPass::Connect(std::shared_ptr<IRenderPass> pNode)
 {
-	UINT uiSBufferOffset = 0;
-	for (const auto& [k, v] : instances) {
-		m_InstanceSBuffer.UpdateData(v, uiSBufferOffset);
-		uiSBufferOffset += v.size();
-	}
-
-#ifdef WITH_UPLOAD_BUFFER
-	m_InstanceDataSBuffer.UpdateResources(m_pd3dDevice, pd3dCommandList);
-
-#endif
-
-	pd3dDevice->CopyDescriptorsSimple(1, descHandleFromPassStart.cpuHandle,
-		m_InstanceSBuffer.GetCPUDescriptorHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	descHandleFromPassStart.cpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-
-	// 3
-	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::PASS_INSTANCE_DATA), descHandleFromPassStart.gpuHandle);
-	descHandleFromPassStart.gpuHandle.Offset(1, D3DCore::g_nCBVSRVDescriptorIncrementSize);
-	
-	int nInstanceBase = 0;
-	for (auto& instance : instances) {
-		instance.meshRenderer->Render(pd3dDevice, pd3dCommandList, descHandleFromPassStart, instance.InstanceDatas.size(), nInstanceBase);
-	}
+	m_pEdgeList.push_back(pNode);
 }

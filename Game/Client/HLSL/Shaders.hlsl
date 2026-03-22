@@ -1,5 +1,5 @@
-#include "Common.hlsl"
-#include "Light.hlsl"
+#include "NewCommon.hlsl"
+//#include "Light.hlsl"
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // StandardShader
@@ -8,9 +8,9 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input, uint nInstanceID : SV_Ins
 {
 	VS_STANDARD_OUTPUT output = (VS_STANDARD_OUTPUT) 0;
 
-	matrix mtxViewProjection = mul(gmtxView, gmtxProjection);
+	matrix mtxViewProjection = mul(gCamera.mtxView, gCamera.mtxProjection);
 	
-	matrix mtxWorld = gnInstanceBase == -1 ? gmtxWorld : gsbInstanceDatas[gnInstanceBase + nInstanceID];
+	matrix mtxWorld = gWorldTransforms[nInstanceID].mtxWorld;
     
 	float3 positionW = mul(float4(input.position, 1.f), mtxWorld).xyz;
 	output.positionW = positionW;
@@ -25,7 +25,7 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input, uint nInstanceID : SV_Ins
 
 float4 PSStandard(VS_STANDARD_OUTPUT input) : SV_Target
 {
-	return gtxtDiffuseTexture.Sample(gSamplerState, input.uv);
+	return gtxtTextures[gnTextureIndex.x].Sample(gSamplerState, input.uv);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -48,13 +48,13 @@ VS_SKINNED_OUTPUT VSAnimated(VS_SKINNED_INPUT input, uint nInstanceID : SV_Insta
 	[unroll(4)]
 	for (int i = 0; i < 4; ++i)
 	{
-		position += fWeights[i] * mul(float4(input.position, 1.f), boneTransforms[input.blendInices[i]]).xyz;
-		normal += fWeights[i] * mul(input.normal, (float3x3)boneTransforms[input.blendInices[i]]);
-		tangent += fWeights[i] * mul(input.tangent, (float3x3)boneTransforms[input.blendInices[i]]);
+		position += fWeights[i] * mul(float4(input.position, 1.f), gBoneTransforms[input.blendInices[i]]).xyz;
+		normal += fWeights[i] * mul(input.normal, (float3x3) gBoneTransforms[input.blendInices[i]]);
+		tangent += fWeights[i] * mul(input.tangent, (float3x3) gBoneTransforms[input.blendInices[i]]);
 	}
 	
-	matrix mtxViewProjection = mul(gmtxView, gmtxProjection);
-	matrix mtxWorld = gmtxWorld;
+	matrix mtxViewProjection = mul(gCamera.mtxView, gCamera.mtxProjection);
+	matrix mtxWorld = gWorldTransforms[nInstanceID].mtxWorld;
 	
 	float4 positionW = mul(float4(position, 1.f), mtxWorld);
 	output.positionW = positionW.xyz;
@@ -69,7 +69,7 @@ VS_SKINNED_OUTPUT VSAnimated(VS_SKINNED_INPUT input, uint nInstanceID : SV_Insta
 
 float4 PSAnimated(VS_SKINNED_OUTPUT input) : SV_Target
 {
-	return gtxtDiffuseTexture.Sample(gSamplerState, input.uv);
+	return gtxtTextures[gnTextureIndex.x].Sample(gSamplerState, input.uv);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -78,14 +78,16 @@ float4 PSAnimated(VS_SKINNED_OUTPUT input) : SV_Target
 VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 {
 	VS_TERRAIN_OUTPUT output = (VS_TERRAIN_OUTPUT) 0;
-
-	matrix mtxViewProjection = mul(gmtxView, gmtxProjection);
-	float3 positionW = mul(float4(input.position, 1.f), gmtxWorld).xyz;
+	
+	matrix mtxViewProjection = mul(gCamera.mtxView, gCamera.mtxProjection);
+	matrix mtxWorld = gWorldTransforms[0].mtxWorld;
+	
+	float3 positionW = mul(float4(input.position, 1.f), mtxWorld).xyz;
 	output.positionW = positionW;
 	output.position = mul(float4(output.positionW, 1.f), mtxViewProjection);
 	
-	output.normalW = mul(float4(input.normal, 0.f), gmtxWorld).xyz;
-	output.tangentW = mul(float4(input.tangent, 0.f), gmtxWorld).xyz;
+	output.normalW = mul(float4(input.normal, 0.f), mtxWorld).xyz;
+	output.tangentW = mul(float4(input.tangent, 0.f), mtxWorld).xyz;
 	
 	output.positionLocalXZ = input.position.zx;
 	return output;
@@ -93,47 +95,38 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 
 float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_Target
 {
-	float2 vWeightUV = (input.positionLocalXZ - gvComponentOriginXZ) / gvComponentSizeXZ;
+	float2 vWeightUV = (input.positionLocalXZ - gv2ComponentOriginXZ) / gv2ComponentSizeXZ;
 	vWeightUV = saturate(vWeightUV);
 	
 	// Half tiling
 	// 안맞추면 경계면 이상함
 	// 조건 : gvNumQuadsXZ + 1.0f 가 WeightMap의 해상도와 일치해야 함
-	float2 vWeightMapSize = float2(gvNumQuadsXZ) + 1.0f;
+	float2 vWeightMapSize = float2(gv2NumQuadsXZ) + 1.0f;
 	vWeightUV += 0.5f / vWeightMapSize;
 	
-	float4 vWeight = gtxtComponentWeightMap.Sample(gWeightMapSamplerState, vWeightUV);
+	float4 vWeight = gtxtTerrainWeightMap.Sample(gWeightMapSamplerState, vWeightUV);
 	
-	float fGrassWeight = 0.f;
 	// Layer Remapping
 	float layerWeights[MAX_LAYER] = { 0.f, 0.f, 0.f, 0.f };
 	[unroll(MAX_LAYER)]
 	for (int channel = 0; channel < MAX_LAYER; ++channel)
 	{
-		int nLayer = gLayerIndex[channel];
+		int nLayer = gi4LayerIndex[channel];
 		if (nLayer >= 0)
 		{
-			if (nLayer == 1)
-			{
-				fGrassWeight = vWeight[channel];
-			}
 			layerWeights[nLayer] += vWeight[channel];
-		}
-		else
-		{
-			vWeight[channel] = 0;
 		}
 	}
 	
 	// Albedo sample + blend
 	float4 cFinalColor = 0;
 	[unroll(MAX_LAYER)]
-	for (int layer = 0; layer < gnLayers; ++layer)
+	for (int layer = 0; layer < gnTerrainLayers; ++layer)
 	{
 		float fWeight = layerWeights[layer];
 		if (fWeight > 1e-6f)
 		{
-			float2 vTileUV = input.positionLocalXZ * gvLayerTiling[layer];
+			float2 vTileUV = input.positionLocalXZ * gv4LayerTiling[layer];
 			float4 cAlbedo = gtxtTerrainAlbedo[layer].Sample(gSamplerState, vTileUV);
 			cFinalColor += cAlbedo * fWeight;
 		}
@@ -145,44 +138,7 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_Target
 		cFinalColor /= fSum;
 	}
 	
+	//return float4(gi4LayerIndex / 10.0);
+	//return float4(vWeightUV, 0, 1);
 	return cFinalColor;
-	//return float4(fGrassWeight, fGrassWeight, fGrassWeight, 1.0);
 }
-
-//	float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_Target
-//	{
-//		float4 cAlbedoColor[4] = { float4(0, 0, 0, 0), float4(0, 0, 0, 0), float4(0, 0, 0, 0), float4(0, 0, 0, 0) };
-//		[unroll(4)]
-//		for (int channel = 0; channel < 4; ++channel)
-//		{
-//			int nLayer = gLayerIndex[channel];
-//			if (nLayer >= 0)
-//			{
-//				float fTiling = gvLayerTiling[nLayer];
-//				float2 vTileUV = (input.positionLocalXZ - gvComponentOriginXZ) * fTiling;
-//				cAlbedoColor[channel] = gtxtTerrainAlbedo[nLayer].Sample(gSamplerState, vTileUV);
-//			}
-//			else
-//			{
-//				cAlbedoColor[channel] = 0;
-//			}
-//		}
-//		
-//		float2 vWeightUV = (input.positionLocalXZ - gvComponentOriginXZ) / gvComponentSizeXZ;
-//		vWeightUV = saturate(vWeightUV);
-//		
-//		float2 vWeightMapSize = float2(gvNumQuadsXZ) + 1.0f;
-//		vWeightUV += 0.5f / vWeightMapSize;
-//		
-//		float4 vWeight = gtxtComponentWeightMap.Sample(gWeightMapSamplerState, vWeightUV);
-//		float4 cFinalColor = (cAlbedoColor[0] * vWeight.r) + (cAlbedoColor[1] * vWeight.g) + (cAlbedoColor[2] * vWeight.b) + (cAlbedoColor[3] * vWeight.a);
-//		
-//		// Normalize
-//		float fSum = vWeight.r + vWeight.g + vWeight.b + vWeight.a;
-//		if (fSum > 1e-6f)
-//		{
-//			cFinalColor /= fSum;
-//		}
-//		
-//		return cFinalColor;
-//	}

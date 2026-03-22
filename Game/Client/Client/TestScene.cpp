@@ -141,9 +141,3 @@ void TestScene::Update()
 	ImGui::End();
 
 }
-
-void TestScene::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList)
-{
-	Scene::RenderObjects(pd3dCommansList);
-	// NavMesh 디버그 렌더링은 RenderManager에서 처리됨
-}

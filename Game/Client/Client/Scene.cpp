@@ -5,6 +5,57 @@
 #include "NodeObject.h"
 #include "Collider.h"
 #include "Zombie.h"
+#include "Skybox.h"
+#include "Sprite.h"
+
+/////////////////////////////////////////////////////////////////////////////
+// SpacePartitionDesc
+
+const GridCell* SpacePartitionDesc::GetCellData(const CellCoord& cdCell) const {
+	int32 index = CellToIndex(cdCell.x, cdCell.y);
+	if (index >= Cells.size()) {
+		return nullptr;
+	}
+
+	return &Cells[index];
+}
+
+SpacePartitionDesc::CellCoord SpacePartitionDesc::WorldToCellXZ(const Vector3& v3WorldPos) const {
+	float fX = (v3WorldPos.x - v2SceneOriginXZ.x) / v2CellSizeXZ.x;
+	float fZ = (v3WorldPos.z - v2SceneOriginXZ.y) / v2CellSizeXZ.y;
+
+	CellCoord cd;
+	cd.x = (int)std::floor(fX);
+	cd.y = (int)std::floor(fZ);
+	return cd;
+}
+
+int32 SpacePartitionDesc::CellToIndex(uint32 x, uint32 z) const {
+	return z * xmui2NumCellsXZ.x + x;
+}
+
+void SpacePartitionDesc::Insert(std::shared_ptr<IGameObject> pObj) {
+	const BoundingOrientedBox& xmOBB = pObj->GetComponent<ICollider>()->GetOBBWorld();
+
+	auto [v3Min, v3Max] = GetMinMaxFromOBB(xmOBB);
+	CellCoord cdMin = WorldToCellXZ(v3Min);
+	CellCoord cdMax = WorldToCellXZ(v3Max);
+
+	cdMin.x = std::clamp(cdMin.x, 0, (int32)xmui2NumCellsXZ.x);
+	cdMin.y = std::clamp(cdMin.y, 0, (int32)xmui2NumCellsXZ.y);
+
+	cdMax.x = std::clamp(cdMax.x, 0, (int32)xmui2NumCellsXZ.x);
+	cdMax.y = std::clamp(cdMax.y, 0, (int32)xmui2NumCellsXZ.y);
+
+	for (uint32 x = cdMin.x; x <= cdMax.x; ++x) {
+		for (uint32 z = cdMin.y; z <= cdMax.y; ++z) {
+			Cells[CellToIndex(x, z)].pObjectsInCell.push_back(pObj);
+		}
+	}
+}
+/////////////////////////////////////////////////////////////////////////////
+// Scene
+
 
 void Scene::InitializeObjects()
 {
@@ -21,18 +72,15 @@ void Scene::InitializeObjects()
 	}
 }
 
-void Scene::RenderObjects(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
+void Scene::CleanUp()
 {
-	if (m_pPlayer)
-		m_pPlayer->Render(pd3dCommandList);
+	m_pGameObjects.clear();
+	m_pSprites.clear();
+	m_pLights.clear();
 
-	for (auto& pObj : m_pGameObjects) {
-		pObj->Render(pd3dCommandList);
-	}
-
-	for (auto& pSprite : m_pSprites) {
-		pSprite->AddToUI(pSprite->GetLayerIndex());
-	}
+	m_pPlayer.reset();
+	m_pTerrain.reset();
+	m_pSkybox.reset();
 }
 
 void Scene::PostInitialize()
@@ -157,6 +205,25 @@ void Scene::PostUpdate()
 	for (auto& obj : m_pGameObjects) {
 		obj->PostUpdate();
 	}
+
+	if (m_pSkybox) {
+		m_pSkybox->Update();
+	}
+
+}
+
+void Scene::PrepareRender()
+{
+	if (m_pPlayer)
+		m_pPlayer->Render();
+
+	for (auto& pObj : m_pGameObjects) {
+		pObj->Render();
+	}
+
+	for (auto& pSprite : m_pSprites) {
+		pSprite->AddToUI(pSprite->GetLayerIndex());
+	}
 }
 
 void Scene::CheckCollision()
@@ -165,24 +232,28 @@ void Scene::CheckCollision()
 	Vector3 v3PlayerPos = m_pPlayer->GetTransform()->GetPosition();
 	SpacePartitionDesc::CellCoord cdPlayer = m_SpacePartition.WorldToCellXZ(v3PlayerPos);
 	const GridCell* pBroadPhaseResult = m_SpacePartition.GetCellData(cdPlayer);
-	if (pBroadPhaseResult) {
-		const PlayerCollider& playerCollider = *m_pPlayer->GetComponent<PlayerCollider>();
-		for (const auto& pObj : pBroadPhaseResult->pObjectsInCell) {
-			const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
-			bool bResult = playerCollider.CheckCollision(pCollider);
-			if (bResult) {
-				CollisionResult result1(m_pPlayer, pObj);
-				CollisionResult result2(pObj, m_pPlayer);
-				if (!m_pCollisionPairs.contains(result1) || !m_pCollisionPairs.contains(result2)) {
-					m_pPlayer->OnBeginCollision(result1);
-					pObj->OnBeginCollision(result2);
-					m_pCollisionPairs.insert(result1);
-					m_pCollisionPairs.insert(result2);
-				}
-				else {
-					m_pPlayer->OnWhileCollision(CollisionResult(m_pPlayer, pObj));
-					pObj->OnWhileCollision(CollisionResult(pObj, m_pPlayer));
-				}
+	if (!pBroadPhaseResult) {
+		return;
+	}
+	
+	const std::shared_ptr<PlayerCollider> playerCollider = m_pPlayer->GetComponent<PlayerCollider>();
+	if (!playerCollider) {
+		return;
+	}
+
+	for (const auto& pObj : pBroadPhaseResult->pObjectsInCell) {
+		const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
+		bool bResult = playerCollider->CheckCollision(pCollider);
+		if (bResult) {
+			CollisionResult result1(m_pPlayer , pObj);
+			CollisionResult result2(pObj, m_pPlayer);
+			if (!m_pCollisionPairs.contains(result1) || !m_pCollisionPairs.contains(result2)) {
+				// Begin Overlap
+				m_pPlayer->OnBeginCollision(result1);
+				pObj->OnBeginCollision(result2);
+
+				m_pCollisionPairs.insert(result1);
+				m_pCollisionPairs.insert(result2);
 			}
 			else {
 				CollisionResult result1(m_pPlayer, pObj);
@@ -280,17 +351,14 @@ void Scene::CellPartition(const Vector2& v2OriginXZ, const Vector2& v2SizePerCel
 	}
 }
 
-CB_LIGHT_DATA Scene::MakeLightData()
+std::vector<LightData> Scene::MakeLightData() const
 {
-	CB_LIGHT_DATA lightData;
+	std::vector<LightData> lightData;
+	lightData.reserve(m_pLights.size());
 
-	for (int i = 0; i < m_pLights.size(); ++i) {
-		lightData.gLights[i] = m_pLights[i]->MakeLightData();
+	for (auto& pLight : m_pLights) {
+		lightData.push_back(pLight->MakeCBData());
 	}
-
-	lightData.gcGlobalAmbientLight = Vector4(1.f, 1.f, 1.f, 1.f);
-	lightData.gnLights = m_pLights.size();
-
 	return lightData;
 }
 
@@ -317,6 +385,23 @@ TerrainHit Scene::QueryTerrainHit(const Vector3& v3WorldPos)
 	return result;
 }
 
+void Scene::BuildLights()
+{
+	m_pLights.reserve(1);
+
+	auto pLight = std::make_shared<DirectionalLight>();
+	{
+		pLight->m_v3Color = Vector3{ 1.f, 1.f, 1.f };
+		pLight->m_v3Direction = Vector3{ 1.f, 1.f, 1.f };
+		pLight->m_v3Position = Vector3{ 100.f, 10000.f, 100.f };
+		pLight->m_fIntensity = 0.2;
+
+		pLight->m_v3Direction.Normalize();
+	}
+
+	m_pLights.push_back(pLight);
+}
+
 HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 {
 	std::string strFilePath = std::format("{}/{}.json", g_strSceneBasePath, strFileName);
@@ -328,7 +413,7 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 	}
 
 	//std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
-	//nlohmann::json j = nlohmann::json::from_bson(bson);;
+	//nlohmann::json j = nlohmann::json::from_bson(bson);
 
 	nlohmann::json jScene = nlohmann::json::parse(inFile);
 
@@ -350,6 +435,7 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 	}
 
 	// Lights 로드
+
 	if (jScene.contains("Lights")) {
 		for (const auto& jLight : jScene["Lights"]) {
 			std::string strType = jLight["Type"].get<std::string>();
@@ -369,10 +455,13 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 				float colorY = jLight["Color"]["Y"].get<float>();
 				float colorZ = jLight["Color"]["Z"].get<float>();
 
-				pLight->m_v4Diffuse.x = colorX * intensity;
-				pLight->m_v4Diffuse.y = colorY * intensity;
-				pLight->m_v4Diffuse.z = colorZ * intensity;
-				pLight->m_v4Diffuse.w = 1.0f;
+				//pLight->m_v4Diffuse.x = colorX * intensity;
+				//pLight->m_v4Diffuse.y = colorY * intensity;
+				//pLight->m_v4Diffuse.z = colorZ * intensity;
+				//pLight->m_v4Diffuse.w = 1.0f;
+
+				pLight->m_v3Color = Vector3(colorX, colorY, colorZ);
+				pLight->m_fIntensity = intensity;
 
 				// Range & Attenuation
 				pLight->m_fRange = jLight["Range"].get<float>();
@@ -403,10 +492,13 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 				float colorY = jLight["Color"]["Y"].get<float>();
 				float colorZ = jLight["Color"]["Z"].get<float>();
 
-				pLight->m_v4Diffuse.x = colorX * intensity;
-				pLight->m_v4Diffuse.y = colorY * intensity;
-				pLight->m_v4Diffuse.z = colorZ * intensity;
-				pLight->m_v4Diffuse.w = 1.0f;
+				//pLight->m_v4Diffuse.x = colorX * intensity;
+				//pLight->m_v4Diffuse.y = colorY * intensity;
+				//pLight->m_v4Diffuse.z = colorZ * intensity;
+				//pLight->m_v4Diffuse.w = 1.0f;
+
+				pLight->m_v3Color = Vector3(colorX, colorY, colorZ);
+				pLight->m_fIntensity = intensity;
 
 				// Range & Attenuation
 				pLight->m_fRange = jLight["Range"].get<float>();
@@ -418,9 +510,8 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 				pLight->m_fFalloff = jLight["Falloff"].get<float>();
 
 				// Cone Angles
-				pLight->m_fTheta = jLight["Theta"].get<float>();
-				pLight->m_fPhi = jLight["Phi"].get<float>();
-
+				pLight->m_fPhi = jLight["Theta"].get<float>();
+				pLight->m_fTheta = jLight["Phi"].get<float>();
 				m_pLights.push_back(pLight);
 			}
 		}

@@ -16,23 +16,29 @@ public:
 public:
 	Matrix GetViewProjectMatrix() const;
 
-	Matrix GetProjectionMatrix() const;
-	Matrix GetViewMatrix() const;
+	const Matrix& GetProjectionMatrix() const;
+	const Matrix& GetViewMatrix() const;
+	const Matrix& GetCameraWorldTransfromMatrix() const;
 
 	float GetNearPlaneDistance() const;
 	float GetFarPlaneDistance() const;
 
-	Vector3 GetPosition() const;
-	Vector3 GetRight() const;
-	Vector3 GetUp() const;
-	Vector3 GetLook() const;
+	const Vector3& GetPosition() const;
+	const Vector3& GetRight() const;
+	const Vector3& GetUp() const;
+	const Vector3& GetLook() const;
 	
 	float GetPitch() const;
 	float GetYaw() const;
 	float GetRoll() const;
+	
+	float GetFovYInRadian() const;
+	float GetAspectRatio() const;
 
 	const BoundingFrustum& GetFrustumOrigin() const { return m_xmFrustumOrigin; }
 	const BoundingFrustum& GetFrustumWorld() const { return m_xmFrustumWorld; }
+
+	const Vector4& GetCascadeSplits() const { return m_v4CascadeSplits; }
 
 public:
 	void SetPosition(float x, float y, float z);
@@ -57,7 +63,10 @@ public:
 
 	virtual void SetViewportsAndScissorRects(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
 
-	CB_CAMERA_DATA MakeCBData() const;
+	CameraData MakeCBData() const;
+
+private:
+	void ComputeCascadeSplits();
 
 protected:
 	BoundingFrustum m_xmFrustumOrigin = {};
@@ -66,6 +75,9 @@ protected:
 	Matrix m_mtxWorld;
 	Matrix m_mtxView;
 	Matrix m_mtxProjection;
+
+	Matrix m_mtxInverseView;
+	Matrix m_mtxInverseProjection;
 
 	float m_ffovY = 0.f;
 	float m_fAspectRatio = 0.f;
@@ -80,6 +92,8 @@ protected:
 	float	m_fPitch = 0.f;
 	float	m_fRoll = 0.f;
 	float	m_fYaw = 0.f;
+
+	Vector4 m_v4CascadeSplits;
 
 	D3D12_VIEWPORT	m_d3dViewport = {};
 	D3D12_RECT		m_d3dScissorRect = {};

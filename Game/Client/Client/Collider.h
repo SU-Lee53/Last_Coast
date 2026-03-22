@@ -9,6 +9,8 @@ public:
 	ICollider(std::shared_ptr<IGameObject> pOwner);
 
 	virtual bool IsInFrustum(const BoundingFrustum& xmFrustumInWorld) const;
+	virtual bool IsInAABB(const BoundingBox& xmAABB) const;
+	virtual bool IsInOBB(const BoundingOrientedBox& xmOBB) const;
 	virtual bool CheckCollision(std::shared_ptr<ICollider> pOther) const;
 
 	const BoundingOrientedBox& GetOBBWorld() const { return m_xmOBBWorld; }
@@ -62,6 +64,8 @@ public:
 	const BoundingCapsule& GetCapsuleWorld() { return m_CapsuleWorld; }
 
 	virtual bool IsInFrustum(const BoundingFrustum& xmFrustumInWorld) const override;
+	virtual bool IsInAABB(const BoundingBox& xmFrustumInWorld) const override;
+	virtual bool IsInOBB(const BoundingOrientedBox& xmFrustumInWorld) const override;
 	virtual bool CheckCollision(std::shared_ptr<ICollider> pOther) const override;
 
 private:

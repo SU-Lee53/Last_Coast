@@ -3,7 +3,7 @@
 
 class IGameObject;
 
-class Transform : public IComponent{
+class Transform : public IComponent {
 public:
 	Transform(std::shared_ptr<IGameObject> pOwner);
 

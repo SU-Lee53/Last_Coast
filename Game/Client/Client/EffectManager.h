@@ -8,7 +8,7 @@ class EffectManager {
 	DECLARE_SINGLE(EffectManager)
 
 public:
-	void Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
+	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
 	void Update(float fTimeElapsed);
 	void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
 

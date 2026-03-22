@@ -3,7 +3,7 @@
 
 class WinCore {
 public:
-	WinCore(HINSTANCE hInstance, DWORD dwWidth, DWORD dwHeight, BOOL bEnableDebugLayer, BOOL bEnableGBV);
+	WinCore(HINSTANCE hInstance, DWORD dwWidth, DWORD dwHeight, BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnableVSync);
 
 	void Run();
 
@@ -17,8 +17,8 @@ public:
 	static HINSTANCE sm_hInstance;
 	static HWND g_hWnd;
 
-	static DWORD sm_dwClientWidth;
-	static DWORD sm_dwClientHeight;
+	static DWORD g_dwClientWidth;
+	static DWORD g_dwClientHeight;
 
 public:
 	std::wstring m_wstrGameName = L"";

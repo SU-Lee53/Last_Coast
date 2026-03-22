@@ -21,6 +21,7 @@
 #include <string>
 #include <array>
 #include <vector>
+#include <list>
 #include <set>
 #include <unordered_set>
 #include <unordered_map>
@@ -47,7 +48,7 @@
 
 
 // D3DCompiler
-#include <d3dcompiler.h>
+#include <dxcapi.h>
 
 // DirectXMath
 #include <DirectXMath.h>
@@ -56,8 +57,15 @@
 #include <DirectXCollision.h>
 
 // DirectXTex
+#include <DirectXTex/DirectXTex.h>
 #include <DirectXTex/DDSTextureLoader12.h>
 #include <DirectXTex/WICTextureLoader12.h>
+
+#ifdef _DEBUG
+#pragma comment(lib, "DirectXTex/Debug/DirectXTex.lib")
+#else
+#pragma comment(lib, "DirectXTex/Release/DirectXTex.lib")
+#endif
 
 #include "SimpleMath.h"
 using namespace DirectX::SimpleMath;
@@ -68,7 +76,7 @@ using namespace DirectX::PackedVector;
 using namespace Microsoft::WRL;
 
 // Import libraries
-#pragma comment(lib, "d3dcompiler.lib")
+#pragma comment(lib, "dxcompiler.lib")	// DXC
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "dxguid.lib")
@@ -99,6 +107,7 @@ using namespace AIDLL;
 #include "CommandListPool.h"
 #include "Typedef.h"
 #include "Defines.h"
+#include "CB_Types.h"
 #include "Concepts.h"
 #include "Utility.h"
 #include "ShaderResource.h"
@@ -106,6 +115,9 @@ using namespace AIDLL;
 #include "Packets.h"
 #include "RandomGenerator.h"
 #include "AnimationHelper.h"
+#include "ResourceTable.h"
+#include "GameObject.h"
+#include "Component.h"
 
 // ImGui
 #include <ImGui/imgui.h>
@@ -116,6 +128,8 @@ using namespace AIDLL;
 #include "WinCore.h"
 #include "D3DCore.h"
 #include "GameFramework.h"
+#include "CommandListAllocator.h"
+
 
 // Managers
 #include "ResourceManager.h"
@@ -134,3 +148,5 @@ using namespace AIDLL;
 #include "AnimationManager.h"
 #include "AIManagerWrapper.h"
 //#include "CollisionManager.h"
+#include "MaterialManager.h"
+#include "ComputeManager.h"

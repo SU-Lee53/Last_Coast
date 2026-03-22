@@ -37,6 +37,61 @@ void GuiManager::Update()
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
 
+	if (INPUT->GetButtonDown(VK_F1)) {
+		m_bShowDebugMenu = !m_bShowDebugMenu;
+	}
+
+	if (m_bShowDebugMenu) {
+		if (ImGui::BeginMainMenuBar()) {
+			if (ImGui::BeginMenu("Managers")) {
+
+				if (ImGui::MenuItem("Render")) {
+					m_eManagerDebug = (m_eManagerDebug != MANAGER_DEBUG::RENDER_MANAGER) ? MANAGER_DEBUG::RENDER_MANAGER : MANAGER_DEBUG::NONE;
+				}
+
+				if (ImGui::MenuItem("Texture")) {
+					m_eManagerDebug = (m_eManagerDebug != MANAGER_DEBUG::TEXTURE_MANAGER) ? MANAGER_DEBUG::TEXTURE_MANAGER : MANAGER_DEBUG::NONE;
+				}
+
+				if (ImGui::MenuItem("Material")) {
+					m_eManagerDebug = (m_eManagerDebug != MANAGER_DEBUG::MATERIAL_MANAGER) ? MANAGER_DEBUG::MATERIAL_MANAGER : MANAGER_DEBUG::NONE;
+				}
+
+				if (ImGui::MenuItem("Model")) {
+					m_eManagerDebug = (m_eManagerDebug != MANAGER_DEBUG::MODEL_MANAGER) ? MANAGER_DEBUG::MODEL_MANAGER : MANAGER_DEBUG::NONE;
+				}
+
+				ImGui::EndMenu();
+			}
+
+			ImGui::EndMainMenuBar();
+		}
+	}
+
+	switch (m_eManagerDebug) {
+	case MANAGER_DEBUG::RENDER_MANAGER:
+	{
+		RENDER->ShowDebugOptions();
+		break;
+	}
+	case MANAGER_DEBUG::TEXTURE_MANAGER:
+	{
+		RENDER->ShowDebugOptions();
+		break;
+	}
+	case MANAGER_DEBUG::MATERIAL_MANAGER:
+	{
+		RENDER->ShowDebugOptions();
+		break;
+	}
+	case MANAGER_DEBUG::MODEL_MANAGER:
+	{
+		RENDER->ShowDebugOptions();
+		break;
+	}
+	}
+
+
 }
 
 void GuiManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)

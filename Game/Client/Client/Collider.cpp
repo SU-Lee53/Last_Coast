@@ -56,6 +56,16 @@ bool ICollider::IsInFrustum(const BoundingFrustum& xmFrustumInWorld) const
 	return xmFrustumInWorld.Intersects(m_xmOBBWorld);
 }
 
+bool ICollider::IsInAABB(const BoundingBox& xmAABB) const
+{
+	return xmAABB.Intersects(m_xmOBBWorld);
+}
+
+bool ICollider::IsInOBB(const BoundingOrientedBox& xmOBB) const
+{
+	return xmOBB.Intersects(m_xmOBBWorld);
+}
+
 bool ICollider::CheckCollision(std::shared_ptr<ICollider> pOther) const
 {
 	return m_xmOBBWorld.Intersects(pOther->m_xmOBBWorld);
@@ -188,6 +198,22 @@ bool PlayerCollider::IsInFrustum(const BoundingFrustum& xmFrustumInWorld) const
 	m_CapsuleWorld.CreateAABBFromCapsule(xmAABB);
 
 	return xmFrustumInWorld.Intersects(xmAABB);
+}
+
+bool PlayerCollider::IsInAABB(const BoundingBox& xmAABBWorld) const
+{
+	BoundingBox xmAABB;
+	m_CapsuleWorld.CreateAABBFromCapsule(xmAABB);
+
+	return xmAABBWorld.Intersects(xmAABB);
+}
+
+bool PlayerCollider::IsInOBB(const BoundingOrientedBox& xmOBB) const
+{
+	BoundingBox xmAABB;
+	m_CapsuleWorld.CreateAABBFromCapsule(xmAABB);
+
+	return xmOBB.Intersects(xmAABB);
 }
 
 bool PlayerCollider::CheckCollision(std::shared_ptr<ICollider> pOther) const

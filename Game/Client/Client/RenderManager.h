@@ -1,93 +1,198 @@
 ﻿#pragma once
 #include "DescriptorHeap.h"
-#include "RenderPass.h"
-#include "MeshRenderer.h"
 
-class NavMeshDebugRenderer;
+#include "ConstantBufferPool.h"
+#include "StructuredBufferPool.h"
 
-// 2월에 전부 갈아엎을 예정
+#include "RenderGraph.h"
 
 enum class ROOT_PARAMETER : uint32 {
-	SCENE_CAM_DATA					= 0,
-	SCENE_LIGHT_DATA				= 1,
-	SCENE_SKYBOX					= 2,
-	SCENE_TERRAIN_DATA				= 3,
-	SCENE_TERRAIN_COMPONENT_DATA	= 4,
-	SCENE_TERRAIN_WEIGHTMAP			= 5,
-	PASS_INSTANCE_DATA				= 6,
-	OBJ_MATERIAL_DATA				= 7,
-	OBJ_BONE_TRANSFORM_DATA			= 8,
-	OBJ_TEXTURES					= 9,
+	PER_SCENE_DATA							= 0,
+	CASCADE_SHADOW_MAPS						= 1,
+	SHADOW_MAPS								= 2,
+	G_BUFFER								= 3,
+	HDR_RESULT								= 4,
+	PER_PASS_DATA							= 5,
+	PER_INSTANCE_DATA						= 6,
+	LIGHT_CAMERA_DATA						= 7,
+	WORLD_TRANSFORM_DATA					= 8,
+	BONE_TRANSFORM							= 9,
+	TERRAIN_LAYER							= 10,
+	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 11,
+	WORLE_TRANSFORM_INDEX					= 12,
 };
 
-constexpr UINT DESCRIPTOR_PER_DRAW = 1000000;
+struct GBuffer {
+	const static uint32 g_unNumGBuffers = 3;
 
-struct MeshRenderParameters {
-	Matrix mtxWorld;
+	std::array<TextureRef<RenderTargetTexture>, GBuffer::g_unNumGBuffers> GBuffers;
+
+	void Initialize(uint32 nPendingFrameIndex);
+
 };
 
-struct InstancePair {
-	std::shared_ptr<MeshRenderer> meshRenderer;
-	std::vector<MeshRenderParameters> InstanceDatas;
-};
+constexpr UINT DESCRIPTOR_PER_DRAW = 100'000;
+
+struct IMesh;
 
 class RenderManager {
 
 	DECLARE_SINGLE(RenderManager)
 
 public:
-	void Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
-	void CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
-	void CreateSkyboxPipelineState(ComPtr<ID3D12Device> pd3dDevice);
-	void CreateDebugLinePipelineState(ComPtr<ID3D12Device> pd3dDevice);
-	void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
-
-private:
-	void RenderAnimated(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descriptorHandleFromPassStart);
-	void RenderSkybox(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descriptorHandleFromPassStart);
-	void RenderNavMeshDebug(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
+	constexpr static uint32 g_unMaxPendingFrames = 3;
+	constexpr static uint32 g_unMaxSpriteLayers = 3;
 
 public:
-	void Add(std::shared_ptr<MeshRenderer> pRenderItem, MeshRenderParameters renderParam);
-	void AddAnimatedObject(std::shared_ptr<IGameObject> pObj);
-	void Clear();
+	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
+	void CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice);
+	void BuildRenderGraph();
+	void Render();
+	void ShowDebugOptions();
 
-	// NavMesh 디버그 렌더러 설정
-	void SetNavMeshDebugRenderer(NavMeshDebugRenderer* pRenderer) { m_pNavMeshDebugRenderer = pRenderer; }
+	template<typename T> requires std::derived_from<T, IGameObject>
+	void Add(std::shared_ptr<T> pObj);
+	void AddSprite(std::shared_ptr<Sprite> pSprite, RECT rect, uint32 unLayer);
+	void Reset();
+
+	const std::shared_ptr<IMesh> GetQuadMesh() const { return m_pQuadMesh; }
 
 public:
-	DescriptorHeap& GetDescriptorHeap() { return m_DescriptorHeapForDraw; }
+	DescriptorHeap& GetDescriptorHeap() { return m_DescriptorHeapForDraw[m_unCurrentContextIndex]; }
+
+	template<typename T>
+	ConstantBuffer AllocCBuffer() {
+		return m_ConstantBufferPool[m_unCurrentContextIndex].Allocate<T>();
+	}
+
+	template<typename T>
+	StructuredBuffer AllocSBuffer(uint32 unElementCount) {
+		if (unElementCount == 0) {
+			return m_StructuredBufferPool[m_unCurrentContextIndex].Allocate<T>(1);	// Temporary
+		}
+		return m_StructuredBufferPool[m_unCurrentContextIndex].Allocate<T>(unElementCount);
+	}
+
+public:
+	// Renderable Items Getter
+	const auto& GetObjectsToRender() const { return m_pObjectsToRender; }
+	const auto& GetTransparentObjectsToRender() const { return m_pTransparentObjectsToRender; }
+	const auto& GetSprites() const { return m_pSpritesToRender; }
 
 private:
+	void BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle);
+
+public:
 	//std::vector<std::shared_ptr<RenderPass>> m_pRenderPasses = {};
-	std::shared_ptr<ForwardPass> m_pForwardPass;
+	//std::shared_ptr<ForwardPass> m_pForwardPass;
+	RenderGraph m_RenderGraph;
 
-
-public:
 	ComPtr<ID3D12Device> m_pd3dDevice; // ref of D3DCore::m_pd3dDevice
 	
 	// Mesh
 	static ComPtr<ID3D12RootSignature> g_pd3dGlobalRootSignature;
-	DescriptorHeap m_DescriptorHeapForDraw;
+
+private:
+	// Objects Ready-To-Draw
+	std::vector<std::shared_ptr<IGameObject>> m_pObjectsToRender;
+	std::vector<std::shared_ptr<IGameObject>> m_pTransparentObjectsToRender;
+
+	std::shared_ptr<IMesh> m_pQuadMesh;
+
+private:
+	// Sprite
+	struct SpriteRenderParameter {
+		std::shared_ptr<Sprite> pSprite;
+		RECT Rect;
+
+		SpriteRenderParameter(std::shared_ptr<Sprite> p, RECT r) : pSprite{ p }, Rect{ r } {}
+	};
+	std::array<std::vector<std::shared_ptr<Sprite>>, g_unMaxSpriteLayers> m_pSpritesToRender;
+
+private:
+	// Frame Resources
+	DescriptorHeap			m_DescriptorHeapForDraw[g_unMaxPendingFrames];
+	ConstantBufferPool		m_ConstantBufferPool[g_unMaxPendingFrames];
+	StructuredBufferPool	m_StructuredBufferPool[g_unMaxPendingFrames];
+
+	GBuffer									m_GBuffers[g_unMaxPendingFrames];
+	TextureRef<RenderTargetTexture>			m_HDRRenderTargetIDs[g_unMaxPendingFrames];
+	TextureRef<RenderTargetTexture>			m_LDRRenderTargetIDs[g_unMaxPendingFrames];
+
+
+
+#pragma region D3D
+public:
+	uint32 GetCurrentContextIndex() const { return m_unCurrentContextIndex; }
+
+	const TextureRef<RenderTargetTexture>& GetCurrentBackBuffer() const;
+	const TextureRef<DepthStencilTexture>& GetDepthStencilBuffer() const;
 	
-	// Skybox
-	ComPtr<ID3D12PipelineState> m_pd3dSkyboxPipelineState;
+	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferHandle() const;
+	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetDepthStencilBufferHandle() const;
 
-	// Debug Line (NavMesh 등)
-	ComPtr<ID3D12PipelineState> m_pd3dDebugLineGreenPipelineState;  // 폴리곤 외곽선 (녹색)
-	ComPtr<ID3D12PipelineState> m_pd3dDebugLineRedPipelineState;    // 인접성 그래프 (빨간색)
-	ComPtr<ID3D12PipelineState> m_pd3dDebugLineBluePipelineState;    // 찾은 경로 그래프 (파란색)
+	const GBuffer& GetCurrentGBuffer() const;
 
-	// Pass 별 분리 필요 ( Forward / Differed ) -> 그냥 분리 안한다 이제
-	// 나중에 GameObject를 직접 담아 그자리에서 컬링 + 분류를 수행하도록 수정할 예정
-	std::unordered_map<uint64, uint32> m_InstanceIndexMap;
-	std::vector<InstancePair> m_InstanceDatas;
+	const TextureRef<RenderTargetTexture>& GetCurrentHDRBuffer() const;
+	const TextureRef<RenderTargetTexture>& GetCurrentLDRBuffer() const;
 
-	// 키프레임 애니메이션 GameObjects (인스턴싱 불가)
-	std::vector<std::shared_ptr<IGameObject>> m_pAnimatedObjects;
+	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentHDRBufferHandle() const;
+	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentLDRBufferHandle() const;
 
-	// NavMesh 디버그 렌더러 (Scene에서 설정)
-	NavMeshDebugRenderer* m_pNavMeshDebugRenderer = nullptr;
+	ComPtr<ID3D12GraphicsCommandList> GetCommandList() const { return m_ppd3dCommandList[m_unCurrentContextIndex]; }
 
-	uint32 m_nInstanceIndex = 0;
+	void WaitForGPUComplete();
+
+private:
+	void OnPrepareRender();
+	void OnPostRender();
+
+private:
+	void CreateFence();
+	void CreateCommandQueueAndList();
+	void CreateSwapChain();
+	void CreateRenderTarget();
+	void CreateDepthStencil();
+
+private:
+	void Present();
+
+private:
+	uint64 Fence();
+	void WaitForFenceValue(uint64 un64ExpectedFenceValue);
+	void ChangeSwapChainState();
+
+private:
+	ComPtr<IDXGISwapChain3> m_pdxgiSwapChain = nullptr;
+	const DXGI_FORMAT m_dxgiRenderTargetFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+	uint32 m_unBackBufferIndex = 0;
+
+	ComPtr<ID3D12CommandQueue>			m_pd3dCommandQueue								= nullptr;
+	ComPtr<ID3D12CommandAllocator>		m_ppd3dCommandAllocator[g_unMaxPendingFrames]	= {};
+	ComPtr<ID3D12GraphicsCommandList>	m_ppd3dCommandList[g_unMaxPendingFrames]		= {};
+
+	ComPtr<ID3D12Fence> m_pd3dFence							= nullptr;
+	HANDLE m_hFenceEvent									= nullptr;
+	uint64 m_un64LastFenceValues[g_unMaxPendingFrames]		= {};
+	uint64 m_un64FenceValues								= 0;
+
+	uint32 m_unCurrentContextIndex = 0;
+
+	// SRV - RTV/DSV
+	TextureRef<RenderTargetTexture> m_BackBufferIDs[g_unMaxPendingFrames];
+	TextureRef<DepthStencilTexture> m_DepthStencilID;
+
+#pragma endregion D3D
 };
+
+template<typename T> requires std::derived_from<T, IGameObject>
+inline void RenderManager::Add(std::shared_ptr<T> pObj)
+{
+	auto pMeshRenderer = pObj->GetComponent<MeshRenderer>();
+	auto pBaseColorTex = pMeshRenderer->GetMaterialHandle(0).GetResource()->GetTexture(0);
+
+
+	(pBaseColorTex->GetAlphaMode() == Texture::ALPHA_MODE::Transparent)
+		? m_pTransparentObjectsToRender.push_back(pObj)
+	    : m_pObjectsToRender.push_back(pObj);
+}

@@ -3,6 +3,7 @@
 
 void AnimationManager::Initialize()
 {
+	LoadGameAnimations();
 }
 
 void AnimationManager::LoadGameAnimations()

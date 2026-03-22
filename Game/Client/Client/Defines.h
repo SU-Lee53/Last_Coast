@@ -37,14 +37,15 @@ public:										\
 #define TIME			GET_SINGLE(GameTimer)
 #define ANIMATION		GET_SINGLE(AnimationManager)
 #define AI				GET_SINGLE(AIManagerWrapper)
+#define MATERIAL		GET_SINGLE(MaterialManager)
+#define COMPUTE			GET_SINGLE(ComputeManager)
 
 #define CUR_SCENE		SCENE->GetCurrentScene()
 #define DT				TIME->GetTimeElapsed()
 
 //////////////////////////////////////////////////////////////////////////////////
 // Constants
-constexpr static float PLANET_ROTATION = 20.f;
-
+constexpr static uint64 INVALID_ID = std::numeric_limits<uint64>::max();
 
 //////////////////////////////////////////////////////////////////////////////////
 // Enums
@@ -101,37 +102,17 @@ enum SPRITE_TYPE : UINT8 {
 	SPRITE_TYPE_COUNT
 };
 
+enum class DESCRIPTOR_TYPE {
+	CBV, 
+	SRV, 
+	UAV, 
+	RTV, 
+	DSV, 
+	SAMPLER 
+};
+
 //////////////////////////////////////////////////////////////////////////////////
 // Structs
-
-struct LightData {
-	Vector4 v4Ambient;                // c0
-	Vector4 v4Diffuse;                // c1
-	Vector4 v4Specular;               // c2
-	Vector3 v3Position;               // c3.xyz
-	float fFalloff;                   // c3.w
-	Vector3 v3Direction;              // c4.xyz
-	float fTheta; //cos(fTheta)     // c4.w
-	Vector3 v3Attenuation;            // c5.xyz
-	float fPhi; //cos(fPhi)         // c5.w
-	BOOL bEnable;                     // c6.x
-	int nType;                        // c6.y
-	float fRange;                     // c6.z
-	float padding;                      // c6.w
-};
-
-struct MaterialColors {
-	XMFLOAT4		xmf4Ambient;
-	XMFLOAT4		xmf4Diffuse;
-	XMFLOAT4		xmf4Specular; //(r,g,b,a=power)
-	XMFLOAT4		xmf4Emissive;
-
-	float			fGlossiness = 0.0f;
-	float			fSmoothness = 0.0f;
-	float			fSpecularHighlight = 0.0f;
-	float			fMetallic = 0.0f;
-	float			fGlossyReflection = 0.0f;
-};
 
 struct EffectParameter {
 	Vector3		xmf3Position;
@@ -197,66 +178,6 @@ struct std::hash<CollisionResult> {
 	}
 };
 
-//////////////////////////////////////////////////////////////////////////////////
-// CB Types
-
-constexpr static UINT MAX_BONE_TRANSFORMS		= 150;
-constexpr static UINT MAX_EFFECT_PER_DRAW		= 100;
-constexpr static UINT MAX_CHARACTER_PER_SPRITE	= 40;
-constexpr static UINT MAX_LIGHTS = 16;
-
-struct CB_CAMERA_DATA {
-	Matrix	mtxView;
-	Matrix	mtxProjection;
-	Vector3 v3CameraPosition;
-};
-
-struct CB_PER_OBJECT_DATA {
-	MaterialColors materialColors;
-	int nInstanceBase;
-};
-
-struct CB_WORLD_TRANSFORM_DATA {
-	Matrix mtxTransforms;
-};
-
-struct CB_BONE_TRANSFORM_DATA {
-	Matrix mtxBoneTransforms[MAX_BONE_TRANSFORMS];
-};
-
-struct CB_PARTICLE_DATA {
-	EffectParameter parameters[MAX_EFFECT_PER_DRAW];
-};
-
-struct CB_LIGHT_DATA {
-	LightData gLights[MAX_LIGHTS];
-	Vector4 gcGlobalAmbientLight;
-	int gnLights;
-};
-
-struct CB_SPRITE_DATA {
-	float fLeft;
-	float fTop;
-	float fRight;
-	float fBottom;
-};
-
-struct CB_TEXT_DATA {
-	UINT nCharacters[MAX_CHARACTER_PER_SPRITE];
-	XMFLOAT4 xmf4TextColor;
-	UINT nLength;
-};
-
-struct CB_BILLBOARD_SPRITE_DATA {
-	XMFLOAT3 xmf3Position;
-	UINT pad1 = 0;
-	XMFLOAT2 xmf2Size;
-	XMUINT2 pad2 = XMUINT2(0, 0);
-	XMFLOAT3 xmf3CameraPosition;
-	UINT pad3 = 0;
-	XMFLOAT4X4 xmf4x4ViewProjection;
-};
-
 struct AnimationKey {
 	Vector3 v3Translation{ 0.f, 0.f, 0.f };
 	Quaternion v4RotationQuat{ 0.f, 0.f, 0.f, 1.f };
@@ -294,6 +215,26 @@ struct AnimationKey {
 
 };
 
+template<typename T>
+struct IteratorRange {
+	T::const_iterator beginIt;
+	T::const_iterator endIt;
+
+	T::const_pointer begin() {
+		return &(*beginIt);
+	}
+
+	T::const_pointer end() {
+		return &(*endIt);
+	}
+
+	size_t distance() {
+		return endIt - beginIt;
+	}
+};
+
+#define ITERATOR_ARGS(itRange) itRange.beginIt, itRange.endIt
+
 //////////////////////////////////////////////////////////////////////////////////
 // Default Constants
 
@@ -302,6 +243,13 @@ D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
 D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
 D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
 D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+
+inline const Matrix g_mtxToTexture = Matrix{
+	0.5f, 0.0f, 0.0f, 0.0f,
+	0.0f, -0.5f, 0.0f, 0.0f,
+	0.0f, 0.0f, 1.0f, 0.0f,
+	0.5f, 0.5f, 0.0f, 1.0f
+};
 
 //////////////////////////////////////////////////////////////////////////////////
 // Type Aliasing

@@ -2,31 +2,52 @@
 #include "D3DCore.h"
 
 UINT D3DCore::g_nCBVSRVDescriptorIncrementSize = 0;
+UINT D3DCore::g_nRTVDescriptorIncrementSize = 0;
+UINT D3DCore::g_nDSVDescriptorIncrementSize = 0;
+UINT D3DCore::g_nSamplerDescriptorIncrementSize = 0;
+uint32 D3DCore::g_unSyncInterval = 0;
 
-D3DCore::D3DCore(BOOL bEnableDebugLayer, BOOL bEnableGBV)
+bool D3DCore::g_bEnableDebugLayer = false;
+bool D3DCore::g_bEnableGBV = false;
+bool D3DCore::g_bMsaa4xEnable = false;
+bool D3DCore::g_nMsaa4xQualityLevels = 0;
+
+bool D3DCore::g_bSupportSSE2 = false;
+bool D3DCore::g_bSupportAVX2 = false;
+
+D3DCore::D3DCore(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnableVSync)
 {
-	CreateD3DDevice(bEnableDebugLayer);
-	CreateCommandQueueAndList();
-	CreateRTVAndDSVDescriptorHeaps();
-	CreateSwapChain();
-	CreateDepthStencilView();
+	g_bEnableDebugLayer = bEnableDebugLayer;
+	g_bEnableGBV = bEnableGBV;
+	g_unSyncInterval = (bEnableVSync) ? 1 : 0;
 
-	g_nCBVSRVDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	g_bSupportSSE2 = CheckSupportSSE2();
+	g_bSupportAVX2 = CheckSupportAVX2();
 }
 
 D3DCore::~D3DCore()
 {
-	// TODO : Release debug layer
-	WaitForGPUComplete();
-
+	//WaitForGPUComplete();
+	//RENDER->WaitForGPUComplete();
+	//RENDER->WaitForGPUComplete();
 }
 
-void D3DCore::CreateD3DDevice(bool bEnableDebugLayer)
+void D3DCore::Initialize()
+{
+	CreateD3DDevice();
+
+	g_nCBVSRVDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	g_nRTVDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	g_nDSVDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	g_nSamplerDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+}
+
+void D3DCore::CreateD3DDevice()
 {
 	HRESULT hr;
 
 	UINT nDXGIFactoryFlags = 0;
-	if (bEnableDebugLayer) {
+	if (g_bEnableDebugLayer) {
 		ComPtr<ID3D12Debug> pd3dDebugController = nullptr;
 		hr = D3D12GetDebugInterface(IID_PPV_ARGS(pd3dDebugController.GetAddressOf()));
 		if (FAILED(hr)) {
@@ -37,8 +58,6 @@ void D3DCore::CreateD3DDevice(bool bEnableDebugLayer)
 		if (pd3dDebugController) {
 			pd3dDebugController->EnableDebugLayer();
 		}
-
-		m_bEnableDebugLayer = bEnableDebugLayer;
 	}
 
 	// DXGI Factory
@@ -102,236 +121,44 @@ void D3DCore::CreateD3DDevice(bool bEnableDebugLayer)
 
 	hr = m_pd3dDevice->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &d3dMsaaQualityLevels, sizeof(D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS));
 	if (SUCCEEDED(hr)) {
-		m_nMsaa4xQualityLevels = d3dMsaaQualityLevels.NumQualityLevels;
-		m_bMsaa4xEnable = (m_nMsaa4xQualityLevels > 1) ? true : false;
+		g_nMsaa4xQualityLevels = d3dMsaaQualityLevels.NumQualityLevels;
+		g_bMsaa4xEnable = (g_nMsaa4xQualityLevels > 1) ? true : false;
 	}
 	else {
 		::OutputDebugString(L"Device doesn't support MSAA4x");
 	}
 
 	// Fence
-	hr = m_pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_pd3dFence.GetAddressOf()));
-	if (FAILED(hr)) {
-		SHOW_ERROR("Failed to create fence");
-	}
-
-	m_hFenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
+	//	hr = m_pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_pd3dFence.GetAddressOf()));
+	//	if (FAILED(hr)) {
+	//		SHOW_ERROR("Failed to create fence");
+	//	}
+	//	
+	//	m_hFenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
 
 }
 
-void D3DCore::CreateSwapChain()
+bool D3DCore::CheckSupportSSE2()
 {
-	DXGI_SWAP_CHAIN_DESC dxgiSwapChainDesc;
-	::ZeroMemory(&dxgiSwapChainDesc, sizeof(DXGI_SWAP_CHAIN_DESC));
-	{
-		dxgiSwapChainDesc.BufferCount = g_nSwapChainBuffers;
-		dxgiSwapChainDesc.BufferDesc.Width = WinCore::sm_dwClientWidth;
-		dxgiSwapChainDesc.BufferDesc.Height = WinCore::sm_dwClientHeight;
-		dxgiSwapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		dxgiSwapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
-		dxgiSwapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
-		dxgiSwapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		dxgiSwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-		dxgiSwapChainDesc.OutputWindow = WinCore::g_hWnd;
-		dxgiSwapChainDesc.SampleDesc.Count = (m_bMsaa4xEnable) ? 4 : 1;
-		dxgiSwapChainDesc.SampleDesc.Quality = (m_bMsaa4xEnable) ? (m_nMsaa4xQualityLevels - 1) : 0;
-		dxgiSwapChainDesc.Windowed = TRUE;
-
-		// Set backbuffer resolution as fullscreen resolution.
-		dxgiSwapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-	}
-
-	ComPtr<IDXGISwapChain> pSwapChain;
-	HRESULT hr = m_pdxgiFactory->CreateSwapChain(m_pd3dCommandQueue.Get(), &dxgiSwapChainDesc, pSwapChain.GetAddressOf());
-	if (FAILED(hr)) {
-		SHOW_ERROR("Failed to create SwapChain");
-	}
-
-	pSwapChain->QueryInterface(IID_PPV_ARGS(m_pdxgiSwapChain.GetAddressOf()));
-	if (FAILED(hr)) {
-		SHOW_ERROR("Failed to create SwapChain QueryInterface");
-	}
-
-	m_nSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
-
-	m_pdxgiFactory->MakeWindowAssociation(WinCore::g_hWnd, DXGI_MWA_NO_ALT_ENTER);
-
-#ifndef _WITH_SWAPCHAIN_FULLSCREEN_STATE
-	CreateRenderTargetViews();
+#if defined(_M_X64)
+	return true;
+#else
+	int cpuInfo[4] = {};
+	__cpuid(cpuInfo, 1);
+	return (cpuInfo[3] & (1 << 26)) != 0; // EDX bit 26 = SSE2
 #endif
 }
 
-void D3DCore::CreateRTVAndDSVDescriptorHeaps()
+bool D3DCore::CheckSupportAVX2()
 {
-	HRESULT hr{};
+	int cpuInfo[4] = {};
+	__cpuid(cpuInfo, 0);
 
-	// Create DescriptorHeap for RTV
-	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc{};
-	::ZeroMemory(&d3dDescriptorHeapDesc, sizeof(D3D12_DESCRIPTOR_HEAP_DESC));
-	{
-		d3dDescriptorHeapDesc.NumDescriptors = g_nSwapChainBuffers;
-		d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-		d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-		d3dDescriptorHeapDesc.NodeMask = 0;
-	}
-	hr = m_pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, IID_PPV_ARGS(m_pd3dRTVDescriptorHeap.GetAddressOf()));
-	if (FAILED(hr)) {
-		SHOW_ERROR("Failed to create RTV DescriptorHeap");
-	}
+	if (cpuInfo[0] < 7)
+		return false;
 
-
-	// Set descriptor increment size
-	m_nRTVDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-	// Create DescriptorHeap for DSV
-	{
-		d3dDescriptorHeapDesc.NumDescriptors = 1;
-		d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-	}
-	hr = m_pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, IID_PPV_ARGS(m_pd3dDSVDescriptorHeap.GetAddressOf()));
-	if (FAILED(hr)) {
-		SHOW_ERROR("Failed to create DSV DescriptorHeap");
-	}
-
-	// Set descriptor increment size
-	m_nDSVDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-
-}
-
-void D3DCore::CreateCommandQueueAndList()
-{
-	HRESULT hr{};
-
-	// Create Command Queue
-	D3D12_COMMAND_QUEUE_DESC d3dCommandQueueDesc{};
-	::ZeroMemory(&d3dCommandQueueDesc, sizeof(D3D12_COMMAND_QUEUE_DESC));
-	{
-		d3dCommandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		d3dCommandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-	}
-	hr = m_pd3dDevice->CreateCommandQueue(&d3dCommandQueueDesc, IID_PPV_ARGS(m_pd3dCommandQueue.GetAddressOf()));
-	if (FAILED(hr)) {
-		SHOW_ERROR("Failed to create CommandQueue");
-	}
-
-	// Create Command Allocator
-	hr = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_pd3dCommandAllocator.GetAddressOf()));
-	if (FAILED(hr)) {
-		SHOW_ERROR("Failed to create CommandAllocator");
-	}
-
-	// Create Command List
-	hr = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dCommandAllocator.Get(), NULL, IID_PPV_ARGS(m_pd3dCommandList.GetAddressOf()));
-	if (FAILED(hr)) {
-		SHOW_ERROR("Failed to create CommandList");
-	}
-
-	// Close Command List(default is opened)
-	hr = m_pd3dCommandList->Close();
-}
-
-void D3DCore::CreateRenderTargetViews()
-{
-	HRESULT hr{};
-
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = m_pd3dRTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	for (UINT i = 0; i < g_nSwapChainBuffers; ++i)
-	{
-		hr = m_pdxgiSwapChain->GetBuffer(i, IID_PPV_ARGS(m_pd3dRenderTargetBuffers[i].GetAddressOf()));
-		if (FAILED(hr)) {
-			SHOW_ERROR("Failed to get buffer from SwapChain");
-		}
-
-		m_pd3dDevice->CreateRenderTargetView(m_pd3dRenderTargetBuffers[i].Get(), NULL, d3dRTVCPUDescriptorHandle);
-		d3dRTVCPUDescriptorHandle.ptr += m_nRTVDescriptorIncrementSize;
-	}
-}
-
-void D3DCore::CreateDepthStencilView()
-{
-	HRESULT hr{};
-
-	D3D12_RESOURCE_DESC d3dResourceDesc{};
-	{
-		d3dResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-		d3dResourceDesc.Alignment = 0;
-		d3dResourceDesc.Width = WinCore::sm_dwClientWidth;
-		d3dResourceDesc.Height = WinCore::sm_dwClientHeight;
-		d3dResourceDesc.DepthOrArraySize = 1;
-		d3dResourceDesc.MipLevels = 1;
-		d3dResourceDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		d3dResourceDesc.SampleDesc.Count = (m_bMsaa4xEnable) ? 4 : 1;
-		d3dResourceDesc.SampleDesc.Quality = (m_bMsaa4xEnable) ? (m_nMsaa4xQualityLevels - 1) : 0;
-		d3dResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-		d3dResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-	}
-
-	D3D12_HEAP_PROPERTIES d3dHeapProperties;
-	::ZeroMemory(&d3dHeapProperties, sizeof(D3D12_HEAP_PROPERTIES));
-	{
-		d3dHeapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
-		d3dHeapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-		d3dHeapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-		d3dHeapProperties.CreationNodeMask = 1;
-		d3dHeapProperties.VisibleNodeMask = 1;
-	}
-
-	D3D12_CLEAR_VALUE d3dClearValue;
-	d3dClearValue.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	d3dClearValue.DepthStencil.Depth = 1.f;
-	d3dClearValue.DepthStencil.Stencil = 0;
-
-	// Create Depth Stencil Buffer
-	hr = m_pd3dDevice->CreateCommittedResource(
-		&d3dHeapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&d3dResourceDesc,
-		D3D12_RESOURCE_STATE_DEPTH_WRITE,
-		&d3dClearValue,
-		IID_PPV_ARGS(m_pd3dDepthStencilBuffer.GetAddressOf())
-	);
-	if (FAILED(hr)) {
-		SHOW_ERROR("Failed to create depth-stencil buffer");
-	}
-
-	// Create Depth Stencil Buffer View
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dDSVCPUDescriptorHandle = m_pd3dDSVDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	m_pd3dDevice->CreateDepthStencilView(m_pd3dDepthStencilBuffer.Get(), NULL, d3dDSVCPUDescriptorHandle);
-}
-
-void D3DCore::ChangeSwapChainState()
-{
-	WaitForGPUComplete();
-
-	BOOL bFullScreenState = FALSE;
-	m_pdxgiSwapChain->GetFullscreenState(&bFullScreenState, NULL);
-	m_pdxgiSwapChain->SetFullscreenState(!bFullScreenState, NULL);
-
-	DXGI_MODE_DESC dxgiTargetParameters;
-	{
-		dxgiTargetParameters.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		dxgiTargetParameters.Width = WinCore::sm_dwClientWidth;
-		dxgiTargetParameters.Height = WinCore::sm_dwClientHeight;
-		dxgiTargetParameters.RefreshRate.Numerator = 60;
-		dxgiTargetParameters.RefreshRate.Denominator = 1;
-		dxgiTargetParameters.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-		dxgiTargetParameters.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-	}
-	m_pdxgiSwapChain->ResizeTarget(&dxgiTargetParameters);
-
-	for (int i = 0; i < g_nSwapChainBuffers; ++i) {
-		if (m_pd3dRenderTargetBuffers[i])
-			m_pd3dRenderTargetBuffers[i].Reset();
-	}
-
-	DXGI_SWAP_CHAIN_DESC dxgiSwapChainDesc;
-	m_pdxgiSwapChain->GetDesc(&dxgiSwapChainDesc);
-	m_pdxgiSwapChain->ResizeBuffers(g_nSwapChainBuffers, WinCore::sm_dwClientWidth, WinCore::sm_dwClientHeight,
-		dxgiSwapChainDesc.BufferDesc.Format, dxgiSwapChainDesc.Flags);
-
-	m_nSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
-
-	CreateRenderTargetViews();
+	__cpuidex(cpuInfo, 7, 0);
+	return (cpuInfo[1] & (1 << 5)) != 0; // EBX bit 5 = AVX2
 }
 
 ComPtr<ID3D12Device> D3DCore::GetDevice() const
@@ -339,111 +166,42 @@ ComPtr<ID3D12Device> D3DCore::GetDevice() const
 	return m_pd3dDevice;
 }
 
-ComPtr<ID3D12GraphicsCommandList> D3DCore::GetCommandList() const
+ComPtr<IDXGIFactory4> D3DCore::GetDXGIFactory() const
 {
-	return m_pd3dCommandList;
+	return m_pdxgiFactory;
 }
 
-void D3DCore::RenderBegin()
+uint32 D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE eDescType)
 {
-	HRESULT hr;
+	uint32 unDescriptorInc = 0;
 
-	hr = m_pd3dCommandAllocator->Reset();
-	if (FAILED(hr)) {
-		SHOW_ERROR("Faied to reset CommandAllocator");
-		__debugbreak();
-	}
-
-	hr = m_pd3dCommandList->Reset(m_pd3dCommandAllocator.Get(), NULL);
-	if (FAILED(hr)) {
-		SHOW_ERROR("Faied to reset CommandList");
-		__debugbreak();
-	}
-
-	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
-	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
+	switch (eDescType)
 	{
-		d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		d3dResourceBarrier.Transition.pResource = m_pd3dRenderTargetBuffers[m_nSwapChainBufferIndex].Get();
-		d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-		d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-		d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	}
-	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = m_pd3dRTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	d3dRTVCPUDescriptorHandle.ptr += (m_nSwapChainBufferIndex * m_nRTVDescriptorIncrementSize);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dDSVDescriptorHandle = m_pd3dDSVDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-
-	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, &d3dDSVDescriptorHandle);
-
-	float pfClearColor[4] = { 0.f, 0.0f, 0.0f, 1.0f };
-	m_pd3dCommandList->ClearRenderTargetView(d3dRTVCPUDescriptorHandle, pfClearColor, 0, NULL);
-
-	m_pd3dCommandList->ClearDepthStencilView(d3dDSVDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, NULL);
-}
-
-void D3DCore::Render()
-{
-}
-
-void D3DCore::RenderEnd()
-{
-	HRESULT hr;
-
-	// Change rendered render target's resource state from D3D12_RESOURCE_STATE_RENDER_TARGET to D3D12_RESOURCE_STATE_PRESENT
-	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
-	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
+	case DESCRIPTOR_TYPE::CBV:
+	case DESCRIPTOR_TYPE::SRV:
+	case DESCRIPTOR_TYPE::UAV:
 	{
-		d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		d3dResourceBarrier.Transition.pResource = m_pd3dRenderTargetBuffers[m_nSwapChainBufferIndex].Get();
-		d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-		d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-		d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		unDescriptorInc = g_nCBVSRVDescriptorIncrementSize;
+		break;
 	}
-	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
-
-	m_pd3dCommandList->Close();
-
-	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList.Get() };
-	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
-
-	WaitForGPUComplete();
-}
-
-void D3DCore::Present()
-{
-	DXGI_PRESENT_PARAMETERS dxgiPresentParameters;
-	dxgiPresentParameters.DirtyRectsCount = 0;
-	dxgiPresentParameters.pDirtyRects = NULL;
-	dxgiPresentParameters.pScrollRect = NULL;
-	dxgiPresentParameters.pScrollOffset = NULL;
-
-	m_pdxgiSwapChain->Present1(1, 0, &dxgiPresentParameters);
-}
-
-void D3DCore::MoveToNextFrame()
-{
-	m_nSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
-
-	UINT64 nFenceValue = ++m_nFenceValues[m_nSwapChainBufferIndex];
-	HRESULT hResult = m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), nFenceValue);
-	if (m_pd3dFence->GetCompletedValue() < nFenceValue) {
-		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
-		::WaitForSingleObject(m_hFenceEvent, INFINITE);
-	}
-}
-
-void D3DCore::WaitForGPUComplete()
-{
-	UINT64 nFenceValue = ++m_nFenceValues[m_nSwapChainBufferIndex];
-	HRESULT hResult = m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), nFenceValue);
-	if (m_pd3dFence->GetCompletedValue() < nFenceValue)
+	case DESCRIPTOR_TYPE::RTV:
 	{
-		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
-		::WaitForSingleObject(m_hFenceEvent, INFINITE);
+		unDescriptorInc = g_nRTVDescriptorIncrementSize;
+		break;
 	}
+	case DESCRIPTOR_TYPE::DSV:
+	{
+		unDescriptorInc = g_nDSVDescriptorIncrementSize;
+		break;
+	}
+	case DESCRIPTOR_TYPE::SAMPLER:
+	{
+		unDescriptorInc = g_nSamplerDescriptorIncrementSize;
+		break;
+	}
+	default:
+		std::unreachable();
+	}
+
+	return unDescriptorInc;
 }

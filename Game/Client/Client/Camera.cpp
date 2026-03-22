@@ -1,6 +1,6 @@
 ﻿#include "pch.h"
 #include "Camera.h"
-
+#include "DirectionalCascadeShadowMapPass.h"
 
 Camera::Camera()
 {
@@ -39,22 +39,22 @@ void Camera::Update()
 	m_xmFrustumOrigin.Transform(m_xmFrustumWorld, m_mtxWorld);
 }
 
-Vector3 Camera::GetPosition() const
+const Vector3& Camera::GetPosition() const
 {
 	return m_v3Position;
 }
 
-Vector3 Camera::GetRight() const
+const Vector3& Camera::GetRight() const
 {
 	return m_v3Right;
 }
 
-Vector3 Camera::GetUp() const
+const Vector3& Camera::GetUp() const
 {
 	return m_v3Up;
 }
 
-Vector3 Camera::GetLook() const
+const Vector3& Camera::GetLook() const
 {
 	return m_v3Look;
 }
@@ -72,6 +72,16 @@ float Camera::GetYaw() const
 float Camera::GetRoll() const
 {
 	return m_fRoll;
+}
+
+float Camera::GetFovYInRadian() const
+{
+	return XMConvertToRadians(m_ffovY);
+}
+
+float Camera::GetAspectRatio() const
+{
+	return m_fAspectRatio;
 }
 
 void Camera::SetPosition(float x, float y, float z)
@@ -149,6 +159,8 @@ void Camera::GenerateViewMatrix()
 	m_mtxView._42 = -m_v3Position.Dot(m_v3Up);
 	m_mtxView._43 = -m_v3Position.Dot(m_v3Look);
 	m_mtxView._44 = 1.f;
+
+	m_mtxInverseView = m_mtxView.Invert();
 }
 
 void Camera::GenerateViewMatrix(Vector3 v3Position, Vector3 v3LookAt, Vector3 v3Up)
@@ -178,7 +190,10 @@ void Camera::GenerateProjectionMatrix(float fNearPlaneDistance, float fFarPlaneD
 		)
 	);
 
+	m_mtxInverseProjection = m_mtxProjection.Invert();
+
 	BoundingFrustum::CreateFromMatrix(m_xmFrustumOrigin, XMLoadFloat4x4(&m_mtxProjection));
+	ComputeCascadeSplits();
 }
 
 void Camera::SetViewport(int xTopLeft, int yTopLeft, int nWidth, int nHeight, float fMinZ, float fMaxZ)
@@ -205,16 +220,33 @@ void Camera::SetViewportsAndScissorRects(ComPtr<ID3D12GraphicsCommandList> pd3dC
 	pd3dCommandList->RSSetScissorRects(1, &m_d3dScissorRect);
 }
 
-CB_CAMERA_DATA Camera::MakeCBData() const
+CameraData Camera::MakeCBData() const
 {
-	CB_CAMERA_DATA camData{
+	CameraData camData{
 		.mtxView = m_mtxView.Transpose(),
+		.mtxInvView = m_mtxInverseView.Transpose(),
 		.mtxProjection = m_mtxProjection.Transpose(),
+		.mtxInvProjection = m_mtxInverseProjection.Transpose(),
+		.v4CascadeSplits = m_v4CascadeSplits,
 		.v3CameraPosition = m_v3Position
 	};
 
-
 	return camData;
+}
+
+void Camera::ComputeCascadeSplits()
+{
+	constexpr uint32 unNumCascade = DirectionalCascadeShadowMapPass::g_unNumCascade;
+
+	float fNearToFar = m_fFar - m_fNear;
+	float fDistancePerCascade = fNearToFar / static_cast<float>(unNumCascade);
+
+	float fSplits[4] = {0.f, 0.f, 0.f, 0.f};
+	for (auto i = 0; i < unNumCascade; ++i) {
+		fSplits[i] = m_fNear + ((i + 1) * fDistancePerCascade);
+	}
+
+	m_v4CascadeSplits = Vector4(fSplits);
 }
 
 Matrix Camera::GetViewProjectMatrix() const
@@ -228,14 +260,19 @@ Matrix Camera::GetViewProjectMatrix() const
 	return ret;
 }
 
-Matrix Camera::GetProjectionMatrix() const
+const Matrix& Camera::GetProjectionMatrix() const
 {
 	return m_mtxProjection;
 }
 
-Matrix Camera::GetViewMatrix() const
+const Matrix& Camera::GetViewMatrix() const
 {
 	return m_mtxView;
+}
+
+const Matrix& Camera::GetCameraWorldTransfromMatrix() const
+{
+	return m_mtxWorld;
 }
 
 float Camera::GetNearPlaneDistance() const

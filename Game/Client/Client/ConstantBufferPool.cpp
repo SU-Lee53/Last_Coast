@@ -5,7 +5,7 @@ ConstantBufferPool::ConstantBufferPool()
 {
 }
 
-void ConstantBufferPool::Initialize(ComPtr<ID3D12Device> pd3dDevice, size_t nCBVCountIn256Bytes, UINT minCBVSize, UINT maxCBVSize)
+void ConstantBufferPool::Initialize(size_t nCBVCountIn256Bytes, UINT minCBVSize, UINT maxCBVSize)
 {
 	// Goal : Create CB in size of 256 -> 512 -> 1024 -> 2048 -> ... -> 65536 (max size of constant buffer)
 	// Number of CBV will be half of previous size's CBV Count
@@ -36,7 +36,7 @@ void ConstantBufferPool::Initialize(ComPtr<ID3D12Device> pd3dDevice, size_t nCBV
 		ByteWidth += cbSize * cbvCount;
 	}
 
-	hr = pd3dDevice->CreateCommittedResource(
+	hr = DEVICE->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer(ByteWidth),
@@ -64,7 +64,7 @@ void ConstantBufferPool::Initialize(ComPtr<ID3D12Device> pd3dDevice, size_t nCBV
 		heapDesc.NodeMask = 0;
 	}
 
-	hr = pd3dDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(m_pCBVHeap.GetAddressOf()));
+	hr = DEVICE->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(m_pCBVHeap.GetAddressOf()));
 	if (FAILED(hr)) {
 		__debugbreak();
 	}
@@ -75,7 +75,7 @@ void ConstantBufferPool::Initialize(ComPtr<ID3D12Device> pd3dDevice, size_t nCBV
 
 	UINT8* pMappedPtr = m_pMappedPtr;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE CBVHandle(m_pCBVHeap->GetCPUDescriptorHandleForHeapStart());
-	UINT DescriptorSize = pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	UINT DescriptorSize = DEVICE->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	D3D12_GPU_VIRTUAL_ADDRESS GPUBufferAddr = m_pResource->GetGPUVirtualAddress();
 
@@ -90,7 +90,7 @@ void ConstantBufferPool::Initialize(ComPtr<ID3D12Device> pd3dDevice, size_t nCBV
 
 		m_CBuffers[cbSize].resize(cbvCount);
 		for (int i = 0; i < cbvCount; ++i) {
-			pd3dDevice->CreateConstantBufferView(&cbvDesc, CBVHandle);
+			DEVICE->CreateConstantBufferView(&cbvDesc, CBVHandle);
 			m_CBuffers[cbSize][i].CBVHandle = CBVHandle;
 			m_CBuffers[cbSize][i].GPUAddress = cbvDesc.BufferLocation;
 			m_CBuffers[cbSize][i].pMappedPtr = pMappedPtr;
@@ -114,5 +114,20 @@ void ConstantBufferPool::Reset()
 {
 	for (auto& [CBSize, CBVAllocated] : m_nAllocated) {
 		CBVAllocated = 0;
+	}
+}
+
+void ConstantBufferPool::ShowDebugInfo()
+{
+	ImGui::Text("Max size : %d", m_nMaxCBVSize);
+
+	ImGui::SeparatorText("CBV count");
+	for (const auto& [size, count] : m_nCBVCount) {
+		ImGui::Text("Size : %d - Count : %d", size, count);
+	}
+
+	ImGui::SeparatorText("CBV Allocated");
+	for (const auto& [size, count] : m_nAllocated) {
+		ImGui::Text("Size : %d - Allocated : %d", size, count);
 	}
 }

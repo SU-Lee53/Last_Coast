@@ -110,6 +110,21 @@
     <Filter Include="02.Game\GameObject\GameObjects">
       <UniqueIdentifier>{bf0745fd-7c0f-4232-8a53-13a737f7c144}</UniqueIdentifier>
     </Filter>
+    <Filter Include="03.Engine\Rendering\RenderPasses">
+      <UniqueIdentifier>{47aadbd6-47a8-4b75-9667-086d83dc6c33}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03.Engine\Compute">
+      <UniqueIdentifier>{2b4b277a-18f9-4a3a-aab0-aef577b2a3ee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Game\Skybox">
+      <UniqueIdentifier>{88d5134d-b3f4-4dce-975c-c321c60b510f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03.Engine\HLSL\Compute">
+      <UniqueIdentifier>{95f52740-376b-42bc-be7c-f9d9a04cdc2b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03.Engine\HLSL\Graphics">
+      <UniqueIdentifier>{828009b6-9e11-49d7-8085-9254128fa4a5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h">
@@ -135,12 +150,6 @@
     </ClInclude>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_textedit.h">
       <Filter>99.Library\ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Dependencies\Includes\DirectXTex\DDSTextureLoader12.h">
-      <Filter>99.Library\DirectXTex</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Dependencies\Includes\DirectXTex\WICTextureLoader12.h">
-      <Filter>99.Library\DirectXTex</Filter>
     </ClInclude>
     <ClInclude Include="Camera.h">
       <Filter>02.Game\Camera</Filter>
@@ -193,9 +202,6 @@
     <ClInclude Include="ConstantBuffer.h">
       <Filter>03.Engine\Resources\Buffer</Filter>
     </ClInclude>
-    <ClInclude Include="ConstantBufferPool.h">
-      <Filter>03.Engine\Resources\Buffer</Filter>
-    </ClInclude>
     <ClInclude Include="DescriptorHeap.h">
       <Filter>03.Engine\Resources\DescriptorHeap</Filter>
     </ClInclude>
@@ -216,9 +222,6 @@
     </ClInclude>
     <ClInclude Include="Sprite.h">
       <Filter>03.Engine\Graphic Components</Filter>
-    </ClInclude>
-    <ClInclude Include="StructuredBuffer.h">
-      <Filter>03.Engine\Resources\Buffer</Filter>
     </ClInclude>
     <ClInclude Include="ShaderResource.h">
       <Filter>03.Engine\Resources</Filter>
@@ -292,6 +295,9 @@
     <ClInclude Include="Player.h">
       <Filter>02.Game\GameObject\Player</Filter>
     </ClInclude>
+    <ClInclude Include="TestScene.h">
+      <Filter>02.Game\Scene</Filter>
+    </ClInclude>
     <ClInclude Include="ThirdPersonPlayer.h">
       <Filter>02.Game\GameObject\Player</Filter>
     </ClInclude>
@@ -331,7 +337,6 @@
     <ClInclude Include="MeshRenderer.h">
       <Filter>02.Game\Components\Components</Filter>
     </ClInclude>
-    <ClInclude Include="Collider.h" />
     <ClInclude Include="DynamicObject.h">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClInclude>
@@ -341,25 +346,75 @@
     <ClInclude Include="StaticObject.h">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClInclude>
-    <ClInclude Include="Skeleton.h" />
     <ClInclude Include="BoundingCapsule.h">
       <Filter>99.Utility</Filter>
     </ClInclude>
-    <ClInclude Include="TestScene.h">
-      <Filter>02.Game\Scene\Test</Filter>
+    <ClInclude Include="ResourceTable.h">
+      <Filter>99.Utility</Filter>
     </ClInclude>
-    <ClInclude Include="AIManagerWrapper.h">
-      <Filter>04.Managers\Game Management</Filter>
-    </ClInclude>
-    <ClInclude Include="Zombie.h">
-      <Filter>02.Game\GameObject\GameObjects</Filter>
-    </ClInclude>
-    <ClInclude Include="ZombieAnimationController.h">
+    <ClInclude Include="Skeleton.h">
       <Filter>02.Game\Components\Components</Filter>
     </ClInclude>
-    <ClInclude Include="NavMeshDebugRenderer.h">
+    <ClInclude Include="Collider.h">
+      <Filter>02.Game\Components\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="CB_Types.h">
+      <Filter>03.Engine\Resources\Buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="ConstantBufferPool.h">
+      <Filter>03.Engine\Resources\Buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="StructuredBufferPool.h">
+      <Filter>03.Engine\Resources\Buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="MaterialManager.h">
+      <Filter>04.Managers\Resource Management</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderGraph.h">
+      <Filter>03.Engine\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="IDGenerator.h">
+      <Filter>99.Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="GBufferPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="ComputePass.h">
+      <Filter>03.Engine\Compute</Filter>
+    </ClInclude>
+    <ClInclude Include="ToneMappingPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="Skybox.h">
+      <Filter>02.Game\Skybox</Filter>
+    </ClInclude>
+    <ClInclude Include="ComputeManager.h" />
+    <ClInclude Include="CommandListAllocator.h" />
+    <ClInclude Include="..\Dependencies\Includes\DirectXTex\DDSTextureLoader12.h">
+      <Filter>99.Library\DirectXTex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\Includes\DirectXTex\WICTextureLoader12.h">
+      <Filter>99.Library\DirectXTex</Filter>
+    </ClInclude>
+    <ClInclude Include="SkyboxPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="DefferedLightingPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectionalCascadeShadowMapPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="TransparentForwardLightingPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="MapTestScene.h">
       <Filter>02.Game\Scene\Test</Filter>
     </ClInclude>
+    <ClInclude Include="TerrainTestScene.h">
+      <Filter>02.Game\Scene\Test</Filter>
+    </ClInclude>
+    <ClInclude Include="SpritePass.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -395,12 +450,6 @@
     </ClCompile>
     <ClCompile Include="..\Dependencies\Includes\ImGui\imgui_widgets.cpp">
       <Filter>99.Library\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Dependencies\Includes\DirectXTex\WICTextureLoader12.cpp">
-      <Filter>99.Library\DirectXTex</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Dependencies\Includes\DirectXTex\DDSTextureLoader12.cpp">
-      <Filter>99.Library\DirectXTex</Filter>
     </ClCompile>
     <ClCompile Include="entry.cpp">
       <Filter>00.Entry</Filter>
@@ -468,9 +517,6 @@
     <ClCompile Include="Sprite.cpp">
       <Filter>03.Engine\Graphic Components</Filter>
     </ClCompile>
-    <ClCompile Include="StructuredBuffer.cpp">
-      <Filter>03.Engine\Resources\Buffer</Filter>
-    </ClCompile>
     <ClCompile Include="ShaderResource.cpp">
       <Filter>03.Engine\Resources</Filter>
     </ClCompile>
@@ -537,6 +583,9 @@
     <ClCompile Include="Player.cpp">
       <Filter>02.Game\GameObject\Player</Filter>
     </ClCompile>
+    <ClCompile Include="TestScene.cpp">
+      <Filter>02.Game\Scene</Filter>
+    </ClCompile>
     <ClCompile Include="ThirdPersonPlayer.cpp">
       <Filter>02.Game\GameObject\Player</Filter>
     </ClCompile>
@@ -573,7 +622,6 @@
     <ClCompile Include="MeshRenderer.cpp">
       <Filter>02.Game\Components\Components</Filter>
     </ClCompile>
-    <ClCompile Include="Collider.cpp" />
     <ClCompile Include="DynamicObject.cpp">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClCompile>
@@ -583,28 +631,72 @@
     <ClCompile Include="StaticObject.cpp">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClCompile>
-    <ClCompile Include="Skeleton.cpp" />
     <ClCompile Include="Defines.cpp">
       <Filter>99.Utility</Filter>
     </ClCompile>
     <ClCompile Include="BoundingCapsule.cpp">
       <Filter>99.Utility</Filter>
     </ClCompile>
-    <ClCompile Include="TestScene.cpp">
-      <Filter>02.Game\Scene\Test</Filter>
+    <ClCompile Include="ResourceTable.cpp">
+      <Filter>99.Utility</Filter>
     </ClCompile>
-    <ClCompile Include="AIManagerWrapper.cpp">
-      <Filter>04.Managers\Game Management</Filter>
-    </ClCompile>
-    <ClCompile Include="Zombie.cpp">
-      <Filter>02.Game\GameObject\GameObjects</Filter>
-    </ClCompile>
-    <ClCompile Include="ZombieAnimationController.cpp">
+    <ClCompile Include="Skeleton.cpp">
       <Filter>02.Game\Components\Components</Filter>
     </ClCompile>
-    <ClCompile Include="NavMeshDebugRenderer.cpp">
+    <ClCompile Include="Collider.cpp">
+      <Filter>02.Game\Components\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="StructuredBufferPool.cpp">
+      <Filter>03.Engine\Resources\Buffer</Filter>
+    </ClCompile>
+    <ClCompile Include="MaterialManager.cpp">
+      <Filter>04.Managers\Resource Management</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderGraph.cpp">
+      <Filter>03.Engine\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="IDGenerator.cpp">
+      <Filter>99.Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="GBufferPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="ComputePass.cpp">
+      <Filter>03.Engine\Compute</Filter>
+    </ClCompile>
+    <ClCompile Include="ToneMappingPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="Skybox.cpp">
+      <Filter>02.Game\Skybox</Filter>
+    </ClCompile>
+    <ClCompile Include="ComputeManager.cpp" />
+    <ClCompile Include="CommandListAllocator.cpp" />
+    <ClCompile Include="DefferedLightingPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="SkyboxPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="DirectionalCascadeShadowMapPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="TransparentForwardLightingPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\Includes\DirectXTex\WICTextureLoader12.cpp">
+      <Filter>99.Library\DirectXTex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\Includes\DirectXTex\DDSTextureLoader12.cpp">
+      <Filter>99.Library\DirectXTex</Filter>
+    </ClCompile>
+    <ClCompile Include="TerrainTestScene.cpp">
       <Filter>02.Game\Scene\Test</Filter>
     </ClCompile>
+    <ClCompile Include="MapTestScene.cpp">
+      <Filter>02.Game\Scene\Test</Filter>
+    </ClCompile>
+    <ClCompile Include="SpritePass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
@@ -615,39 +707,56 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="..\HLSL\HDRIToCubeMap.hlsl">
+      <Filter>03.Engine\HLSL\Compute</Filter>
+    </FxCompile>
     <FxCompile Include="..\HLSL\Common.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\DefferedShader.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\EffectCommon.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
+      <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\EffectShader.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
+      <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\FullScreenShader.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
+      <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\Light.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\NewCommon.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\RayShader.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\SkyboxShader.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\Sprite.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\SpriteShader.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
+      <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\Shaders.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
+      <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
-    <FxCompile Include="NewCommon.hlsl" />
-    <FxCompile Include="..\HLSL\DebugLineShader.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
+    <FxCompile Include="..\HLSL\SkyboxShader.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\Sprite.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\SpriteShader.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\ToneMapping.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\Skybox.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\ForwardShader.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\ShadowMapShader.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

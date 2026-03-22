@@ -1,29 +1,35 @@
 ﻿#pragma once
 
-enum LIGHT_TYPE : int {
-    LIGHT_TYPE_POINT_LIGHT = 1,
-    LIGHT_TYPE_SPOT_LIGHT = 2,
-    LIGHT_TYPE_DIRECTIONAL_LIGHT = 3,
+enum class LIGHT_TYPE : int32 {
+    POINT_LIGHT = 1,
+    SPOT_LIGHT = 2,
+    DIRECTIONAL_LIGHT = 3,
 };
 
 class Light {
 public:
-    virtual LightData MakeLightData() { return LightData{}; }
+    virtual LightData MakeCBData() { return LightData{}; }
+
+	virtual void ShowControllImGui() { };
 
 public:
-    bool m_bEnable;
+    bool m_bEnable = true;
 };
 
 class PointLight : public Light {
 public:
-    virtual LightData MakeLightData() override;
+    virtual LightData MakeCBData() override;
+	virtual void ShowControllImGui() override;
 
-    Vector4    m_v4Diffuse;
-    Vector4    m_v4Ambient;
-    Vector4    m_v4Specular;
+    //Vector4    m_v4Diffuse;
+    //Vector4    m_v4Ambient;
+    //Vector4    m_v4Specular;
 
-    Vector3    m_v3Position;
-    Vector3    m_v3Direction;
+	Vector3		m_v3Color;
+	float		m_fIntensity;
+
+    Vector3		m_v3Position;
+    Vector3		m_v3Direction;
 
     float       m_fRange;
     float       m_fAttenuation0;
@@ -34,14 +40,14 @@ public:
 
 class SpotLight : public Light {
 public:
-    virtual LightData MakeLightData() override;
+    virtual LightData MakeCBData() override;
+	virtual void ShowControllImGui() override;
 
-    Vector4    m_v4Diffuse;
-    Vector4    m_v4Ambient;
-    Vector4    m_v4Specular;
+	Vector3		m_v3Color;
+	float		m_fIntensity;
 
-    Vector3    m_v3Position;
-    Vector3    m_v3Direction;
+    Vector3		m_v3Position;
+    Vector3		m_v3Direction;
 
     float       m_fRange;
     float       m_fFalloff;
@@ -54,12 +60,13 @@ public:
 
 class DirectionalLight : public Light {
 public:
-    virtual LightData MakeLightData() override;
+    virtual LightData MakeCBData() override;
+	virtual void ShowControllImGui() override;
 
-    Vector4    m_v4Diffuse;
-    Vector4    m_v4Ambient;
-    Vector4    m_v4Specular;
+	Vector3		m_v3Color;
+	float		m_fIntensity;
 
     Vector3    m_v3Direction;
+    Vector3    m_v3Position;
 };
 

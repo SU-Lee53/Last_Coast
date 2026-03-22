@@ -14,7 +14,11 @@ public:
 
 	bool IsCursorInSprite(float x, float y) const;
 
+	TextureHandle GetImageHandle() { return m_ImageHandle; }
+
 protected:
+	TextureHandle m_ImageHandle;
+
 	SpriteRect m_Rect;	// 윈도우 좌표계를 기준
 	bool m_bClickable;
 	UINT m_nLayerIndex;

@@ -30,59 +30,57 @@ struct MATERIALLOADINFO {
 	float fUVTiling;
 }; 
 
-class Material {
+interface IMaterial abstract {
 public:
-	Material(const MATERIALLOADINFO& materialLoadInfo);
-	virtual ~Material();
+	friend class MaterialManager;
+	using ID = uint64;
 
 public:
-	const MaterialColors& GetMaterialColors() const { return m_MaterialColors; }
+	virtual void Initialize(const MATERIALLOADINFO& materialLoadInfo) = 0;
+
+	const MaterialData& GetMaterialData() const { return m_MaterialData; }
 	const std::shared_ptr<Shader>& GetShader() const { return m_pShader; }
 	void SetShader(std::shared_ptr<Shader> pShader);
 
-	void SetTexture(std::shared_ptr<Texture> pTexture, TEXTURE_TYPE eTextureType);
+	void SetTexture(const TextureRef<Texture>& texID, TEXTURE_TYPE eTextureType);
 	std::shared_ptr<Texture> GetTexture(int nIndex);
 
-public:
-	virtual void UpdateShaderVariables(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, void* dataForBind);
-	virtual void UpdateShaderVariables(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle);
+	const std::vector<TextureRef<Texture>>& GetTextureRefs() const { return m_TextureIDs; }
 
 protected:
-	MaterialColors m_MaterialColors{};
-	std::vector<std::shared_ptr<Texture>> m_pTextures;
+	void InitializeColors(const MATERIALLOADINFO& materialLoadInfo);
+
+protected:
+	MaterialData m_MaterialData{};
+	std::vector<TextureRef<Texture>> m_TextureIDs;
 
 	std::shared_ptr<Shader> m_pShader;
-
 };
 
 //////////////////////////////////////////////////////////////////////////////////
 // StandardMaterial
 
-class StandardMaterial : public Material {
+class StandardMaterial : public IMaterial {
 public:
-	StandardMaterial(const MATERIALLOADINFO& materialLoadInfo);
-	virtual ~StandardMaterial() {}
+	virtual void Initialize(const MATERIALLOADINFO& materialLoadInfo) override;
 
 };
 
 //////////////////////////////////////////////////////////////////////////////////
 // SkinnedMaterial
 
-class SkinnedMaterial : public Material {
+class SkinnedMaterial : public IMaterial {
 public:
-	SkinnedMaterial(const MATERIALLOADINFO& materialLoadInfo);
-	virtual ~SkinnedMaterial() {}
+	virtual void Initialize(const MATERIALLOADINFO& materialLoadInfo) override;
 
 };
 
 //////////////////////////////////////////////////////////////////////////////////
 // TerrainMaterial
 
-class TerrainMaterial : public Material {
+class TerrainMaterial : public IMaterial {
 public:
-	TerrainMaterial(const MATERIALLOADINFO& materialLoadInfo);
-	virtual ~TerrainMaterial() {}
-
+	virtual void Initialize(const MATERIALLOADINFO& materialLoadInfo) override;
 	float GetTiling() const { return m_fTiling; }
 
 private:

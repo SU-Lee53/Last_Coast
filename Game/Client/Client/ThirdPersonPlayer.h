@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Player.h"
+#include "BoundingCapsule.h"
 
 class ThirdPersonPlayer : public IPlayer {
 public:

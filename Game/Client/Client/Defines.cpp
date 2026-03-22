@@ -2,6 +2,8 @@
 #include "Defines.h"
 #include "GameObject.h"
 
+#include "Collider.h"
+
 
 float CollisionResult::GetDistanceBetweenCenter() const 
 {

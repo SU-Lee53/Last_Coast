@@ -2,16 +2,15 @@
 #include "SceneManager.h"
 #include "AnimationTestScene.h"
 #include "NetworkTestScene.h"
+#include "TerrainTestScene.h"
+#include "MapTestScene.h"
 #include "TestScene.h"
 
 void SceneManager::Initialize()
 {
-	m_upCurrentScene = std::make_unique<TestScene>();
+	m_upCurrentScene = std::make_unique<MapTestScene>();
+	m_upCurrentScene->BuildLights();
 	m_upCurrentScene->BuildObjects();
-	
-	//m_upCurrentScene = std::make_unique<TestScene>();
-	//m_upCurrentScene->BuildObjects();
-
 	m_upCurrentScene->PostInitialize();
 
 	//RESOURCE->WaitForCopyComplete();
@@ -29,11 +28,15 @@ void SceneManager::Update()
 {
 	m_upCurrentScene->PreUpdate();
 	m_upCurrentScene->Update();
+	if (m_bSceneChanged) {
+		m_bSceneChanged = false;
+		return;
+	}
 	m_upCurrentScene->FixedUpdate();
 	m_upCurrentScene->PostUpdate();
 }
 
-void SceneManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommansList)
+void SceneManager::PrepareRender()
 {
-	m_upCurrentScene->Render(pd3dCommansList);
+	m_upCurrentScene->PrepareRender();
 }

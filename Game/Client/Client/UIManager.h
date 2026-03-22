@@ -1,8 +1,9 @@
 ﻿#pragma once
-#include "Sprite.h"
 
 #define MAX_UI_LAYER_COUNT 3
 #define MAX_SPRITE_PER_DRAW 100
+
+class Sprite;
 
 struct SpriteParameter {
 	SpriteRect spriteRect;	// 그림 / 텍스트가 들어갈 사각형 (Window 좌표계)
@@ -11,6 +12,7 @@ struct SpriteParameter {
 };
 
 using UILayerContainerType = std::array<std::array<std::vector<std::shared_ptr<Sprite>>, SPRITE_TYPE_COUNT>, MAX_UI_LAYER_COUNT>;
+
 
 class UILayer {
 public:

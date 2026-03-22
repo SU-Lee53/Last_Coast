@@ -72,7 +72,7 @@ float GameTimer::GetTimeElapsed()
 	return m_fTotalTimeElapsed;
 }
 
-double GameTimer::GetTotalTime()
+float GameTimer::GetTotalTime()
 {
 	if (m_bStopped) return(float(((m_nStopPerformanceCounter - m_nPausedPerformanceCounter) - m_nBasePerformanceCounter) * m_fTimeScale));
 	return float(((m_nCurrentPerformanceCounter - m_nPausedPerformanceCounter) - m_nBasePerformanceCounter) * m_fTimeScale);

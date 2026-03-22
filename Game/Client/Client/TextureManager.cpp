@@ -1,6 +1,9 @@
 ﻿#include "pch.h"
 #include "TextureManager.h"
 
+uint32 TextureManager::g_unRTVFromCoreCount = 0;
+uint32 TextureManager::g_unDSVFromCoreCount = 0;
+
 void TextureManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 {
 	m_pd3dDevice = pd3dDevice;
@@ -8,25 +11,11 @@ void TextureManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 	CreateCommandList();
 	CreateFence();
 
-	// Create DescriptorHeaps
-	D3D12_DESCRIPTOR_HEAP_DESC heapDesc;
-	{
-		heapDesc.NumDescriptors = MAX_TEXTURE_COUNT;
-		heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-		heapDesc.NodeMask = 0;
-	}
-	m_SRVUAVDescriptorHeap.Initialize(pd3dDevice, heapDesc);
-
-	{
-		heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	}
-	m_RTVDescriptorHeap.Initialize(pd3dDevice, heapDesc);
-
-	{
-		heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-	}
-	m_DSVDescriptorHeap.Initialize(pd3dDevice, heapDesc);
+	//// Create DescriptorHeaps + Table
+	m_SRVTextureTable.Initialize(pd3dDevice, MAX_TEXTURE_COUNT, true, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
+	m_UAVTextureTable.Initialize(pd3dDevice, 50, true, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
+	m_RTVTextureTable.Initialize(pd3dDevice, 50, true, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
+	m_DSVTextureTable.Initialize(pd3dDevice, 50, true, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
 
 	m_CommandListPool.Initialize(pd3dDevice);
 }
@@ -34,431 +23,467 @@ void TextureManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 void TextureManager::LoadGameTextures()
 {
 	// Font
-	LoadTexture("font");
+	//LoadTexture("font");
 }
 
-std::shared_ptr<Texture> TextureManager::LoadTexture(const std::string& strTextureName)
+TextureRef<Texture> TextureManager::LoadTexture(const std::string& strTextureName, bool bCheckTransparent)
 {
-	auto it = m_pTexturePool.find(strTextureName);
-	if (it == m_pTexturePool.end()) {
-		std::shared_ptr<Texture> pTexture = CreateTextureFromFile(::StringToWString(strTextureName));
-		if (pTexture) {
-			m_pTexturePool[strTextureName] = pTexture;
+	TextureHandle findHandle = m_SRVTextureTable.GetHandle(strTextureName);
+	if (!findHandle.IsValid()) {
+		std::shared_ptr<Texture> pTexture = std::make_shared<Texture>();
+		bool bResult = pTexture->CreateTextureFromFile(::StringToWString(strTextureName), bCheckTransparent);
+		if (!bResult) {
+			return {};
 		}
-	}
 
-	return m_pTexturePool[strTextureName];
-}
+		TextureTable::ResourceDesc srvDesc;
+		srvDesc.eType = TextureTable::ResourceDesc::TYPE::SRV;
+		srvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
+		TextureHandle SRVHandle = m_SRVTextureTable.Register(
+			strTextureName,
+			pTexture,
+			&srvDesc);
 
-std::shared_ptr<Texture> TextureManager::LoadTextureFromRaw(const std::string& strTextureName, uint32 unWidth, uint32 unHeight)
-{
-	auto it = m_pTexturePool.find(strTextureName);
-	if (it == m_pTexturePool.end()) {
-		std::shared_ptr<Texture> pTexture = CreateTextureFromRawFile(::StringToWString(strTextureName), unWidth, unHeight);
-		if (pTexture) {
-			m_pTexturePool[strTextureName] = pTexture;
+		if (!SRVHandle.IsValid()) {
+			OutputDebugStringA(std::format("Failed to load texture SRV : {}", strTextureName).c_str());
+			return {};
 		}
+
+		pTexture->m_d3dSRVDesc = srvDesc.srv;
+		pTexture->m_un64RuntimeSRVID = SRVHandle.GetID();
+		pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByHandle(SRVHandle);
+
+		return { SRVHandle };
 	}
 
-	return m_pTexturePool[strTextureName];
+	return { findHandle };
 }
 
-std::shared_ptr<Texture> TextureManager::LoadTextureArray(const std::string& strTextureName, const std::wstring& wstrTexturePath)
+TextureRef<Texture> TextureManager::LoadTextureFromRaw(const std::string& strTextureName, uint32 unWidth, uint32 unHeight)
 {
-	auto it = m_pTexturePool.find(strTextureName);
-	if (it == m_pTexturePool.end()) {
-		std::shared_ptr<Texture> pTexture = CreateTextureArrayFromFile(wstrTexturePath);
-		if (pTexture) {
-			m_pTexturePool[strTextureName] = pTexture;
+	TextureHandle findHandle = m_SRVTextureTable.GetHandle(strTextureName);
+	if (!findHandle.IsValid()) {
+		std::shared_ptr<Texture> pTexture = std::make_shared<Texture>();
+		bool bResult = pTexture->CreateTextureFromRawFile(::StringToWString(strTextureName), unWidth, unHeight);
+		if (!bResult) {
+			return {};
 		}
-	}
 
-	return m_pTexturePool[strTextureName];
-}
+		TextureTable::ResourceDesc srvDesc;
+		srvDesc.eType = TextureTable::ResourceDesc::TYPE::SRV;
+		srvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
+		TextureHandle SRVHandle = m_SRVTextureTable.Register(
+			strTextureName,
+			pTexture,
+			&srvDesc);
 
-std::shared_ptr<Texture> TextureManager::Get(const std::string& strTextureName) const
-{
-	auto it = m_pTexturePool.find(strTextureName);
-	if (it != m_pTexturePool.end()) {
-		return it->second;
-	}
-
-	return nullptr;
-}
-
-std::shared_ptr<Texture> TextureManager::CreateTextureFromFile(const std::wstring& wstrTextureName)
-{
-	namespace fs = std::filesystem;
-	
-	std::wstring wstrTexturePath;
-	if (fs::path(wstrTextureName).has_extension()) {
-		wstrTexturePath = wstrTextureName;
-	}
-	else {
-		wstrTexturePath = std::format(L"{}/{}.dds", g_wstrTextureBasePath, wstrTextureName);
-	}
-
-
-	fs::path texPath{ wstrTexturePath };
-	if (!fs::exists(texPath)) {
-		OutputDebugStringA(std::format("{} - {} : {} : {}\n", __FILE__, __LINE__, "Texture file not exist", texPath.string()).c_str());
-		return nullptr;
-	}
-
-	std::shared_ptr<Texture> pTexture = std::make_shared<Texture>();
-
-	std::unique_ptr<uint8_t[]> ddsData = nullptr;
-	std::vector<D3D12_SUBRESOURCE_DATA> subresources;
-	if (texPath.extension().string() == ".dds" || texPath.extension().string() == ".DDS") {
-		LoadFromDDSFile(pTexture->m_pTexResource.pResource.GetAddressOf(), wstrTexturePath, ddsData, subresources);
-	}
-	else {
-		LoadFromWICFile(pTexture->m_pTexResource.pResource.GetAddressOf(), wstrTexturePath, ddsData, subresources);
-	}
-
-	D3D12_RESOURCE_DESC d3dTextureResourceDesc = pTexture->m_pTexResource.pResource->GetDesc();
-	UINT nSubResources = (UINT)subresources.size();
-	UINT64 nBytes = GetRequiredIntermediateSize(pTexture->m_pTexResource.pResource.Get(), 0, nSubResources);
-	nBytes = (nBytes == 0) ? 1 : nBytes;
-	//	UINT nSubResources = d3dTextureResourceDesc.DepthOrArraySize * d3dTextureResourceDesc.MipLevels;
-	//	UINT64 nBytes = 0;
-	//	pd3dDevice->GetCopyableFootprints(&d3dTextureResourceDesc, 0, nSubResources, 0, NULL, NULL, NULL, &nBytes);
-
-	ComPtr<ID3D12Resource> pd3dUploadBuffer = nullptr;
-	m_pd3dDevice->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(nBytes),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(pd3dUploadBuffer.GetAddressOf())
-	);
-
-	// BinaryResource -> Upload Buffer -> Texture Buffer
-	auto cmdList = AllocateCommandListSafe();
-	{
-		pTexture->m_pTexResource.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_COPY_DEST);
-		{
-			::UpdateSubresources(cmdList->pd3dCommandList.Get(), pTexture->m_pTexResource.pResource.Get(), pd3dUploadBuffer.Get(), 0, 0, nSubResources, subresources.data());
+		if (SRVHandle.IsValid()) {
+			OutputDebugStringA(std::format("Failed to load texture SRV : {}", strTextureName).c_str());
+			return {};
 		}
-		pTexture->m_pTexResource.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+
+		pTexture->m_d3dSRVDesc = srvDesc.srv;
+		pTexture->m_un64RuntimeSRVID = SRVHandle.GetID();
+		pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByHandle(SRVHandle);
+
+		return { SRVHandle };
 	}
-	ExcuteCommandList(*cmdList);
-	cmdList->ui64FenceValue = Fence();
-	m_PendingUploadBuffers.push_back({ pd3dUploadBuffer, cmdList });
 
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
-	{
-		srvDesc.Format = d3dTextureResourceDesc.Format;
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = d3dTextureResourceDesc.MipLevels;
-		srvDesc.Texture2D.MostDetailedMip = 0;
-		srvDesc.Texture2D.PlaneSlice = 0;
-		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-	}
-	pTexture->m_d3dSRVDesc = srvDesc;
-
-	CD3DX12_CPU_DESCRIPTOR_HANDLE SRVHandle = m_SRVUAVDescriptorHeap.GetDescriptorHandleFromHeapStart().cpuHandle;
-	SRVHandle.Offset(m_nNumSRVUAVTextures++, D3DCORE->g_nCBVSRVDescriptorIncrementSize);
-	m_pd3dDevice->CreateShaderResourceView(pTexture->m_pTexResource.pResource.Get(), &srvDesc, SRVHandle);
-	pTexture->m_d3dSRVHandle = SRVHandle;
-
-	return pTexture;
+	return { findHandle };
 }
 
-std::shared_ptr<Texture> TextureManager::CreateTextureArrayFromFile(const std::wstring& wstrTexturePath)
+TextureRef<Texture> TextureManager::LoadTextureArray(const std::string& strTextureName, const std::wstring& wstrTexturePath)
 {
-	namespace fs = std::filesystem;
-
-	fs::path texPath{ wstrTexturePath };
-	if (!fs::exists(texPath)) {
-		OutputDebugStringA(std::format("{} - {} : {} : {}\n", __FILE__, __LINE__, "Texture file not exist", texPath.string()).c_str());
-		return nullptr;
-	}
-
-	std::shared_ptr<Texture> pTexture = std::make_shared<Texture>();
-
-	std::unique_ptr<uint8_t[]> ddsData = nullptr;
-	std::vector<D3D12_SUBRESOURCE_DATA> subresources;
-	if (texPath.extension().string() == ".dds" || texPath.extension().string() == ".DDS") {
-		LoadFromDDSFile(pTexture->m_pTexResource.pResource.GetAddressOf(), wstrTexturePath, ddsData, subresources);
-	}
-	else {
-		LoadFromWICFile(pTexture->m_pTexResource.pResource.GetAddressOf(), wstrTexturePath, ddsData, subresources);
-	}
-
-	D3D12_RESOURCE_DESC d3dTextureResourceDesc = pTexture->m_pTexResource.pResource->GetDesc();
-	UINT nSubResources = (UINT)subresources.size();
-	UINT64 nBytes = GetRequiredIntermediateSize(pTexture->m_pTexResource.pResource.Get(), 0, nSubResources);
-	nBytes = (nBytes == 0) ? 1 : nBytes;
-	//	UINT nSubResources = d3dTextureResourceDesc.DepthOrArraySize * d3dTextureResourceDesc.MipLevels;
-	//	UINT64 nBytes = 0;
-	//	pd3dDevice->GetCopyableFootprints(&d3dTextureResourceDesc, 0, nSubResources, 0, NULL, NULL, NULL, &nBytes);
-
-	ComPtr<ID3D12Resource> pd3dUploadBuffer = nullptr;
-	m_pd3dDevice->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(nBytes),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(pd3dUploadBuffer.GetAddressOf())
-	);
-
-	// BinaryResource -> Upload Buffer -> Texture Buffer
-	auto cmdList = AllocateCommandListSafe();
-	{
-		pTexture->m_pTexResource.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_COPY_DEST);
-		{
-			::UpdateSubresources(cmdList->pd3dCommandList.Get(), pTexture->m_pTexResource.pResource.Get(), pd3dUploadBuffer.Get(), 0, 0, nSubResources, subresources.data());
+	TextureHandle findHandle = m_SRVTextureTable.GetHandle(strTextureName);
+	if (!findHandle.IsValid()) {
+		std::shared_ptr<Texture> pTexture = std::make_shared<Texture>();
+		bool bResult = pTexture->CreateTextureArrayFromFile(::StringToWString(strTextureName));
+		if (!bResult) {
+			return {};
 		}
-		pTexture->m_pTexResource.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-	}
-	ExcuteCommandList(*cmdList);
-	cmdList->ui64FenceValue = Fence();
-	m_PendingUploadBuffers.push_back({ pd3dUploadBuffer, cmdList });
 
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
-	{
-		srvDesc.Format = d3dTextureResourceDesc.Format;
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-		srvDesc.Texture2DArray.MostDetailedMip = 0;
-		srvDesc.Texture2DArray.MipLevels = d3dTextureResourceDesc.MipLevels;
-		srvDesc.Texture2DArray.FirstArraySlice = 0;
-		srvDesc.Texture2DArray.ArraySize = d3dTextureResourceDesc.DepthOrArraySize;
-		srvDesc.Texture2DArray.PlaneSlice = 0;
-		srvDesc.Texture2DArray.ResourceMinLODClamp = 0.0f;
-	}
-	pTexture->m_d3dSRVDesc = srvDesc;
+		TextureTable::ResourceDesc srvDesc;
+		srvDesc.eType = TextureTable::ResourceDesc::TYPE::SRV;
+		srvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2DARRAY;
+		TextureHandle SRVHandle = m_SRVTextureTable.Register(
+			strTextureName,
+			pTexture,
+			&srvDesc);
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE SRVHandle = m_SRVUAVDescriptorHeap.GetDescriptorHandleFromHeapStart().cpuHandle;
-	SRVHandle.Offset(m_nNumSRVUAVTextures++);
-	m_pd3dDevice->CreateShaderResourceView(pTexture->m_pTexResource.pResource.Get(), &srvDesc, SRVHandle);
-	pTexture->m_d3dSRVHandle = SRVHandle;
-
-	return pTexture;
-}
-
-std::shared_ptr<Texture> TextureManager::CreateTextureFromRawFile(const std::wstring& wstrTexturePath, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiFormat)
-{
-	// TODO : std::vector 생명주기와 GPU 복사 시기를 고려해야 함
-	namespace fs = std::filesystem;
-
-	//std::wstring wstrTexturePath;
-	std::ifstream in{ wstrTexturePath, std::ios::binary };
-	if (!in) {
-		OutputDebugStringA(std::format("{} - {} : {} : {}\n", __FILE__, __LINE__, "Texture file not exist", fs::path(wstrTexturePath).string()).c_str());
-		__debugbreak();
-		return nullptr;
-	}
-
-	// 파일 읽기
-	in.seekg(0, std::ios::end);
-	int32 nSize = in.tellg();
-	in.seekg(0, std::ios::beg);
-
-	std::vector<uint8> rawData;
-	rawData.resize(nSize);
-	in.read((char*)rawData.data(), nSize);
-
-	// 리소스 포인터 생성
-	D3D12_RESOURCE_DESC resourceDesc = {};
-	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	resourceDesc.Alignment = 0;
-	resourceDesc.Width = unWidth;
-	resourceDesc.Height = unHeight;
-	resourceDesc.DepthOrArraySize = 1;
-	resourceDesc.MipLevels = 1;
-	resourceDesc.Format = dxgiFormat;
-	resourceDesc.SampleDesc.Count = 1;
-	resourceDesc.SampleDesc.Quality = 0;
-	resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-	resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-	std::shared_ptr<Texture> pTexture = std::make_shared<Texture>();
-	CD3DX12_HEAP_PROPERTIES d3dHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
-
-	pTexture->m_pTexResource.Create(
-		m_pd3dDevice,
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		D3D12_HEAP_FLAG_NONE,
-		&resourceDesc,
-		D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
-		nullptr
-	);
-
-	// UploadBuffer 생성
-	D3D12_RESOURCE_DESC d3dTextureResourceDesc = pTexture->m_pTexResource.pResource->GetDesc();
-	UINT64 nBytes = GetRequiredIntermediateSize(pTexture->m_pTexResource.pResource.Get(), 0, 1);
-
-	ComPtr<ID3D12Resource> pd3dUploadBuffer = nullptr;
-	m_pd3dDevice->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(nBytes),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(pd3dUploadBuffer.GetAddressOf())
-	);
-
-	// UploadBuffer 에 바로 Raw data 복사
-	uint8* pMappedPtr = nullptr;
-	CD3DX12_RANGE d3dReadRange(0, 0);
-	pd3dUploadBuffer->Map(0, &d3dReadRange, reinterpret_cast<void**>(&pMappedPtr));
-	::memcpy(pMappedPtr, rawData.data(), rawData.size());
-	pd3dUploadBuffer->Unmap(0, nullptr);
-
-	D3D12_SUBRESOURCE_DATA subresourceData{};
-	subresourceData.pData = pMappedPtr;
-	subresourceData.RowPitch = unWidth * sizeof(uint32); // R8G8B8A8
-	subresourceData.SlicePitch = subresourceData.RowPitch * unHeight;
-
-	// Raw Data -> Tex Resource 로 복사
-	auto cmdList = AllocateCommandListSafe();
-	{
-		pTexture->m_pTexResource.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_COPY_DEST);
-		{
-			::UpdateSubresources(cmdList->pd3dCommandList.Get(), pTexture->m_pTexResource.pResource.Get(), pd3dUploadBuffer.Get(), 0, 0, 1, &subresourceData);
+		if (SRVHandle.IsValid()) {
+			OutputDebugStringA(std::format("Failed to load texture SRV : {}", strTextureName).c_str());
+			return {};
 		}
-		pTexture->m_pTexResource.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+
+		pTexture->m_d3dSRVDesc = srvDesc.srv;
+		pTexture->m_un64RuntimeSRVID = SRVHandle.GetID();
+		pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByHandle(SRVHandle);
+
+		return { SRVHandle };
 	}
 
-	ExcuteCommandList(*cmdList);
-	cmdList->ui64FenceValue = Fence();
-	m_PendingUploadBuffers.push_back({ pd3dUploadBuffer, cmdList });
-
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
-	{
-		srvDesc.Format = d3dTextureResourceDesc.Format;
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = d3dTextureResourceDesc.MipLevels;
-		srvDesc.Texture2D.MostDetailedMip = 0;
-		srvDesc.Texture2D.PlaneSlice = 0;
-		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-	}
-	pTexture->m_d3dSRVDesc = srvDesc;
-
-	CD3DX12_CPU_DESCRIPTOR_HANDLE SRVHandle = m_SRVUAVDescriptorHeap.GetDescriptorHandleFromHeapStart().cpuHandle;
-	SRVHandle.Offset(m_nNumSRVUAVTextures++);
-	m_pd3dDevice->CreateShaderResourceView(pTexture->m_pTexResource.pResource.Get(), &srvDesc, SRVHandle);
-	pTexture->m_d3dSRVHandle = SRVHandle;
-
-	return pTexture;
+	return { findHandle };
 }
 
-std::shared_ptr<Texture> TextureManager::CreateRTVTexture(const std::string& strName, UINT uiWidth, UINT uiHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat)
+TextureRef<RenderTargetTexture> TextureManager::LoadRenderTargetTexture(const std::string& strTextureName, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat)
 {
-	if (auto pTex = m_pTexturePool.find(strName); pTex != m_pTexturePool.end()) {
-		return pTex->second;
+	TextureHandle SRVFindHandle = m_SRVTextureTable.GetHandle(strTextureName);
+	if (!SRVFindHandle.IsValid()) {
+		std::shared_ptr<RenderTargetTexture> pTexture = std::make_shared<RenderTargetTexture>();
+		bool bResult = pTexture->Initialize(unWidth, unHeight, dxgiSRVFormat, dxgiRTVFormat);;
+		if (!bResult) {
+			return { {}, {} };
+		}
+
+
+		// SRV
+		TextureTable::ResourceDesc srvDesc;
+		srvDesc.eType = TextureTable::ResourceDesc::TYPE::SRV;
+		srvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
+		TextureHandle SRVHandle = m_SRVTextureTable.Register(
+			strTextureName,
+			pTexture,
+			&srvDesc,
+			&dxgiSRVFormat,
+			sizeof(DXGI_FORMAT));
+
+		if (!SRVHandle.IsValid()) {
+			OutputDebugStringA(std::format("Failed to load texture SRV : {}", strTextureName).c_str());
+			return { {}, {} };
+		}
+
+		pTexture->m_d3dSRVDesc = srvDesc.srv;
+		pTexture->m_un64RuntimeSRVID = SRVHandle.GetID();
+		pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByHandle(SRVHandle);
+
+		// RTV
+		TextureTable::ResourceDesc rtvDesc;
+		rtvDesc.eType = TextureTable::ResourceDesc::TYPE::RTV;
+		rtvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
+		TextureHandle RTVHandle = m_RTVTextureTable.Register(
+			strTextureName, 
+			pTexture, 
+			&rtvDesc,
+			&dxgiRTVFormat, 
+			sizeof(DXGI_FORMAT));
+
+		if (!RTVHandle.IsValid()) {
+			OutputDebugStringA(std::format("Failed to load texture RTV : {}", strTextureName).c_str());
+			return { {}, {} };
+		}
+
+		pTexture->m_d3dRTVDesc = rtvDesc.rtv;
+		pTexture->m_un64RuntimeRTVID = RTVHandle.GetID();
+		pTexture->m_d3dRTVHandle = m_RTVTextureTable.GetCPUHandleByHandle(RTVHandle);
+
+		return { SRVHandle, RTVHandle };
 	}
+
+	TextureHandle RTVFindHandle = m_RTVTextureTable.GetHandle(strTextureName);
+
+	return { SRVFindHandle, RTVFindHandle };
+}
+
+TextureRef<RenderTargetTexture> TextureManager::LoadRenderTargetTexture(ComPtr<ID3D12Resource> pd3dRTVResourceFromSwapChain, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat)
+{
+	std::string strTextureName = "RTV_" + std::to_string(g_unRTVFromCoreCount++);
 
 	std::shared_ptr<RenderTargetTexture> pTexture = std::make_shared<RenderTargetTexture>();
-	pTexture->Initialize(m_pd3dDevice, uiWidth, uiHeight, DXGI_FORMAT_UNKNOWN);
-	
-	D3D12_RESOURCE_DESC resourceDesc = pTexture->m_pTexResource.pResource->GetDesc();
+	bool bResult = pTexture->Initialize(pd3dRTVResourceFromSwapChain);
 
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-	{
-		srvDesc.Format = dxgiSRVFormat;
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
-		srvDesc.Texture2D.MostDetailedMip = 0;
-		srvDesc.Texture2D.PlaneSlice = 0;
-		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+	// SRV
+	TextureTable::ResourceDesc srvDesc;
+	srvDesc.eType = TextureTable::ResourceDesc::TYPE::SRV;
+	srvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
+	TextureHandle SRVHandle = m_SRVTextureTable.Register(
+		strTextureName,
+		pTexture,
+		&srvDesc,
+		&dxgiSRVFormat,
+		sizeof(DXGI_FORMAT));
+
+	if (!SRVHandle.IsValid()) {
+		OutputDebugStringA(std::format("Failed to load texture SRV : {}", strTextureName).c_str());
+		return { {}, {} };
 	}
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE CPUHandle = m_SRVUAVDescriptorHeap.GetDescriptorHandleFromHeapStart().cpuHandle;
-	CPUHandle.Offset(m_nNumSRVUAVTextures++);
-	m_pd3dDevice->CreateShaderResourceView(pTexture->m_pTexResource.pResource.Get(), &srvDesc, CPUHandle);
-	pTexture->m_d3dSRVHandle = CPUHandle;
+	pTexture->m_d3dSRVDesc = srvDesc.srv;
+	pTexture->m_un64RuntimeSRVID = SRVHandle.GetID();
+	pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByHandle(SRVHandle);
 
-	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
-	{
-		rtvDesc.Format = dxgiRTVFormat;
-		rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		rtvDesc.Texture2D.MipSlice = 0;
-		rtvDesc.Texture2D.PlaneSlice = 0;
+	// RTV
+	TextureTable::ResourceDesc rtvDesc;
+	rtvDesc.eType = TextureTable::ResourceDesc::TYPE::RTV;
+	rtvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
+	TextureHandle RTVHandle = m_RTVTextureTable.Register(
+		strTextureName,
+		pTexture,
+		&rtvDesc,
+		&dxgiRTVFormat,
+		sizeof(DXGI_FORMAT));
+
+	if (!RTVHandle.IsValid()) {
+		OutputDebugStringA(std::format("Failed to load texture RTV : {}", strTextureName).c_str());
+		return { {}, {} };
 	}
 
-	CPUHandle = m_RTVDescriptorHeap.GetDescriptorHandleFromHeapStart().cpuHandle;
-	CPUHandle.Offset(m_nNumRTVTextures++);
-	m_pd3dDevice->CreateRenderTargetView(pTexture->m_pTexResource.pResource.Get(), &rtvDesc, CPUHandle);
-	pTexture->m_d3dRTVHandle = CPUHandle;
+	pTexture->m_d3dRTVDesc = rtvDesc.rtv;
+	pTexture->m_un64RuntimeRTVID = RTVHandle.GetID();
+	pTexture->m_d3dRTVHandle = m_RTVTextureTable.GetCPUHandleByHandle(RTVHandle);
 
-	m_pTexturePool.insert({strName, pTexture});
+	return { SRVHandle, RTVHandle };
+}
+
+TextureRef<DepthStencilTexture> TextureManager::LoadDepthStencilTexture(const std::string& strTextureName, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiDSVFormat)
+{
+	TextureHandle SRVFindHandle = m_SRVTextureTable.GetHandle(strTextureName);
+	if (!SRVFindHandle.IsValid()) {
+		std::shared_ptr<DepthStencilTexture> pTexture = std::make_shared<DepthStencilTexture>();
+		bool bResult = pTexture->Initialize(unWidth, unHeight, D3DCore::g_bMsaa4xEnable, dxgiSRVFormat, dxgiDSVFormat);;
+		if (!bResult) {
+			return { {}, {} };
+		}
+
+
+		// SRV
+		TextureTable::ResourceDesc srvDesc;
+		srvDesc.eType = TextureTable::ResourceDesc::TYPE::SRV;
+		srvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
+		TextureHandle SRVHandle = m_SRVTextureTable.Register(
+			strTextureName,
+			pTexture,
+			&srvDesc,
+			&dxgiSRVFormat,
+			sizeof(DXGI_FORMAT));
+
+		if (!SRVHandle.IsValid()) {
+			OutputDebugStringA(std::format("Failed to load texture SRV : {}", strTextureName).c_str());
+			return { {}, {} };
+		}
+
+		pTexture->m_d3dSRVDesc = srvDesc.srv;
+		pTexture->m_un64RuntimeSRVID = SRVHandle.GetID();
+		pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByHandle(SRVHandle);
+		
+		// DSV
+		TextureTable::ResourceDesc dsvDesc;
+		dsvDesc.eType = TextureTable::ResourceDesc::TYPE::DSV;
+		dsvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
+		TextureHandle DSVHandle = m_DSVTextureTable.Register(
+			strTextureName,
+			pTexture,
+			&dsvDesc,
+			&dxgiDSVFormat, sizeof(DXGI_FORMAT));
+
+		if (!DSVHandle.IsValid()) {
+			OutputDebugStringA(std::format("Failed to load texture RTV : {}", strTextureName).c_str());
+			return { {}, {} };
+		}
+
+		pTexture->m_d3dDSVDesc = dsvDesc.dsv;
+		pTexture->m_un64RuntimeDSVID = DSVHandle.GetID();
+		pTexture->m_d3dDSVHandle = m_DSVTextureTable.GetCPUHandleByHandle(DSVHandle);
+
+		return { SRVHandle, DSVHandle };
+	}
+
+	TextureHandle DSVFindHandle = m_DSVTextureTable.GetHandle(strTextureName);
+
+	return { SRVFindHandle, DSVFindHandle };
+}
+
+TextureRef<UnorderedAccessTexture> TextureManager::LoadUnorderedAccessTexture(const std::string& strTextureName, uint32 unArraySize, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVUAVFormat)
+{
+	TextureHandle SRVFindHandle = m_SRVTextureTable.GetHandle(strTextureName);
+	if (!SRVFindHandle.IsValid()) {
+		std::shared_ptr<UnorderedAccessTexture> pTexture = std::make_shared<UnorderedAccessTexture>();
+		bool bResult = (unArraySize == 1) ? pTexture->Initialize(unWidth, unHeight, dxgiSRVUAVFormat)
+			: pTexture->InitializeArray(unArraySize, unWidth, unHeight, dxgiSRVUAVFormat);
+		if (!bResult) {
+			return { {}, {} };
+		}
+
+
+		// SRV
+		TextureTable::ResourceDesc srvDesc;
+		srvDesc.eType = TextureTable::ResourceDesc::TYPE::SRV;
+		if (unArraySize == 1) {
+			srvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
+		}
+		else {
+			srvDesc.eDimension = (unArraySize == 6) ? TextureTable::ResourceDesc::DIMENSION::TEXTURECUBE
+				                                    : TextureTable::ResourceDesc::DIMENSION::TEXTURE2DARRAY;
+		}
+		TextureHandle SRVHandle = m_SRVTextureTable.Register(
+			strTextureName,
+			pTexture,
+			&srvDesc,
+			&dxgiSRVUAVFormat, 
+			sizeof(DXGI_FORMAT));
+
+		if (!SRVHandle.IsValid()) {
+			OutputDebugStringA(std::format("Failed to load texture SRV : {}", strTextureName).c_str());
+			return { {}, {} };
+		}
+
+		pTexture->m_d3dSRVDesc = srvDesc.srv;
+		pTexture->m_un64RuntimeSRVID = SRVHandle.GetID();
+		pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByHandle(SRVHandle);
+
+		// UAV
+		TextureTable::ResourceDesc uavDesc;
+		uavDesc.eType = TextureTable::ResourceDesc::TYPE::UAV;
+		uavDesc.eDimension = (unArraySize == 1) ? TextureTable::ResourceDesc::DIMENSION::TEXTURE2D
+			                                    : TextureTable::ResourceDesc::DIMENSION::TEXTURE2DARRAY;
+		TextureHandle UAVHandle = m_UAVTextureTable.Register(
+			strTextureName,
+			pTexture,
+			&uavDesc,
+			&dxgiSRVUAVFormat,
+			sizeof(DXGI_FORMAT));
+
+		if (!UAVHandle.IsValid()) {
+			OutputDebugStringA(std::format("Failed to load texture UAV : {}", strTextureName).c_str());
+			return { {}, {} };
+		}
+
+		pTexture->m_d3dUAVDesc = uavDesc.uav;
+		pTexture->m_un64RuntimeUAVID = UAVHandle.GetID();
+		pTexture->m_d3dUAVHandle = m_UAVTextureTable.GetCPUHandleByHandle(UAVHandle);
+
+		return { SRVHandle, UAVHandle };
+	}
+
+	TextureHandle UAVFindHandle = m_UAVTextureTable.GetHandle(strTextureName);
+
+	return { SRVFindHandle, UAVFindHandle };
+}
+
+std::shared_ptr<Texture> TextureManager::GetTextureByName(const std::string& strTextureName, TEXTURE_RESOURCE_TYPE eResourceType) const
+{
+	std::shared_ptr<Texture> pTexture = nullptr;
+
+	switch (eResourceType)
+	{
+	case TEXTURE_RESOURCE_TYPE::SRV:
+	{
+		pTexture = m_SRVTextureTable.GetResourceByName(strTextureName);
+		break;
+	}
+	case TEXTURE_RESOURCE_TYPE::RTV:
+	{
+		pTexture = m_RTVTextureTable.GetResourceByName(strTextureName);
+		break;
+	}
+	case TEXTURE_RESOURCE_TYPE::UAV:
+	{
+		pTexture = m_UAVTextureTable.GetResourceByName(strTextureName);
+		break;
+	}
+	case TEXTURE_RESOURCE_TYPE::DSV:
+	{
+		pTexture = m_DSVTextureTable.GetResourceByName(strTextureName);
+		break;
+	}
+	default:
+	{
+		std::unreachable();
+	}
+	}
 
 	return pTexture;
 }
 
-std::shared_ptr<Texture> TextureManager::CreateUAVTexture(const std::string& strName, UINT uiWidth, UINT uiHeight, DXGI_FORMAT dxgiFormat)
+std::shared_ptr<Texture> TextureManager::GetTextureByHandle(const TextureHandle& handle, TEXTURE_RESOURCE_TYPE eResourceType) const
 {
-	// TODO : 구현
-	return std::shared_ptr<Texture>();
-}
+	std::shared_ptr<Texture> pTexture = nullptr;
 
-std::shared_ptr<Texture> TextureManager::CreateDSVTexture(const std::string& strName, UINT uiWidth, UINT uiHeight, DXGI_FORMAT dxgiFormat)
-{
-	// TODO : 구현
-	return std::shared_ptr<Texture>();
-}
-
-void TextureManager::LoadFromDDSFile(ID3D12Resource** ppOutResource, const std::wstring& wstrTexturePath, std::unique_ptr<uint8_t[]>& ddsData, std::vector<D3D12_SUBRESOURCE_DATA>& subResources)
-{
-	HRESULT hr;
-	DDS_ALPHA_MODE ddsAlphaMode = DDS_ALPHA_MODE_UNKNOWN;
-	bool bIsCubeMap = false;
-
-	hr = ::LoadDDSTextureFromFileEx(
-		m_pd3dDevice.Get(),
-		wstrTexturePath.c_str(),
-		0,
-		D3D12_RESOURCE_FLAG_NONE,
-		DDS_LOADER_DEFAULT,
-		ppOutResource,
-		ddsData,
-		subResources,
-		&ddsAlphaMode,
-		&bIsCubeMap
-	);
-
-	if (FAILED(hr)) {
-		OutputDebugStringA(std::format("{} - {} : {}", __FILE__, __LINE__, "Failed To Load DDS File").c_str());
-		return;
+	switch (eResourceType)
+	{
+	case TEXTURE_RESOURCE_TYPE::SRV:
+	{
+		pTexture = m_SRVTextureTable.GetResourceByHandle(handle);
+		break;
+	}
+	case TEXTURE_RESOURCE_TYPE::RTV:
+	{
+		pTexture = m_RTVTextureTable.GetResourceByHandle(handle);
+		break;
+	}
+	case TEXTURE_RESOURCE_TYPE::UAV:
+	{
+		pTexture = m_UAVTextureTable.GetResourceByHandle(handle);
+		break;
+	}
+	case TEXTURE_RESOURCE_TYPE::DSV:
+	{
+		pTexture = m_DSVTextureTable.GetResourceByHandle(handle);
+		break;
+	}
+	default:
+	{
+		std::unreachable();
+	}
 	}
 
+	return pTexture;
 }
 
-void TextureManager::LoadFromWICFile(ID3D12Resource** ppOutResource, const std::wstring& wstrTexturePath, std::unique_ptr<uint8_t[]>& ddsData, std::vector<D3D12_SUBRESOURCE_DATA>& subResources)
+CD3DX12_CPU_DESCRIPTOR_HANDLE TextureManager::GetCPUHandleByHandle(const TextureHandle& handle, TEXTURE_RESOURCE_TYPE eResourceType) const
 {
-	HRESULT hr;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE CPUHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE{};
 
-	subResources.resize(1);
-
-	hr = ::LoadWICTextureFromFileEx(
-		m_pd3dDevice.Get(),
-		wstrTexturePath.c_str(),
-		0,
-		D3D12_RESOURCE_FLAG_NONE,
-		WIC_LOADER_IGNORE_SRGB,
-		ppOutResource,
-		ddsData,
-		subResources[0]
-	);
-
-	if (FAILED(hr)) {
-		OutputDebugStringA(std::format("{} - {} : {}", __FILE__, __LINE__, "Failed To Load WIC File").c_str());
-		return;
+	switch (eResourceType)
+	{
+	case TEXTURE_RESOURCE_TYPE::SRV:
+	{
+		CPUHandle = m_SRVTextureTable.GetCPUHandleByHandle(handle);
+		break;
 	}
+	case TEXTURE_RESOURCE_TYPE::RTV:
+	{
+		CPUHandle = m_RTVTextureTable.GetCPUHandleByHandle(handle);
+		break;
+	}
+	case TEXTURE_RESOURCE_TYPE::UAV:
+	{
+		CPUHandle = m_UAVTextureTable.GetCPUHandleByHandle(handle);
+		break;
+	}
+	case TEXTURE_RESOURCE_TYPE::DSV:
+	{
+		CPUHandle = m_DSVTextureTable.GetCPUHandleByHandle(handle);
+		break;
+	}
+	default:
+	{
+		std::unreachable();
+	}
+	}
+
+	return CPUHandle;
 }
 
 void TextureManager::WaitForCopyComplete()
 {
 	while (m_PendingUploadBuffers.size() != 0) {
 		ReleaseCompletedUploadBuffers();
+	}
+}
+
+void TextureManager::CreateUploadBuffer(ID3D12Resource** ppUploadBuffer, uint32 unBytes)
+{
+	HRESULT hr = DEVICE->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(unBytes),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(ppUploadBuffer)
+	);
+
+	if (FAILED(hr)) {
+		__debugbreak();
 	}
 }
 
@@ -470,6 +495,42 @@ void TextureManager::ReleaseCompletedUploadBuffers()
 	std::erase_if(m_PendingUploadBuffers, [](const PendingUploadBuffer& pended) {
 		return !pended.cmdListPair->bInUse;
 	});
+}
+
+void TextureManager::UpdateResources(ComPtr<ID3D12Resource> pResource, D3D12_RESOURCE_STATES d3dCurrentState, const std::vector<D3D12_SUBRESOURCE_DATA>& subResources, uint32 unBytes, ComPtr<ID3D12Resource> pd3dUploadBuffer)
+{
+	if (!pd3dUploadBuffer) {
+		CreateUploadBuffer(pd3dUploadBuffer.GetAddressOf(), unBytes);
+	}
+
+	// BinaryResource -> Upload Buffer -> Texture Buffer
+	auto cmdList = AllocateCommandListSafe();
+	{
+		cmdList->pd3dCommandList->ResourceBarrier(
+			1,
+			&CD3DX12_RESOURCE_BARRIER::Transition(
+				pResource.Get(), 
+				d3dCurrentState,
+				D3D12_RESOURCE_STATE_COPY_DEST, 
+				D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, 
+				D3D12_RESOURCE_BARRIER_FLAG_NONE)
+		);
+		
+		::UpdateSubresources(cmdList->pd3dCommandList.Get(), pResource.Get(), pd3dUploadBuffer.Get(), 0, 0, subResources.size(), subResources.data());
+		
+		cmdList->pd3dCommandList->ResourceBarrier(
+			1,
+			&CD3DX12_RESOURCE_BARRIER::Transition(
+				pResource.Get(),
+				D3D12_RESOURCE_STATE_COPY_DEST,
+				d3dCurrentState,
+				D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+				D3D12_RESOURCE_BARRIER_FLAG_NONE)
+		);
+	}
+	ExcuteCommandList(*cmdList);
+	cmdList->ui64FenceValue = Fence();
+	m_PendingUploadBuffers.push_back({ pd3dUploadBuffer, cmdList });
 }
 
 #pragma region D3D

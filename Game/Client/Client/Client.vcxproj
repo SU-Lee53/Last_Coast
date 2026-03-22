@@ -29,13 +29,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -48,7 +48,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -72,18 +72,16 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LibraryPath>$(SolutionDir)Dependencies\Libraries\;$(LibraryPath)</LibraryPath>
-    <ExternalIncludePath>$(SolutionDir)Dependencies\Includes\;$(SolutionDir)AI;$(ExternalIncludePath)</ExternalIncludePath>
+    <ExternalIncludePath>$(SolutionDir)Dependencies\Includes\;$(ExternalIncludePath)</ExternalIncludePath>
     <OutDir>$(SolutionDir)Executables\</OutDir>
     <TargetName>$(ProjectName)_dbg</TargetName>
     <IntDir>$(SolutionDir)Intermediates\</IntDir>
-    <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>$(SolutionDir)Dependencies\Libraries\;$(LibraryPath)</LibraryPath>
-    <ExternalIncludePath>$(SolutionDir)Dependencies\Includes\;$(SolutionDir)AI;$(ExternalIncludePath)</ExternalIncludePath>
+    <ExternalIncludePath>$(SolutionDir)Dependencies\Includes\;$(ExternalIncludePath)</ExternalIncludePath>
     <OutDir>$(SolutionDir)Executables\</OutDir>
     <IntDir>$(SolutionDir)Intermediates\</IntDir>
-    <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -121,13 +119,10 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <EnableModules>false</EnableModules>
-      <AdditionalIncludeDirectories>$(SolutionDir)AI;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)Executables\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>AI.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -142,13 +137,10 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <EnableModules>false</EnableModules>
-      <AdditionalIncludeDirectories>$(SolutionDir)AI;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)Executables\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>AI.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -162,7 +154,6 @@
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_rectpack.h" />
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_textedit.h" />
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h" />
-    <ClInclude Include="AIManagerWrapper.h" />
     <ClInclude Include="Animation.h" />
     <ClInclude Include="AnimationController.h" />
     <ClInclude Include="AnimationHelper.h" />
@@ -171,16 +162,22 @@
     <ClInclude Include="AnimationStateMachine.h" />
     <ClInclude Include="BoundingCapsule.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="CB_Types.h" />
     <ClInclude Include="Collider.h" />
+    <ClInclude Include="CommandListAllocator.h" />
     <ClInclude Include="CommandListPool.h" />
     <ClInclude Include="Component.h" />
+    <ClInclude Include="ComputeManager.h" />
+    <ClInclude Include="ComputePass.h" />
     <ClInclude Include="Concepts.h" />
     <ClInclude Include="ConstantBuffer.h" />
     <ClInclude Include="ConstantBufferPool.h" />
     <ClInclude Include="D3DCore.h" />
     <ClInclude Include="DebugPlayer.h" />
+    <ClInclude Include="DefferedLightingPass.h" />
     <ClInclude Include="Defines.h" />
     <ClInclude Include="DescriptorHeap.h" />
+    <ClInclude Include="DirectionalCascadeShadowMapPass.h" />
     <ClInclude Include="DynamicObject.h" />
     <ClInclude Include="Effect.h" />
     <ClInclude Include="EffectManager.h" />
@@ -188,14 +185,17 @@
     <ClInclude Include="GameFramework.h" />
     <ClInclude Include="GameObject.h" />
     <ClInclude Include="GameTimer.h" />
+    <ClInclude Include="GBufferPass.h" />
     <ClInclude Include="GuiManager.h" />
     <ClInclude Include="HeightMapRawImage.h" />
+    <ClInclude Include="IDGenerator.h" />
     <ClInclude Include="InputManager.h" />
     <ClInclude Include="Light.h" />
+    <ClInclude Include="MapTestScene.h" />
     <ClInclude Include="Material.h" />
+    <ClInclude Include="MaterialManager.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MeshRenderer.h" />
-    <ClInclude Include="NavMeshDebugRenderer.h" />
     <ClInclude Include="ModelManager.h" />
     <ClInclude Include="NetworkManager.h" />
     <ClInclude Include="NetworkTestScene.h" />
@@ -204,10 +204,12 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="RandomGenerator.h" />
+    <ClInclude Include="RenderGraph.h" />
     <ClInclude Include="RenderManager.h" />
     <ClInclude Include="RenderPass.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="ResourceManager.h" />
+    <ClInclude Include="ResourceTable.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="SceneManager.h" />
     <ClInclude Include="Shader.h" />
@@ -215,27 +217,31 @@
     <ClInclude Include="ShaderResource.h" />
     <ClInclude Include="SimpleMath.h" />
     <ClInclude Include="Skeleton.h" />
+    <ClInclude Include="Skybox.h" />
+    <ClInclude Include="SkyboxPass.h" />
     <ClInclude Include="SoundManager.h" />
     <ClInclude Include="Sprite.h" />
+    <ClInclude Include="SpritePass.h" />
     <ClInclude Include="StaticObject.h" />
-    <ClInclude Include="StructuredBuffer.h" />
+    <ClInclude Include="StructuredBufferPool.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="AnimationTestScene.h" />
     <ClInclude Include="TerrainComponent.h" />
     <ClInclude Include="TerrainObject.h" />
+    <ClInclude Include="TerrainTestScene.h" />
     <ClInclude Include="TestScene.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TextureManager.h" />
     <ClInclude Include="ThirdPersonCamera.h" />
     <ClInclude Include="ThirdPersonPlayer.h" />
+    <ClInclude Include="ToneMappingPass.h" />
     <ClInclude Include="Transform.h" />
+    <ClInclude Include="TransparentForwardLightingPass.h" />
     <ClInclude Include="Typedef.h" />
     <ClInclude Include="UIManager.h" />
     <ClInclude Include="Utility.h" />
     <ClInclude Include="WinCore.h" />
     <ClInclude Include="WInSockCommon.h" />
-    <ClInclude Include="Zombie.h" />
-    <ClInclude Include="ZombieAnimationController.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc" />
@@ -281,7 +287,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="AIManagerWrapper.cpp" />
     <ClCompile Include="Animation.cpp" />
     <ClCompile Include="AnimationController.cpp" />
     <ClCompile Include="AnimationHelper.cpp" />
@@ -291,14 +296,19 @@
     <ClCompile Include="BoundingCapsule.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Collider.cpp" />
+    <ClCompile Include="CommandListAllocator.cpp" />
     <ClCompile Include="CommandListPool.cpp" />
     <ClCompile Include="Component.cpp" />
+    <ClCompile Include="ComputeManager.cpp" />
+    <ClCompile Include="ComputePass.cpp" />
     <ClCompile Include="ConstantBuffer.cpp" />
     <ClCompile Include="ConstantBufferPool.cpp" />
     <ClCompile Include="D3DCore.cpp" />
     <ClCompile Include="DebugPlayer.cpp" />
+    <ClCompile Include="DefferedLightingPass.cpp" />
     <ClCompile Include="Defines.cpp" />
     <ClCompile Include="DescriptorHeap.cpp" />
+    <ClCompile Include="DirectionalCascadeShadowMapPass.cpp" />
     <ClCompile Include="DynamicObject.cpp" />
     <ClCompile Include="Effect.cpp" />
     <ClCompile Include="EffectManager.cpp" />
@@ -307,14 +317,17 @@
     <ClCompile Include="GameFramework.cpp" />
     <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="GameTimer.cpp" />
+    <ClCompile Include="GBufferPass.cpp" />
     <ClCompile Include="GuiManager.cpp" />
     <ClCompile Include="HeightMapRawImage.cpp" />
+    <ClCompile Include="IDGenerator.cpp" />
     <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="Light.cpp" />
+    <ClCompile Include="MapTestScene.cpp" />
     <ClCompile Include="Material.cpp" />
+    <ClCompile Include="MaterialManager.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MeshRenderer.cpp" />
-    <ClCompile Include="NavMeshDebugRenderer.cpp" />
     <ClCompile Include="ModelManager.cpp" />
     <ClCompile Include="NetworkManager.cpp" />
     <ClCompile Include="NetworkTestScene.cpp" />
@@ -325,9 +338,11 @@
     </ClCompile>
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="RandomGenerator.cpp" />
+    <ClCompile Include="RenderGraph.cpp" />
     <ClCompile Include="RenderManager.cpp" />
     <ClCompile Include="RenderPass.cpp" />
     <ClCompile Include="ResourceManager.cpp" />
+    <ClCompile Include="ResourceTable.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="SceneManager.cpp" />
     <ClCompile Include="Shader.cpp" />
@@ -335,24 +350,28 @@
     <ClCompile Include="ShaderResource.cpp" />
     <ClCompile Include="SimpleMath.cpp" />
     <ClCompile Include="Skeleton.cpp" />
+    <ClCompile Include="Skybox.cpp" />
+    <ClCompile Include="SkyboxPass.cpp" />
     <ClCompile Include="SoundManager.cpp" />
     <ClCompile Include="Sprite.cpp" />
+    <ClCompile Include="SpritePass.cpp" />
     <ClCompile Include="StaticObject.cpp" />
-    <ClCompile Include="StructuredBuffer.cpp" />
     <ClCompile Include="AnimationTestScene.cpp" />
+    <ClCompile Include="StructuredBufferPool.cpp" />
     <ClCompile Include="TerrainComponent.cpp" />
     <ClCompile Include="TerrainObject.cpp" />
+    <ClCompile Include="TerrainTestScene.cpp" />
     <ClCompile Include="TestScene.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="TextureManager.cpp" />
     <ClCompile Include="ThirdPersonCamera.cpp" />
     <ClCompile Include="ThirdPersonPlayer.cpp" />
+    <ClCompile Include="ToneMappingPass.cpp" />
     <ClCompile Include="Transform.cpp" />
+    <ClCompile Include="TransparentForwardLightingPass.cpp" />
     <ClCompile Include="UIManager.cpp" />
     <ClCompile Include="Utility.cpp" />
     <ClCompile Include="WinCore.cpp" />
-    <ClCompile Include="Zombie.cpp" />
-    <ClCompile Include="ZombieAnimationController.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui.ini" />
@@ -363,9 +382,11 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="..\HLSL\DebugLineShader.hlsl">
+    <FxCompile Include="..\HLSL\DefferedShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="..\HLSL\EffectCommon.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -375,15 +396,39 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
+    <FxCompile Include="..\HLSL\ForwardShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="..\HLSL\FullScreenShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\HDRIToCubeMap.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="..\HLSL\Light.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
+    <FxCompile Include="..\HLSL\NewCommon.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="..\HLSL\RayShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\ShadowMapShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\Skybox.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
@@ -403,15 +448,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="NewCommon.hlsl">
+    <FxCompile Include="..\HLSL\ToneMapping.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\AI\AI.vcxproj">
-      <Project>{b019fdb4-06d4-47aa-8358-93648c1e7f12}</Project>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
