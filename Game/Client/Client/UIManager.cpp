@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "UIManager.h"
 #include "Texture.h"
+#include "Sprite.h"
 
 void UIManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 {

@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "DescriptorHeap.h"
-#include "MeshRenderer.h"
 
 #include "ConstantBufferPool.h"
 #include "StructuredBufferPool.h"
@@ -26,13 +25,15 @@ enum class ROOT_PARAMETER : uint32 {
 struct GBuffer {
 	const static uint32 g_unNumGBuffers = 3;
 
-	std::array<std::shared_ptr<RenderTargetTexture>, GBuffer::g_unNumGBuffers> GBuffers;
+	std::array<std::pair<TextureHandle, TextureHandle>, GBuffer::g_unNumGBuffers> GBuffers;
 
 	void Initialize(uint32 nPendingFrameIndex);
 
 };
 
 constexpr UINT DESCRIPTOR_PER_DRAW = 100'000;
+
+struct IMesh;
 
 class RenderManager {
 
@@ -115,8 +116,8 @@ private:
 	StructuredBufferPool	m_StructuredBufferPool[g_unMaxPendingFrames];
 
 	GBuffer									m_GBuffers[g_unMaxPendingFrames];
-	std::pair<Texture::ID, Texture::ID>		m_HDRRenderTargetIDs[g_unMaxPendingFrames];
-	std::pair<Texture::ID, Texture::ID>		m_LDRRenderTargetIDs[g_unMaxPendingFrames];
+	std::pair<TextureHandle, TextureHandle>		m_HDRRenderTargetIDs[g_unMaxPendingFrames];
+	std::pair<TextureHandle, TextureHandle>		m_LDRRenderTargetIDs[g_unMaxPendingFrames];
 
 
 
@@ -124,16 +125,16 @@ private:
 public:
 	uint32 GetCurrentContextIndex() const { return m_unCurrentContextIndex; }
 
-	const std::shared_ptr<RenderTargetTexture> GetCurrentBackBuffer() const;
-	const std::shared_ptr<DepthStencilTexture> GetDepthStencilBuffer() const;
+	const TextureHandle GetCurrentBackBuffer() const;
+	const TextureHandle GetDepthStencilBuffer() const;
 	
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferHandle() const;
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetDepthStencilBufferHandle() const;
 
 	const GBuffer& GetCurrentGBuffer() const;
 
-	const std::shared_ptr<RenderTargetTexture> GetCurrentHDRBuffer() const;
-	const std::shared_ptr<RenderTargetTexture> GetCurrentLDRBuffer() const;
+	const TextureHandle GetCurrentHDRBuffer() const;
+	const TextureHandle GetCurrentLDRBuffer() const;
 
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentHDRBufferHandle() const;
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentLDRBufferHandle() const;
@@ -178,8 +179,8 @@ private:
 	uint32 m_unCurrentContextIndex = 0;
 
 	// SRV - RTV/DSV
-	std::pair<Texture::ID, Texture::ID> m_BackBufferIDs[g_unMaxPendingFrames];
-	std::pair<Texture::ID, Texture::ID> m_DepthStencilID;
+	std::pair<TextureHandle, TextureHandle> m_BackBufferIDs[g_unMaxPendingFrames];
+	std::pair<TextureHandle, TextureHandle> m_DepthStencilID;
 
 #pragma endregion D3D
 };
@@ -188,9 +189,10 @@ template<typename T> requires std::derived_from<T, IGameObject>
 inline void RenderManager::Add(std::shared_ptr<T> pObj)
 {
 	auto pMeshRenderer = pObj->GetComponent<MeshRenderer>();
-	auto pBaseColorTexure = MATERIAL->GetMaterialByID(pMeshRenderer->GetMaterialID(0))->GetTexture(0);
-	
-	(pBaseColorTexure->GetAlphaMode() == Texture::ALPHA_MODE::Transparent) 
+	auto pBaseColorTex = pMeshRenderer->GetMaterialHandle(0).GetResource()->GetTexture(0);
+
+
+	(pBaseColorTex->GetAlphaMode() == Texture::ALPHA_MODE::Transparent)
 		? m_pTransparentObjectsToRender.push_back(pObj)
 	    : m_pObjectsToRender.push_back(pObj);
 }

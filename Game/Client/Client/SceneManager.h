@@ -39,8 +39,8 @@ inline void SceneManager::ChangeScene()
 	m_upCurrentScene->BuildLights();
 	m_upCurrentScene->BuildObjects();
 	m_upCurrentScene->PostInitialize();
-
-	Update();
+	m_upCurrentScene->PreUpdate();
+	m_upCurrentScene->Update();
 
 	m_bSceneChanged = true;
 }

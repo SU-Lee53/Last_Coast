@@ -6,7 +6,7 @@ void TerrainComponent::Initialize(const TERRAINCOMPONENTLOADINFO& componentLoadI
 	m_v2ComponentOriginXZ = componentLoadInfo.v2ComponentOriginXZ;
 	m_xmi2NumQuadsXZ = componentLoadInfo.xmi2NumQuadsXZ;
 	m_xmi4LayerIndices = componentLoadInfo.xmi4LayerIndices;
-	m_WeightMapID = TEXTURE->LoadTexture(componentLoadInfo.strWeightMapName);
+	m_WeightMapHandles = TEXTURE->LoadTexture(componentLoadInfo.strWeightMapName);
 	m_v3TerrainScale = v3TerrainScale;
 	m_IndexRange = indexRange;
 }

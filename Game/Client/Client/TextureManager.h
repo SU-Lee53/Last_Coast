@@ -22,30 +22,30 @@ public:
 	void LoadGameTextures();
 
 public:
-	Texture::ID LoadTexture(const std::string& strTextureName, bool bCheckTransparent = false);
-	Texture::ID LoadTextureFromRaw(const std::string& strTextureName, uint32 unWidth, uint32 unHeight);
-	Texture::ID LoadTextureArray(const std::string& strTextureName, const std::wstring& wstrTexturePath);
+	TextureHandle LoadTexture(const std::string& strTextureName, bool bCheckTransparent = false);
+	TextureHandle LoadTextureFromRaw(const std::string& strTextureName, uint32 unWidth, uint32 unHeight);
+	TextureHandle LoadTextureArray(const std::string& strTextureName, const std::wstring& wstrTexturePath);
 	
-	std::pair<Texture::ID, Texture::ID> LoadRenderTargetTexture(
+	std::pair<TextureHandle, TextureHandle> LoadRenderTargetTexture(
 		const std::string& strTextureName, 
 		uint32 unWidth,
 		uint32 unHeight,
 		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN,
 		DXGI_FORMAT dxgiRTVFormat = DXGI_FORMAT_UNKNOWN);
 	
-	std::pair<Texture::ID, Texture::ID> LoadRenderTargetTexture(
+	std::pair<TextureHandle, TextureHandle> LoadRenderTargetTexture(
 		ComPtr<ID3D12Resource> pd3dRTVResourceFromSwapChain,
 		DXGI_FORMAT dxgiSRVFormat,
 		DXGI_FORMAT dxgiRTVFormat);
 
-	std::pair<Texture::ID, Texture::ID> LoadDepthStencilTexture(
+	std::pair<TextureHandle, TextureHandle> LoadDepthStencilTexture(
 		const std::string& strTextureName,
 		uint32 unWidth,
 		uint32 unHeight,
 		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN,
 		DXGI_FORMAT dxgiDSVFormat = DXGI_FORMAT_UNKNOWN);
 	
-	std::pair<Texture::ID, Texture::ID> LoadUnorderedAccessTexture(
+	std::pair<TextureHandle, TextureHandle> LoadUnorderedAccessTexture(
 		const std::string& strTextureName,
 		uint32 unArraySize,
 		uint32 unWidth,
@@ -53,8 +53,8 @@ public:
 		DXGI_FORMAT dxgiSRVUAVFormat = DXGI_FORMAT_UNKNOWN);
 
 	std::shared_ptr<Texture> GetTextureByName(const std::string& strTextureName, TEXTURE_RESOURCE_TYPE eResourceType) const;
-	std::shared_ptr<Texture> GetTextureByID(uint64 unID, TEXTURE_RESOURCE_TYPE eResourceType) const;
-	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCPUHandleByID(uint64 unID, TEXTURE_RESOURCE_TYPE eResourceType) const;
+	std::shared_ptr<Texture> GetTextureByHandle(const TextureHandle& handle, TEXTURE_RESOURCE_TYPE eResourceType) const;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCPUHandleByHandle(const TextureHandle& handle, TEXTURE_RESOURCE_TYPE eResourceType) const;
 
 
 	void WaitForCopyComplete();

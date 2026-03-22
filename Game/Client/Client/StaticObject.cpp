@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "StaticObject.h"
+#include "Collider.h"
 
 void StaticObject::Initialize()
 {

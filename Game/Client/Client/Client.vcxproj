@@ -182,7 +182,6 @@
     <ClInclude Include="Effect.h" />
     <ClInclude Include="EffectManager.h" />
     <ClInclude Include="FirstPersonCamera.h" />
-    <ClInclude Include="ForwardPass.h" />
     <ClInclude Include="GameFramework.h" />
     <ClInclude Include="GameObject.h" />
     <ClInclude Include="GameTimer.h" />
@@ -229,7 +228,6 @@
     <ClInclude Include="AnimationTestScene.h" />
     <ClInclude Include="TerrainComponent.h" />
     <ClInclude Include="TerrainObject.h" />
-    <ClInclude Include="TerrainPass.h" />
     <ClInclude Include="TerrainTestScene.h" />
     <ClInclude Include="TestScene.h" />
     <ClInclude Include="Texture.h" />
@@ -316,7 +314,6 @@
     <ClCompile Include="EffectManager.cpp" />
     <ClCompile Include="entry.cpp" />
     <ClCompile Include="FirstPersonCamera.cpp" />
-    <ClCompile Include="ForwardPass.cpp" />
     <ClCompile Include="GameFramework.cpp" />
     <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="GameTimer.cpp" />
@@ -363,7 +360,6 @@
     <ClCompile Include="StructuredBufferPool.cpp" />
     <ClCompile Include="TerrainComponent.cpp" />
     <ClCompile Include="TerrainObject.cpp" />
-    <ClCompile Include="TerrainPass.cpp" />
     <ClCompile Include="TerrainTestScene.cpp" />
     <ClCompile Include="TestScene.cpp" />
     <ClCompile Include="Texture.cpp" />

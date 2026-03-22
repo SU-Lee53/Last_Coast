@@ -1,32 +1,13 @@
 ﻿#pragma once
 #include "Mesh.h"
 #include "Material.h"
-#include "MeshRenderer.h"
 
 class IGameObject;
-
-enum class OBJECT_RENDER_TYPE : uint8 {
-	FORWARD = 0,
-	DIFFERED,
-
-	COUNT
-};
-
-//#define WITH_FRUSTUM_CULLING
-
-struct MeshRendererHash;
-struct MeshRendererEq;
 
 class MeshRenderer : public IComponent {
 public:
 	using ID = uint64;
 	
-	friend MeshRendererHash;
-	friend MeshRendererEq;
-
-	template<typename T>
-	using InstanceMap = std::unordered_map<std::reference_wrapper<MeshRenderer>, T, MeshRendererHash, MeshRendererEq>;
-
 public:
 	MeshRenderer(std::shared_ptr<IGameObject> pOwner);
 	MeshRenderer(std::shared_ptr<IGameObject> pOwner, const std::vector<MESHLOADINFO>& meshLoadInfos, const std::vector<MATERIALLOADINFO>& materialLoadInfo);
@@ -37,50 +18,26 @@ public:
 	virtual void Update() override;
 	virtual std::shared_ptr<IComponent> Copy(std::shared_ptr<IGameObject> pNewOwner) const override;
 
-	void Render(
-		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-		DescriptorHandle& descHandle, 
-		int32 unStartIndex, 
-		int32 unIndexCount, 
-		int32 nInstanceCount, 
-		OUT int32& outnInstanceBase, 
-		const Matrix& mtxWorld = Matrix::Identity) const;
-
 public:
 	const std::vector<std::shared_ptr<IMesh>>& GetMeshes() const { return m_pMeshes; }
-	const std::vector<IMaterial::ID>& GetMaterialIDs() const { return m_MaterialIDs; };
-	const IMaterial::ID GetMaterialID(size_t idx) const { return m_MaterialIDs[idx]; };
+	const std::vector<MaterialHandle>& GetMaterialHandles() const { return m_MaterialIDs; };
+	const MaterialHandle GetMaterialHandle(size_t idx) const { return m_MaterialIDs[idx]; };
 	BoundingOrientedBox GetOBBMerged() const;
 
 	MeshRenderer::ID GetID() const { return m_RuntimeID; }
-	OBJECT_RENDER_TYPE GetRenderType() const { return m_eRenderType; }
 	MESH_TYPE GetMeshType() { return m_eMeshType; }
 
-	void SetTexture(Texture::ID texID, UINT nMaterialIndex, TEXTURE_TYPE eTextureType);
+	void SetTexture(const TextureHandle& texHandle, UINT nMaterialIndex, TEXTURE_TYPE eTextureType);
 
 protected:
 	std::vector<std::shared_ptr<IMesh>> m_pMeshes;
-	std::vector<IMaterial::ID> m_MaterialIDs;
+	std::vector<MaterialHandle> m_MaterialIDs;
 
 	MeshRenderer::ID m_RuntimeID = 0;	// ID 가 같다 -> 인스턴싱이 가능하다
-	OBJECT_RENDER_TYPE m_eRenderType = OBJECT_RENDER_TYPE::FORWARD;
 	MESH_TYPE m_eMeshType = MESH_TYPE::UNDEFINED;
 
 protected:
 	static MeshRenderer::ID g_ui64RendererIDBase;
-};
-
-struct MeshRendererHash {
-	size_t operator()(const std::reference_wrapper<MeshRenderer>& mr) const {
-		return std::hash<MeshRenderer::ID>{}(mr.get().m_RuntimeID);
-	}
-};
-
-struct MeshRendererEq {
-	using KeyType = std::reference_wrapper<MeshRenderer>;
-	bool operator()(const KeyType& lhs, const KeyType& rhs) const {
-		return lhs.get().m_RuntimeID == rhs.get().m_RuntimeID;
-	}
 };
 
 template <>

@@ -44,34 +44,34 @@ MeshRenderer::MeshRenderer(std::shared_ptr<IGameObject> pOwner, const std::vecto
 	uint32 unCount = 0;
 	for (const auto& materialInfo : materialLoadInfo) {
 		std::string strMaterialKey = pOwner->GetName() + std::to_string(unCount++);
-		IMaterial::ID id{};
+		MaterialHandle handle{};
 		switch (m_eMeshType)
 		{
 		case MESH_TYPE::STATIC:
 		{
-			id = MATERIAL->LoadMaterial<StandardMaterial>(strMaterialKey, materialInfo);
+			handle = MATERIAL->LoadMaterial<StandardMaterial>(strMaterialKey, materialInfo);
 			break;
 		}
 		case MESH_TYPE::SKINNED:
 		{
-			id = MATERIAL->LoadMaterial<SkinnedMaterial>(strMaterialKey, materialInfo);
+			handle = MATERIAL->LoadMaterial<SkinnedMaterial>(strMaterialKey, materialInfo);
 			break;
 		}
 		case MESH_TYPE::TERRAIN:
 		{
-			id = MATERIAL->LoadMaterial<TerrainMaterial>(strMaterialKey, materialInfo);
+			handle = MATERIAL->LoadMaterial<TerrainMaterial>(strMaterialKey, materialInfo);
 			break;
 		}
 		default:
 			std::unreachable();
 		}
 
-		if (id == INVALID_ID) {
+		if (!handle.IsValid()) {
 			OutputDebugStringA("Material load failed");
 			continue;
 		}
 
-		m_MaterialIDs.push_back(id);
+		m_MaterialIDs.push_back(handle);
 	}
 
 	m_RuntimeID = ++g_ui64RendererIDBase;
@@ -79,7 +79,6 @@ MeshRenderer::MeshRenderer(std::shared_ptr<IGameObject> pOwner, const std::vecto
 
 void MeshRenderer::Initialize()
 {
-	m_eRenderType = OBJECT_RENDER_TYPE::FORWARD;
 	m_bInitialized = true;
 }
 
@@ -95,15 +94,9 @@ std::shared_ptr<IComponent> MeshRenderer::Copy(std::shared_ptr<IGameObject> pNew
 	pClone->m_pMeshes = m_pMeshes;
 	pClone->m_MaterialIDs = m_MaterialIDs;
 	pClone->m_RuntimeID = m_RuntimeID;	// 반드시 필수
-	pClone->m_eRenderType = m_eRenderType;
 	pClone->m_eMeshType = m_eMeshType;
 
 	return pClone;
-}
-
-void MeshRenderer::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle, int32 unStartIndex, int32 unIndexCount, int32 nInstanceCount, OUT int32& outnInstanceBase, const Matrix& mtxWorld) const
-{
-	// TODO : 구현
 }
 
 BoundingOrientedBox MeshRenderer::GetOBBMerged() const
@@ -129,9 +122,10 @@ BoundingOrientedBox MeshRenderer::GetOBBMerged() const
 	return xmOBBResult;
 }
 
-void MeshRenderer::SetTexture(Texture::ID texID, UINT nMaterialIndex, TEXTURE_TYPE eTextureType)
+void MeshRenderer::SetTexture(const TextureHandle& texHandle, UINT nMaterialIndex, TEXTURE_TYPE eTextureType)
 {
-	assert(texID == INVALID_ID);
-	auto pMaterial = MATERIAL->GetMaterialByID(m_MaterialIDs[nMaterialIndex]);
-	pMaterial->SetTexture(texID, eTextureType);
+	assert(texHandle.IsValid());
+	auto pMaterial = m_MaterialIDs[nMaterialIndex].GetResource();
+	pMaterial->SetTexture(texHandle, eTextureType);
 }
+

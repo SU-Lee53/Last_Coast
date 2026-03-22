@@ -41,8 +41,8 @@ void TransparentForwardLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandLis
 	BindGeometryData(pd3dCommandList, pFrustumCulled, outDescHandle);
 
 	// Set Render Target
-	auto pHDRRenderTarget = RENDER->GetCurrentHDRBuffer();
-	auto pDSV = RENDER->GetDepthStencilBuffer();
+	auto pHDRRenderTarget = static_pointer_cast<RenderTargetTexture>(RENDER->GetCurrentHDRBuffer().GetResource());
+	auto pDSV = static_pointer_cast<DepthStencilTexture>(RENDER->GetDepthStencilBuffer().GetResource());
 
 	pHDRRenderTarget->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	pDSV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_DEPTH_WRITE);			// 이전 DefferedLighting Pass 에서 ALL_SHADER_RESOURCE 로 바꾸었으므로 한번 전환이 필요함
@@ -95,15 +95,15 @@ void TransparentForwardLightingPass::OnPostRender(ComPtr<ID3D12GraphicsCommandLi
 void TransparentForwardLightingPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<std::shared_ptr<IGameObject>>& frustumCulled, OUT DescriptorHandle& outDescHandle) const
 {
 	// materialData
-	std::unordered_map<IMaterial::ID, size_t> materialIdxMap;
+	std::unordered_map<uint64_t, size_t> materialIdxMap;
 	materialIdxMap.reserve(frustumCulled.size());
-	std::vector<IMaterial::ID> materialIDForBind;
-	materialIDForBind.reserve(frustumCulled.size());
+	std::vector<const MaterialHandle*> pMaterialHandleForBind;
+	pMaterialHandleForBind.reserve(frustumCulled.size());
 
-	std::unordered_map<Texture::ID, size_t> textureIdxMap;
+	std::unordered_map<uint64_t, size_t> textureIdxMap;
 	textureIdxMap.reserve(frustumCulled.size() * 4);
-	std::vector<Texture::ID> textureIDForBind;
-	textureIDForBind.reserve(frustumCulled.size() * 4);
+	std::vector<const TextureHandle*> pTextureHandleForBind;
+	pTextureHandleForBind.reserve(frustumCulled.size() * 4);
 
 	std::unordered_set<std::shared_ptr<IMesh>> pMeshes;
 
@@ -121,32 +121,32 @@ void TransparentForwardLightingPass::BindGeometryData(ComPtr<ID3D12GraphicsComma
 
 		const auto pMeshRenderer = pObj->GetComponent<MeshRenderer>();
 
-		for (auto [pMesh, materialID] : std::views::zip(pMeshRenderer->GetMeshes(), pMeshRenderer->GetMaterialIDs())) {
+		for (const auto& [pMesh, materialHandle] : std::views::zip(pMeshRenderer->GetMeshes(), pMeshRenderer->GetMaterialHandles())) {
 			RenderParameter renderParameter{};
 
-			auto materialIt = materialIdxMap.find(materialID);
+			auto materialIt = materialIdxMap.find(materialHandle.GetID());
 			if (materialIt == materialIdxMap.end()) {
-				materialIdxMap.insert({ materialID, unMaterialBindIndex++ });
-				materialIDForBind.push_back(materialID);
+				materialIdxMap.insert({ materialHandle.GetID(), unMaterialBindIndex++});
+				pMaterialHandleForBind.push_back(&materialHandle);
 
-				auto pMaterial = MATERIAL->GetMaterialByID(materialID);
-				for (auto texID : pMaterial->GetTextureIDs()) {
-					if (texID == INVALID_ID) continue;
-					auto texIt = textureIdxMap.find(texID);
+				auto pMaterial = materialHandle.GetResource();
+				for (auto texHandle : pMaterial->GetTextureHandles()) {
+					if (!texHandle.IsValid()) continue;
+					auto texIt = textureIdxMap.find(texHandle.GetID());
 					if (texIt == textureIdxMap.end()) {
-						textureIdxMap.insert({ texID, unTextureBindIndex++ });
-						textureIDForBind.push_back(texID);
+						textureIdxMap.insert({ texHandle.GetID(), unTextureBindIndex++ });
+						pTextureHandleForBind.push_back(&texHandle);
 					}
 				}
 			}
 
-			renderParameter.cbInstanceData.gnMaterialIndex = materialIdxMap[materialID];
+			renderParameter.cbInstanceData.gnMaterialIndex = materialIdxMap[materialHandle.GetID()];
 
-			auto pMaterial = MATERIAL->GetMaterialByID(materialID);
-			const auto& texIDs = pMaterial->GetTextureIDs();
+			auto pMaterial = materialHandle.GetResource();
+			const auto& texHandles = pMaterial->GetTextureHandles();
 			for (uint32 i = 0; i < 4; ++i) {
 				auto pTex = pMaterial->GetTexture(i);
-				renderParameter.cbInstanceData.gnTextureIndex[i] = (pTex) ? textureIdxMap[texIDs[i]] : -1;
+				renderParameter.cbInstanceData.gnTextureIndex[i] = (pTex) ? textureIdxMap[texHandles[i].GetID()] : -1;
 			}
 
 			renderParameter.sbWorldTransformIndex = sbWorldTransformData.size() - 1;
@@ -169,9 +169,9 @@ void TransparentForwardLightingPass::BindGeometryData(ComPtr<ID3D12GraphicsComma
 
 	// Bind Material
 	std::vector<MaterialData> sbMaterialDatas;
-	sbMaterialDatas.reserve(materialIDForBind.size());
-	std::transform(materialIDForBind.begin(), materialIDForBind.end(), std::back_inserter(sbMaterialDatas), [](const Texture::ID id) {
-		return MATERIAL->GetMaterialByID(id)->GetMaterialData();
+	sbMaterialDatas.reserve(pMaterialHandleForBind.size());
+	std::transform(pMaterialHandleForBind.begin(), pMaterialHandleForBind.end(), std::back_inserter(sbMaterialDatas), [](const auto& handle) {
+		return handle->GetResource()->GetMaterialData();
 	});
 
 	auto materialSBuffer = RENDER->AllocSBuffer<MaterialData>(sbMaterialDatas.size());
@@ -181,10 +181,10 @@ void TransparentForwardLightingPass::BindGeometryData(ComPtr<ID3D12GraphicsComma
 	outDescHandle.cpuHandle.Offset(1, unDescriptorInc);
 
 	// Bind Texture
-	const uint32 unNumTextures = textureIDForBind.size();
-	for (Texture::ID texID : textureIDForBind) {
-		CD3DX12_CPU_DESCRIPTOR_HANDLE texHandle = TEXTURE->GetTextureByID(texID, TEXTURE_RESOURCE_TYPE::SRV)->GetSRVHandle();
-		DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, texHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	const uint32 unNumTextures = pTextureHandleForBind.size();
+	for (const auto& texHandle : pTextureHandleForBind) {
+		CD3DX12_CPU_DESCRIPTOR_HANDLE texCPUHandle = texHandle->GetResource()->GetSRVHandle();
+		DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, texCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		outDescHandle.cpuHandle.Offset(1, unDescriptorInc);
 	}
 

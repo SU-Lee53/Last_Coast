@@ -31,22 +31,18 @@ void GBufferPass::SetRenderTargets(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
 	const auto& currentGBuffer = RENDER->GetCurrentGBuffer();
 
-	CD3DX12_RESOURCE_BARRIER pd3dResourceBarriers[] = {
-		currentGBuffer.GBuffers[0]->GetResourceBarrier(D3D12_RESOURCE_STATE_RENDER_TARGET, true),
-		currentGBuffer.GBuffers[1]->GetResourceBarrier(D3D12_RESOURCE_STATE_RENDER_TARGET, true),
-		currentGBuffer.GBuffers[2]->GetResourceBarrier(D3D12_RESOURCE_STATE_RENDER_TARGET, true)
-	};
-
-	pd3dCommandList->ResourceBarrier(_countof(pd3dResourceBarriers), pd3dResourceBarriers);
+	for (auto& gBuffer : currentGBuffer.GBuffers) {
+		gBuffer.second.GetResource()->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	}
 
 	// Clear Render Targets
 	float pfClearColor[4] = { 0.f, 0.0f, 0.0f, 1.0f };
 
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE pd3dRTVCPUDescriptorHandle[] = {
-		currentGBuffer.GBuffers[0]->GetRTVHandle(),
-		currentGBuffer.GBuffers[1]->GetRTVHandle(),
-		currentGBuffer.GBuffers[2]->GetRTVHandle()
+		static_pointer_cast<RenderTargetTexture>(currentGBuffer.GBuffers[0].second.GetResource())->GetRTVHandle(),
+		static_pointer_cast<RenderTargetTexture>(currentGBuffer.GBuffers[1].second.GetResource())->GetRTVHandle(),
+		static_pointer_cast<RenderTargetTexture>(currentGBuffer.GBuffers[2].second.GetResource())->GetRTVHandle(),
 	};
 
 	for (int i = 0; i < GBuffer::g_unNumGBuffers; ++i) {
@@ -111,13 +107,13 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 	// materialData
 	std::unordered_map<IMaterial::ID, size_t> materialIdxMap;
 	materialIdxMap.reserve(renderItems.size());
-	std::vector<IMaterial::ID> materialIDForBind;
-	materialIDForBind.reserve(renderItems.size());
+	std::vector<const MaterialHandle*> pMaterialHandleForBind;
+	pMaterialHandleForBind.reserve(renderItems.size());
 
 	std::unordered_map<Texture::ID, size_t> textureIdxMap;
 	textureIdxMap.reserve(renderItems.size() * 4);
-	std::vector<Texture::ID> textureIDForBind;
-	textureIDForBind.reserve(renderItems.size() * 4);
+	std::vector<const TextureHandle*> pTextureHandleForBind;
+	pTextureHandleForBind.reserve(renderItems.size() * 4);
 
 	m_RenderQueueCached.clear();
 	size_t estimatedRenderQueueSize = 0;
@@ -129,18 +125,18 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 
 		// Prepare
 		const auto& pMeshes = k->GetMeshes();
-		const auto& materialIDs = k->GetMaterialIDs();
+		const auto& materialHandles = k->GetMaterialHandles();
 		int32 nMeshes = pMeshes.size();
 
 		for (int32 meshIdx = 0; meshIdx < k->GetMeshes().size(); ++meshIdx) {
 			RenderParameter renderParameter;
 			CB_INSTANCE_DATA instanceData{};
 
-			auto matIt = materialIdxMap.find(materialIDs[meshIdx]);
+			auto matIt = materialIdxMap.find(materialHandles[meshIdx].GetID());
 			if (matIt == materialIdxMap.end()) {
-				size_t idx = materialIDForBind.size();
-				materialIdxMap.emplace(materialIDs[meshIdx], idx);
-				materialIDForBind.push_back(materialIDs[meshIdx]);
+				size_t idx = pMaterialHandleForBind.size();
+				materialIdxMap.emplace(materialHandles[meshIdx].GetID(), idx);
+				pMaterialHandleForBind.push_back(&materialHandles[meshIdx]);
 
 				instanceData.gnMaterialIndex = idx;
 			}
@@ -148,19 +144,19 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 				instanceData.gnMaterialIndex = matIt->second;
 			}
 
-			const auto& pMaterial = MATERIAL->GetMaterialByID(materialIDs[meshIdx]);
-			auto& texIDs = pMaterial->GetTextureIDs();
+			const auto& pMaterial = materialHandles[meshIdx].GetResource();
+			auto& texIDs = pMaterial->GetTextureHandles();
 			for (int32 texIdx = 0; texIdx < 4; ++texIdx) {
-				if (texIDs[texIdx] == INVALID_ID) {
+				if (!texIDs[texIdx].IsValid()) {
 					instanceData.gnTextureIndex[texIdx] = -1;
 					continue;
 				}
 
-				auto texIt = textureIdxMap.find(texIDs[texIdx]);
+				auto texIt = textureIdxMap.find(texIDs[texIdx].GetID());
 				if (texIt == textureIdxMap.end()) {
-					size_t idx = textureIDForBind.size();
-					textureIdxMap.emplace(texIDs[texIdx], idx);
-					textureIDForBind.push_back(texIDs[texIdx]);
+					size_t idx = pTextureHandleForBind.size();
+					textureIdxMap.emplace(texIDs[texIdx].GetID(), idx);
+					pTextureHandleForBind.push_back(&texIDs[texIdx]);
 
 					instanceData.gnTextureIndex[texIdx] = idx;
 				}
@@ -194,11 +190,10 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
 
 	std::vector<MaterialData> materialDatas;
-	materialDatas.reserve(materialIDForBind.size());
-	std::transform(materialIDForBind.begin(), materialIDForBind.end(), std::back_inserter(materialDatas), [](const Texture::ID id) {
-		return MATERIAL->GetMaterialByID(id)->GetMaterialData();
+	materialDatas.reserve(pMaterialHandleForBind.size());
+	std::transform(pMaterialHandleForBind.begin(), pMaterialHandleForBind.end(), std::back_inserter(materialDatas), [](const auto& handle) {
+		return handle->GetResource()->GetMaterialData();
 	});
-
 
 	auto materialSBuffer = RENDER->AllocSBuffer<MaterialData>(materialDatas.size());
 	materialSBuffer.WriteData(materialDatas);
@@ -207,10 +202,10 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 	outDescHandle.cpuHandle.Offset(1, unDescriptorInc);
 
 	// Bind Texture
-	const uint32 unNumTextures = textureIDForBind.size();
-	for (Texture::ID texID : textureIDForBind) {
-		CD3DX12_CPU_DESCRIPTOR_HANDLE texHandle = TEXTURE->GetTextureByID(texID, TEXTURE_RESOURCE_TYPE::SRV)->GetSRVHandle();
-		DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, texHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	const uint32 unNumTextures = pTextureHandleForBind.size();
+	for (const auto& pTexHandle : pTextureHandleForBind) {
+		CD3DX12_CPU_DESCRIPTOR_HANDLE texCPUHandle = pTexHandle->GetResource()->GetSRVHandle();
+		DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, texCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		outDescHandle.cpuHandle.Offset(1, unDescriptorInc);
 	}
 
@@ -244,11 +239,11 @@ void GBufferPass::BindTerrainData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 	CD3DX12_CPU_DESCRIPTOR_HANDLE normalHandleBase = terrainLayerHandle;
 	normalHandleBase.Offset(4, unDescriptorInc);
 
-	const auto& terrainMaterialIDs = pTerrain->GetComponent<MeshRenderer>()->GetMaterialIDs();
+	const auto& terrainMaterialIDs = pTerrain->GetComponent<MeshRenderer>()->GetMaterialHandles();
 	for (int i = 0; i < 4; ++i) {
 		if (i < terrainMaterialIDs.size()) {
-			if (terrainMaterialIDs[i] != INVALID_ID) {
-				auto& pMaterial = MATERIAL->GetMaterialByID(terrainMaterialIDs[i]);
+			if (!terrainMaterialIDs[i].IsValid()) {
+				auto& pMaterial = terrainMaterialIDs[i].GetResource();
 				auto& pAlbedoTex = pMaterial->GetTexture(0);	// Albedo
 				auto& pNormalTex = pMaterial->GetTexture(1);	// Normal
 
@@ -347,9 +342,9 @@ void GBufferPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		outDescHandle.cpuHandle.Offset(1, unDescriptorInc);
 
 		// Texture
-		Texture::ID weightMapID = pComponent->GetWeightMapID();
-		CD3DX12_CPU_DESCRIPTOR_HANDLE weightMapHandle = TEXTURE->GetTextureByID(weightMapID, TEXTURE_RESOURCE_TYPE::SRV)->GetSRVHandle();
-		DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, weightMapHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		auto weightMapHandle = pComponent->GetWeightMapID();
+		CD3DX12_CPU_DESCRIPTOR_HANDLE weightMapCPUHandle = weightMapHandle.GetResource()->GetSRVHandle();
+		DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, weightMapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		outDescHandle.cpuHandle.Offset(1, unDescriptorInc);
 
 		pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamTerrainComponent, outDescHandle.gpuHandle);
@@ -364,28 +359,24 @@ void GBufferPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList
 {
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
 	const auto& currentGBuffer = RENDER->GetCurrentGBuffer();
-	auto pDepthBuffer = RENDER->GetDepthStencilBuffer();
+	auto depthHandle = RENDER->GetDepthStencilBuffer();
 
-	CD3DX12_RESOURCE_BARRIER d3dResourceBarriers[] = {
-		currentGBuffer.GBuffers[0]->GetResourceBarrier(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, true),
-		currentGBuffer.GBuffers[1]->GetResourceBarrier(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, true),
-		currentGBuffer.GBuffers[2]->GetResourceBarrier(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, true),
-		pDepthBuffer->GetResourceBarrier(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, true)
-	};
-
-	pd3dCommandList->ResourceBarrier(_countof(d3dResourceBarriers), d3dResourceBarriers);
+	for (auto& gBuffer : currentGBuffer.GBuffers) {
+		gBuffer.second.GetResource()->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+	}
+	depthHandle.GetResource()->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE gBufferHandle = outDescHandle.cpuHandle;
 	constexpr uint32 rootParamGBuffer = std::to_underlying(ROOT_PARAMETER::G_BUFFER);
 
 	for (const auto& gBuffer : currentGBuffer.GBuffers) {
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtSRVHandle = gBuffer->GetSRVHandle();
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtSRVHandle = gBuffer.second.GetResource()->GetSRVHandle();
 		DEVICE->CopyDescriptorsSimple(1, gBufferHandle, rtSRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		gBufferHandle.Offset(1, unDescriptorInc);
 	}
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE depthSRVHandle = pDepthBuffer->GetSRVHandle();
+	CD3DX12_CPU_DESCRIPTOR_HANDLE depthSRVHandle = depthHandle.GetResource()->GetSRVHandle();
 	DEVICE->CopyDescriptorsSimple(1, gBufferHandle, depthSRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	gBufferHandle.Offset(1, unDescriptorInc);
 

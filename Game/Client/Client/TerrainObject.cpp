@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "TerrainObject.h"
+#include "MeshRenderer.h"
 
 const std::string TerrainObject::g_strTerrainPath = "../Resources/Terrain/";
 
@@ -27,13 +28,13 @@ bool TerrainObject::GetHeightNormalWorld(const Vector3& v3WorldPos, OUT float& o
 
 CB_TERRAIN_LAYER_DATA TerrainObject::MakeLayerCBData()
 {
-	const auto& materialIDs = GetComponent<MeshRenderer>()->GetMaterialIDs();
+	const auto& materialIDs = GetComponent<MeshRenderer>()->GetMaterialHandles();
 	float pfTiling[4] = { 0.f, 0.f, 0.f, 0.f };
 	int32 nLayers = materialIDs.size();
 
 	for (int i = 0; i < materialIDs.size(); ++i) {
-		if (materialIDs[i] != INVALID_ID) {
-			pfTiling[i] = std::static_pointer_cast<TerrainMaterial>(MATERIAL->GetMaterialByID(materialIDs[i]))->GetTiling();
+		if (materialIDs[i].IsValid()) {
+			pfTiling[i] = std::static_pointer_cast<TerrainMaterial>(materialIDs[i].GetResource())->GetTiling();
 		}
 	}
 

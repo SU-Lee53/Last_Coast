@@ -112,6 +112,9 @@ using namespace Microsoft::WRL;
 #include "Packets.h"
 #include "RandomGenerator.h"
 #include "AnimationHelper.h"
+#include "ResourceTable.h"
+#include "GameObject.h"
+#include "Component.h"
 
 // ImGui
 #include <ImGui/imgui.h>
@@ -122,8 +125,8 @@ using namespace Microsoft::WRL;
 #include "WinCore.h"
 #include "D3DCore.h"
 #include "GameFramework.h"
-#include "ResourceTable.h"
 #include "CommandListAllocator.h"
+
 
 // Managers
 #include "ResourceManager.h"

@@ -11,8 +11,9 @@ std::shared_ptr<IMaterial> MaterialManager::GetMaterialByName(const std::string&
 	return m_MaterialTable.GetResourceByName(strTextureName);
 }
 
-std::shared_ptr<IMaterial> MaterialManager::GetMaterialByID(uint64 unID) const
+std::shared_ptr<IMaterial> MaterialManager::GetMaterialByHandle(const MaterialHandle& handle) const
 {
-	return m_MaterialTable.GetResourceByID(unID);
+	return m_MaterialTable.GetResourceByHandle(handle);
 }
+
 

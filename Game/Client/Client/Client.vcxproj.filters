@@ -376,12 +376,6 @@
     <ClInclude Include="IDGenerator.h">
       <Filter>99.Utility</Filter>
     </ClInclude>
-    <ClInclude Include="ForwardPass.h">
-      <Filter>03.Engine\Rendering\RenderPasses</Filter>
-    </ClInclude>
-    <ClInclude Include="TerrainPass.h">
-      <Filter>03.Engine\Rendering\RenderPasses</Filter>
-    </ClInclude>
     <ClInclude Include="GBufferPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
@@ -663,12 +657,6 @@
     </ClCompile>
     <ClCompile Include="IDGenerator.cpp">
       <Filter>99.Utility</Filter>
-    </ClCompile>
-    <ClCompile Include="ForwardPass.cpp">
-      <Filter>03.Engine\Rendering\RenderPasses</Filter>
-    </ClCompile>
-    <ClCompile Include="TerrainPass.cpp">
-      <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
     <ClCompile Include="GBufferPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>

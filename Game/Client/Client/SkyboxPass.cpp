@@ -10,8 +10,8 @@ void SkyboxPass::Initialize()
 void SkyboxPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
 	//auto pRTV = input.pRenderTargets[0];	// 이전 DefferedLightingPass 에서 사용한 R16G16B16A16_FLOAT 리소스를 넘겨받아야 함
-	auto pRTV = RENDER->GetCurrentHDRBuffer();
-	auto pDSV = RENDER->GetDepthStencilBuffer();
+	auto pRTV = static_pointer_cast<RenderTargetTexture>(RENDER->GetCurrentHDRBuffer().GetResource());
+	auto pDSV = static_pointer_cast<DepthStencilTexture>(RENDER->GetDepthStencilBuffer().GetResource());
 
 	pDSV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_DEPTH_WRITE);			// 이전 G-Buffer Pass 에서 ALL_SHADER_RESOURCE 로 바꾸었으므로 한번 전환이 필요함
 	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = pRTV->GetRTVHandle();
@@ -32,7 +32,7 @@ void SkyboxPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const
 void SkyboxPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
-	auto pRTV = RENDER->GetCurrentHDRBuffer();
+	auto pRTV = RENDER->GetCurrentHDRBuffer().GetResource();
 	pRTV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
 	// Set HDR result

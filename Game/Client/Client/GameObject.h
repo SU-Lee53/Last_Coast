@@ -2,9 +2,9 @@
 #include "Component.h"
 #include "Transform.h"
 #include "MeshRenderer.h"
-#include "AnimationController.h"
 #include "Collider.h"
 #include "Skeleton.h"
+#include "AnimationController.h"
 
 struct MESHLOADINFO;
 struct MATERIALLOADINFO;

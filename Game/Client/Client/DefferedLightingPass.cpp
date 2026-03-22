@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "DefferedLightingPass.h"
+#include "Mesh.h"
 
 void DefferedLightingPass::Initialize()
 {
@@ -26,8 +27,8 @@ void DefferedLightingPass::Initialize()
 void DefferedLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
 	// Set Render Targets
-	auto pHDRRenderTarget = RENDER->GetCurrentHDRBuffer();
-	pHDRRenderTarget->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	auto pHDRRenderTarget = std::static_pointer_cast<RenderTargetTexture>(RENDER->GetCurrentHDRBuffer().GetResource());
+	pHDRRenderTarget->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);	// TODO : 이거 왜 시작부터 ALL_SHADER_RESOURCE 로 되있는거임?
 
 	// Clear Render Targets
 	float pfClearColor[4] = { 0.f, 0.0f, 0.0f, 1.0f };

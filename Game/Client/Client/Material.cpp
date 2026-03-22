@@ -20,19 +20,19 @@ void IMaterial::SetShader(std::shared_ptr<Shader> pShader)
 	m_pShader = pShader;
 }
 
-void IMaterial::SetTexture(Texture::ID texID, TEXTURE_TYPE eTextureType)
+void IMaterial::SetTexture(const TextureHandle& texHandle, TEXTURE_TYPE eTextureType)
 {
 	if (m_TextureIDs.size() < std::to_underlying(eTextureType) + 1) {
 		m_TextureIDs.resize(std::to_underlying(eTextureType) + 1);
 	}
-	m_TextureIDs[std::to_underlying(eTextureType)] = texID;
+	m_TextureIDs[std::to_underlying(eTextureType)] = texHandle;
 }
 
 std::shared_ptr<Texture> IMaterial::GetTexture(int nIndex)
 {
 	assert(nIndex < m_TextureIDs.size());
 
-	return TEXTURE->GetTextureByID(m_TextureIDs[nIndex], TEXTURE_RESOURCE_TYPE::SRV);
+	return m_TextureIDs[nIndex].GetResource();
 }
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -48,8 +48,8 @@ void StandardMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 	m_TextureIDs[2] = TEXTURE->LoadTexture(materialLoadInfo.strMetallicMapName, false);		// Metallic
 	m_TextureIDs[3] = TEXTURE->LoadTexture(materialLoadInfo.strSpecularMapName, false);		// Specular
 
-	if (m_TextureIDs[0] != INVALID_ID) {
-		m_MaterialData.eAlphaMode = std::to_underlying(TEXTURE->GetTextureByID(m_TextureIDs[0], TEXTURE_RESOURCE_TYPE::SRV)->GetAlphaMode());
+	if (m_TextureIDs[0].IsValid()) {
+		m_MaterialData.eAlphaMode = std::to_underlying(m_TextureIDs[0].GetResource()->GetAlphaMode());
 	}
 
 	m_pShader = SHADER->Get<StandardShader>();
@@ -68,8 +68,8 @@ void SkinnedMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 	m_TextureIDs[2] = TEXTURE->LoadTexture(materialLoadInfo.strMetallicMapName, false);		// Metallic
 	m_TextureIDs[3] = TEXTURE->LoadTexture(materialLoadInfo.strSpecularMapName, false);		// Specular
 
-	if (m_TextureIDs[0] != INVALID_ID) {
-		m_MaterialData.eAlphaMode = std::to_underlying(TEXTURE->GetTextureByID(m_TextureIDs[0], TEXTURE_RESOURCE_TYPE::SRV)->GetAlphaMode());
+	if (m_TextureIDs[0].IsValid()) {
+		m_MaterialData.eAlphaMode = std::to_underlying(m_TextureIDs[0].GetResource()->GetAlphaMode());
 	}
 
 	m_pShader = SHADER->Get<AnimatedShader>();

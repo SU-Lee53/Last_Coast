@@ -1,11 +1,12 @@
 ﻿#pragma once
+#include "GameObject.h"
 #include "Player.h"	// Includes GameObject
-#include "Sprite.h"	// Includes GameObject
 #include "Camera.h"
 #include "Light.h"
 
 class TerrainObject;
 class Skybox;
+class Sprite;
 
 struct GridCell {
 	std::vector<std::shared_ptr<IGameObject>> pObjectsInCell;
@@ -22,48 +23,13 @@ struct SpacePartitionDesc {
 	Vector2 v2CellSizeXZ;
 	XMUINT2 xmui2NumCellsXZ;
 
-	const GridCell* GetCellData(const CellCoord& cdCell) const {
-		int32 index = CellToIndex(cdCell.x, cdCell.y);
-		if (index >= Cells.size()) {
-			return nullptr;
-		}
+	const GridCell* GetCellData(const CellCoord& cdCell) const;
 
-		return &Cells[index];
-	}
+	CellCoord WorldToCellXZ(const Vector3& v3WorldPos) const;
 
-	CellCoord WorldToCellXZ(const Vector3& v3WorldPos) const {
-		float fX = (v3WorldPos.x - v2SceneOriginXZ.x) / v2CellSizeXZ.x;
-		float fZ = (v3WorldPos.z - v2SceneOriginXZ.y) / v2CellSizeXZ.y;
-		
-		CellCoord cd;
-		cd.x = (int)std::floor(fX);
-		cd.y = (int)std::floor(fZ);
-		return cd;
-	}
+	int32 CellToIndex(uint32 x, uint32 z) const;
 
-	int32 CellToIndex(uint32 x, uint32 z) const {
-		return z * xmui2NumCellsXZ.x + x;
-	}
-
-	void Insert(std::shared_ptr<IGameObject> pObj) {
-		const BoundingOrientedBox& xmOBB = pObj->GetComponent<ICollider>()->GetOBBWorld();
-		
-		auto [v3Min, v3Max] = GetMinMaxFromOBB(xmOBB);
-		CellCoord cdMin = WorldToCellXZ(v3Min);
-		CellCoord cdMax = WorldToCellXZ(v3Max);
-
-		cdMin.x = std::clamp(cdMin.x, 0, (int32)xmui2NumCellsXZ.x);
-		cdMin.y = std::clamp(cdMin.y, 0, (int32)xmui2NumCellsXZ.y);
-
-		cdMax.x = std::clamp(cdMax.x, 0, (int32)xmui2NumCellsXZ.x);
-		cdMax.y = std::clamp(cdMax.y, 0, (int32)xmui2NumCellsXZ.y);
-
-		for (uint32 x = cdMin.x; x <= cdMax.x; ++x) {
-			for (uint32 z = cdMin.y; z <= cdMax.y; ++z) {
-				Cells[CellToIndex(x, z)].pObjectsInCell.push_back(pObj);
-			}
-		}
-	}
+	void Insert(std::shared_ptr<IGameObject> pObj);
 
 };
 
@@ -97,11 +63,14 @@ public:
 	virtual void OnLeaveScene() = 0;
 
 	void PostInitialize();
+
 	void PreProcessInput();
 	void PostProcessInput();
+
 	void PreUpdate();
 	void FixedUpdate();
 	void PostUpdate();
+
 	void PrepareRender();
 
 	void CheckCollision();

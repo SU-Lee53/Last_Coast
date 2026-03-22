@@ -7,7 +7,7 @@ void DirectionalCascadeShadowMapPass::Initialize()
 	for (uint32 i = 0; i < RenderManager::g_unMaxPendingFrames; ++i) {
 		for (uint32 j = 0; j < g_unNumCascade; ++j) {
 			uint32 unShadowMapSize = g_unCascadeShadowMapSize[j];
-			auto [srvID, dsvID] = TEXTURE->LoadDepthStencilTexture(
+			auto [srvHandle, dsvHandle] = TEXTURE->LoadDepthStencilTexture(
 				std::format("Cascade_{}_{}", i, j),
 				unShadowMapSize,
 				unShadowMapSize,
@@ -15,8 +15,8 @@ void DirectionalCascadeShadowMapPass::Initialize()
 				DXGI_FORMAT_D32_FLOAT
 			);
 
-			m_ShadowMapSRVID[i][j] = srvID;
-			m_ShadowMapDSVID[i][j] = dsvID;
+			m_ShadowMapSRVID[i][j] = srvHandle;
+			m_ShadowMapDSVID[i][j] = dsvHandle;
 		}
 	}
 
@@ -30,7 +30,7 @@ void DirectionalCascadeShadowMapPass::OnPreRender(ComPtr<ID3D12GraphicsCommandLi
 	std::vector<CD3DX12_RESOURCE_BARRIER> d3dResourceBarriers;
 	d3dResourceBarriers.reserve(g_unNumCascade);
 	for (int i = 0; i < g_unNumCascade; ++i) {
-		auto pTex = TEXTURE->GetTextureByID(m_ShadowMapDSVID[unCurrentContext][i], TEXTURE_RESOURCE_TYPE::DSV);
+		auto pTex = m_ShadowMapDSVID[unCurrentContext][i].GetResource();
 		pTex->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	}
 
@@ -99,7 +99,7 @@ void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandL
 	pDSVTextures.reserve(g_unNumCascade);
 	d3dResourceBarriers.reserve(g_unNumCascade);
 	for (int i = 0; i < g_unNumCascade; ++i) {
-		auto pTex = TEXTURE->GetTextureByID(m_ShadowMapDSVID[unCurrentContext][i], TEXTURE_RESOURCE_TYPE::DSV);
+		auto pTex = m_ShadowMapDSVID[unCurrentContext][i].GetResource();
 		pTex->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 		pDSVTextures.push_back(pTex);
 	}
@@ -200,8 +200,8 @@ void DirectionalCascadeShadowMapPass::SetRenderTargets(ComPtr<ID3D12GraphicsComm
 {
 	auto unCurrentContext = RENDER->GetCurrentContextIndex();
 
-	Texture::ID dsvID = m_ShadowMapDSVID[unCurrentContext][unCascade];
-	auto pDSV = static_pointer_cast<DepthStencilTexture>(TEXTURE->GetTextureByID(dsvID, TEXTURE_RESOURCE_TYPE::DSV));
+	TextureHandle dsvID = m_ShadowMapDSVID[unCurrentContext][unCascade];
+	auto pDSV = static_pointer_cast<DepthStencilTexture>(dsvID.GetResource());
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dDSVHandle = pDSV->GetDSVHandle();
 	pd3dCommandList->ClearDepthStencilView(d3dDSVHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, NULL);
@@ -258,7 +258,7 @@ void DirectionalCascadeShadowMapPass::BindGeometryData(ComPtr<ID3D12GraphicsComm
 
 		// Prepare
 		const auto& pMeshes = k->GetMeshes();
-		const auto& materialIDs = k->GetMaterialIDs();
+		const auto& materialIDs = k->GetMaterialHandles();
 		int32 nMeshes = pMeshes.size();
 
 		for (int32 meshIdx = 0; meshIdx < k->GetMeshes().size(); ++meshIdx) {

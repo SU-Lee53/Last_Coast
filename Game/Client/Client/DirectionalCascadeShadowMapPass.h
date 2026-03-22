@@ -70,7 +70,7 @@ private:
 	ComPtr<ID3D12PipelineState> m_pd3dStandardPipelineState;
 	ComPtr<ID3D12PipelineState> m_pd3dAnimatedPipelineState;
 
-	Texture::ID m_ShadowMapSRVID[RenderManager::g_unMaxPendingFrames][g_unNumCascade];
-	Texture::ID m_ShadowMapDSVID[RenderManager::g_unMaxPendingFrames][g_unNumCascade];
+	TextureHandle m_ShadowMapSRVID[RenderManager::g_unMaxPendingFrames][g_unNumCascade];
+	TextureHandle m_ShadowMapDSVID[RenderManager::g_unMaxPendingFrames][g_unNumCascade];
 };
 

@@ -9,10 +9,10 @@ public:
 	void Initialize();
 
 	template<typename T> requires std::derived_from<T, IMaterial>
-	IMaterial::ID LoadMaterial(const std::string& strNameKey, const MATERIALLOADINFO& loadInfo);
+	MaterialHandle LoadMaterial(const std::string& strNameKey, const MATERIALLOADINFO& loadInfo);
 
 	std::shared_ptr<IMaterial> GetMaterialByName(const std::string& strTextureName) const;
-	std::shared_ptr<IMaterial> GetMaterialByID(uint64 unID) const;
+	std::shared_ptr<IMaterial> GetMaterialByHandle(const MaterialHandle& handle) const;
 	//CD3DX12_CPU_DESCRIPTOR_HANDLE GetCPUHandleByID(uint64 unID) const;
 
 private:
@@ -22,21 +22,21 @@ private:
 };
  
 template<typename T> requires std::derived_from<T, IMaterial>
-inline IMaterial::ID MaterialManager::LoadMaterial(const std::string& strNameKey, const MATERIALLOADINFO& loadInfo)
+inline MaterialHandle MaterialManager::LoadMaterial(const std::string& strNameKey, const MATERIALLOADINFO& loadInfo)
 {
-	IMaterial::ID findID = m_MaterialTable.GetID(strNameKey);
-	if (findID == MaterialTable::InvalidID) {
+	MaterialHandle findHandle = m_MaterialTable.GetHandle(strNameKey);
+	if (!findHandle.IsValid()) {
 		std::shared_ptr<IMaterial> pMaterial = std::make_shared<T>();
-		IMaterial::ID id = m_MaterialTable.Register(strNameKey, pMaterial);
-		if (id == MaterialTable::InvalidID) {
+		MaterialHandle handle = m_MaterialTable.Register(strNameKey, pMaterial);
+		if (!handle.IsValid()) {
 			OutputDebugStringA(std::format("Failed to load material : {}\n", strNameKey).c_str());
 		}
 		else {
 			pMaterial->Initialize(loadInfo);
 		}
 
-		return id;
+		return handle;
 	}
 
-	return findID;
+	return findHandle;
 }

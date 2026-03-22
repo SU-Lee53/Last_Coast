@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include "Scene.h"
 
 struct RenderPassResource {
 	void* pResource;
@@ -11,12 +10,12 @@ struct RenderPassResource {
 };
 
 struct RenderPassInput {
-	std::vector<std::shared_ptr<RenderTargetTexture>> pRenderTargets;
+	std::vector<std::shared_ptr<TextureHandle>> pRenderTargets;
 	RenderPassResource passResource;
 };
 
 struct RenderPassOutput {
-	std::vector<std::shared_ptr<RenderTargetTexture>> pRenderTargets;
+	std::vector<std::shared_ptr<TextureHandle>> pRenderTargets;
 	RenderPassResource passResource;
 
 	RenderPassInput ToInput() {
@@ -26,7 +25,7 @@ struct RenderPassOutput {
 
 interface IRenderPass abstract {
 public:
-	using RenderTargetArray = std::array<std::vector<std::shared_ptr<RenderTargetTexture>>, 3>;
+	using RenderTargetArray = std::array<std::vector<std::shared_ptr<TextureHandle>>, 3>;
 
 public:
 	virtual void Initialize() {};
