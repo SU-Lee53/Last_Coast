@@ -242,7 +242,7 @@ void GBufferPass::BindTerrainData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 	const auto& terrainMaterialIDs = pTerrain->GetComponent<MeshRenderer>()->GetMaterialHandles();
 	for (int i = 0; i < 4; ++i) {
 		if (i < terrainMaterialIDs.size()) {
-			if (!terrainMaterialIDs[i].IsValid()) {
+			if (terrainMaterialIDs[i].IsValid()) {
 				auto& pMaterial = terrainMaterialIDs[i].GetResource();
 				auto& pAlbedoTex = pMaterial->GetTexture(0);	// Albedo
 				auto& pNormalTex = pMaterial->GetTexture(1);	// Normal
