@@ -1,5 +1,6 @@
 ﻿#pragma once
 #define SERVERPORT 9000
+#include "ServerCore/Session.h"
 
 class NetworkManager {
 
@@ -54,3 +55,36 @@ private:
 
 	bool m_bOfflineMode = true;
 };
+//class ServerSession : public Session
+//{
+//public:
+//	//~ServerSession()
+//	//{
+//	//	cout << "~ServerSession" << endl;
+//	//}
+//
+//	//virtual void OnConnected() override
+//	//{
+//	//	std::cout << "Connected To Server" << std::endl;
+//	//	Send((BYTE*)sendBuffer, sizeof(sendBuffer));
+//	//}
+//
+//	//virtual int32 OnRecv(BYTE* buffer, int32 len) override
+//	//{
+//	//	//	Echo
+//	//	std::cout << "OnRecv Len = " << len << std::endl;
+//
+//	//	Send((BYTE*)sendBuffer, sizeof(sendBuffer));
+//	//	return len;
+//	//}
+//
+//	//virtual void OnSend(int32 len) override
+//	//{
+//	//	std::cout << "OnSend Len = " << len << std::endl;
+//	//}
+//
+//	//virtual void OnDisconnected() override
+//	//{
+//	//	std::cout << "Disconnected" << std::endl;
+//	//}
+//};

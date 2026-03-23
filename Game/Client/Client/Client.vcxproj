@@ -76,6 +76,7 @@
     <OutDir>$(SolutionDir)Executables\</OutDir>
     <TargetName>$(ProjectName)_dbg</TargetName>
     <IntDir>$(SolutionDir)Intermediates\</IntDir>
+    <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>$(SolutionDir)Dependencies\Libraries\;$(LibraryPath)</LibraryPath>
