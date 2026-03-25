@@ -414,11 +414,16 @@
     <ClInclude Include="TerrainTestScene.h">
       <Filter>02.Game\Scene\Test</Filter>
     </ClInclude>
-    <ClInclude Include="SpritePass.h" />
     <ClInclude Include="NavMeshDebugRenderer.h" />
     <ClInclude Include="ZombieAnimationController.h" />
     <ClInclude Include="Zombie.h" />
     <ClInclude Include="AIManagerWrapper.h" />
+    <ClInclude Include="SpritePass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\Includes\ImGui\imgui_stdlib.h">
+      <Filter>99.Library\ImGui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -700,11 +705,16 @@
     <ClCompile Include="MapTestScene.cpp">
       <Filter>02.Game\Scene\Test</Filter>
     </ClCompile>
-    <ClCompile Include="SpritePass.cpp" />
     <ClCompile Include="NavMeshDebugRenderer.cpp" />
     <ClCompile Include="Zombie.cpp" />
     <ClCompile Include="ZombieAnimationController.cpp" />
     <ClCompile Include="AIManagerWrapper.cpp" />
+    <ClCompile Include="SpritePass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\Includes\ImGui\imgui_stdlib.cpp">
+      <Filter>99.Library\ImGui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
@@ -743,9 +753,6 @@
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\Shaders.hlsl">
-      <Filter>03.Engine\HLSL\Graphics</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\SkyboxShader.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\Sprite.hlsl">

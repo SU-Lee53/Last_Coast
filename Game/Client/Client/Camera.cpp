@@ -193,6 +193,8 @@ void Camera::GenerateProjectionMatrix(float fNearPlaneDistance, float fFarPlaneD
 	m_mtxInverseProjection = m_mtxProjection.Invert();
 
 	BoundingFrustum::CreateFromMatrix(m_xmFrustumOrigin, XMLoadFloat4x4(&m_mtxProjection));
+	m_xmFrustumOrigin.Transform(m_xmFrustumWorld, m_mtxWorld);
+
 	ComputeCascadeSplits();
 }
 

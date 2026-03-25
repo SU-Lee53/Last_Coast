@@ -32,7 +32,7 @@ public:
 		OUT RenderPassOutput& output, 
 		OUT DescriptorHandle& outDescHandle) const override;
 
-	virtual void ShowDebugInfo() const;
+	virtual void ShowDebugInfo() override;
 
 private:
 	void SetRenderTargets(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList) const;

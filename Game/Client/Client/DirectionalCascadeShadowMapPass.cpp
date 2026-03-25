@@ -90,14 +90,8 @@ void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandL
 {
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
 
-	std::vector<std::shared_ptr<Texture>> pDSVTextures;
-	std::vector<CD3DX12_RESOURCE_BARRIER> d3dResourceBarriers;
-	pDSVTextures.reserve(g_unNumCascade);
-	d3dResourceBarriers.reserve(g_unNumCascade);
-	for (int i = 0; i < g_unNumCascade; ++i) {
-		auto pTex = m_ShadowMapRef[unCurrentContext][i].GetResource();
-		pTex->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-		pDSVTextures.push_back(pTex);
+	for (const auto& texRef : m_ShadowMapRef[unCurrentContext]) {
+		texRef.GetResource()->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 	}
 
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
@@ -114,9 +108,8 @@ void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandL
 	DEVICE->CopyDescriptorsSimple(1, bindHandle, toShadowCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	bindHandle.Offset(1, unDescriptorInc);
 
-
-	for (const auto& shadowMap : pDSVTextures) {
-		CD3DX12_CPU_DESCRIPTOR_HANDLE dsSRVHandle = shadowMap->GetSRVHandle();
+	for (const auto& texRef : m_ShadowMapRef[unCurrentContext]) {
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsSRVHandle = texRef.GetResource()->GetSRVHandle();
 		DEVICE->CopyDescriptorsSimple(1, bindHandle, dsSRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		bindHandle.Offset(1, unDescriptorInc);
 	}
@@ -128,6 +121,21 @@ void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandL
 	// Viewport & Scissor rect 복구
 	auto pCamera = CUR_SCENE->GetCamera();
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+
+
+	if (m_bShowShadowMaps) {
+		constexpr float fSize = 0.2f;
+		for (const auto& [idx, texRef] : m_ShadowMapRef[unCurrentContext] | std::views::enumerate) {
+			SpriteRect r;
+			{
+				r.fLeft = 0.f;
+				r.fTop = (float)idx * fSize;
+				r.fRight = r.fLeft + fSize;
+				r.fBottom = r.fTop + fSize;
+			}
+			RENDER->AddSprite(texRef, r, 0);
+		}
+	}
 }
 
 void DirectionalCascadeShadowMapPass::CreatePipelineState()
@@ -221,6 +229,7 @@ void DirectionalCascadeShadowMapPass::SetRenderTargets(ComPtr<ID3D12GraphicsComm
 
 	pd3dCommandList->RSSetViewports(1, &d3dViewport);
 	pd3dCommandList->RSSetScissorRects(1, &d3dScissorRect);
+
 }
 
 void DirectionalCascadeShadowMapPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<std::shared_ptr<IGameObject>>& frustumCulled, OUT DescriptorHandle& outDescHandle) const
@@ -338,6 +347,7 @@ void DirectionalCascadeShadowMapPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandLi
 		const auto& terrainIndexRange = pComponent->GetIndexRange();
 		pTerrainMesh->Render(pd3dCommandList, 1, terrainIndexRange.unStartIndex, terrainIndexRange.unIndexCount);
 	}
+
 }
 
 void DirectionalCascadeShadowMapPass::ComputeCascade() const
@@ -457,5 +467,12 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 		};
 
 		m_CascadeCached[i] = data;
+	}
+}
+
+void DirectionalCascadeShadowMapPass::ShowDebugInfo()
+{
+	if (ImGui::Button(std::format("Show Shadow Maps : {}", m_bShowShadowMaps ? "TRUE" : "FALSE").c_str())) {
+		m_bShowShadowMaps = !m_bShowShadowMaps;
 	}
 }

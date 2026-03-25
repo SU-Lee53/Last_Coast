@@ -50,6 +50,8 @@ private:
 
 	void ComputeCascade() const;
 
+	virtual void ShowDebugInfo() override;
+
 private:
 	struct RenderParameter {
 		std::vector<WorldTransformData> sbWorldTransformData;
@@ -71,5 +73,7 @@ private:
 	ComPtr<ID3D12PipelineState> m_pd3dAnimatedPipelineState;
 
 	TextureRef<DepthStencilTexture> m_ShadowMapRef[RenderManager::g_unMaxPendingFrames][g_unNumCascade];
+
+	mutable bool m_bShowShadowMaps;
 };
 

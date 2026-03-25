@@ -6,6 +6,7 @@
 #include "DirectionalCascadeShadowMapPass.h"
 #include "ToneMappingPass.h"
 #include "SkyboxPass.h"
+#include "SpritePass.h"
 #include <queue>
 
 void RenderGraph::BuildGraph()
@@ -44,13 +45,17 @@ void RenderGraph::BuildGraph()
 	std::shared_ptr<IRenderPass> pToneMappingPass = std::make_shared<ToneMappingPass>();
 	pToneMappingPass->Initialize();
 	m_pAdjLists.push_back(pToneMappingPass);
+
+	std::shared_ptr<IRenderPass> pSpritePass = std::make_shared<SpritePass>();
+	pSpritePass->Initialize();
+	m_pAdjLists.push_back(pSpritePass);
 	
 	pDirectionalCascadeShadowMapPass->Connect(pGBufferPass);
 	pGBufferPass->Connect(pDefferedLightingPass);
 	pDefferedLightingPass->Connect(pTransparentForwardPass);
-	//pDefferedLightingPass->Connect(pSkyboxPass);
 	pTransparentForwardPass->Connect(pSkyboxPass);
 	pSkyboxPass->Connect(pToneMappingPass);
+	pToneMappingPass->Connect(pSpritePass);
 
 	m_unEntryNodeIndex = 0;
 }

@@ -218,6 +218,9 @@ void ShaderManager::CompileShaders()
 	Compile("ShadowStandardVS", L"ShadowMapShader.hlsl", L"VSShadowStandard", SHADER_TYPE::VS);
 	Compile("ShadowAnimatedVS", L"ShadowMapShader.hlsl", L"VSShadowAnimated", SHADER_TYPE::VS);
 
+	Compile("SpriteVS", L"Sprite.hlsl", L"VSSprite", SHADER_TYPE::VS);
+	Compile("SpritePS", L"Sprite.hlsl", L"PSSprite", SHADER_TYPE::PS);
+
 	// Compute
 	Compile("HDRIToCubeMapCS", L"HDRIToCubeMap.hlsl", L"CSHDRIToCubeMap", SHADER_TYPE::CS);
 

@@ -65,6 +65,6 @@ private:
 	Vector3 m_v3NightHorizonColor;
 
 	std::shared_ptr<IComputePass> m_pPass;
-	const std::string g_strSkyboxBasePath = "../Resources/Skybox/";
+	inline const static  std::string g_strSkyboxBasePath = "../Resources/Skybox/";
 };
 

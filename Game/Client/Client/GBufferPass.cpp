@@ -385,7 +385,7 @@ void GBufferPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList
 	outDescHandle.gpuHandle.Offset(4, unDescriptorInc);
 }
 
-void GBufferPass::ShowDebugInfo() const
+void GBufferPass::ShowDebugInfo()
 {
 	ImGui::Text("Frustum Culled : %d", m_unFrustumCulled);
 	

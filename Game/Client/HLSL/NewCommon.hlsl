@@ -154,6 +154,35 @@ struct LightData
 	float	pad0;						// c7.w
 };
 
+struct AgXParameters
+{
+	float fExposure;
+	float fGamma;
+	
+	float fSaturation;
+	float fLookStrength;
+	float fInputScale;
+	float fOutputScale;
+	
+	// Look Parameters
+	float3 slope; // Data1.xyz
+	float fContrastPivot; // Data1.w
+	float3 offset; // Data2.xyz
+	float fContrastStrength; // Data2.w
+	float3 power; // Data3.xyz
+	float fBlackLift; // Data3.w
+	float3 shadowTint; // Data4.xyz
+	float fShadowTintStrength; // Data4.w
+	float3 highlightTint; // Data5.xyz
+	float fHighlightTintStrength; // Data5.w
+	float fDensity; // Data6.x
+	float fLookSaturation; // Data6.y
+	float fShadowStartLuma; // Data6.z
+	float fShadowEndLuma; // Data6.w
+	float fHighlightStartLuma; // Data7.x
+	float fHighlightEndLuma; // Data8.y
+};
+
 // ============ cbuffers ============
 
 cbuffer cbSceneData : register(b0, space0)
@@ -174,6 +203,21 @@ cbuffer cbShadowMatrix : register(b2, space0)
 {
 	float4x4 gmtxShadows[4];
 }
+
+cbuffer cbToneMappingData : register(b3, space0)
+{
+	uint gnToneMappingType;
+	float3 gToneMappingCommon0;	// x = exposure, y = gamma, z = reserved
+	
+	float4 gToneMappingData0;
+	float4 gToneMappingData1;
+	float4 gToneMappingData2;
+	float4 gToneMappingData3;
+	float4 gToneMappingData4;
+	float4 gToneMappingData5;
+	float4 gToneMappingData6;
+	float4 gToneMappingData7;
+};
 
 // ============ StructuredBuffers ============
 
@@ -255,6 +299,14 @@ struct InstanceData
 	float4x4 mtxInvWorld;
 };
 
+struct SpriteData
+{
+	float fLeft;
+	float fTop;
+	float fRight;
+	float fBottom;
+};
+
 #define MAX_BONES 100
 #define MAX_TERRAIN_COMPONENTS 8*8
 
@@ -306,12 +358,12 @@ cbuffer cbLightCameraData : register(b4, space2)
 StructuredBuffer<InstanceData> gWorldTransforms : register(t0, space2);
 StructuredBuffer<matrix> gBoneTransforms : register(t1, space2);
 
-
 Texture2D gtxtTerrainAlbedo[4] : register(t2, space2); // t2, t3, t4, t5
 Texture2D gtxtTerrainNormal[4] : register(t6, space2); // t6, t7, t8, t9
 
 Texture2D gtxtTerrainWeightMap : register(t10, space2);
 
+StructuredBuffer<SpriteData> gSpriteData : register(t11, space2);
 
 
 // ================================================================================

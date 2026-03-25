@@ -93,25 +93,27 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	d3dDescriptorRanges[14].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbTerrainComponentData 
 	d3dDescriptorRanges[15].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 10, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainWeightMap
 
-	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[13];
+	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[15];
 	// Per Scene
 	d3dRootParameters[0].InitAsDescriptorTable(2, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);	// Per Draw
 	d3dRootParameters[1].InitAsDescriptorTable(2, &d3dDescriptorRanges[2], D3D12_SHADER_VISIBILITY_ALL);	// Cascade Shadow maps
 	d3dRootParameters[2].InitAsDescriptorTable(2, &d3dDescriptorRanges[4], D3D12_SHADER_VISIBILITY_ALL);	// Shadow maps
 	d3dRootParameters[3].InitAsDescriptorTable(2, &d3dDescriptorRanges[6], D3D12_SHADER_VISIBILITY_ALL);	// G-Buffers
 	d3dRootParameters[4].InitAsDescriptorTable(1, &d3dDescriptorRanges[8], D3D12_SHADER_VISIBILITY_ALL);	// HDR Result
+	d3dRootParameters[5].InitAsConstantBufferView(3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// ToneMapping parameters
 	
 	// Per Pass
-	d3dRootParameters[5].InitAsDescriptorTable(2, &d3dDescriptorRanges[9], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass
+	d3dRootParameters[6].InitAsDescriptorTable(2, &d3dDescriptorRanges[9], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass
 
 	// Per Instance(Draw)
-	d3dRootParameters[6].InitAsConstantBufferView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// cbInstanceData
-	d3dRootParameters[7].InitAsConstantBufferView(4, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// cbLightCameraData
-	d3dRootParameters[8].InitAsShaderResourceView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gWorldTransforms
-	d3dRootParameters[9].InitAsShaderResourceView(1, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gBoneTransforms
-	d3dRootParameters[10].InitAsDescriptorTable(3, &d3dDescriptorRanges[11], D3D12_SHADER_VISIBILITY_ALL);	// TerrainLayer
-	d3dRootParameters[11].InitAsDescriptorTable(2, &d3dDescriptorRanges[14], D3D12_SHADER_VISIBILITY_ALL);	// TerrainComponent
-	d3dRootParameters[12].InitAsConstants(1, 3, 2, D3D12_SHADER_VISIBILITY_ALL);	// gnWorldTransformIndex
+	d3dRootParameters[7].InitAsConstantBufferView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// cbInstanceData
+	d3dRootParameters[8].InitAsConstantBufferView(4, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// cbLightCameraData
+	d3dRootParameters[9].InitAsShaderResourceView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gWorldTransforms
+	d3dRootParameters[10].InitAsShaderResourceView(1, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gBoneTransforms
+	d3dRootParameters[11].InitAsDescriptorTable(3, &d3dDescriptorRanges[11], D3D12_SHADER_VISIBILITY_ALL);	// TerrainLayer
+	d3dRootParameters[12].InitAsDescriptorTable(2, &d3dDescriptorRanges[14], D3D12_SHADER_VISIBILITY_ALL);	// TerrainComponent
+	d3dRootParameters[13].InitAsConstants(1, 3, 2, D3D12_SHADER_VISIBILITY_ALL);	// gnWorldTransformIndex
+	d3dRootParameters[14].InitAsShaderResourceView(11, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_ALL);	//gSpriteData
 
 	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[4];
 	// s0 : SkyboxSampler
@@ -300,9 +302,24 @@ void RenderManager::ShowDebugOptions()
 	ImGui::End();
 }
 
-void RenderManager::AddSprite(std::shared_ptr<Sprite> pSprite, RECT rect, uint32 unLayer)
+void RenderManager::AddSprite(const TextureRef<Texture>& texHandle, const SpriteRect& rect, uint32 unLayer)
 {
-	//m_pSpritesToRender[unLayer].emplace_back(pSprite, rect);
+	m_pSpritesToRender[unLayer].emplace_back(texHandle, rect);
+}
+
+void RenderManager::AddSprite(const TextureRef<RenderTargetTexture>& texHandle, const SpriteRect& rect, uint32 unLayer)
+{
+	m_pSpritesToRender[unLayer].emplace_back(texHandle, rect);
+}
+
+void RenderManager::AddSprite(const TextureRef<DepthStencilTexture>& texHandle, const SpriteRect& rect, uint32 unLayer)
+{
+	m_pSpritesToRender[unLayer].emplace_back(texHandle, rect);
+}
+
+void RenderManager::AddSprite(const TextureRef<UnorderedAccessTexture>& texHandle, const SpriteRect& rect, uint32 unLayer)
+{
+	m_pSpritesToRender[unLayer].emplace_back(texHandle, rect);
 }
 
 void RenderManager::Reset()

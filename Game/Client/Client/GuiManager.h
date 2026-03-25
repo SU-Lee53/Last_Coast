@@ -18,6 +18,8 @@ public:
 	void Update();
 	void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
 
+	static void HelpMarker(const char* desc);
+
 private:
 	std::unique_ptr<DescriptorHeap> m_pFontSrvDescriptorHeap = nullptr;
 

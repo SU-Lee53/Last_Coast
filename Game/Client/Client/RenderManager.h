@@ -12,14 +12,16 @@ enum class ROOT_PARAMETER : uint32 {
 	SHADOW_MAPS								= 2,
 	G_BUFFER								= 3,
 	HDR_RESULT								= 4,
-	PER_PASS_DATA							= 5,
-	PER_INSTANCE_DATA						= 6,
-	LIGHT_CAMERA_DATA						= 7,
-	WORLD_TRANSFORM_DATA					= 8,
-	BONE_TRANSFORM							= 9,
-	TERRAIN_LAYER							= 10,
-	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 11,
-	WORLE_TRANSFORM_INDEX					= 12,
+	TONE_MAPPING_DATA						= 5,
+	PER_PASS_DATA							= 6,
+	PER_INSTANCE_DATA						= 7,
+	LIGHT_CAMERA_DATA						= 8,
+	WORLD_TRANSFORM_DATA					= 9,
+	BONE_TRANSFORM							= 10,
+	TERRAIN_LAYER							= 11,
+	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 12,
+	WORLE_TRANSFORM_INDEX					= 13,
+	SPRITE_DATA								= 14,
 };
 
 struct GBuffer {
@@ -52,8 +54,13 @@ public:
 
 	template<typename T> requires std::derived_from<T, IGameObject>
 	void Add(std::shared_ptr<T> pObj);
-	void AddSprite(std::shared_ptr<Sprite> pSprite, RECT rect, uint32 unLayer);
 	void Reset();
+
+	// Sprites
+	void AddSprite(const TextureRef<Texture>& texHandle, const SpriteRect& rect, uint32 unLayer);
+	void AddSprite(const TextureRef<RenderTargetTexture>& texHandle, const SpriteRect& rect, uint32 unLayer);
+	void AddSprite(const TextureRef<DepthStencilTexture>& texHandle, const SpriteRect& rect, uint32 unLayer);
+	void AddSprite(const TextureRef<UnorderedAccessTexture>& texHandle, const SpriteRect& rect, uint32 unLayer);
 
 	const std::shared_ptr<IMesh> GetQuadMesh() const { return m_pQuadMesh; }
 
@@ -102,12 +109,16 @@ private:
 private:
 	// Sprite
 	struct SpriteRenderParameter {
-		std::shared_ptr<Sprite> pSprite;
-		RECT Rect;
+		const TextureHandle& texHandle;
+		SpriteRect Rect;
 
-		SpriteRenderParameter(std::shared_ptr<Sprite> p, RECT r) : pSprite{ p }, Rect{ r } {}
+		SpriteRenderParameter(const TextureRef<Texture>& texHandle, const SpriteRect& r) : texHandle{ texHandle.srvHandle }, Rect{ r } {}
+		SpriteRenderParameter(const TextureRef<RenderTargetTexture>& texHandle, const SpriteRect& r) : texHandle{ texHandle.srvHandle }, Rect{ r } {}
+		SpriteRenderParameter(const TextureRef<DepthStencilTexture>& texHandle, const SpriteRect& r) : texHandle{ texHandle.srvHandle }, Rect{ r } {}
+		SpriteRenderParameter(const TextureRef<UnorderedAccessTexture>& texHandle, const SpriteRect& r) : texHandle{ texHandle.srvHandle }, Rect{ r } {}
 	};
-	std::array<std::vector<std::shared_ptr<Sprite>>, g_unMaxSpriteLayers> m_pSpritesToRender;
+
+	std::array<std::vector<SpriteRenderParameter>, g_unMaxSpriteLayers> m_pSpritesToRender;
 
 private:
 	// Frame Resources
