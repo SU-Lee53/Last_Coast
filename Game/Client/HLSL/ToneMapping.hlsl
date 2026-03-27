@@ -253,10 +253,8 @@ float3 ApplyShadowHighlightTint(float3 color, float3 shadowTint, float fShadowSt
 	return color;
 }
 
-float3 ApplyLook(float3 color, LookParameters lookParameters)
+float3 ApplyLook(float3 color, LookParameters params)
 {
-	LookParameters params = ExtractLookParameters();
-	
 	// 1. Black lift
 	color = ApplyBlackLift(color, params.fBlackLift);
 	
@@ -373,6 +371,66 @@ float3 AgXToneMapping(float3 hdrColor)
 	return saturate(finalColor);
 }
 
+/////////////////////////////////////////////////////////////////////////////////
+// UC2
+
+float UC2CurveScalar(float x, float P, float a, float m, float l, float c, float b)
+{
+	P = max(P, 1e-4f);
+	a = max(a, 1e-4f);
+	m = clamp(m, 1e-4f, P - 1e-4f);
+	l = saturate(l);
+	c = max(c, 1e-4f);
+	b = max(b, 0.0f);
+
+	float l0 = ((P - m) * l) / a;
+	float S0 = m + l0;
+	float S1 = m + a * l0;
+	float C2 = (a * P) / max(P - S1, 1e-4f);
+	float CP = -C2 / P;
+
+	float w0 = 1.0f - smoothstep(0.0f, m, x);
+	float w2 = step(m + l0, x);
+	float w1 = 1.0f - w0 - w2;
+
+	float T = m * pow(max(x, 0.0f) / max(m, 1e-4f), c) + b;
+	float S = P - (P - S1) * exp(CP * (x - S0));
+	float L = m + a * (x - m);
+
+	return T * w0 + L * w1 + S * w2;
+}
+
+float3 UC2Core(float3 hdrColor, CommonParameters commonParams, UC2Parameters params)
+{
+	float3 color = hdrColor * commonParams.fExposure * commonParams.fInputScale;
+	color = max(color, 0.f);
+	
+	float fLuma = GetLuminance(color);
+	
+	float fMappedLuma = UC2CurveScalar(fLuma, params.fUC2MaxBrightness, params.fUC2Contrast, params.fUC2LinearStart, params.fUC2LinearLength, params.fUC2Black, params.fUC2Pedestal);
+	
+	float fScale = fMappedLuma / max(fLuma, 1e-4f);
+	color *= fScale;
+	
+	return saturate(color);
+}
+
+float3 UC2ToneMapping(float3 hdrColor)
+{
+	CommonParameters commonParams = ExtractCommonParameters();
+	UC2Parameters uc2Params = ExtractUC2Parameters();
+	LookParameters lookparams = ExtractLookParameters();
+	
+	float3 baseColor = UC2Core(hdrColor, commonParams, uc2Params);
+	float3 lookColor = ApplyLook(baseColor, lookparams);
+	
+	float3 finalColor = lerp(baseColor, lookColor, saturate(lookparams.fLookStrength));
+	finalColor = ApplySaturation(finalColor, commonParams.fSaturation);
+	finalColor *= commonParams.fOutputScale;
+	
+	return saturate(finalColor);
+}
+
 float4 PSToneMapping(VS_QUAD_OUTPUT input) : SV_Target0
 {
 	int2 pixelPos = int2(input.uv * gnScreenSize);
@@ -388,7 +446,7 @@ float4 PSToneMapping(VS_QUAD_OUTPUT input) : SV_Target0
 		break;
 	
 	case 1:
-		mapped = AgXToneMapping(hdr);
+		mapped = UC2ToneMapping(hdr);
 		break;
 	
 	case 2:

@@ -252,6 +252,8 @@ void ToneMappingPass::ShowDebugInfo()
 
 
 	ImGui::SeparatorText("LookParameters");
+	ShowDragFloat(cnt++, "fLookStrength", reinterpret_cast<float*>(&m_Parameters.Look.fLookStrength), 0.01f, 0.0f, 1.0f, true, 0.0f, 1.0f, 1.0f);
+
 	ImGui::SeparatorText("Color modify");
 	ShowDragFloat3(cnt++, "v3Slope", reinterpret_cast<float*>(&m_Parameters.Look.v3Slope), 0.001f, 0.5f, 1.5f, true, 0.9f, 1.1f, 1.0f);
 	ShowDragFloat3(cnt++, "v3Offset", reinterpret_cast<float*>(&m_Parameters.Look.v3Offset), 0.001f, -0.25f, 0.25f, true, -0.05f, 0.05f, 0.0f);
