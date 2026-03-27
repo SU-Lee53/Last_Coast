@@ -258,10 +258,6 @@ float4 PSDefferedLighting(VS_QUAD_OUTPUT input) : SV_Target0
 	float2 uv = (input.position.xy) / float2(gnScreenSize);
 	
 	GBufferData g = LoadGBuffer(pixelPos);
-	if (g.depth >= 0.9999f)
-	{
-		return float4(0, 0, 0, 1);
-	}
 	
 	float3 worldPos = ReconstructWorldPos(uv, g.depth);
 	float3 viewDir = normalize(gCamera.v3CameraPosition - worldPos);

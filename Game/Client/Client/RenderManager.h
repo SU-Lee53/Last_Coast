@@ -12,16 +12,17 @@ enum class ROOT_PARAMETER : uint32 {
 	SHADOW_MAPS								= 2,
 	G_BUFFER								= 3,
 	HDR_RESULT								= 4,
-	TONE_MAPPING_DATA						= 5,
-	PER_PASS_DATA							= 6,
-	PER_INSTANCE_DATA						= 7,
-	LIGHT_CAMERA_DATA						= 8,
-	WORLD_TRANSFORM_DATA					= 9,
-	BONE_TRANSFORM							= 10,
-	TERRAIN_LAYER							= 11,
-	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 12,
-	WORLE_TRANSFORM_INDEX					= 13,
-	SPRITE_DATA								= 14,
+	FOG_DATA								= 5,
+	TONE_MAPPING_DATA						= 6,
+	PER_PASS_DATA							= 7,
+	PER_INSTANCE_DATA						= 8,
+	LIGHT_CAMERA_DATA						= 9,
+	WORLD_TRANSFORM_DATA					= 10,
+	BONE_TRANSFORM							= 11,
+	TERRAIN_LAYER							= 12,
+	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 13,
+	WORLE_TRANSFORM_INDEX					= 14,
+	SPRITE_DATA								= 15,
 };
 
 struct GBuffer {
@@ -127,9 +128,10 @@ private:
 	StructuredBufferPool	m_StructuredBufferPool[g_unMaxPendingFrames];
 
 	GBuffer									m_GBuffers[g_unMaxPendingFrames];
-	TextureRef<RenderTargetTexture>			m_HDRRenderTargetIDs[g_unMaxPendingFrames];
-	TextureRef<RenderTargetTexture>			m_LDRRenderTargetIDs[g_unMaxPendingFrames];
+	TextureRef<RenderTargetTexture>			m_HDRRenderTargetIDs[2][g_unMaxPendingFrames];
 
+
+	TextureRef<RenderTargetTexture>			m_LDRRenderTargetIDs[g_unMaxPendingFrames];
 
 
 #pragma region D3D
@@ -144,10 +146,10 @@ public:
 
 	const GBuffer& GetCurrentGBuffer() const;
 
-	const TextureRef<RenderTargetTexture>& GetCurrentHDRBuffer() const;
+	const TextureRef<RenderTargetTexture>& GetCurrentHDRBuffer(int nIndex) const;
 	const TextureRef<RenderTargetTexture>& GetCurrentLDRBuffer() const;
 
-	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentHDRBufferHandle() const;
+	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentHDRBufferHandle(int nIndex) const;
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentLDRBufferHandle() const;
 
 	ComPtr<ID3D12GraphicsCommandList> GetCommandList() const { return m_ppd3dCommandList[m_unCurrentContextIndex]; }

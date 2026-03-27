@@ -424,6 +424,9 @@
     <ClInclude Include="..\Dependencies\Includes\ImGui\imgui_stdlib.h">
       <Filter>99.Library\ImGui</Filter>
     </ClInclude>
+    <ClInclude Include="DefferedFogPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -715,6 +718,9 @@
     <ClCompile Include="..\Dependencies\Includes\ImGui\imgui_stdlib.cpp">
       <Filter>99.Library\ImGui</Filter>
     </ClCompile>
+    <ClCompile Include="DefferedFogPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
@@ -771,6 +777,9 @@
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\ShadowMapShader.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\HDRPostProcessing.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
   </ItemGroup>

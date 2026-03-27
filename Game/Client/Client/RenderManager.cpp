@@ -36,12 +36,20 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 		m_GBuffers[i].Initialize(i);
 
 		{
-			m_HDRRenderTargetIDs[i] = TEXTURE->LoadRenderTargetTexture(
-				"HDR" + std::to_string(i),
+			m_HDRRenderTargetIDs[0][i] = TEXTURE->LoadRenderTargetTexture(
+				"HDR0" + std::to_string(i),
 				WinCore::g_dwClientWidth,
 				WinCore::g_dwClientHeight,
 				DXGI_FORMAT_R16G16B16A16_FLOAT,
 				DXGI_FORMAT_R16G16B16A16_FLOAT);
+			
+			m_HDRRenderTargetIDs[1][i] = TEXTURE->LoadRenderTargetTexture(
+				"HDR1" + std::to_string(i),
+				WinCore::g_dwClientWidth,
+				WinCore::g_dwClientHeight,
+				DXGI_FORMAT_R16G16B16A16_FLOAT,
+				DXGI_FORMAT_R16G16B16A16_FLOAT);
+
 		}
 
 		{
@@ -93,27 +101,28 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	d3dDescriptorRanges[14].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbTerrainComponentData 
 	d3dDescriptorRanges[15].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 10, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainWeightMap
 
-	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[15];
+	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[16];
 	// Per Scene
 	d3dRootParameters[0].InitAsDescriptorTable(2, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);	// Per Draw
 	d3dRootParameters[1].InitAsDescriptorTable(2, &d3dDescriptorRanges[2], D3D12_SHADER_VISIBILITY_ALL);	// Cascade Shadow maps
 	d3dRootParameters[2].InitAsDescriptorTable(2, &d3dDescriptorRanges[4], D3D12_SHADER_VISIBILITY_ALL);	// Shadow maps
 	d3dRootParameters[3].InitAsDescriptorTable(2, &d3dDescriptorRanges[6], D3D12_SHADER_VISIBILITY_ALL);	// G-Buffers
 	d3dRootParameters[4].InitAsDescriptorTable(1, &d3dDescriptorRanges[8], D3D12_SHADER_VISIBILITY_ALL);	// HDR Result
-	d3dRootParameters[5].InitAsConstantBufferView(3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// ToneMapping parameters
+	d3dRootParameters[5].InitAsConstantBufferView(3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// Fog parameters
+	d3dRootParameters[6].InitAsConstantBufferView(4, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// ToneMapping parameters
 	
 	// Per Pass
-	d3dRootParameters[6].InitAsDescriptorTable(2, &d3dDescriptorRanges[9], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass
+	d3dRootParameters[7].InitAsDescriptorTable(2, &d3dDescriptorRanges[9], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass
 
 	// Per Instance(Draw)
-	d3dRootParameters[7].InitAsConstantBufferView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// cbInstanceData
-	d3dRootParameters[8].InitAsConstantBufferView(4, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// cbLightCameraData
-	d3dRootParameters[9].InitAsShaderResourceView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gWorldTransforms
-	d3dRootParameters[10].InitAsShaderResourceView(1, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gBoneTransforms
-	d3dRootParameters[11].InitAsDescriptorTable(3, &d3dDescriptorRanges[11], D3D12_SHADER_VISIBILITY_ALL);	// TerrainLayer
-	d3dRootParameters[12].InitAsDescriptorTable(2, &d3dDescriptorRanges[14], D3D12_SHADER_VISIBILITY_ALL);	// TerrainComponent
-	d3dRootParameters[13].InitAsConstants(1, 3, 2, D3D12_SHADER_VISIBILITY_ALL);	// gnWorldTransformIndex
-	d3dRootParameters[14].InitAsShaderResourceView(11, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_ALL);	//gSpriteData
+	d3dRootParameters[8].InitAsConstantBufferView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// cbInstanceData
+	d3dRootParameters[9].InitAsConstantBufferView(4, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// cbLightCameraData
+	d3dRootParameters[10].InitAsShaderResourceView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gWorldTransforms
+	d3dRootParameters[11].InitAsShaderResourceView(1, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// gBoneTransforms
+	d3dRootParameters[12].InitAsDescriptorTable(3, &d3dDescriptorRanges[11], D3D12_SHADER_VISIBILITY_ALL);	// TerrainLayer
+	d3dRootParameters[13].InitAsDescriptorTable(2, &d3dDescriptorRanges[14], D3D12_SHADER_VISIBILITY_ALL);	// TerrainComponent
+	d3dRootParameters[14].InitAsConstants(1, 3, 2, D3D12_SHADER_VISIBILITY_ALL);	// gnWorldTransformIndex
+	d3dRootParameters[15].InitAsShaderResourceView(11, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_ALL);	//gSpriteData
 
 	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[4];
 	// s0 : SkyboxSampler
@@ -277,9 +286,17 @@ void RenderManager::ShowDebugOptions()
 				ImGui::TreePop();
 			}
 			
-			if (ImGui::TreeNode("HDR")) {
+			if (ImGui::TreeNode("HDR0")) {
 				ImGui::Text("HDR[0][0] Info. Rest is same");
-				auto pHDR = m_HDRRenderTargetIDs[0].GetResource();
+				auto pHDR = m_HDRRenderTargetIDs[0][0].GetResource();
+				pHDR->ShowDebugInfo();
+
+				ImGui::TreePop();
+			}
+			
+			if (ImGui::TreeNode("HDR1")) {
+				ImGui::Text("HDR[0][0] Info. Rest is same");
+				auto pHDR = m_HDRRenderTargetIDs[0][1].GetResource();
 				pHDR->ShowDebugInfo();
 
 				ImGui::TreePop();
@@ -408,9 +425,9 @@ const GBuffer& RenderManager::GetCurrentGBuffer() const
 	return m_GBuffers[m_unCurrentContextIndex];
 }
 
-const TextureRef<RenderTargetTexture>& RenderManager::GetCurrentHDRBuffer() const
+const TextureRef<RenderTargetTexture>& RenderManager::GetCurrentHDRBuffer(int nIndex) const
 {
-	return m_HDRRenderTargetIDs[m_unBackBufferIndex];
+	return m_HDRRenderTargetIDs[nIndex][m_unBackBufferIndex];
 }
 
 const TextureRef<RenderTargetTexture>& RenderManager::GetCurrentLDRBuffer() const
@@ -418,9 +435,9 @@ const TextureRef<RenderTargetTexture>& RenderManager::GetCurrentLDRBuffer() cons
 	return m_LDRRenderTargetIDs[m_unBackBufferIndex];
 }
 
-const CD3DX12_CPU_DESCRIPTOR_HANDLE RenderManager::GetCurrentHDRBufferHandle() const
+const CD3DX12_CPU_DESCRIPTOR_HANDLE RenderManager::GetCurrentHDRBufferHandle(int nIndex) const
 {
-	return static_pointer_cast<RenderTargetTexture>(m_HDRRenderTargetIDs[m_unBackBufferIndex].GetResource())->GetRTVHandle();
+	return static_pointer_cast<RenderTargetTexture>(m_HDRRenderTargetIDs[nIndex][m_unBackBufferIndex].GetResource())->GetRTVHandle();
 }
 
 const CD3DX12_CPU_DESCRIPTOR_HANDLE RenderManager::GetCurrentLDRBufferHandle() const

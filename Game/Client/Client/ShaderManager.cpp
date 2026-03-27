@@ -221,6 +221,10 @@ void ShaderManager::CompileShaders()
 	Compile("SpriteVS", L"Sprite.hlsl", L"VSSprite", SHADER_TYPE::VS);
 	Compile("SpritePS", L"Sprite.hlsl", L"PSSprite", SHADER_TYPE::PS);
 
+	// PostProcess
+	Compile("DefferedFogVS", L"HDRPostProcessing.hlsl", L"VSDefferedFog", SHADER_TYPE::VS);
+	Compile("DefferedFogPS", L"HDRPostProcessing.hlsl", L"PSDefferedFog", SHADER_TYPE::PS);
+
 	// Compute
 	Compile("HDRIToCubeMapCS", L"HDRIToCubeMap.hlsl", L"CSHDRIToCubeMap", SHADER_TYPE::CS);
 

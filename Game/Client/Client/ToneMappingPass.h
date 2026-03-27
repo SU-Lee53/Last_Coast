@@ -1,57 +1,65 @@
 ﻿#pragma once
 #include "RenderPass.h"
 
-struct AgXParameters
-{
-	float fSaturation = 1.0f;		// Data0.x
-	float fLookStrength = 0.0f;		// Data0.y
-	float fInputScale = 1.0f;		// Data0.z
-	float fOutputScale = 1.0f;		// Data0.w
+struct ToneMappingCommonParameters {
+	float fExposure = 1.f;
+	float fGamma = 2.2f;
 
-	// Look Parameters
-	Vector3 v3Slope;				// Data1.xyz
-	float fContrastPivot;			// Data1.w
-
-	Vector3 v3Offset;				// Data2.xyz
-	float fContrastStrength;		// Data2.w
-
-	Vector3 v3Power;				// Data3.xyz
-	float fBlackLift;				// Data3.w
-
-	Vector3 v3ShadowTint;			// Data4.xyz
-	float fShadowTintStrength;		// Data4.w
-
-	Vector3 v3HighlightTint;		// Data5.xyz
-	float fHighlightTintStrength;	// Data5.w
-
-	float fDensity;					// Data6.x
-	float fLookSaturation;			// Data6.y
-	float fShadowStartLuma;			// Data6.z
-	float fShadowEndLuma;			// Data6.w
-	float fHighlightStartLuma;		// Data7.x
-	float fHighlightEndLuma;		// Data7.y
-
+	float fSaturation = 1.0f;
+	float fInputScale = 1.0f;	
+	float fOutputScale = 1.0f;
 };
 
-struct UC2Parameters
-{
-	float fExposure;
-	float fGamma;
+struct AgXParameters {
+	float fAgXWhite = 1.0f;			// White ceiling / shoulder
+	float fAgXBlack = 0.0f;			// Black floor / toe
+	float fAgXContrast = 1.0f;		// AgX 곡선의 Contrast(대비)
+	float fAgXMinEV = -12.47393f;
+	float fAgXMaxEV = 4.026069f;	// 입력 HDR -> log working range
+};
 
+struct UC2Parameters {
+	float fUC2MaxBrightness = 1.0f;  // 최종 White/peak
+	float fUC2Contrast = 1.0f;       // 커브 전체의 Contrast
+	float fUC2LinearStart = 0.22f;   // linear 시작점
+	float fUC2LinearLength = 0.40f;  // linear 길이
+	float fUC2Black = 1.33f;         // toe/dkaqn shaping
+	float fUC2Pedestal = 0.0f;       // black pedestal
+};
+
+struct ACESParameters {
 	// TODO: Implement later
 };
 
-struct ACESParameters
-{
-	float fExposure;
-	float fGamma;
+struct LookParameters {
+	Vector3 v3Slope;
+	float fContrastPivot;
 
-	// TODO: Implement later
+	Vector3 v3Offset;
+	float fContrastStrength;
+
+	Vector3 v3Power;
+	float fBlackLift;
+
+	Vector3 v3ShadowTint;
+	float fShadowTintStrength;
+
+	Vector3 v3HighlightTint;
+	float fHighlightTintStrength;
+
+	float fLookStrength;
+	float fDensity;
+	float fLookSaturation;
+	float fShadowStartLuma;
+
+	float fShadowEndLuma;
+	float fHighlightStartLuma;
+	float fHighlightEndLuma;
 };
 
 struct ToneMappingParameter {
-	float fExposure = 1.f;
-	float fGamma = 2.2f;
+	ToneMappingCommonParameters Common;
+	LookParameters Look;
 
 	union {
 		AgXParameters AgX;
@@ -60,24 +68,86 @@ struct ToneMappingParameter {
 	};
 
 	ToneMappingParameter() {
-		fExposure = 1.f;
-		fGamma = 2.2f;
+		Common = g_DefaultCommonParameters;
+		Look = g_DefaultLookParameters;
+		AgX = g_DefaultAgXParameters;
 	}
 
+	constexpr static ToneMappingCommonParameters g_DefaultCommonParameters{
+		.fExposure = 1.f,
+		.fGamma = 2.2f,
+		.fSaturation = 1.0f,
+		.fInputScale = 1.0f,
+		.fOutputScale = 1.0f,
+	};
+
+	constexpr static AgXParameters g_DefaultAgXParameters{
+		.fAgXWhite = 1.0f,
+		.fAgXBlack = 0.0f,
+		.fAgXContrast = 1.0f,
+		.fAgXMinEV = -12.47393f,
+		.fAgXMaxEV = 4.026069f,
+	};
+
+	constexpr static UC2Parameters g_DefaultUC2Parameters{
+		.fUC2MaxBrightness = 1.0f,
+		.fUC2Contrast = 1.0f,
+		.fUC2LinearStart = 0.22f,
+		.fUC2LinearLength = 0.40f,
+		.fUC2Black = 1.33f, 
+		.fUC2Pedestal = 0.0f,
+	};
+
+	constexpr static LookParameters g_DefaultLookParameters{
+		.v3Slope = Vector3(1.f, 1.f, 1.f),
+		.fContrastPivot = 0.4f,
+		.v3Offset = Vector3(0.0f, 0.0f, 0.0f),
+		.fContrastStrength = 1.0f,
+		.v3Power = Vector3(1.f, 1.f, 1.f),
+		.fBlackLift = 0.02f,
+		.v3ShadowTint = Vector3(1.f, 1.f, 1.f),
+		.fShadowTintStrength = 0.1f,
+		.v3HighlightTint = Vector3(1.f, 1.f, 1.f),
+		.fHighlightTintStrength = 0.2f,
+		.fDensity = 0.1f,
+		.fLookSaturation = 1.0f,
+		.fShadowStartLuma = 0.10f,
+		.fShadowEndLuma = 0.55f,
+		.fHighlightStartLuma = 0.45f,
+		.fHighlightEndLuma = 0.85f,
+	};
 };
 
 struct CB_TONE_MAPPING_DATA {
 	uint32 nMode;
-	Vector3 gToneMappingCommon0;	// x = exposure, y = gamma, zw = reserved
+	Vector3 gToneMappingCommon0;	// x = exposure, y = gamma, z = saturation
+	Vector4 gToneMappingCommon1;	// x = inputScale, y = outputScale, zw = reserved
+	Vector4 gToneMappingCommon2;	// xyzw  = reserved
 	
-	Vector4 gToneMappingData0;
-	Vector4 gToneMappingData1;
-	Vector4 gToneMappingData2;
-	Vector4 gToneMappingData3;
-	Vector4 gToneMappingData4;
-	Vector4 gToneMappingData5;
-	Vector4 gToneMappingData6;
-	Vector4 gToneMappingData7;
+	// Common Look Parameters
+	Vector3 v3Slope;
+	float fContrastPivot;
+
+	Vector3 v3Offset;
+	float fContrastStrength;
+
+	Vector3 v3Power;
+	float fBlackLift;
+
+	Vector3 v3ShadowTint;
+	float fShadowTintStrength;
+
+	Vector3 v3HighlightTint;
+	float fHighlightTintStrength;
+
+	float fLookStrength;
+	float fDensity;
+	float fLookSaturation;
+	float fShadowStartLuma;
+
+	float fShadowEndLuma;
+	float fHighlightStartLuma;
+	float fHighlightEndLuma;
 };
 
 class ToneMappingPass : public IRenderPass {
@@ -121,11 +191,13 @@ private:
 	void SetDefaultParameters(TONE_MAPPING_MODE eModeBefore, TONE_MAPPING_MODE eModeAfter);
 
 	void SaveParametersToJson() const;
+	void SaveLook() const;
 	void SaveAgX() const;
 	void SaveUC2() const;
 	void SaveACES() const;
 
 	void LoadParametersFromJson();
+	void LoadLook();
 	void LoadAgX();
 	void LoadUC2();
 	void LoadACES();
@@ -140,7 +212,8 @@ private:
 		bool bShowHelp = true, 
 		float fRecommandMin = 0.f, 
 		float fRecommandMax = 0.f,
-		float fDefault = 0.f);
+		float fDefault = 0.f,
+		const char* cstrformat = "%.3f");
 
 	void ShowDragFloat3(
 		int cnt,
@@ -172,28 +245,6 @@ private:
 		"AgX", "UC2", "ACES Filmic"
 	};
 
-	constexpr static AgXParameters g_AgxDefaultParameters{
-		.fSaturation = 1.0f,
-		.fLookStrength = 0.85f,
-		.fInputScale = 1.0f,
-		.fOutputScale = 1.0f,
-		.v3Slope = Vector3(1.f, 1.f, 1.f),
-		.fContrastPivot = 0.4f,
-		.v3Offset = Vector3(0.0f, 0.0f, 0.0f),
-		.fContrastStrength = 1.0f,
-		.v3Power = Vector3(1.f, 1.f, 1.f),
-		.fBlackLift = 0.02f,
-		.v3ShadowTint = Vector3(1.f, 1.f, 1.f),
-		.fShadowTintStrength = 0.1f,
-		.v3HighlightTint = Vector3(1.f, 1.f, 1.f),
-		.fHighlightTintStrength = 0.2f,
-		.fDensity = 0.1f,
-		.fLookSaturation = 1.0f,
-		.fShadowStartLuma = 0.10f,
-		.fShadowEndLuma = 0.55f,
-		.fHighlightStartLuma = 0.45f,
-		.fHighlightEndLuma = 0.85f,
-	};
 
 	inline const static std::string g_strSavePath = "../Resources/ToneMappings";
 };

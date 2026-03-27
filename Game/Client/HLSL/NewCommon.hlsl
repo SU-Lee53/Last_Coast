@@ -154,35 +154,6 @@ struct LightData
 	float	pad0;						// c7.w
 };
 
-struct AgXParameters
-{
-	float fExposure;
-	float fGamma;
-	
-	float fSaturation;
-	float fLookStrength;
-	float fInputScale;
-	float fOutputScale;
-	
-	// Look Parameters
-	float3 slope; // Data1.xyz
-	float fContrastPivot; // Data1.w
-	float3 offset; // Data2.xyz
-	float fContrastStrength; // Data2.w
-	float3 power; // Data3.xyz
-	float fBlackLift; // Data3.w
-	float3 shadowTint; // Data4.xyz
-	float fShadowTintStrength; // Data4.w
-	float3 highlightTint; // Data5.xyz
-	float fHighlightTintStrength; // Data5.w
-	float fDensity; // Data6.x
-	float fLookSaturation; // Data6.y
-	float fShadowStartLuma; // Data6.z
-	float fShadowEndLuma; // Data6.w
-	float fHighlightStartLuma; // Data7.x
-	float fHighlightEndLuma; // Data8.y
-};
-
 // ============ cbuffers ============
 
 cbuffer cbSceneData : register(b0, space0)
@@ -204,19 +175,55 @@ cbuffer cbShadowMatrix : register(b2, space0)
 	float4x4 gmtxShadows[4];
 }
 
-cbuffer cbToneMappingData : register(b3, space0)
+cbuffer cbFogData : register(b3, space0)
+{
+	float4 gfogColor;
+	
+	float gfFogStartDistance;
+	float gfFogCutOffDistance;
+	float gfFogDistanceDensity;
+	float gFogDistancePower;
+
+	float gfFogHeightDensity;
+	float gfFogHeightFalloff;
+	float gfFogBaseHeight;
+	float gfFogHeightStartDistance;
+
+	float gfFogMaxOpacity;
+	float3 pad;
+};
+
+cbuffer cbToneMappingData : register(b4, space0)
 {
 	uint gnToneMappingType;
-	float3 gToneMappingCommon0;	// x = exposure, y = gamma, z = reserved
+	float3 gToneMappingCommon0; // x = exposure, y = gamma, z = saturation
+	float4 gToneMappingCommon1; // x = inputScale, y = outputScale, zw = reserved
+	float4 gToneMappingCommon2; // xyzw  = reserved
 	
-	float4 gToneMappingData0;
-	float4 gToneMappingData1;
-	float4 gToneMappingData2;
-	float4 gToneMappingData3;
-	float4 gToneMappingData4;
-	float4 gToneMappingData5;
-	float4 gToneMappingData6;
-	float4 gToneMappingData7;
+	// Common Look Parameters
+	float3 gv3Slope;
+	float gfContrastPivot;
+	
+	float3 gv3Offset;
+	float gfContrastStrength;
+	
+	float3 gv3Power;
+	float gfBlackLift;
+	
+	float3 gv3ShadowTint;
+	float gfShadowTintStrength;
+	
+	float3 gv3HighlightTint;
+	float gfHighlightTintStrength;
+	
+	float gfLookStrength;
+	float gfDensity;
+	float gfLookSaturation;
+	float gfShadowStartLuma;
+	
+	float gfShadowEndLuma;
+	float gfHighlightStartLuma;
+	float gfHighlightEndLuma;
 };
 
 // ============ StructuredBuffers ============
@@ -567,6 +574,78 @@ float3 ReconstructWorldPos(float2 uv, float depth)
 
 	float4 world = mul(view, gCamera.mtxInvView);
 	return world.xyz;
+}
+
+float ComputeViewDepth(float3 worldPos)
+{
+	float3 viewPos = mul(float4(worldPos, 1.f), gCamera.mtxView).xyz;
+	return max(0.f, viewPos.z);
+}
+
+float ComputeHeightFogOpticalDepth(float3 worldPos)
+{
+	float3 ray = worldPos - gCamera.v3CameraPosition;
+	float fDistToPixel = length(ray);
+	
+	if(fDistToPixel <= 1e-4f)
+	{
+		return 0.f;
+	}
+	
+	float3 rayDir = ray / fDistToPixel;
+	float fRayLength = max(0.f, fDistToPixel - gfFogHeightStartDistance);
+	
+	if(gfFogCutOffDistance > 0.f)
+	{
+		fRayLength = min(fRayLength, gfFogCutOffDistance);
+	}
+	
+	if(fRayLength <= 1e-4f)
+	{
+		return 0.f;
+	}
+	
+	float3 startPos = gCamera.v3CameraPosition + rayDir * gfFogHeightStartDistance;
+	
+	float fFallOff = max(1e-4f, gfFogHeightFalloff);
+	
+	float fStartTerm = exp(-fFallOff * (startPos.y - gfFogBaseHeight));
+	float fEndTerm = exp(-fFallOff * (startPos.y + rayDir.y * fRayLength - gfFogBaseHeight));
+	
+	float fIntegral = (abs(rayDir.y) > 1e-4f) ? (fStartTerm - fEndTerm) / (fFallOff * rayDir.y)
+                                              : (fStartTerm * fRayLength);
+	
+	return gfFogHeightDensity * max(0.f, fIntegral);
+}
+
+float ComputeDistanceFogFactor(float3 worldPos)
+{
+	float fViewDepth = ComputeViewDepth(worldPos);
+	float t = saturate((fViewDepth - gfFogStartDistance) / max(1e-4f, gfFogCutOffDistance - gfFogStartDistance));
+	t = t * t * (3.0f - 2.0f * t);
+	return t;
+}
+
+float ComputeHeightFogFactor(float3 worldPos)
+{
+	float odHeight = ComputeHeightFogOpticalDepth(worldPos);
+	return 1.0f - exp(-odHeight);
+
+}
+
+float ComputeFogAlpha(float3 worldPos)
+{
+	float fDistanceFog = ComputeDistanceFogFactor(worldPos);
+	float fHeightFog = ComputeHeightFogFactor(worldPos);
+	
+	float fFogAlpha = 1.0f - (1.0f - fDistanceFog) * (1.0f - fHeightFog);
+	return min(fFogAlpha, gfFogMaxOpacity);
+}
+
+float3 ApplyFog(float3 sceneColor, float3 worldPos)
+{
+	float fFogAlpha = ComputeFogAlpha(worldPos);
+	return lerp(sceneColor, gfogColor.rgb, fFogAlpha);
 }
 
 #endif 

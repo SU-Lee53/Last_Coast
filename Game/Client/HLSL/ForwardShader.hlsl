@@ -108,5 +108,6 @@ float4 PSForwardLighting(VS_STANDARD_OUTPUT input) : SV_Target0
 		}
 	}
 	
+	finalColor = ApplyFog(finalColor, input.positionW);
 	return float4(finalColor, alpha);
 }
