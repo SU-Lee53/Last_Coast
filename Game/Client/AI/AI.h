@@ -107,7 +107,7 @@ namespace AIDLL
 		virtual AIBehaviorState GetBehaviorState() const = 0;
 		virtual void UpdateSensoryStimulus(int EntityId, const Vector3& pos,
 		                                   bool Visible, bool Heard) = 0;
-		virtual void Think(int nTargetEntityId, float deltaTime) = 0;
+		virtual void Think(int nTargetEntityId, float deltaTime, float fTargetDist = FLT_MAX) = 0;
 
 		// 공격 히트 이벤트 소비 (GoalAttack 쿨다운 완료 시 true, 한 번만 반환)
 		virtual bool ConsumeAttackHit() = 0;

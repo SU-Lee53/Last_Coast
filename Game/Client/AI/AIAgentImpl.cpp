@@ -17,6 +17,11 @@ namespace AIDLL
         , m_fMoveSpeed(300.0f)
         , m_v3PathDir(Vector3::Zero)
     {
+        // 에이전트마다 초기 타이머 위상을 달리해 같은 프레임에 몰리지 않도록 분산
+        // 예) 3그룹, 50ms 인터벌 → 0ms / 16.7ms / 33.3ms 오프셋으로 시작
+        static int s_nNextPhase = 0;
+        const int nPhase = s_nNextPhase++ % g_nThinkGroupCount;
+        m_fAccumulatedDeltaTime = g_fThinkInterval * nPhase / g_nThinkGroupCount;
     }
 
     AIAgentImpl::~AIAgentImpl()
@@ -74,6 +79,21 @@ namespace AIDLL
         m_nPathIndex = 0;
         m_PathState  = AIPathState::Idle;
         m_v3PathDir  = Vector3::Zero;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SetDirectPath  : A* 없이 현재 위치 → target 단일 엣지 경로를 즉시 설정
+    //                  LOS가 열린 Chase 상태에서 A* 요청 비용을 제거한다.
+    //                  이후 OnPathReady()가 호출되면 A* 결과로 덮어씌워지나,
+    //                  다음 Think()에서 LOS 재확인 후 다시 SetDirectPath()로 복원된다.
+    // ─────────────────────────────────────────────────────────────────────────
+    void AIAgentImpl::SetDirectPath(const Vector3& target)
+    {
+        m_Path.clear();
+        m_Path.emplace_back(m_v3Position, target);
+        m_nPathIndex = 0;
+        m_v3PathDir  = Vector3::Zero;
+        m_PathState  = AIPathState::Moving;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -239,13 +259,20 @@ namespace AIDLL
 		}
 
 		// ── 4. NavMesh 클램핑 ─────────────────────────────────────────────────
-		if (auto navMesh = m_wpNavMesh.lock())
+		// IsPointOnNavMesh()는 모든 타일/폴리곤 순회 → 매 프레임 실행 시 비용 큼
+		// 이동 거리를 누적해 g_fClampCheckDistance 이상 움직였을 때만 체크
+		m_fClampAccum += m_fMoveSpeed * deltaTime;
+		if (m_fClampAccum >= g_fClampCheckDistance)
 		{
-			if (!navMesh->IsPointOnNavMesh(m_v3Position))
+			m_fClampAccum = 0.f;
+			if (auto navMesh = m_wpNavMesh.lock())
 			{
-				Vector3 v3Nearest = navMesh->GetNearestPointOnNavMesh(m_v3Position);
-				if (Vector3::Distance(m_v3Position, v3Nearest) > g_fClampThreshold)
-					m_v3Position = v3Nearest;
+				if (!navMesh->IsPointOnNavMesh(m_v3Position))
+				{
+					Vector3 v3Nearest = navMesh->GetNearestPointOnNavMesh(m_v3Position);
+					if (Vector3::Distance(m_v3Position, v3Nearest) > g_fClampThreshold)
+						m_v3Position = v3Nearest;
+				}
 			}
 		}
 	}
@@ -262,11 +289,12 @@ namespace AIDLL
     // Think  : SensoryMemory를 감쇠하고 Goal Brain을 구동한다.
     //          Zombie::PostUpdate에서 UpdateSensoryStimulus 이후 호출.
     // ─────────────────────────────────────────────────────────────────────────
-    void AIAgentImpl::Think(int nTargetEntityId, float deltaTime)
+    void AIAgentImpl::Think(int nTargetEntityId, float deltaTime, float fTargetDist)
     {
-        m_fLastDeltaTime = deltaTime;
+        // 스킵된 프레임 dt 누적 — 뇌가 실행될 때 한 번에 전달해 Goal 타이머 정확도 유지
+        m_fAccumulatedDeltaTime += deltaTime;
 
-        // 감지되지 않은 엔티티의 기억 감퇴
+        // 감지되지 않은 엔티티의 기억 감퇴 — 감쇠 정확도를 위해 매 프레임 실행
         m_SensoryMemory.Update(deltaTime);
 
         // 브레인 초기화 (첫 호출 시)
@@ -280,7 +308,19 @@ namespace AIDLL
             m_pBrain->SetTarget(nTargetEntityId);
         }
 
-        m_pBrain->Process();
+        // ── AI LOD: 타겟까지 거리에 따라 Think 주기 조정 ──────────────────────
+        // 시야 범위(800cm) 바깥은 낮은 주기로도 충분 — 원거리 좀비 CPU 비용 절감
+        float fEffectiveInterval;
+        if      (fTargetDist < 1000.f) fEffectiveInterval = 0.05f;  // ≤10m:  20Hz (전투/감지 범위)
+        else if (fTargetDist < 3000.f) fEffectiveInterval = 0.2f;   // ≤30m:  5Hz  (중거리)
+        else                           fEffectiveInterval = 1.0f;   //  >30m:  1Hz  (원거리)
+
+        if (m_fAccumulatedDeltaTime >= fEffectiveInterval)
+        {
+            m_fLastDeltaTime        = m_fAccumulatedDeltaTime;
+            m_fAccumulatedDeltaTime = 0.f;
+            m_pBrain->Process();
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
