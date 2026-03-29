@@ -33,14 +33,14 @@ struct AgXParameters
 	float fAgXMaxEV;
 };
 
-struct UC2Parameters
+struct GTParameters
 {
-	float fUC2MaxBrightness;
-	float fUC2Contrast;
-	float fUC2LinearStart;
-	float fUC2LinearLength;
-	float fUC2Black;
-	float fUC2Pedestal;
+	float fGTMaxBrightness;
+	float fGTContrast;
+	float fGTLinearStart;
+	float fGTLinearLength;
+	float fGTBlack;
+	float fGTPedestal;
 };
 
 struct ACESParameters
@@ -133,16 +133,16 @@ AgXParameters ExtractAgXParameters()
 	return params;
 }
 
-UC2Parameters ExtractUC2Parameters()
+GTParameters ExtractGTParameters()
 {
-	UC2Parameters params;
+	GTParameters params;
 	
-	params.fUC2MaxBrightness = gToneMappingCommon1.z;
-	params.fUC2Contrast = gToneMappingCommon1.w;
-	params.fUC2LinearStart = gToneMappingCommon2.x;
-	params.fUC2LinearLength = gToneMappingCommon2.y;
-	params.fUC2Black = gToneMappingCommon2.z;
-	params.fUC2Pedestal = gToneMappingCommon2.w;
+	params.fGTMaxBrightness = gToneMappingCommon1.z;
+	params.fGTContrast = gToneMappingCommon1.w;
+	params.fGTLinearStart = gToneMappingCommon2.x;
+	params.fGTLinearLength = gToneMappingCommon2.y;
+	params.fGTBlack = gToneMappingCommon2.z;
+	params.fGTPedestal = gToneMappingCommon2.w;
 	
 	return params;
 }
@@ -372,9 +372,9 @@ float3 AgXToneMapping(float3 hdrColor)
 }
 
 /////////////////////////////////////////////////////////////////////////////////
-// UC2
+// GT
 
-float UC2CurveScalar(float x, float P, float a, float m, float l, float c, float b)
+float GTCurveScalar(float x, float P, float a, float m, float l, float c, float b)
 {
 	P = max(P, 1e-4f);
 	a = max(a, 1e-4f);
@@ -400,28 +400,25 @@ float UC2CurveScalar(float x, float P, float a, float m, float l, float c, float
 	return T * w0 + L * w1 + S * w2;
 }
 
-float3 UC2Core(float3 hdrColor, CommonParameters commonParams, UC2Parameters params)
+float3 GTCore(float3 hdrColor, CommonParameters commonParams, GTParameters params)
 {
 	float3 color = hdrColor * commonParams.fExposure * commonParams.fInputScale;
 	color = max(color, 0.f);
 	
-	float fLuma = GetLuminance(color);
-	
-	float fMappedLuma = UC2CurveScalar(fLuma, params.fUC2MaxBrightness, params.fUC2Contrast, params.fUC2LinearStart, params.fUC2LinearLength, params.fUC2Black, params.fUC2Pedestal);
-	
-	float fScale = fMappedLuma / max(fLuma, 1e-4f);
-	color *= fScale;
+	color.r = GTCurveScalar(color.r, params.fGTMaxBrightness, params.fGTContrast, params.fGTLinearStart, params.fGTLinearLength, params.fGTBlack, params.fGTPedestal);
+	color.g = GTCurveScalar(color.g, params.fGTMaxBrightness, params.fGTContrast, params.fGTLinearStart, params.fGTLinearLength, params.fGTBlack, params.fGTPedestal);
+	color.b = GTCurveScalar(color.b, params.fGTMaxBrightness, params.fGTContrast, params.fGTLinearStart, params.fGTLinearLength, params.fGTBlack, params.fGTPedestal);
 	
 	return saturate(color);
 }
 
-float3 UC2ToneMapping(float3 hdrColor)
+float3 GTToneMapping(float3 hdrColor)
 {
 	CommonParameters commonParams = ExtractCommonParameters();
-	UC2Parameters uc2Params = ExtractUC2Parameters();
+	GTParameters GTParams = ExtractGTParameters();
 	LookParameters lookparams = ExtractLookParameters();
 	
-	float3 baseColor = UC2Core(hdrColor, commonParams, uc2Params);
+	float3 baseColor = GTCore(hdrColor, commonParams, GTParams);
 	float3 lookColor = ApplyLook(baseColor, lookparams);
 	
 	float3 finalColor = lerp(baseColor, lookColor, saturate(lookparams.fLookStrength));
@@ -446,7 +443,7 @@ float4 PSToneMapping(VS_QUAD_OUTPUT input) : SV_Target0
 		break;
 	
 	case 1:
-		mapped = UC2ToneMapping(hdr);
+		mapped = GTToneMapping(hdr);
 		break;
 	
 	case 2:

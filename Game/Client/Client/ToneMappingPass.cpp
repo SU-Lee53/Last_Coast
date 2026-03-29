@@ -83,9 +83,9 @@ CB_TONE_MAPPING_DATA ToneMappingPass::MakeCBData() const
 		::memcpy(&data.gToneMappingCommon1.z, &m_Parameters.AgX, sizeof(AgXParameters));
 		break;
 	}
-	case TONE_MAPPING_MODE::UC2:
+	case TONE_MAPPING_MODE::GT:
 	{
-		::memcpy(&data.gToneMappingCommon1.z, &m_Parameters.UC2, sizeof(UC2Parameters));
+		::memcpy(&data.gToneMappingCommon1.z, &m_Parameters.GT, sizeof(GTParameters));
 		break;
 	}
 	case TONE_MAPPING_MODE::ACES:
@@ -117,9 +117,9 @@ void ToneMappingPass::SetDefaultParameters(TONE_MAPPING_MODE eModeBefore, TONE_M
 		m_Parameters.AgX = ToneMappingParameter::g_DefaultAgXParameters;
 		break;
 	}
-	case TONE_MAPPING_MODE::UC2:
+	case TONE_MAPPING_MODE::GT:
 	{
-		m_Parameters.UC2 = ToneMappingParameter::g_DefaultUC2Parameters;
+		m_Parameters.GT = ToneMappingParameter::g_DefaultGTParameters;
 		break;
 	}
 	case TONE_MAPPING_MODE::ACES:
@@ -224,24 +224,27 @@ void ToneMappingPass::ShowDebugInfo()
 
 		break;
 	}
-	case TONE_MAPPING_MODE::UC2:
+	case TONE_MAPPING_MODE::GT:
 	{
-		ShowDragFloat(cnt++, "fUC2MaxBrightness", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2MaxBrightness),	0.001f, 0.8f, 2.0f, true, 0.9f, 1.3f, 1.0f);
-		ShowDragFloat(cnt++, "fUC2Contrast", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2Contrast),				0.001f, 0.5f, 2.0f, true, 0.85f, 1.25f, 1.0f);
-		ShowDragFloat(cnt++, "fUC2LinearStart", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2LinearStart),		0.001f, 0.0f, 0.5f, true, 0.12f, 0.3f, 0.22f);
-		ShowDragFloat(cnt++, "fUC2LinearLength", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2LinearLength),		0.0001f, 0.05f, 0.8f, true, 0.2f, 0.55f, 0.4f);
-		ShowDragFloat(cnt++, "fUC2Black", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2Black),					0.001f, 0.5f, 2.5f, true, 1.f, 1.6f, 1.33f);
-		ShowDragFloat(cnt++, "fUC2Pedestal", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2Pedestal),				0.00001f, 0.0f, 0.1f, true, 0.0f, 0.03f, 0.0f);
+		ShowDragFloat(cnt++, "fGTMaxBrightness", reinterpret_cast<float*>(&m_Parameters.GT.fGTMaxBrightness),	0.001f, 0.8f, 2.0f, true, 0.9f, 1.3f, 1.0f);
+		ShowDragFloat(cnt++, "fGTContrast", reinterpret_cast<float*>(&m_Parameters.GT.fGTContrast),				0.001f, 0.5f, 2.0f, true, 0.85f, 1.25f, 1.0f);
+		ShowDragFloat(cnt++, "fGTLinearStart", reinterpret_cast<float*>(&m_Parameters.GT.fGTLinearStart),		0.001f, 0.0f, 0.5f, true, 0.12f, 0.3f, 0.22f);
+		ShowDragFloat(cnt++, "fGTLinearLength", reinterpret_cast<float*>(&m_Parameters.GT.fGTLinearLength),		0.0001f, 0.05f, 0.8f, true, 0.2f, 0.55f, 0.4f);
+		ShowDragFloat(cnt++, "fGTBlack", reinterpret_cast<float*>(&m_Parameters.GT.fGTBlack),					0.001f, 0.5f, 2.5f, true, 1.f, 1.6f, 1.33f);
+		ShowDragFloat(cnt++, "fGTPedestal", reinterpret_cast<float*>(&m_Parameters.GT.fGTPedestal),				0.00001f, 0.0f, 0.1f, true, 0.0f, 0.03f, 0.0f);
 
-		if (m_Parameters.UC2.fUC2LinearStart + m_Parameters.UC2.fUC2LinearLength <= 1.0f) {
-			m_Parameters.UC2.fUC2LinearLength = std::min(m_Parameters.UC2.fUC2LinearLength, 1.0f - m_Parameters.UC2.fUC2LinearStart);
+		if (m_Parameters.GT.fGTLinearStart + m_Parameters.GT.fGTLinearLength <= 1.0f) {
+			m_Parameters.GT.fGTLinearLength = std::min(m_Parameters.GT.fGTLinearLength, 1.0f - m_Parameters.GT.fGTLinearStart);
 		}
 
 		break;
 	}
+	case TONE_MAPPING_MODE::UC2:
+	{
+		break;
+	}
 	case TONE_MAPPING_MODE::ACES:
 	{
-
 		break;
 	}
 	default:
@@ -294,9 +297,9 @@ void ToneMappingPass::SaveParametersToJson() const
 		SaveAgX();
 		break;
 	}
-	case TONE_MAPPING_MODE::UC2:
+	case TONE_MAPPING_MODE::GT:
 	{
-		SaveUC2();
+		SaveGT();
 		break;
 	}
 	case TONE_MAPPING_MODE::ACES:
@@ -387,7 +390,7 @@ void ToneMappingPass::SaveAgX() const
 	out.write(reinterpret_cast<const char*>(bson.data()), bson.size());
 }
 
-void ToneMappingPass::SaveUC2() const
+void ToneMappingPass::SaveGT() const
 {
 	using namespace nlohmann;
 	namespace fs = std::filesystem;
@@ -400,15 +403,15 @@ void ToneMappingPass::SaveUC2() const
 	j["fInputScale"] = m_Parameters.Common.fInputScale;
 	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
 
-	// UC2Parameters
-	j["fUC2MaxBrightness"] = m_Parameters.UC2.fUC2MaxBrightness;
-	j["fUC2Contrast"] = m_Parameters.UC2.fUC2Contrast;
-	j["fUC2LinearStart"] = m_Parameters.UC2.fUC2LinearStart;
-	j["fUC2LinearLength"] = m_Parameters.UC2.fUC2LinearLength;
-	j["fUC2Black"] = m_Parameters.UC2.fUC2Black;
-	j["fUC2Pedestal"] = m_Parameters.UC2.fUC2Pedestal;
+	// GTParameters
+	j["fGTMaxBrightness"] = m_Parameters.GT.fGTMaxBrightness;
+	j["fGTContrast"] = m_Parameters.GT.fGTContrast;
+	j["fGTLinearStart"] = m_Parameters.GT.fGTLinearStart;
+	j["fGTLinearLength"] = m_Parameters.GT.fGTLinearLength;
+	j["fGTBlack"] = m_Parameters.GT.fGTBlack;
+	j["fGTPedestal"] = m_Parameters.GT.fGTPedestal;
 
-	std::string strSavePath = std::format("{}/UC2_{}.bin", g_strSavePath, m_strSaveName);
+	std::string strSavePath = std::format("{}/GT_{}.bin", g_strSavePath, m_strSaveName);
 	if (!fs::exists(strSavePath)) {
 		fs::path p = strSavePath;
 		fs::create_directories(p.parent_path());
@@ -454,9 +457,9 @@ void ToneMappingPass::LoadParametersFromJson()
 		LoadAgX();
 		break;
 	}
-	case TONE_MAPPING_MODE::UC2:
+	case TONE_MAPPING_MODE::GT:
 	{
-		LoadUC2();
+		LoadGT();
 		break;
 	}
 	case TONE_MAPPING_MODE::ACES:
@@ -537,9 +540,9 @@ void ToneMappingPass::LoadAgX()
 	m_Parameters.AgX.fAgXMaxEV = inJson["fAgXMaxEV"].get<float>();
 }
 
-void ToneMappingPass::LoadUC2()
+void ToneMappingPass::LoadGT()
 {
-	std::string strParametersPath = std::format("{}/UC2_{}.bin", g_strSavePath, m_strSaveName);
+	std::string strParametersPath = std::format("{}/GT_{}.bin", g_strSavePath, m_strSaveName);
 	std::ifstream inFile{ strParametersPath, std::ios::binary };
 	if (!inFile) {
 		return;
@@ -554,12 +557,12 @@ void ToneMappingPass::LoadUC2()
 	m_Parameters.Common.fInputScale = inJson["fInputScale"].get<float>();
 	m_Parameters.Common.fOutputScale = inJson["fOutputScale"].get<float>();
 
-	m_Parameters.UC2.fUC2MaxBrightness = inJson["fUC2MaxBrightness"].get<float>();
-	m_Parameters.UC2.fUC2Contrast = inJson["fUC2Contrast"].get<float>();
-	m_Parameters.UC2.fUC2LinearStart = inJson["fUC2LinearStart"].get<float>();
-	m_Parameters.UC2.fUC2LinearLength = inJson["fUC2LinearLength"].get<float>();
-	m_Parameters.UC2.fUC2Black = inJson["fUC2Black"].get<float>();
-	m_Parameters.UC2.fUC2Pedestal = inJson["fUC2Pedestal"].get<float>();
+	m_Parameters.GT.fGTMaxBrightness = inJson["fGTMaxBrightness"].get<float>();
+	m_Parameters.GT.fGTContrast = inJson["fGTContrast"].get<float>();
+	m_Parameters.GT.fGTLinearStart = inJson["fGTLinearStart"].get<float>();
+	m_Parameters.GT.fGTLinearLength = inJson["fGTLinearLength"].get<float>();
+	m_Parameters.GT.fGTBlack = inJson["fGTBlack"].get<float>();
+	m_Parameters.GT.fGTPedestal = inJson["fGTPedestal"].get<float>();
 }
 
 void ToneMappingPass::LoadACES()

@@ -18,13 +18,17 @@ struct AgXParameters {
 	float fAgXMaxEV = 4.026069f;	// 입력 HDR -> log working range
 };
 
+struct GTParameters {
+	float fGTMaxBrightness = 1.0f;  // 최종 White/peak
+	float fGTContrast = 1.0f;       // 커브 전체의 Contrast
+	float fGTLinearStart = 0.22f;   // linear 시작점
+	float fGTLinearLength = 0.40f;  // linear 길이
+	float fGTBlack = 1.33f;         // toe/dkaqn shaping
+	float fGTPedestal = 0.0f;       // black pedestal
+};
+
 struct UC2Parameters {
-	float fUC2MaxBrightness = 1.0f;  // 최종 White/peak
-	float fUC2Contrast = 1.0f;       // 커브 전체의 Contrast
-	float fUC2LinearStart = 0.22f;   // linear 시작점
-	float fUC2LinearLength = 0.40f;  // linear 길이
-	float fUC2Black = 1.33f;         // toe/dkaqn shaping
-	float fUC2Pedestal = 0.0f;       // black pedestal
+	// TODO: Implement later
 };
 
 struct ACESParameters {
@@ -63,6 +67,7 @@ struct ToneMappingParameter {
 
 	union {
 		AgXParameters AgX;
+		GTParameters GT;
 		UC2Parameters UC2;
 		ACESParameters ACES;
 	};
@@ -89,13 +94,13 @@ struct ToneMappingParameter {
 		.fAgXMaxEV = 4.026069f,
 	};
 
-	constexpr static UC2Parameters g_DefaultUC2Parameters{
-		.fUC2MaxBrightness = 1.0f,
-		.fUC2Contrast = 1.0f,
-		.fUC2LinearStart = 0.22f,
-		.fUC2LinearLength = 0.40f,
-		.fUC2Black = 1.33f, 
-		.fUC2Pedestal = 0.0f,
+	constexpr static GTParameters g_DefaultGTParameters{
+		.fGTMaxBrightness = 1.0f,
+		.fGTContrast = 1.0f,
+		.fGTLinearStart = 0.22f,
+		.fGTLinearLength = 0.40f,
+		.fGTBlack = 1.33f, 
+		.fGTPedestal = 0.0f,
 	};
 
 	constexpr static LookParameters g_DefaultLookParameters{
@@ -154,8 +159,9 @@ class ToneMappingPass : public IRenderPass {
 public:
 	enum class TONE_MAPPING_MODE : uint32 {
 		AGX = 0,
-		UC2 = 1,
-		ACES = 2,
+		GT = 1,
+		UC2 = 2,
+		ACES = 3,
 
 		UNDEFINED = std::numeric_limits<uint32>::max()
 	};
@@ -193,13 +199,13 @@ private:
 	void SaveParametersToJson() const;
 	void SaveLook() const;
 	void SaveAgX() const;
-	void SaveUC2() const;
+	void SaveGT() const;
 	void SaveACES() const;
 
 	void LoadParametersFromJson();
 	void LoadLook();
 	void LoadAgX();
-	void LoadUC2();
+	void LoadGT();
 	void LoadACES();
 
 	void ShowDragFloat(
@@ -241,8 +247,8 @@ private:
 	std::string m_strSaveName;
 
 	// Debug messages
-	const char* g_cstrModeName[3] = {
-		"AgX", "UC2", "ACES Filmic"
+	const char* g_cstrModeName[4] = {
+		"AgX", "GT", "UC2", "ACES"
 	};
 
 
