@@ -94,7 +94,7 @@ void Zombie::PostUpdate()
 	bool bHeard = (fDist <= m_fHearingRange);
 
 	m_pAIAgent->UpdateSensoryStimulus(0, v3PlayerPos, bVisible, bHeard);
-	m_pAIAgent->Think(0, DT);
+	m_pAIAgent->Think(0, DT, fDist);
 
 	// 공격 히트: GoalAttack 쿨다운 완료 시 데미지 적용
 	if (m_pAIAgent->ConsumeAttackHit())

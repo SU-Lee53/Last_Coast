@@ -33,7 +33,7 @@ namespace AIDLL
         virtual AIBehaviorState GetBehaviorState() const override { return m_BehaviorState; }
         virtual void UpdateSensoryStimulus(int nEntityId, const Vector3& pos,
                                            bool bVisible, bool bHeard) override;
-        virtual void Think(int nTargetEntityId, float deltaTime) override;
+        virtual void Think(int nTargetEntityId, float deltaTime, float fTargetDist = FLT_MAX) override;
         virtual bool ConsumeAttackHit() override;
 
         // ── 내부 초기화 (AIManagerImpl 에서만 호출) ──────────────────────────
@@ -53,6 +53,7 @@ namespace AIDLL
         float          GetDeltaTime() const                 { return m_fLastDeltaTime; }
         std::shared_ptr<NavMeshImpl> GetNavMeshInternal() const { return m_wpNavMesh.lock(); }
         void           CancelPath();  // 경로 즉시 취소 (Alert/Attack 등 이동 중단 시 호출)
+        void           SetDirectPath(const Vector3& target); // A* 없이 단일 직선 경로 설정 (LOS 열린 경우 Chase에서 사용)
         void           SetAttackHitPending(bool b)          { m_bAttackHitPending = b; }
 
         // ── Flocking (AIManagerImpl에서만 호출) ─────────────────────────────
@@ -80,6 +81,12 @@ namespace AIDLL
         // 공격 히트 이벤트 (GoalAttack이 쿨다운 완료 시 set, ConsumeAttackHit으로 소비)
         bool m_bAttackHitPending = false;
 
+        // Think() 스태거링 — 시간 기반 인터벌, 프레임레이트 무관하게 일정 주기 유지
+        float m_fAccumulatedDeltaTime   = 0.f; // dt 누적 타이머 겸 뇌 실행 시 전달할 경과 시간
+
+        static constexpr float g_fThinkInterval  = 0.05f; // 뇌 실행 주기 (20Hz)
+        static constexpr int   g_nThinkGroupCount = 3;    // 스태거 그룹 수 (초기 위상 분산용)
+
         // 경로 추종 방향 (waypoint skip 판정 전용 — boids 힘 미포함)
         Vector3 m_v3PathDir;
 
@@ -93,7 +100,10 @@ namespace AIDLL
         PathDebugInfo m_DebugInfo;
 
 	private:
-		constexpr static float g_fClampThreshold = 30.f;  // 30cm 이상 벗어나면 클램핑
+		constexpr static float g_fClampThreshold     = 30.f;   // 30cm 이상 벗어나면 클램핑
+		constexpr static float g_fClampCheckDistance = 60.f;   // 이 거리 이상 이동 시에만 클램핑 체크 (IsPointOnNavMesh 호출 빈도 절감)
+
+		float m_fClampAccum = 0.f;  // 마지막 클램핑 체크 이후 이동 거리 누적
 
 		constexpr static float g_fLookAheadDist = 150.0f;  // 150cm
 

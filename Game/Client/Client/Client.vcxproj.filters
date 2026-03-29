@@ -295,9 +295,6 @@
     <ClInclude Include="Player.h">
       <Filter>02.Game\GameObject\Player</Filter>
     </ClInclude>
-    <ClInclude Include="TestScene.h">
-      <Filter>02.Game\Scene</Filter>
-    </ClInclude>
     <ClInclude Include="ThirdPersonPlayer.h">
       <Filter>02.Game\GameObject\Player</Filter>
     </ClInclude>
@@ -414,18 +411,17 @@
     <ClInclude Include="TerrainTestScene.h">
       <Filter>02.Game\Scene\Test</Filter>
     </ClInclude>
+    <ClInclude Include="SpritePass.h" />
     <ClInclude Include="NavMeshDebugRenderer.h" />
-    <ClInclude Include="ZombieAnimationController.h" />
-    <ClInclude Include="Zombie.h" />
     <ClInclude Include="AIManagerWrapper.h" />
-    <ClInclude Include="SpritePass.h">
-      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    <ClInclude Include="TestScene.h">
+      <Filter>02.Game\Scene\Test</Filter>
     </ClInclude>
-    <ClInclude Include="..\Dependencies\Includes\ImGui\imgui_stdlib.h">
-      <Filter>99.Library\ImGui</Filter>
+    <ClInclude Include="ZombieAnimationController.h">
+      <Filter>02.Game\Animation</Filter>
     </ClInclude>
-    <ClInclude Include="DefferedFogPass.h">
-      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    <ClInclude Include="Zombie.h">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -553,9 +549,6 @@
     <ClCompile Include="ModelManager.cpp">
       <Filter>04.Managers\Resource Management</Filter>
     </ClCompile>
-    <ClCompile Include="NetworkManager.cpp">
-      <Filter>04.Managers\Game Management</Filter>
-    </ClCompile>
     <ClCompile Include="RenderManager.cpp">
       <Filter>04.Managers\Rendering Management</Filter>
     </ClCompile>
@@ -594,9 +587,6 @@
     </ClCompile>
     <ClCompile Include="Player.cpp">
       <Filter>02.Game\GameObject\Player</Filter>
-    </ClCompile>
-    <ClCompile Include="TestScene.cpp">
-      <Filter>02.Game\Scene</Filter>
     </ClCompile>
     <ClCompile Include="ThirdPersonPlayer.cpp">
       <Filter>02.Game\GameObject\Player</Filter>
@@ -708,18 +698,20 @@
     <ClCompile Include="MapTestScene.cpp">
       <Filter>02.Game\Scene\Test</Filter>
     </ClCompile>
+    <ClCompile Include="SpritePass.cpp" />
     <ClCompile Include="NavMeshDebugRenderer.cpp" />
-    <ClCompile Include="Zombie.cpp" />
-    <ClCompile Include="ZombieAnimationController.cpp" />
     <ClCompile Include="AIManagerWrapper.cpp" />
-    <ClCompile Include="SpritePass.cpp">
-      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    <ClCompile Include="TestScene.cpp">
+      <Filter>02.Game\Scene\Test</Filter>
     </ClCompile>
-    <ClCompile Include="..\Dependencies\Includes\ImGui\imgui_stdlib.cpp">
-      <Filter>99.Library\ImGui</Filter>
+    <ClCompile Include="NetworkManager.cpp">
+      <Filter>02.Game\Scene\Test</Filter>
     </ClCompile>
-    <ClCompile Include="DefferedFogPass.cpp">
-      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    <ClCompile Include="Zombie.cpp">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="ZombieAnimationController.cpp">
+      <Filter>02.Game\Animation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -761,6 +753,9 @@
     <FxCompile Include="..\HLSL\Shaders.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
+    <FxCompile Include="..\HLSL\SkyboxShader.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
     <FxCompile Include="..\HLSL\Sprite.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
@@ -777,9 +772,6 @@
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\ShadowMapShader.hlsl">
-      <Filter>03.Engine\HLSL\Graphics</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\HDRPostProcessing.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
   </ItemGroup>

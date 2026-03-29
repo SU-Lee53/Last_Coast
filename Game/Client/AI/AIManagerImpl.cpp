@@ -111,6 +111,67 @@ namespace AIDLL
 
 
     // ─────────────────────────────────────────────────────────────────────────
+    // FlockGrid::Build  : 활성 에이전트 AABB 기반으로 격자를 동적 빌드
+    //   - 활성 에이전트 위치의 min/max로 범위 결정 (셀 1칸 패딩)
+    //   - cells 벡터의 capacity는 프레임 간 유지해 재할당 방지
+    //   - 각 Cell의 indices는 clear()만 호출해 capacity 재사용
+    // ─────────────────────────────────────────────────────────────────────────
+    void FlockGrid::Build(
+        const std::vector<std::shared_ptr<AIAgentImpl>>& agents, float cellSize)
+    {
+        // 1) 활성 에이전트 AABB 계산
+        float fMinX =  FLT_MAX, fMinZ =  FLT_MAX;
+        float fMaxX = -FLT_MAX, fMaxZ = -FLT_MAX;
+        bool  bHasActive = false;
+
+        for (const auto& pAgent : agents)
+        {
+            if (pAgent->GetBehaviorState() == AIBehaviorState::Idle) continue;
+            const Vector3 v3Pos = pAgent->GetPosition();
+            if (v3Pos.x < fMinX) fMinX = v3Pos.x;
+            if (v3Pos.x > fMaxX) fMaxX = v3Pos.x;
+            if (v3Pos.z < fMinZ) fMinZ = v3Pos.z;
+            if (v3Pos.z > fMaxZ) fMaxZ = v3Pos.z;
+            bHasActive = true;
+        }
+
+        if (!bHasActive) { nCellsX = 0; nCellsZ = 0; return; }
+
+        // 2) 범위에 셀 1칸 패딩 → 경계 에이전트의 인접 셀 접근 보장
+        fMinX -= cellSize;  fMinZ -= cellSize;
+        fMaxX += cellSize;  fMaxZ += cellSize;
+
+        fCellSize = cellSize;
+        fOriginX  = fMinX;
+        fOriginZ  = fMinZ;
+        nCellsX   = static_cast<int>(std::ceil((fMaxX - fMinX) / cellSize));
+        nCellsZ   = static_cast<int>(std::ceil((fMaxZ - fMinZ) / cellSize));
+
+        // 3) 셀 배열 준비 — capacity 재사용, indices만 clear
+        const int nTotal = nCellsX * nCellsZ;
+        cells.resize(nTotal);
+        for (auto& cell : cells) cell.indices.clear();
+
+        // 4) 에이전트 인덱스를 해당 셀에 삽입
+        for (int i = 0; i < static_cast<int>(agents.size()); ++i)
+        {
+            if (agents[i]->GetBehaviorState() == AIBehaviorState::Idle) continue;
+            const Vector3 v3Pos = agents[i]->GetPosition();
+            int cx, cz;
+            WorldToCell(v3Pos.x, v3Pos.z, cx, cz);
+            if (InBounds(cx, cz))
+                cells[ToIndex(cx, cz)].indices.push_back(i);
+        }
+    }
+
+    void FlockGrid::WorldToCell(float x, float z, int& cx, int& cz) const
+    {
+        cx = static_cast<int>(std::floor((x - fOriginX) / fCellSize));
+        cz = static_cast<int>(std::floor((z - fOriginZ) / fCellSize));
+    }
+
+
+    // ─────────────────────────────────────────────────────────────────────────
     // UpdateFlocking  : Boids 3규칙(Separation / Alignment / Cohesion) 계산
     //                   각 에이전트의 FlockForce를 설정한다.
     // ─────────────────────────────────────────────────────────────────────────
@@ -118,6 +179,11 @@ namespace AIDLL
     {
         const int n = static_cast<int>(m_Agents.size());
         if (n < 2)
+            return;
+
+        // 격자 빌드: O(n), 셀 크기 = Cohesion 반경 → 3×3 체크로 모든 반경 커버
+        m_FlockGrid.Build(m_Agents, g_fCohesionRadius);
+        if (m_FlockGrid.nCellsX == 0)
             return;
 
         for (int i = 0; i < n; ++i)
@@ -140,48 +206,58 @@ namespace AIDLL
             Vector3 v3Cohesion   = Vector3::Zero;
             int nSepCount = 0, nAliCount = 0, nCohCount = 0;
 
-            for (int j = 0; j < n; ++j)
+            // 에이전트 i의 셀 좌표
+            int cx, cz;
+            m_FlockGrid.WorldToCell(v3PosA.x, v3PosA.z, cx, cz);
+
+            // 3×3 인접 셀 순회 (셀 크기 = 600cm이므로 600cm 이내 에이전트 전부 포함)
+            for (int dz = -1; dz <= 1; ++dz)
+            for (int dx = -1; dx <= 1; ++dx)
             {
-                if (i == j) 
-					continue;
+                const int nx = cx + dx;
+                const int nz = cz + dz;
+                if (!m_FlockGrid.InBounds(nx, nz)) continue;
 
-                auto& AgentB = m_Agents[j];
-                if (AgentB->GetBehaviorState() == AIBehaviorState::Idle) 
-					continue;
-
-                Vector3 v3Diff = v3PosA - AgentB->GetPosition();
-                v3Diff.y = 0.f;
-                const float fDist = v3Diff.Length();
-
-                // ── Separation (단거리: 서로 밀어냄) ────────────────────────
-                if (fDist < g_fSeparationRadius && fDist > 1e-4f)
+                for (int j : m_FlockGrid.cells[m_FlockGrid.ToIndex(nx, nz)].indices)
                 {
-                    v3Separation += v3Diff / fDist;  // 거리 반비례 가중
-                    ++nSepCount;
-                }
+                    if (i == j) continue;
 
-                // ── Alignment (중거리: 이동 방향 맞춤) ──────────────────────
-                if (fDist < g_fAlignmentRadius)
-                {
-                    const Vector3 v3DirB = AgentB->GetPathDir();
-                    if (v3DirB.LengthSquared() > 1e-6f)
+                    auto& AgentB = m_Agents[j];
+
+                    Vector3 v3Diff = v3PosA - AgentB->GetPosition();
+                    v3Diff.y = 0.f;
+                    const float fDist = v3Diff.Length();
+
+                    // ── Separation (단거리: 서로 밀어냄) ────────────────────
+                    if (fDist < g_fSeparationRadius && fDist > 1e-4f)
                     {
-                        v3Alignment += v3DirB;
-                        ++nAliCount;
+                        v3Separation += v3Diff / fDist;  // 거리 반비례 가중
+                        ++nSepCount;
                     }
-                }
 
-                // ── Cohesion (장거리: 그룹 중심으로 끌림) ───────────────────
-                // 분리 반경의 2배를 완충 구간으로 사용:
-                //   0~150cm  → Separation만 작용 (밀어냄)
-                //   150~300cm → 아무 힘 없음 (완충)  ← 여기서 경계 진동 차단
-                //   300~600cm → Cohesion만 작용 (당김)
-                if (fDist > g_fSeparationRadius * 2.0f && fDist < g_fCohesionRadius)
-                {
-                    v3Cohesion += AgentB->GetPosition();
-                    ++nCohCount;
-                }
-            }
+                    // ── Alignment (중거리: 이동 방향 맞춤) ──────────────────
+                    if (fDist < g_fAlignmentRadius)
+                    {
+                        const Vector3 v3DirB = AgentB->GetPathDir();
+                        if (v3DirB.LengthSquared() > 1e-6f)
+                        {
+                            v3Alignment += v3DirB;
+                            ++nAliCount;
+                        }
+                    }
+
+                    // ── Cohesion (장거리: 그룹 중심으로 끌림) ───────────────
+                    // 분리 반경의 2배를 완충 구간으로 사용:
+                    //   0~150cm   → Separation만 작용 (밀어냄)
+                    //   150~300cm → 아무 힘 없음 (완충)  ← 경계 진동 차단
+                    //   300~600cm → Cohesion만 작용 (당김)
+                    if (fDist > g_fSeparationRadius * 2.0f && fDist < g_fCohesionRadius)
+                    {
+                        v3Cohesion += AgentB->GetPosition();
+                        ++nCohCount;
+                    }
+                }  // for j
+            }  // for dx / for dz
 
             // ── 상태별 가중치 ────────────────────────────────────────────────
             float fSep, fAli, fCoh;

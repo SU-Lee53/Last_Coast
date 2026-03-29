@@ -3,6 +3,7 @@
 #include "GoalMoveToPosition.h"
 #include "AIAgentImpl.h"
 #include "SensoryMemory.h"
+#include "NavMeshImpl.h"
 
 namespace AIDLL
 {
@@ -15,6 +16,7 @@ namespace AIDLL
     void GoalChase::Activate()
     {
         m_Status = Active;
+        m_fReplanCooldown = g_fReplanCooldownDuration;  // 활성화 즉시 경로 탐색 → 쿨다운 시작
 
         auto pOwner = m_pOwner.lock();
         if (!pOwner) { m_Status = Failed; return; }
@@ -56,11 +58,32 @@ namespace AIDLL
             return m_Status;
         }
 
-        // 대상이 충분히 이동했으면 재계획
-        float moved = Vector3::Distance(rec->v3LastKnownPos, m_v3LastTargetPos);
-        if (moved > g_fReplanThreshold)
+        const Vector3 v3TargetPos = rec->v3LastKnownPos;
+        auto pNavMesh = pOwner->GetNavMeshInternal();
+
+        // ── LOS 열림: A* 없이 직선 경로로 직접 추격 ─────────────────────────
+        if (pNavMesh && pNavMesh->IsLineOfSightClear(pOwner->GetPosition(), v3TargetPos))
         {
-            m_v3LastTargetPos = rec->v3LastKnownPos;
+            RemoveAllSubgoals();                   // 진행 중인 A* 서브골 제거
+            pOwner->SetDirectPath(v3TargetPos);    // 단일 엣지 경로 즉시 설정
+            m_v3LastTargetPos = v3TargetPos;
+            m_fReplanCooldown = 0.f;               // LOS가 막히는 순간 즉시 A* 재탐색 허용
+            return Active;
+        }
+
+        // ── LOS 막힘: A* 재탐색 (거리 조건 + 쿨다운) ────────────────────────
+        m_fReplanCooldown += pOwner->GetDeltaTime();
+        float fMoved = Vector3::Distance(v3TargetPos, m_v3LastTargetPos);
+
+        // 서브골이 없으면 LOS 직접 추격에서 막 전환된 상태 → 쿨다운/거리 무시하고 즉시 재탐색
+        // (이 조건이 없으면 ProcessSubgoals()가 빈 리스트에서 Completed를 반환해 Chase가 즉시 종료됨)
+        const bool bNeedsReplan = m_SubGoals.empty() ||
+            (fMoved > g_fReplanThreshold && m_fReplanCooldown >= g_fReplanCooldownDuration);
+
+        if (bNeedsReplan)
+        {
+            m_v3LastTargetPos = v3TargetPos;
+            m_fReplanCooldown = 0.f;
             RemoveAllSubgoals();
             AddSubgoal(std::make_unique<GoalMoveToPosition>(pOwner, m_v3LastTargetPos));
         }

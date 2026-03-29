@@ -21,7 +21,9 @@ namespace AIDLL
     private:
         int     m_nTargetId;
         Vector3 m_v3LastTargetPos;
+        float   m_fReplanCooldown = 0.f;  // 마지막 재탐색 이후 경과 시간
 
-        static constexpr float g_fReplanThreshold = 40.0f;  // 40cm
+        static constexpr float g_fReplanThreshold        = 40.0f;  // 재탐색 트리거 이동 거리
+        static constexpr float g_fReplanCooldownDuration = 0.5f;   // 재탐색 최소 간격 (초)
     };
 }

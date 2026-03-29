@@ -12,7 +12,7 @@ void TestScene::BuildObjects()
 
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 
-	for (int i = 0; i < 10; ++i) {
+	for (int i = 0; i < 50; ++i) {
 		std::shared_ptr<IGameObject> pObj = std::make_shared<Zombie>();
 		m_pGameObjects.push_back(pObj);
 	}

@@ -161,6 +161,7 @@ bool UJsonSaveManager::SaveActorsToJson(const TArray<AActor*>& Actors, const FSt
             LightJson->SetObjectField(TEXT("Transform"), TransformToJson(Actor->GetActorTransform()));
 
             // ✅ Direction (Transform의 Forward Vector)
+
             LightJson->SetObjectField(TEXT("Direction"), DirectionToJson(Actor->GetActorTransform()));
 
             if (USpotLightComponent* LightComp = SpotLight->SpotLightComponent)
@@ -327,23 +328,18 @@ TSharedPtr<FJsonObject> UJsonSaveManager::DirectionToJson(const FTransform& Tran
 {
     TSharedPtr<FJsonObject> DirectionJson = MakeShareable(new FJsonObject);
 
-    // Forward Vector 추출
     FVector UnrealForward = Transform.GetRotation().GetForwardVector();
+    UnrealForward.Normalize();
 
-    // 좌표계 변환 행렬
-    FMatrix ConversionMatrix = FMatrix(
-        FPlane(0, 1, 0, 0),
-        FPlane(0, 0, 1, 0),
-        FPlane(1, 0, 0, 0),
-        FPlane(0, 0, 0, 1)
+    // TransformToJson 좌표 매핑과 동일하게 성분 스왑
+    // Unreal X → DX Z
+    // Unreal Y → DX X
+    // Unreal Z → DX Y
+    FVector DirectXDirection(
+        UnrealForward.Y,  // DX X = Unreal Y
+        UnrealForward.Z,  // DX Y = Unreal Z
+        UnrealForward.X   // DX Z = Unreal X
     );
-
-    // 변환 행렬 적용
-    FVector4 DirectXDirection4 = ConversionMatrix.TransformVector(UnrealForward);
-
-    // 정규화 (방향 벡터이므로)
-    FVector DirectXDirection(DirectXDirection4.X, DirectXDirection4.Y, DirectXDirection4.Z);
-    DirectXDirection.Normalize();
 
     DirectionJson->SetNumberField(TEXT("X"), DirectXDirection.X);
     DirectionJson->SetNumberField(TEXT("Y"), DirectXDirection.Y);
@@ -351,6 +347,7 @@ TSharedPtr<FJsonObject> UJsonSaveManager::DirectionToJson(const FTransform& Tran
 
     return DirectionJson;
 }
+
 
 TSharedPtr<FJsonObject> UJsonSaveManager::Vector3ToJson(const FVector& UnrealVector)
 {
