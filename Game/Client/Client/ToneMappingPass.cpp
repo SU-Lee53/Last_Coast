@@ -88,6 +88,11 @@ CB_TONE_MAPPING_DATA ToneMappingPass::MakeCBData() const
 		::memcpy(&data.gToneMappingCommon1.z, &m_Parameters.GT, sizeof(GTParameters));
 		break;
 	}
+	case TONE_MAPPING_MODE::UC2:
+	{
+		::memcpy(&data.gToneMappingCommon1.z, &m_Parameters.UC2, sizeof(UC2Parameters));
+		break;
+	}
 	case TONE_MAPPING_MODE::ACES:
 	{
 
@@ -120,6 +125,11 @@ void ToneMappingPass::SetDefaultParameters(TONE_MAPPING_MODE eModeBefore, TONE_M
 	case TONE_MAPPING_MODE::GT:
 	{
 		m_Parameters.GT = ToneMappingParameter::g_DefaultGTParameters;
+		break;
+	}
+	case TONE_MAPPING_MODE::UC2:
+	{
+		m_Parameters.UC2 = ToneMappingParameter::g_DefaultUC2Parameters;
 		break;
 	}
 	case TONE_MAPPING_MODE::ACES:
@@ -170,7 +180,7 @@ void ToneMappingPass::ShowDebugInfo()
 {
 	uint32 unMode = std::to_underlying(m_eMode);
 	TONE_MAPPING_MODE eBefore = m_eMode;
-	ImGui::SliderInt("Mode", reinterpret_cast<int*>(&m_eMode), 0, 2, g_cstrModeName[unMode]);
+	ImGui::SliderInt("Mode", reinterpret_cast<int*>(&m_eMode), 0, std::to_underlying(TONE_MAPPING_MODE::COUNT) - 1, g_cstrModeName[unMode]);
 	SetDefaultParameters(eBefore, m_eMode);
 
 	if (ImGui::Button("Reset Parameters")) {
@@ -241,6 +251,19 @@ void ToneMappingPass::ShowDebugInfo()
 	}
 	case TONE_MAPPING_MODE::UC2:
 	{
+		ImGui::SeparatorText("Shoulder params");
+		ShowDragFloat(cnt++, "fUC2A", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2A), 0.001f, 0.05f, 0.30, true, 0.05f, 0.30f, 0.15f);
+		ShowDragFloat(cnt++, "fUC2B", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2B), 0.001f, 0.20f, 0.80, true, 0.20f, 0.80f, 0.50f);
+		ImGui::SeparatorText("Linear section params");
+		ShowDragFloat(cnt++, "fUC2C", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2C), 0.001f, 0.05f, 0.30, true, 0.05f, 0.30f, 0.10f);
+		ShowDragFloat(cnt++, "fUC2D", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2D), 0.001f, 0.05f, 0.40, true, 0.05f, 0.40f, 0.20f);
+		ImGui::SeparatorText("Toe params");
+		ShowDragFloat(cnt++, "fUC2E", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2E), 0.001f, 0.00f, 0.08, true, 0.00f, 0.08f, 0.02f);
+		ShowDragFloat(cnt++, "fUC2F", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2F), 0.001f, 0.01f, 0.50, true, 0.01f, 0.50f, 0.30f);
+		ImGui::SeparatorText("Normalization");
+		ShowDragFloat(cnt++, "fUC2WhitePoint", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2WhitePoint), 0.1f, 1.0f, 20.0f, true, 4.0f, 16.0f, 11.2f);
+		ShowDragFloat(cnt++, "fUC2ExposureBias", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2ExposureBias), 0.1f, 0.1f, 4.0f, true, 0.5f, 3.0f, 0.15f);
+
 		break;
 	}
 	case TONE_MAPPING_MODE::ACES:
@@ -300,6 +323,11 @@ void ToneMappingPass::SaveParametersToJson() const
 	case TONE_MAPPING_MODE::GT:
 	{
 		SaveGT();
+		break;
+	}
+	case TONE_MAPPING_MODE::UC2:
+	{
+		SaveUC2();
 		break;
 	}
 	case TONE_MAPPING_MODE::ACES:
@@ -423,6 +451,41 @@ void ToneMappingPass::SaveGT() const
 	out.write(reinterpret_cast<const char*>(bson.data()), bson.size());
 }
 
+void ToneMappingPass::SaveUC2() const
+{
+	using namespace nlohmann;
+	namespace fs = std::filesystem;
+
+	json j;
+	j["fExposure"] = m_Parameters.Common.fExposure;
+	j["fGamma"] = m_Parameters.Common.fGamma;
+
+	j["fSaturation"] = m_Parameters.Common.fSaturation;
+	j["fInputScale"] = m_Parameters.Common.fInputScale;
+	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
+
+	// GTParameters
+	j["fUC2A"] = m_Parameters.UC2.fUC2A;
+	j["fUC2B"] = m_Parameters.UC2.fUC2B;
+	j["fUC2C"] = m_Parameters.UC2.fUC2C;
+	j["fUC2D"] = m_Parameters.UC2.fUC2D;
+	j["fUC2E"] = m_Parameters.UC2.fUC2E;
+	j["fUC2F"] = m_Parameters.UC2.fUC2F;
+	j["fUC2WhitePoint"] = m_Parameters.UC2.fUC2WhitePoint;
+	j["fUC2ExposureBias"] = m_Parameters.UC2.fUC2ExposureBias;
+
+	std::string strSavePath = std::format("{}/UC2_{}.bin", g_strSavePath, m_strSaveName);
+	if (!fs::exists(strSavePath)) {
+		fs::path p = strSavePath;
+		fs::create_directories(p.parent_path());
+	}
+
+	std::ofstream out{ strSavePath, std::ios::binary };
+
+	std::vector<uint8_t> bson = nlohmann::json::to_bson(j);
+	out.write(reinterpret_cast<const char*>(bson.data()), bson.size());
+}
+
 void ToneMappingPass::SaveACES() const
 {
 	using namespace nlohmann;
@@ -460,6 +523,11 @@ void ToneMappingPass::LoadParametersFromJson()
 	case TONE_MAPPING_MODE::GT:
 	{
 		LoadGT();
+		break;
+	}
+	case TONE_MAPPING_MODE::UC2:
+	{
+		LoadUC2();
 		break;
 	}
 	case TONE_MAPPING_MODE::ACES:
@@ -563,6 +631,33 @@ void ToneMappingPass::LoadGT()
 	m_Parameters.GT.fGTLinearLength = inJson["fGTLinearLength"].get<float>();
 	m_Parameters.GT.fGTBlack = inJson["fGTBlack"].get<float>();
 	m_Parameters.GT.fGTPedestal = inJson["fGTPedestal"].get<float>();
+}
+
+void ToneMappingPass::LoadUC2()
+{
+	std::string strParametersPath = std::format("{}/UC2_{}.bin", g_strSavePath, m_strSaveName);
+	std::ifstream inFile{ strParametersPath, std::ios::binary };
+	if (!inFile) {
+		return;
+	}
+
+	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
+	nlohmann::json inJson = nlohmann::json::from_bson(bson);;
+
+	m_Parameters.Common.fExposure = inJson["fExposure"].get<float>();
+	m_Parameters.Common.fGamma = inJson["fGamma"].get<float>();
+	m_Parameters.Common.fSaturation = inJson["fSaturation"].get<float>();
+	m_Parameters.Common.fInputScale = inJson["fInputScale"].get<float>();
+	m_Parameters.Common.fOutputScale = inJson["fOutputScale"].get<float>();
+
+	m_Parameters.UC2.fUC2A = inJson["fUC2A"].get<float>();
+	m_Parameters.UC2.fUC2B = inJson["fUC2B"].get<float>();
+	m_Parameters.UC2.fUC2C = inJson["fUC2C"].get<float>();
+	m_Parameters.UC2.fUC2D = inJson["fUC2D"].get<float>();
+	m_Parameters.UC2.fUC2E = inJson["fUC2E"].get<float>();
+	m_Parameters.UC2.fUC2F = inJson["fUC2F"].get<float>();
+	m_Parameters.UC2.fUC2WhitePoint = inJson["fUC2WhitePoint"].get<float>();
+	m_Parameters.UC2.fUC2ExposureBias = inJson["fUC2ExposureBias"].get<float>();
 }
 
 void ToneMappingPass::LoadACES()

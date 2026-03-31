@@ -29,6 +29,15 @@ struct GTParameters {
 
 struct UC2Parameters {
 	// TODO: Implement later
+	float fUC2A;
+	float fUC2B;
+	float fUC2C;
+	float fUC2D;
+
+	float fUC2E;
+	float fUC2F;
+	float fUC2WhitePoint;
+	float fUC2ExposureBias;
 };
 
 struct ACESParameters {
@@ -103,6 +112,17 @@ struct ToneMappingParameter {
 		.fGTPedestal = 0.0f,
 	};
 
+	constexpr static UC2Parameters g_DefaultUC2Parameters{
+		.fUC2A = 0.15f,
+		.fUC2B = 0.50f,
+		.fUC2C = 0.10f,
+		.fUC2D = 0.20f,
+		.fUC2E = 0.02f, 
+		.fUC2F = 0.30f,
+		.fUC2WhitePoint = 11.2f,
+		.fUC2ExposureBias = 0.15f,
+	};
+
 	constexpr static LookParameters g_DefaultLookParameters{
 		.v3Slope = Vector3(1.f, 1.f, 1.f),
 		.fContrastPivot = 0.4f,
@@ -128,6 +148,7 @@ struct CB_TONE_MAPPING_DATA {
 	Vector3 gToneMappingCommon0;	// x = exposure, y = gamma, z = saturation
 	Vector4 gToneMappingCommon1;	// x = inputScale, y = outputScale, zw = reserved
 	Vector4 gToneMappingCommon2;	// xyzw  = reserved
+	Vector4 gToneMappingCommon3;
 	
 	// Common Look Parameters
 	Vector3 v3Slope;
@@ -163,6 +184,7 @@ public:
 		UC2 = 2,
 		ACES = 3,
 
+		COUNT,
 		UNDEFINED = std::numeric_limits<uint32>::max()
 	};
 
@@ -200,12 +222,14 @@ private:
 	void SaveLook() const;
 	void SaveAgX() const;
 	void SaveGT() const;
+	void SaveUC2() const;
 	void SaveACES() const;
 
 	void LoadParametersFromJson();
 	void LoadLook();
 	void LoadAgX();
 	void LoadGT();
+	void LoadUC2();
 	void LoadACES();
 
 	void ShowDragFloat(

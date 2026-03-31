@@ -199,6 +199,7 @@ cbuffer cbToneMappingData : register(b4, space0)
 	float3 gToneMappingCommon0; // x = exposure, y = gamma, z = saturation
 	float4 gToneMappingCommon1; // x = inputScale, y = outputScale, zw = reserved
 	float4 gToneMappingCommon2; // xyzw  = reserved
+	float4 gToneMappingCommon3; // xyzw  = reserved
 	
 	// Common Look Parameters
 	float3 gv3Slope;

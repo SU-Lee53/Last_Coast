@@ -127,7 +127,7 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 		const auto& pMeshes = k->GetMeshes();
 		const auto& materialHandles = k->GetMaterialHandles();
 		int32 nMeshes = pMeshes.size();
-
+	
 		for (int32 meshIdx = 0; meshIdx < k->GetMeshes().size(); ++meshIdx) {
 			RenderParameter renderParameter;
 			CB_INSTANCE_DATA instanceData{};

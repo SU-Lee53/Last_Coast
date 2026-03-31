@@ -43,6 +43,18 @@ struct GTParameters
 	float fGTPedestal;
 };
 
+struct UC2Parameters
+{
+	float fUC2A;
+	float fUC2B;
+	float fUC2C;
+	float fUC2D;
+	float fUC2E;
+	float fUC2F;
+	float fUC2WhitePoint;
+	float fUC2ExposureBias;
+};
+
 struct ACESParameters
 {
 	float dummy;
@@ -143,6 +155,23 @@ GTParameters ExtractGTParameters()
 	params.fGTLinearLength = gToneMappingCommon2.y;
 	params.fGTBlack = gToneMappingCommon2.z;
 	params.fGTPedestal = gToneMappingCommon2.w;
+	
+	return params;
+}
+
+UC2Parameters ExtractUC2Parameters()
+{
+	UC2Parameters params;
+	
+	params.fUC2A = gToneMappingCommon1.z;
+	params.fUC2B = gToneMappingCommon1.w;
+	params.fUC2C = gToneMappingCommon2.x;
+	params.fUC2D = gToneMappingCommon2.y;
+	params.fUC2E = gToneMappingCommon2.z;
+	params.fUC2F = gToneMappingCommon2.w;
+	
+	params.fUC2WhitePoint = gToneMappingCommon3.x;
+	params.fUC2ExposureBias = gToneMappingCommon3.y;
 	
 	return params;
 }
@@ -372,7 +401,7 @@ float3 AgXToneMapping(float3 hdrColor)
 }
 
 /////////////////////////////////////////////////////////////////////////////////
-// GT
+// Uchimura GT
 
 float GTCurveScalar(float x, float P, float a, float m, float l, float c, float b)
 {
@@ -428,6 +457,55 @@ float3 GTToneMapping(float3 hdrColor)
 	return saturate(finalColor);
 }
 
+/////////////////////////////////////////////////////////////////////////////////
+// Hable UC2
+
+float UC2CurveScalar(float x, float A, float B, float C, float D, float E, float F)
+{
+	float fNumerator = x * (A * x + C * B) + D * E;
+	float fDenominator = x * (A * x + B) + D * F;
+	return (fNumerator / max(fDenominator, 1e-6f)) - (E / F);
+}
+
+float3 UC2CurveRGB(float3 x, float A, float B, float C, float D, float E, float F)
+{
+	float3 fNumerator = x * (A * x + C * B) + D * E;
+	float3 fDenominator = x * (A * x + B) + D * F;
+	return (fNumerator / max(fDenominator, 1e-6f.xxx)) - (E / F);
+}
+
+float3 UC2Core(float3 hdrColor, CommonParameters commonParams, UC2Parameters params)
+{
+	float3 color = hdrColor * commonParams.fExposure * commonParams.fInputScale;
+	color = max(color, 0.f);
+	color *= params.fUC2ExposureBias;
+	
+	color.r = UC2CurveScalar(color.r, params.fUC2A, params.fUC2B, params.fUC2C, params.fUC2D, params.fUC2E, params.fUC2F);
+	color.g = UC2CurveScalar(color.g, params.fUC2A, params.fUC2B, params.fUC2C, params.fUC2D, params.fUC2E, params.fUC2F);
+	color.b = UC2CurveScalar(color.b, params.fUC2A, params.fUC2B, params.fUC2C, params.fUC2D, params.fUC2E, params.fUC2F);
+	float fWhiteScale = UC2CurveScalar(params.fUC2WhitePoint, params.fUC2A, params.fUC2B, params.fUC2C, params.fUC2D, params.fUC2E, params.fUC2F);
+	
+	color /= max(fWhiteScale, 1e-6f);
+	
+	return color;
+}
+
+float3 UC2ToneMapping(float3 hdrColor)
+{
+	CommonParameters commonParams = ExtractCommonParameters();
+	UC2Parameters UC2Params = ExtractUC2Parameters();
+	LookParameters lookparams = ExtractLookParameters();
+	
+	float3 baseColor = UC2Core(hdrColor, commonParams, UC2Params);
+	float3 lookColor = ApplyLook(baseColor, lookparams);
+	
+	float3 finalColor = lerp(baseColor, lookColor, saturate(lookparams.fLookStrength));
+	finalColor = ApplySaturation(finalColor, commonParams.fSaturation);
+	finalColor *= commonParams.fOutputScale;
+	
+	return saturate(finalColor);
+}
+
 float4 PSToneMapping(VS_QUAD_OUTPUT input) : SV_Target0
 {
 	int2 pixelPos = int2(input.uv * gnScreenSize);
@@ -447,6 +525,10 @@ float4 PSToneMapping(VS_QUAD_OUTPUT input) : SV_Target0
 		break;
 	
 	case 2:
+		mapped = UC2ToneMapping(hdr);
+		break;
+	
+	case 3:
 		mapped = ACESFilm(hdr);
 		break;
 	}
