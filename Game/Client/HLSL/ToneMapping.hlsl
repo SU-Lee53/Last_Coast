@@ -57,7 +57,11 @@ struct UC2Parameters
 
 struct ACESParameters
 {
-	float dummy;
+	float fACESExposureBias;
+	float fACESPreSaturation;
+	float fACESPostSaturation;
+	float fACESHighlightDesaturation;
+	float fACESCoreOutputScale;
 };
 
 struct LookParameters
@@ -101,20 +105,6 @@ float3 GammaCorrect(float3 color, float fGamma)
 {
 	return pow(saturate(color), 1.0 / max(fGamma, 1e-6));
 }
-
-/////////////////////////////////////////////////////////////////////////////////
-// ACES
-
-float3 ACESFilm(float3 x)
-{
-	float a = 2.51;
-	float b = 0.03;
-	float c = 2.43;
-	float d = 0.59;
-	float e = 0.14;
-	return saturate((x * (a * x + b)) / (x * (c * x + d) + e));
-}
-
 
 /////////////////////////////////////////////////////////////////////////////////
 // Parameter extract
@@ -172,6 +162,19 @@ UC2Parameters ExtractUC2Parameters()
 	
 	params.fUC2WhitePoint = gToneMappingCommon3.x;
 	params.fUC2ExposureBias = gToneMappingCommon3.y;
+	
+	return params;
+}
+
+ACESParameters ExtractACESParameters()
+{
+	ACESParameters params;
+	
+	params.fACESExposureBias = gToneMappingCommon1.z;
+	params.fACESPreSaturation = gToneMappingCommon1.w;
+	params.fACESPostSaturation = gToneMappingCommon2.x;
+	params.fACESHighlightDesaturation = gToneMappingCommon2.y;
+	params.fACESCoreOutputScale = gToneMappingCommon2.z;
 	
 	return params;
 }
@@ -306,6 +309,102 @@ float3 ApplyLook(float3 color, LookParameters params)
 	color = ApplySaturation(color, params.fLookSaturation);
 	
 	return saturate(color);
+}
+
+/////////////////////////////////////////////////////////////////////////////////
+// ACES
+
+// Krzysztof Narkowicz's simple ACES curve
+float3 ACESSimple(float3 x)
+{
+	float a = 2.51;
+	float b = 0.03;
+	float c = 2.43;
+	float d = 0.59;
+	float e = 0.14;
+	return saturate((x * (a * x + b)) / (x * (c * x + d) + e));
+}
+
+// Stephen Hill / Baking Lab ACES fitted
+static const float3x3 ACESInputMat =
+{
+	{ 0.59719, 0.35458, 0.04823 },
+	{ 0.07600, 0.90834, 0.01566 },
+	{ 0.02840, 0.13383, 0.83777 }
+};
+
+static const float3x3 ACESOutputMat =
+{
+	{ 1.60475, -0.53108, -0.07367 },
+	{ -0.10208, 1.10813, -0.00605 },
+	{ -0.00327, -0.07276, 1.07602 }
+};
+
+float3 RRTAndODTFit(float3 v)
+{
+	float3 a = v * (v + 0.0245786f) - 0.000090537f;
+	float3 b = v * (0.983729f * v + 0.4329510f) + 0.238081f;
+	return a / b;
+}
+
+float3 ACESFittedCore(float3 color)
+{
+	color = mul(ACESInputMat, color);
+	color = RRTAndODTFit(color);
+	color = mul(ACESOutputMat, color);
+	return color;
+}
+
+float3 ApplyHighlightDesaturation(float3 color, float fAmount)
+{
+	float fLuma = GetLuminance(color);
+
+	float t = saturate((fLuma - 1.0f) / 1.0f);
+	t *= saturate(fAmount);
+	
+	float fGray = fLuma;
+	return lerp(color, fGray.xxx, t);
+}
+
+float3 ACESCore(float3 hdrColor, CommonParameters commonParams, ACESParameters params)
+{
+	float3 color = hdrColor * commonParams.fExposure * commonParams.fInputScale;
+	color = max(color, 0.f);
+	
+	// engine side pre-exposure
+	color *= params.fACESExposureBias;
+	
+	// Pre-saturation
+	color = ApplySaturation(color, params.fACESPreSaturation);
+	
+	// ACES Stype fit
+	color = ACESFittedCore(color);
+	
+	// highlight desaturation
+	color = ApplyHighlightDesaturation(color, params.fACESHighlightDesaturation);
+	
+	// post-saturation
+	color = ApplySaturation(color, params.fACESPostSaturation);
+	
+	color *= params.fACESCoreOutputScale;
+	
+	return max(color, 0.f);
+}
+
+float3 ACESToneMapping(float3 hdrColor)
+{
+	CommonParameters commonParams = ExtractCommonParameters();
+	ACESParameters agxParams = ExtractACESParameters();
+	LookParameters lookparams = ExtractLookParameters();
+	
+	float3 baseColor = ACESCore(hdrColor, commonParams, agxParams);
+	float3 lookColor = ApplyLook(baseColor, lookparams);
+	
+	float3 finalColor = lerp(baseColor, lookColor, saturate(lookparams.fLookStrength));
+	finalColor = ApplySaturation(finalColor, commonParams.fSaturation);
+	finalColor *= commonParams.fOutputScale;
+	
+	return saturate(finalColor);
 }
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -478,7 +577,7 @@ float3 UC2Core(float3 hdrColor, CommonParameters commonParams, UC2Parameters par
 {
 	float3 color = hdrColor * commonParams.fExposure * commonParams.fInputScale;
 	color = max(color, 0.f);
-	color *= params.fUC2ExposureBias;
+	//color *= params.fUC2ExposureBias;
 	
 	color.r = UC2CurveScalar(color.r, params.fUC2A, params.fUC2B, params.fUC2C, params.fUC2D, params.fUC2E, params.fUC2F);
 	color.g = UC2CurveScalar(color.g, params.fUC2A, params.fUC2B, params.fUC2C, params.fUC2D, params.fUC2E, params.fUC2F);
@@ -529,7 +628,7 @@ float4 PSToneMapping(VS_QUAD_OUTPUT input) : SV_Target0
 		break;
 	
 	case 3:
-		mapped = ACESFilm(hdr);
+		mapped = ACESToneMapping(hdr);
 		break;
 	}
 	

@@ -28,7 +28,6 @@ struct GTParameters {
 };
 
 struct UC2Parameters {
-	// TODO: Implement later
 	float fUC2A;
 	float fUC2B;
 	float fUC2C;
@@ -41,7 +40,11 @@ struct UC2Parameters {
 };
 
 struct ACESParameters {
-	// TODO: Implement later
+	float fACESExposureBias;
+	float fACESPreSaturation;
+	float fACESPostSaturation;
+	float fACESHighlightDesaturation;
+	float fACESCoreOutputScale;
 };
 
 struct LookParameters {
@@ -121,6 +124,14 @@ struct ToneMappingParameter {
 		.fUC2F = 0.30f,
 		.fUC2WhitePoint = 11.2f,
 		.fUC2ExposureBias = 0.15f,
+	};
+
+	constexpr static ACESParameters g_DefaultACESParameters{
+		.fACESExposureBias = 1.0f,
+		.fACESPreSaturation = 1.0f,
+		.fACESPostSaturation = 1.0f,
+		.fACESHighlightDesaturation = 0.0f,
+		.fACESCoreOutputScale = 1.0f,
 	};
 
 	constexpr static LookParameters g_DefaultLookParameters{

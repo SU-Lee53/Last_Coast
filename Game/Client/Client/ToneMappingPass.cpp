@@ -95,7 +95,7 @@ CB_TONE_MAPPING_DATA ToneMappingPass::MakeCBData() const
 	}
 	case TONE_MAPPING_MODE::ACES:
 	{
-
+		::memcpy(&data.gToneMappingCommon1.z, &m_Parameters.ACES, sizeof(ACESParameters));
 		break;
 	}
 	default:
@@ -134,6 +134,7 @@ void ToneMappingPass::SetDefaultParameters(TONE_MAPPING_MODE eModeBefore, TONE_M
 	}
 	case TONE_MAPPING_MODE::ACES:
 	{
+		m_Parameters.ACES = ToneMappingParameter::g_DefaultACESParameters;
 		break;
 	}
 	default:
@@ -253,8 +254,8 @@ void ToneMappingPass::ShowDebugInfo()
 	{
 		ImGui::SeparatorText("Shoulder params");
 		ShowDragFloat(cnt++, "fUC2A", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2A), 0.001f, 0.05f, 0.30, true, 0.05f, 0.30f, 0.15f);
-		ShowDragFloat(cnt++, "fUC2B", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2B), 0.001f, 0.20f, 0.80, true, 0.20f, 0.80f, 0.50f);
 		ImGui::SeparatorText("Linear section params");
+		ShowDragFloat(cnt++, "fUC2B", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2B), 0.001f, 0.20f, 0.80, true, 0.20f, 0.80f, 0.50f);
 		ShowDragFloat(cnt++, "fUC2C", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2C), 0.001f, 0.05f, 0.30, true, 0.05f, 0.30f, 0.10f);
 		ShowDragFloat(cnt++, "fUC2D", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2D), 0.001f, 0.05f, 0.40, true, 0.05f, 0.40f, 0.20f);
 		ImGui::SeparatorText("Toe params");
@@ -268,14 +269,17 @@ void ToneMappingPass::ShowDebugInfo()
 	}
 	case TONE_MAPPING_MODE::ACES:
 	{
+		ShowDragFloat(cnt++, "fACESExposureBias", reinterpret_cast<float*>(&m_Parameters.ACES.fACESExposureBias),					0.01f, 0.f, 4.f, true, 0.8f, 1.5f, 1.0f);
+		ShowDragFloat(cnt++, "fACESPreSaturation", reinterpret_cast<float*>(&m_Parameters.ACES.fACESPreSaturation),					0.01f, 0.f, 2.f, true, 0.9f, 1.1f, 1.0f);
+		ShowDragFloat(cnt++, "fACESPostSaturation", reinterpret_cast<float*>(&m_Parameters.ACES.fACESPostSaturation),				0.01f, 0.f, 2.f, true, 0.9f, 1.2f, 1.0f);
+		ShowDragFloat(cnt++, "fACESHighlightDesaturation", reinterpret_cast<float*>(&m_Parameters.ACES.fACESHighlightDesaturation),	0.01f, 0.f, 1.f, true, 0.0f, 0.35f, 0.0f);
+		ShowDragFloat(cnt++, "fACESCoreOutputScale", reinterpret_cast<float*>(&m_Parameters.ACES.fACESCoreOutputScale),				0.01f, 0.f, 2.f, true, 0.9f, 1.1f, 1.0f);
 		break;
 	}
 	default:
 		std::unreachable();
 		break;
 	}
-
-
 
 	ImGui::SeparatorText("LookParameters");
 	ShowDragFloat(cnt++, "fLookStrength", reinterpret_cast<float*>(&m_Parameters.Look.fLookStrength), 0.01f, 0.0f, 1.0f, true, 0.0f, 1.0f, 1.0f);
@@ -498,6 +502,14 @@ void ToneMappingPass::SaveACES() const
 	j["fSaturation"] = m_Parameters.Common.fSaturation;
 	j["fInputScale"] = m_Parameters.Common.fInputScale;
 	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
+	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
+
+	// GTParameters
+	j["fACESExposureBias"] = m_Parameters.ACES.fACESExposureBias;
+	j["fACESPreSaturation"] = m_Parameters.ACES.fACESPreSaturation;
+	j["fACESPostSaturation"] = m_Parameters.ACES.fACESPostSaturation;
+	j["fACESHighlightDesaturation"] = m_Parameters.ACES.fACESHighlightDesaturation;
+	j["fACESCoreOutputScale"] = m_Parameters.ACES.fACESCoreOutputScale;
 
 	std::string strSavePath = std::format("{}/ACES_{}.bin", g_strSavePath, m_strSaveName);
 	if (!fs::exists(strSavePath)) {
@@ -662,4 +674,24 @@ void ToneMappingPass::LoadUC2()
 
 void ToneMappingPass::LoadACES()
 {
+	std::string strParametersPath = std::format("{}/ACES_{}.bin", g_strSavePath, m_strSaveName);
+	std::ifstream inFile{ strParametersPath, std::ios::binary };
+	if (!inFile) {
+		return;
+	}
+
+	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
+	nlohmann::json inJson = nlohmann::json::from_bson(bson);;
+
+	m_Parameters.Common.fExposure = inJson["fExposure"].get<float>();
+	m_Parameters.Common.fGamma = inJson["fGamma"].get<float>();
+	m_Parameters.Common.fSaturation = inJson["fSaturation"].get<float>();
+	m_Parameters.Common.fInputScale = inJson["fInputScale"].get<float>();
+	m_Parameters.Common.fOutputScale = inJson["fOutputScale"].get<float>();
+
+	m_Parameters.ACES.fACESExposureBias = inJson["fACESExposureBias"].get<float>();
+	m_Parameters.ACES.fACESPreSaturation = inJson["fACESPreSaturation"].get<float>();
+	m_Parameters.ACES.fACESPostSaturation = inJson["fACESPostSaturation"].get<float>();
+	m_Parameters.ACES.fACESHighlightDesaturation = inJson["fACESHighlightDesaturation"].get<float>();
+	m_Parameters.ACES.fACESCoreOutputScale = inJson["fACESCoreOutputScale"].get<float>();
 }
