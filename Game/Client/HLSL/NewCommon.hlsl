@@ -162,6 +162,7 @@ cbuffer cbSceneData : register(b0, space0)
 	SceneGlobalData gSceneGlobal;
 	SkyboxData gSkybox;
 	int2 gnScreenSize;
+	uint gnToneMappingMode;
 };
 
 #define NUM_CASCADES 4
@@ -190,41 +191,19 @@ cbuffer cbFogData : register(b3, space0)
 	float gfFogHeightStartDistance;
 
 	float gfFogMaxOpacity;
-	float3 pad;
+	float3 pad0;
 };
 
 cbuffer cbToneMappingData : register(b4, space0)
 {
-	uint gnToneMappingType;
-	float3 gToneMappingCommon0; // x = exposure, y = gamma, z = saturation
-	float4 gToneMappingCommon1; // x = inputScale, y = outputScale, zw = reserved
-	float4 gToneMappingCommon2; // xyzw  = reserved
-	float4 gToneMappingCommon3; // xyzw  = reserved
+	float gfExposure;
+	float gfGamma;
+	float gfSaturation;
+	float gfInputScale;
 	
-	// Common Look Parameters
-	float3 gv3Slope;
-	float gfContrastPivot;
-	
-	float3 gv3Offset;
-	float gfContrastStrength;
-	
-	float3 gv3Power;
-	float gfBlackLift;
-	
-	float3 gv3ShadowTint;
-	float gfShadowTintStrength;
-	
-	float3 gv3HighlightTint;
-	float gfHighlightTintStrength;
-	
+	float gfOutputScale;
 	float gfLookStrength;
-	float gfDensity;
-	float gfLookSaturation;
-	float gfShadowStartLuma;
-	
-	float gfShadowEndLuma;
-	float gfHighlightStartLuma;
-	float gfHighlightEndLuma;
+	float3 pad1;
 };
 
 // ============ StructuredBuffers ============
@@ -238,6 +217,10 @@ Texture2D gtxtShadowss[4] : register(t5, space0);						// t5, t6, t7, t8
 Texture2D gtxtGBuffer[3] : register(t9, space0);	// t9, t10, t11
 Texture2D gtxtGBufferDepth : register(t12, space0);
 Texture2D gtxtHDRResult : register(t13, space0);
+
+// Tone mapping LUT
+Texture3D gtxtToneMapLUT : register(t14, space0);
+Texture3D gtxtLookTransformLUT : register(t15, space0);
 
 // ============ Samplers ============
 SamplerState gSkyboxSamplerState : register(s0, space0);
@@ -339,7 +322,7 @@ cbuffer cbTerrainLayerData : register(b1, space2)
 {
 	float4 gv4LayerTiling;
 	int gnTerrainLayers;
-	float3 pad0;
+	float3 pad2;
 };
 
 cbuffer cbTerrainComponentData : register(b2, space2)
@@ -348,7 +331,7 @@ cbuffer cbTerrainComponentData : register(b2, space2)
 	float2 gv2ComponentSizeXZ;
 	int4 gi4LayerIndex;
 	int2 gv2NumQuadsXZ;
-	int2 pad1;
+	int2 pad3;
 };
 
 cbuffer cbWorldTransformIndexData : register(b3, space2)

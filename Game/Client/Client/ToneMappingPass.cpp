@@ -1,20 +1,120 @@
 ﻿#include "pch.h"
 #include "ToneMappingPass.h"
 
+#define TONE_MAPPING_USE_LUT
+
 void ToneMappingPass::Initialize()
 {
 	SetDefaultParameters(TONE_MAPPING_MODE::UNDEFINED, TONE_MAPPING_MODE::AGX);
 	CreatePipelineState();
+
+	std::string strName = "ToneLUT";
+	m_ToneMapLUT = TEXTURE->LoadUnorderedAccessTexture(strName, 1, g_unLUTSize, g_unLUTSize, g_unLUTSize, DXGI_FORMAT_R16G16B16A16_FLOAT);
+
+	strName = "LookLUT";
+	m_LookLUT = TEXTURE->LoadUnorderedAccessTexture(strName, 1, g_unLUTSize, g_unLUTSize, g_unLUTSize, DXGI_FORMAT_R16G16B16A16_FLOAT);
 }
 
 void ToneMappingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
 	constexpr auto rootParamToneMapping = std::to_underlying(ROOT_PARAMETER::TONE_MAPPING_DATA);
+	auto nDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
 	
+#ifdef TONE_MAPPING_USE_LUT
+	// TODO : Dirty LUT 를 갱신하고 Set
+	// 1. 현재 Mode 가 Dirty 라면 갱신
+	// 2. Look 인지 Dirty 라면 갱신
+	// 3. LUT 를 SRV 로 Bind 하고 Draw
+	auto nCurMode = std::to_underlying(m_eMode);
+
+	if (true == m_bToneMapLUTDirtyFlags[nCurMode]) {
+		// Resource barrier first
+		const auto pUAV = static_pointer_cast<UnorderedAccessTexture>(m_ToneMapLUT.GetResource());
+		pUAV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+		pd3dCommandList->SetPipelineState(m_pd3dLUTBakingPipelineState[0].Get());
+		pd3dCommandList->SetComputeRootSignature(m_pd3dLUTRootSignature.Get());
+
+		//cbuffer cbToneMappingData : register(b1, space0)
+		CB_TONE_MAPPING_LUT_DATA data = MakeLUTCBData((DIRTY_UPDATE)nCurMode);
+		auto cBuffer = RENDER->AllocCBuffer<CB_TONE_MAPPING_LUT_DATA>();
+		cBuffer.WriteData(&data);
+		pd3dCommandList->SetComputeRootConstantBufferView(0, cBuffer.GPUAddress);
+
+		//RWTexture3D<float4> gtxtLUTToBuild : register(u0, space0);
+		auto bindHandle = outDescHandle.cpuHandle;
+		DEVICE->CopyDescriptorsSimple(1, bindHandle, pUAV->GetUAVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		pd3dCommandList->SetComputeRootDescriptorTable(1, outDescHandle.gpuHandle);
+		outDescHandle.cpuHandle.Offset(1, nDescriptorInc);
+		outDescHandle.gpuHandle.Offset(1, nDescriptorInc);
+
+		// LUTSize = 32 * 32 * 32
+		// numthreads = 4, 4, 4
+		// => Dispatch = 8, 8, 8
+		pd3dCommandList->Dispatch(8, 8, 8);
+
+		pUAV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+
+		m_bToneMapLUTDirtyFlags[nCurMode] = false;
+	}
+
+	if (true == m_bLookLUTDirtyFlag) {
+		// Resource barrier first
+		const auto pUAV = static_pointer_cast<UnorderedAccessTexture>(m_LookLUT.GetResource());
+		pUAV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+		pd3dCommandList->SetPipelineState(m_pd3dLUTBakingPipelineState[1].Get());
+		pd3dCommandList->SetComputeRootSignature(m_pd3dLUTRootSignature.Get());
+
+		//cbuffer cbToneMappingData : register(b1, space0)
+		CB_TONE_MAPPING_LUT_DATA data = MakeLUTCBData(DIRTY_UPDATE::LOOK);
+		auto cBuffer = RENDER->AllocCBuffer<CB_TONE_MAPPING_LUT_DATA>();
+		cBuffer.WriteData(&data);
+		pd3dCommandList->SetComputeRootConstantBufferView(0, cBuffer.GPUAddress);
+
+		//RWTexture3D<float4> gtxtLUTToBuild : register(u0, space0);
+		auto bindHandle = outDescHandle.cpuHandle;
+		DEVICE->CopyDescriptorsSimple(1, bindHandle, pUAV->GetUAVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		pd3dCommandList->SetComputeRootDescriptorTable(1, outDescHandle.gpuHandle);
+		outDescHandle.cpuHandle.Offset(1, nDescriptorInc);
+		outDescHandle.gpuHandle.Offset(1, nDescriptorInc);
+
+		pd3dCommandList->Dispatch(8, 8, 8);
+
+		pUAV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+
+		m_bLookLUTDirtyFlag = false;
+	}
+	
+	// Set PS data
+	pd3dCommandList->SetPipelineState(m_pd3dPipelineState.Get());
+	pd3dCommandList->SetComputeRootSignature(RenderManager::g_pd3dGlobalRootSignature.Get());
+
+	CB_TONE_MAPPING_DATA data = MakeCBData();
+	auto cBuffer = RENDER->AllocCBuffer<CB_TONE_MAPPING_DATA>();
+	cBuffer.WriteData(&data);
+
+	const auto pToneLUTSRV = m_ToneMapLUT.GetResource();
+	const auto pLookLUTSRV = m_LookLUT.GetResource();
+
+	auto bindHandle = outDescHandle.cpuHandle;
+	DEVICE->CopyDescriptorsSimple(1, bindHandle, cBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, nDescriptorInc), pToneLUTSRV->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, nDescriptorInc), pLookLUTSRV->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamToneMapping, outDescHandle.gpuHandle);
+	outDescHandle.cpuHandle.Offset(3, nDescriptorInc);
+	outDescHandle.gpuHandle.Offset(3, nDescriptorInc);
+
+#else
 	CB_TONE_MAPPING_DATA data = MakeCBData();
 	auto paramCBuffer = RENDER->AllocCBuffer<CB_TONE_MAPPING_DATA>();
 	paramCBuffer.WriteData(&data);
 	pd3dCommandList->SetGraphicsRootConstantBufferView(rootParamToneMapping, paramCBuffer.GPUAddress);
+
+#endif
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = RENDER->GetCurrentBackBufferHandle();
 	pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, nullptr);
@@ -68,34 +168,106 @@ void ToneMappingPass::CreatePipelineState()
 	if (FAILED(hr)) {
 		__debugbreak();
 	}
+
+
+	CreateRootSignature();
+	D3D12_COMPUTE_PIPELINE_STATE_DESC d3dComputePipelineDesc{};
+	{
+		d3dComputePipelineDesc.pRootSignature = m_pd3dLUTRootSignature.Get();
+		d3dComputePipelineDesc.CS = SHADER->GetShaderByteCode("ToneMapLUTCS");
+		d3dComputePipelineDesc.CachedPSO = { nullptr, 0 };
+		d3dComputePipelineDesc.NodeMask = 0;
+		d3dComputePipelineDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	}
+	
+	hr = DEVICE->CreateComputePipelineState(&d3dComputePipelineDesc, IID_PPV_ARGS(m_pd3dLUTBakingPipelineState[0].GetAddressOf()));
+
+	{
+		d3dComputePipelineDesc.CS = SHADER->GetShaderByteCode("LookLUTCS");
+	}
+	
+	hr = DEVICE->CreateComputePipelineState(&d3dComputePipelineDesc, IID_PPV_ARGS(m_pd3dLUTBakingPipelineState[1].GetAddressOf()));
+
 }
 
-CB_TONE_MAPPING_DATA ToneMappingPass::MakeCBData() const
+void ToneMappingPass::CreateRootSignature()
 {
-	CB_TONE_MAPPING_DATA data;
-	data.nMode = std::to_underlying(m_eMode);
-	::memcpy(&data.gToneMappingCommon0.x, &m_Parameters.Common, sizeof(ToneMappingCommonParameters));
+	CD3DX12_DESCRIPTOR_RANGE1 d3dRootDescriptor[1];
+	d3dRootDescriptor[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0);
 
-	switch (m_eMode)
+	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[2];
+	d3dRootParameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+	d3dRootParameters[1].InitAsDescriptorTable(1, d3dRootDescriptor, D3D12_SHADER_VISIBILITY_ALL);
+
+
+	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags =
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS
+		| D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS
+		| D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS
+		| D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS
+		| D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS;
+
+	D3D12_VERSIONED_ROOT_SIGNATURE_DESC d3dRootSignatureDesc{};
+	d3dRootSignatureDesc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
+	d3dRootSignatureDesc.Desc_1_1.NumParameters = _countof(d3dRootParameters);
+	d3dRootSignatureDesc.Desc_1_1.pParameters = d3dRootParameters;
+	d3dRootSignatureDesc.Desc_1_1.NumStaticSamplers = 0;
+	d3dRootSignatureDesc.Desc_1_1.pStaticSamplers = nullptr;
+	d3dRootSignatureDesc.Desc_1_1.Flags = d3dRootSignatureFlags;
+
+	ComPtr<ID3DBlob> pd3dSignatureBlob = nullptr;
+	ComPtr<ID3DBlob> pd3dErrorBlob = nullptr;
+
+	HRESULT hr = D3D12SerializeVersionedRootSignature(&d3dRootSignatureDesc, pd3dSignatureBlob.GetAddressOf(), pd3dErrorBlob.GetAddressOf());
+	if (FAILED(hr)) {
+		char* pErrorString = (char*)pd3dErrorBlob->GetBufferPointer();
+		HWND hWnd = ::GetActiveWindow();
+		MessageBoxA(hWnd, pErrorString, NULL, 0);
+		OutputDebugStringA(pErrorString);
+		__debugbreak();
+	}
+
+	hr = DEVICE->CreateRootSignature(
+		0,
+		pd3dSignatureBlob->GetBufferPointer(),
+		pd3dSignatureBlob->GetBufferSize(),
+		IID_PPV_ARGS(m_pd3dLUTRootSignature.GetAddressOf())
+	);
+
+	if (FAILED(hr)) {
+		__debugbreak();
+	}
+}
+
+CB_TONE_MAPPING_LUT_DATA ToneMappingPass::MakeLUTCBData(DIRTY_UPDATE eDirty) const
+{
+	CB_TONE_MAPPING_LUT_DATA data{};
+	data.gToneMappingCommon0.x = (float)m_eMode;
+	switch (eDirty)
 	{
-	case TONE_MAPPING_MODE::AGX:
+	case ToneMappingPass::DIRTY_UPDATE::AGX:
 	{
-		::memcpy(&data.gToneMappingCommon1.z, &m_Parameters.AgX, sizeof(AgXParameters));
+		::memcpy(&data.gToneMappingCommon0.y, &m_Parameters.AgX, sizeof(AgXParameters));
 		break;
 	}
-	case TONE_MAPPING_MODE::GT:
+	case ToneMappingPass::DIRTY_UPDATE::ACES:
 	{
-		::memcpy(&data.gToneMappingCommon1.z, &m_Parameters.GT, sizeof(GTParameters));
+		::memcpy(&data.gToneMappingCommon0.y, &m_Parameters.ACES, sizeof(ACESParameters));
 		break;
 	}
-	case TONE_MAPPING_MODE::UC2:
+	case ToneMappingPass::DIRTY_UPDATE::UC2:
 	{
-		::memcpy(&data.gToneMappingCommon1.z, &m_Parameters.UC2, sizeof(UC2Parameters));
+		::memcpy(&data.gToneMappingCommon0.y, &m_Parameters.UC2, sizeof(UC2Parameters));
 		break;
 	}
-	case TONE_MAPPING_MODE::ACES:
+	case ToneMappingPass::DIRTY_UPDATE::GT:
 	{
-		::memcpy(&data.gToneMappingCommon1.z, &m_Parameters.ACES, sizeof(ACESParameters));
+		::memcpy(&data.gToneMappingCommon0.y, &m_Parameters.GT, sizeof(GTParameters));
+		break;
+	}
+	case ToneMappingPass::DIRTY_UPDATE::LOOK:
+	{
+		::memcpy(&data.gToneMappingCommon0.y, &m_Parameters.Look, sizeof(LookParameters));
 		break;
 	}
 	default:
@@ -103,10 +275,20 @@ CB_TONE_MAPPING_DATA ToneMappingPass::MakeCBData() const
 		break;
 	}
 
-	::memcpy(&data.v3Slope, &m_Parameters.Look, sizeof(LookParameters));
-
-
 	return data;
+}
+
+CB_TONE_MAPPING_DATA ToneMappingPass::MakeCBData() const
+{
+	return CB_TONE_MAPPING_DATA{
+		.fExposure = m_Parameters.Common.fExposure,
+		.fGamma = m_Parameters.Common.fGamma,
+		.fSaturation = m_Parameters.Common.fSaturation,
+		.fInputScale = m_Parameters.Common.fInputScale,
+		.fOutputScale = m_Parameters.Common.fOutputScale,
+		.fLookStrength = m_Parameters.Common.fLookStrength,
+		.pad = Vector2(0.f),
+	};
 }
 
 void ToneMappingPass::SetDefaultParameters(TONE_MAPPING_MODE eModeBefore, TONE_MAPPING_MODE eModeAfter)
@@ -146,43 +328,19 @@ void ToneMappingPass::SetDefaultParameters(TONE_MAPPING_MODE eModeBefore, TONE_M
 
 }
 
-void ToneMappingPass::ShowDragFloat(int cnt, const char* cstrLabel, float* v, float fSpeed, float fMin, float fMax, bool bShowHelp, float fRecommandMin, float fRecommandMax, float fDefault, const char* cstrformat)
-{
-	ImGui::DragFloat(cstrLabel, v, fSpeed, fMin, fMax, cstrformat);
-	ImGui::SameLine();
-
-	if (bShowHelp) {
-		std::string strHelp = std::format("Recommanded range : {} ~ {}\n Default = {}", fRecommandMin, fRecommandMax, fDefault);
-		GuiManager::HelpMarker(strHelp.c_str());
-	}
-
-	std::string strButton = std::format("Default{}", cnt++);
-	if (ImGui::Button(strButton.c_str())) *v = fDefault;
-}
-
-void ToneMappingPass::ShowDragFloat3(int cnt, const char* cstrLabel, float* v, float fSpeed, float fMin, float fMax, bool bShowHelp, float fRecommandMin, float fRecommandMax, float fDefault)
-{
-	ImGui::DragFloat3(cstrLabel, v, fSpeed, fMin, fMax);
-	ImGui::SameLine();
-
-	if (bShowHelp) {
-		std::string strHelp = std::format("Recommanded range : {} ~ {}\n Default = {}", fRecommandMin, fRecommandMax, fDefault);
-		GuiManager::HelpMarker(strHelp.c_str());
-	}
-
-	std::string strButton = std::format("Default{}", cnt++);
-	if (ImGui::Button(strButton.c_str())) {
-		Vector3* pv3Value = reinterpret_cast<Vector3*>(v);
-		*pv3Value = Vector3(fDefault, fDefault, fDefault);
-	}
-}
-
 void ToneMappingPass::ShowDebugInfo()
 {
 	uint32 unMode = std::to_underlying(m_eMode);
 	TONE_MAPPING_MODE eBefore = m_eMode;
-	ImGui::SliderInt("Mode", reinterpret_cast<int*>(&m_eMode), 0, std::to_underlying(TONE_MAPPING_MODE::COUNT) - 1, g_cstrModeName[unMode]);
-	SetDefaultParameters(eBefore, m_eMode);
+	bool bModeChanged = ImGui::SliderInt("Mode", reinterpret_cast<int*>(&m_eMode), 0, std::to_underlying(TONE_MAPPING_MODE::COUNT) - 1, g_cstrModeName[unMode]);
+
+	if (bModeChanged) {
+		SetDefaultParameters(eBefore, m_eMode);
+		uint32 unBeforeMode = std::to_underlying(eBefore);
+
+		m_bToneMapLUTDirtyFlags[unBeforeMode] |= true;
+		m_bToneMapLUTDirtyFlags[unMode] |= true;
+	}
 
 	if (ImGui::Button("Reset Parameters")) {
 		SetDefaultParameters(TONE_MAPPING_MODE::UNDEFINED, m_eMode);
@@ -218,16 +376,19 @@ void ToneMappingPass::ShowDebugInfo()
 	ShowDragFloat(cnt++, "fSaturation", reinterpret_cast<float*>(&m_Parameters.Common.fSaturation), 0.01f, 0.f, 2.f, true, 0.75f, 1.15, 1.f);
 	ShowDragFloat(cnt++, "fInputScale", reinterpret_cast<float*>(&m_Parameters.Common.fInputScale), 0.01f, 0.25f, 4.f, true, 0.5f, 2.0f, 1.f);
 	ShowDragFloat(cnt++, "fOutputScale", reinterpret_cast<float*>(&m_Parameters.Common.fOutputScale), 0.01f, 0.5f, 2.f, true, 0.8, 1.2, 1.f);
+	ShowDragFloat(cnt++, "fLookStrength", reinterpret_cast<float*>(&m_Parameters.Common.fLookStrength), 0.01f, 0.0f, 1.0f, true, 0.0f, 1.0f, 1.0f);
+
+	bool bToneLUTDirty = false;
 
 	switch (m_eMode)
 	{
 	case TONE_MAPPING_MODE::AGX:
 	{
-		ShowDragFloat(cnt++, "fAgXWhite", reinterpret_cast<float*>(&m_Parameters.AgX.fAgXWhite),		0.001f, 0.8f, 1.2f, true, 0.9f, 1.05f, 1.0f);
-		ShowDragFloat(cnt++, "fAgXBlack", reinterpret_cast<float*>(&m_Parameters.AgX.fAgXBlack),		0.001f, 0.0f, 0.15f, true, 0.0f, 0.05f, 0.f);
-		ShowDragFloat(cnt++, "fAgXContrast", reinterpret_cast<float*>(&m_Parameters.AgX.fAgXContrast),	0.0001f, 0.6f, 1.4f, true, 0.85f, 1.15f, 1.0f);
-		ShowDragFloat(cnt++, "fAgXMinEV", reinterpret_cast<float*>(&m_Parameters.AgX.fAgXMinEV),		0.000001f, -16.0f, -8.0f, true, -13.5f, -10.f, -12.47393f, "%.8f");
-		ShowDragFloat(cnt++, "fAgXMaxEV", reinterpret_cast<float*>(&m_Parameters.AgX.fAgXMaxEV),		0.000001f, 2.0f, 8.0f, true, 3.f, 5.f, 4.026069f, "%.8f");
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fAgXWhite", reinterpret_cast<float*>(&m_Parameters.AgX.fAgXWhite),		0.001f, 0.8f, 1.2f, true, 0.9f, 1.05f, 1.0f);
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fAgXBlack", reinterpret_cast<float*>(&m_Parameters.AgX.fAgXBlack),		0.001f, 0.0f, 0.15f, true, 0.0f, 0.05f, 0.f);
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fAgXContrast", reinterpret_cast<float*>(&m_Parameters.AgX.fAgXContrast),	0.0001f, 0.6f, 1.4f, true, 0.85f, 1.15f, 1.0f);
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fAgXMinEV", reinterpret_cast<float*>(&m_Parameters.AgX.fAgXMinEV),		0.000001f, -16.0f, -8.0f, true, -13.5f, -10.f, -12.47393f, "%.8f");
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fAgXMaxEV", reinterpret_cast<float*>(&m_Parameters.AgX.fAgXMaxEV),		0.000001f, 2.0f, 8.0f, true, 3.f, 5.f, 4.026069f, "%.8f");
 
 		if (m_Parameters.AgX.fAgXMaxEV < m_Parameters.AgX.fAgXMinEV) {
 			m_Parameters.AgX.fAgXMaxEV = std::max(m_Parameters.AgX.fAgXMaxEV, m_Parameters.AgX.fAgXMinEV + 1.0f);
@@ -235,14 +396,43 @@ void ToneMappingPass::ShowDebugInfo()
 
 		break;
 	}
+	case TONE_MAPPING_MODE::ACES:
+	{
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fACESExposureBias", reinterpret_cast<float*>(&m_Parameters.ACES.fACESExposureBias), 0.01f, 0.f, 4.f, true, 0.8f, 1.5f, 1.0f);
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fACESPreSaturation", reinterpret_cast<float*>(&m_Parameters.ACES.fACESPreSaturation), 0.01f, 0.f, 2.f, true, 0.9f, 1.1f, 1.0f);
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fACESPostSaturation", reinterpret_cast<float*>(&m_Parameters.ACES.fACESPostSaturation), 0.01f, 0.f, 2.f, true, 0.9f, 1.2f, 1.0f);
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fACESHighlightDesaturation", reinterpret_cast<float*>(&m_Parameters.ACES.fACESHighlightDesaturation), 0.01f, 0.f, 1.f, true, 0.0f, 0.35f, 0.0f);
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fACESCoreOutputScale", reinterpret_cast<float*>(&m_Parameters.ACES.fACESCoreOutputScale), 0.01f, 0.f, 2.f, true, 0.9f, 1.1f, 1.0f);
+		break;
+	}
+	case TONE_MAPPING_MODE::UC2:
+	{
+		ImGui::SeparatorText("Shoulder params");
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fUC2A", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2A), 0.001f, 0.05f, 0.30, true, 0.05f, 0.30f, 0.15f);
+
+		ImGui::SeparatorText("Linear section params");
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fUC2B", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2B), 0.001f, 0.20f, 0.80, true, 0.20f, 0.80f, 0.50f);
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fUC2C", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2C), 0.001f, 0.05f, 0.30, true, 0.05f, 0.30f, 0.10f);
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fUC2D", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2D), 0.001f, 0.05f, 0.40, true, 0.05f, 0.40f, 0.20f);
+
+		ImGui::SeparatorText("Toe params");
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fUC2E", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2E), 0.001f, 0.00f, 0.08, true, 0.00f, 0.08f, 0.02f);
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fUC2F", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2F), 0.001f, 0.01f, 0.50, true, 0.01f, 0.50f, 0.30f);
+
+		ImGui::SeparatorText("Normalization");
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fUC2WhitePoint", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2WhitePoint), 0.1f, 1.0f, 20.0f, true, 4.0f, 16.0f, 11.2f);
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fUC2ExposureBias", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2ExposureBias), 0.1f, 0.1f, 4.0f, true, 0.5f, 3.0f, 0.15f);
+
+		break;
+	}
 	case TONE_MAPPING_MODE::GT:
 	{
-		ShowDragFloat(cnt++, "fGTMaxBrightness", reinterpret_cast<float*>(&m_Parameters.GT.fGTMaxBrightness),	0.001f, 0.8f, 2.0f, true, 0.9f, 1.3f, 1.0f);
-		ShowDragFloat(cnt++, "fGTContrast", reinterpret_cast<float*>(&m_Parameters.GT.fGTContrast),				0.001f, 0.5f, 2.0f, true, 0.85f, 1.25f, 1.0f);
-		ShowDragFloat(cnt++, "fGTLinearStart", reinterpret_cast<float*>(&m_Parameters.GT.fGTLinearStart),		0.001f, 0.0f, 0.5f, true, 0.12f, 0.3f, 0.22f);
-		ShowDragFloat(cnt++, "fGTLinearLength", reinterpret_cast<float*>(&m_Parameters.GT.fGTLinearLength),		0.0001f, 0.05f, 0.8f, true, 0.2f, 0.55f, 0.4f);
-		ShowDragFloat(cnt++, "fGTBlack", reinterpret_cast<float*>(&m_Parameters.GT.fGTBlack),					0.001f, 0.5f, 2.5f, true, 1.f, 1.6f, 1.33f);
-		ShowDragFloat(cnt++, "fGTPedestal", reinterpret_cast<float*>(&m_Parameters.GT.fGTPedestal),				0.00001f, 0.0f, 0.1f, true, 0.0f, 0.03f, 0.0f);
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fGTMaxBrightness", reinterpret_cast<float*>(&m_Parameters.GT.fGTMaxBrightness),	0.001f, 0.8f, 2.0f, true, 0.9f, 1.3f, 1.0f);
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fGTContrast", reinterpret_cast<float*>(&m_Parameters.GT.fGTContrast),				0.001f, 0.5f, 2.0f, true, 0.85f, 1.25f, 1.0f);
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fGTLinearStart", reinterpret_cast<float*>(&m_Parameters.GT.fGTLinearStart),		0.001f, 0.0f, 0.5f, true, 0.12f, 0.3f, 0.22f);
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fGTLinearLength", reinterpret_cast<float*>(&m_Parameters.GT.fGTLinearLength),		0.0001f, 0.05f, 0.8f, true, 0.2f, 0.55f, 0.4f);
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fGTBlack", reinterpret_cast<float*>(&m_Parameters.GT.fGTBlack),					0.001f, 0.5f, 2.5f, true, 1.f, 1.6f, 1.33f);
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fGTPedestal", reinterpret_cast<float*>(&m_Parameters.GT.fGTPedestal),				0.00001f, 0.0f, 0.1f, true, 0.0f, 0.03f, 0.0f);
 
 		if (m_Parameters.GT.fGTLinearStart + m_Parameters.GT.fGTLinearLength <= 1.0f) {
 			m_Parameters.GT.fGTLinearLength = std::min(m_Parameters.GT.fGTLinearLength, 1.0f - m_Parameters.GT.fGTLinearStart);
@@ -250,69 +440,51 @@ void ToneMappingPass::ShowDebugInfo()
 
 		break;
 	}
-	case TONE_MAPPING_MODE::UC2:
-	{
-		ImGui::SeparatorText("Shoulder params");
-		ShowDragFloat(cnt++, "fUC2A", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2A), 0.001f, 0.05f, 0.30, true, 0.05f, 0.30f, 0.15f);
-		ImGui::SeparatorText("Linear section params");
-		ShowDragFloat(cnt++, "fUC2B", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2B), 0.001f, 0.20f, 0.80, true, 0.20f, 0.80f, 0.50f);
-		ShowDragFloat(cnt++, "fUC2C", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2C), 0.001f, 0.05f, 0.30, true, 0.05f, 0.30f, 0.10f);
-		ShowDragFloat(cnt++, "fUC2D", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2D), 0.001f, 0.05f, 0.40, true, 0.05f, 0.40f, 0.20f);
-		ImGui::SeparatorText("Toe params");
-		ShowDragFloat(cnt++, "fUC2E", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2E), 0.001f, 0.00f, 0.08, true, 0.00f, 0.08f, 0.02f);
-		ShowDragFloat(cnt++, "fUC2F", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2F), 0.001f, 0.01f, 0.50, true, 0.01f, 0.50f, 0.30f);
-		ImGui::SeparatorText("Normalization");
-		ShowDragFloat(cnt++, "fUC2WhitePoint", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2WhitePoint), 0.1f, 1.0f, 20.0f, true, 4.0f, 16.0f, 11.2f);
-		ShowDragFloat(cnt++, "fUC2ExposureBias", reinterpret_cast<float*>(&m_Parameters.UC2.fUC2ExposureBias), 0.1f, 0.1f, 4.0f, true, 0.5f, 3.0f, 0.15f);
-
-		break;
-	}
-	case TONE_MAPPING_MODE::ACES:
-	{
-		ShowDragFloat(cnt++, "fACESExposureBias", reinterpret_cast<float*>(&m_Parameters.ACES.fACESExposureBias),					0.01f, 0.f, 4.f, true, 0.8f, 1.5f, 1.0f);
-		ShowDragFloat(cnt++, "fACESPreSaturation", reinterpret_cast<float*>(&m_Parameters.ACES.fACESPreSaturation),					0.01f, 0.f, 2.f, true, 0.9f, 1.1f, 1.0f);
-		ShowDragFloat(cnt++, "fACESPostSaturation", reinterpret_cast<float*>(&m_Parameters.ACES.fACESPostSaturation),				0.01f, 0.f, 2.f, true, 0.9f, 1.2f, 1.0f);
-		ShowDragFloat(cnt++, "fACESHighlightDesaturation", reinterpret_cast<float*>(&m_Parameters.ACES.fACESHighlightDesaturation),	0.01f, 0.f, 1.f, true, 0.0f, 0.35f, 0.0f);
-		ShowDragFloat(cnt++, "fACESCoreOutputScale", reinterpret_cast<float*>(&m_Parameters.ACES.fACESCoreOutputScale),				0.01f, 0.f, 2.f, true, 0.9f, 1.1f, 1.0f);
-		break;
-	}
 	default:
 		std::unreachable();
 		break;
 	}
 
+	// Set dirty flag if parameter changed
+	auto nMode = std::to_underlying(m_eMode);
+	m_bToneMapLUTDirtyFlags[nMode] |= bToneLUTDirty;
+
+	bool bLookLUTDirty = false;
+
 	ImGui::SeparatorText("LookParameters");
-	ShowDragFloat(cnt++, "fLookStrength", reinterpret_cast<float*>(&m_Parameters.Look.fLookStrength), 0.01f, 0.0f, 1.0f, true, 0.0f, 1.0f, 1.0f);
 
 	ImGui::SeparatorText("Color modify");
-	ShowDragFloat3(cnt++, "v3Slope", reinterpret_cast<float*>(&m_Parameters.Look.v3Slope), 0.001f, 0.5f, 1.5f, true, 0.9f, 1.1f, 1.0f);
-	ShowDragFloat3(cnt++, "v3Offset", reinterpret_cast<float*>(&m_Parameters.Look.v3Offset), 0.001f, -0.25f, 0.25f, true, -0.05f, 0.05f, 0.0f);
-	ShowDragFloat3(cnt++, "v3Power", reinterpret_cast<float*>(&m_Parameters.Look.v3Power), 0.001f, 0.5f, 1.5f, true, 0.9f, 1.12f, 1.0f);
+	bLookLUTDirty |= ShowDragFloat3(cnt++, "v3Slope", reinterpret_cast<float*>(&m_Parameters.Look.v3Slope), 0.001f, 0.5f, 1.5f, true, 0.9f, 1.1f, 1.0f);
+	bLookLUTDirty |= ShowDragFloat3(cnt++, "v3Offset", reinterpret_cast<float*>(&m_Parameters.Look.v3Offset), 0.001f, -0.25f, 0.25f, true, -0.05f, 0.05f, 0.0f);
+	bLookLUTDirty |= ShowDragFloat3(cnt++, "v3Power", reinterpret_cast<float*>(&m_Parameters.Look.v3Power), 0.001f, 0.5f, 1.5f, true, 0.9f, 1.12f, 1.0f);
 
 	ImGui::SeparatorText("Sectional hues");
-	ShowDragFloat3(cnt++, "v3ShadowTint", reinterpret_cast<float*>(&m_Parameters.Look.v3ShadowTint), 0.001f, 0.f, 1.5f, true, 0.85f, 1.10f, 1.0f);
-	ShowDragFloat(cnt++, "fShadowTintStrength", reinterpret_cast<float*>(&m_Parameters.Look.fShadowTintStrength), 0.001f, 0.0f, 1.0f, true, 0.0f, 0.35f, 0.1f);
-	ShowDragFloat(cnt++, "fShadowStartLuma", reinterpret_cast<float*>(&m_Parameters.Look.fShadowStartLuma), 0.001f, 0.0f, 0.4f, true, 0.f, 0.f, 0.1f);
-	ShowDragFloat(cnt++, "fShadowEndLuma", reinterpret_cast<float*>(&m_Parameters.Look.fShadowEndLuma), 0.001f, 0.1f, 0.8f, true, 0.f, 0.f, 0.55f);
+	bLookLUTDirty |= ShowDragFloat3(cnt++, "v3ShadowTint", reinterpret_cast<float*>(&m_Parameters.Look.v3ShadowTint), 0.001f, 0.f, 1.5f, true, 0.85f, 1.10f, 1.0f);
+	bLookLUTDirty |= ShowDragFloat(cnt++, "fShadowTintStrength", reinterpret_cast<float*>(&m_Parameters.Look.fShadowTintStrength), 0.001f, 0.0f, 1.0f, true, 0.0f, 0.35f, 0.1f);
+	bLookLUTDirty |= ShowDragFloat(cnt++, "fShadowStartLuma", reinterpret_cast<float*>(&m_Parameters.Look.fShadowStartLuma), 0.001f, 0.0f, 0.4f, true, 0.f, 0.f, 0.1f);
+	bLookLUTDirty |= ShowDragFloat(cnt++, "fShadowEndLuma", reinterpret_cast<float*>(&m_Parameters.Look.fShadowEndLuma), 0.001f, 0.1f, 0.8f, true, 0.f, 0.f, 0.55f);
 
 	m_Parameters.Look.fShadowEndLuma = std::max(m_Parameters.Look.fShadowStartLuma + 0.01f, m_Parameters.Look.fShadowEndLuma);
 
-	ShowDragFloat3(cnt++, "v3HighlightTint", reinterpret_cast<float*>(&m_Parameters.Look.v3HighlightTint), 0.001f, 0.0f, 1.5f, true, 0.9f, 1.1f, 1.0f);
-	ShowDragFloat(cnt++, "fHighlightTintStrength", reinterpret_cast<float*>(&m_Parameters.Look.fHighlightTintStrength), 0.01f, 0.0f, 1.0f, true, 0.0f, 0.35f, 0.2f);
-	ShowDragFloat(cnt++, "fHighlightStartLuma", reinterpret_cast<float*>(&m_Parameters.Look.fHighlightStartLuma), 0.001f, 0.2f, 0.8f, true, 0.f, 0.f, 0.45f);
-	ShowDragFloat(cnt++, "fHighlightEndLuma", reinterpret_cast<float*>(&m_Parameters.Look.fHighlightEndLuma), 0.001f, 0.4f, 1.0f, true, 0.f, 0.f, 0.85f);
+	bLookLUTDirty |= ShowDragFloat3(cnt++, "v3HighlightTint", reinterpret_cast<float*>(&m_Parameters.Look.v3HighlightTint), 0.001f, 0.0f, 1.5f, true, 0.9f, 1.1f, 1.0f);
+	bLookLUTDirty |= ShowDragFloat(cnt++, "fHighlightTintStrength", reinterpret_cast<float*>(&m_Parameters.Look.fHighlightTintStrength), 0.01f, 0.0f, 1.0f, true, 0.0f, 0.35f, 0.2f);
+	bLookLUTDirty |= ShowDragFloat(cnt++, "fHighlightStartLuma", reinterpret_cast<float*>(&m_Parameters.Look.fHighlightStartLuma), 0.001f, 0.2f, 0.8f, true, 0.f, 0.f, 0.45f);
+	bLookLUTDirty |= ShowDragFloat(cnt++, "fHighlightEndLuma", reinterpret_cast<float*>(&m_Parameters.Look.fHighlightEndLuma), 0.001f, 0.4f, 1.0f, true, 0.f, 0.f, 0.85f);
 
 	m_Parameters.Look.fHighlightEndLuma = std::max(m_Parameters.Look.fHighlightStartLuma + 0.01f, m_Parameters.Look.fHighlightEndLuma);
 
 	ImGui::SeparatorText("Tone Structure");
-	ShowDragFloat(cnt++, "fContrastPivot", reinterpret_cast<float*>(&m_Parameters.Look.fContrastPivot), 0.001f, 0.0f, 1.0f, true, 0.18f, 0.5f, 0.4f);
-	ShowDragFloat(cnt++, "fContrastStrength", reinterpret_cast<float*>(&m_Parameters.Look.fContrastStrength), 0.001f, 0.5f, 1.5f, true, 0.85f, 1.2f, 1.0f);
-	ShowDragFloat(cnt++, "fBlackLift", reinterpret_cast<float*>(&m_Parameters.Look.fBlackLift), 0.001f, 0.0f, 0.2, true, 0.f, 0.06f, 0.02f);
-	ShowDragFloat(cnt++, "fDensity", reinterpret_cast<float*>(&m_Parameters.Look.fDensity), 0.01f, 0.0f, 1.5f, true, 0.0f, 0.35f, 0.1f);
+	bLookLUTDirty |= ShowDragFloat(cnt++, "fContrastPivot", reinterpret_cast<float*>(&m_Parameters.Look.fContrastPivot), 0.001f, 0.0f, 1.0f, true, 0.18f, 0.5f, 0.4f);
+	bLookLUTDirty |= ShowDragFloat(cnt++, "fContrastStrength", reinterpret_cast<float*>(&m_Parameters.Look.fContrastStrength), 0.001f, 0.5f, 1.5f, true, 0.85f, 1.2f, 1.0f);
+	bLookLUTDirty |= ShowDragFloat(cnt++, "fBlackLift", reinterpret_cast<float*>(&m_Parameters.Look.fBlackLift), 0.001f, 0.0f, 0.2, true, 0.f, 0.06f, 0.02f);
+	bLookLUTDirty |= ShowDragFloat(cnt++, "fDensity", reinterpret_cast<float*>(&m_Parameters.Look.fDensity), 0.01f, 0.0f, 1.5f, true, 0.0f, 0.35f, 0.1f);
 
 
 	ImGui::SeparatorText("Tone Structure");
-	ShowDragFloat(cnt++, "fLookSaturation", reinterpret_cast<float*>(&m_Parameters.Look.fLookSaturation), 0.01f, 0.0f, 2.0f, true, 0.8f, 1.2f, 1.0f);
+	bLookLUTDirty |= ShowDragFloat(cnt++, "fLookSaturation", reinterpret_cast<float*>(&m_Parameters.Look.fLookSaturation), 0.01f, 0.0f, 2.0f, true, 0.8f, 1.2f, 1.0f);
+
+	// Set dirty flag if parameter changed
+	m_bLookLUTDirtyFlag |= bToneLUTDirty;
 }
 
 void ToneMappingPass::SaveParametersToJson() const
@@ -324,9 +496,9 @@ void ToneMappingPass::SaveParametersToJson() const
 		SaveAgX();
 		break;
 	}
-	case TONE_MAPPING_MODE::GT:
+	case TONE_MAPPING_MODE::ACES:
 	{
-		SaveGT();
+		SaveACES();
 		break;
 	}
 	case TONE_MAPPING_MODE::UC2:
@@ -334,9 +506,9 @@ void ToneMappingPass::SaveParametersToJson() const
 		SaveUC2();
 		break;
 	}
-	case TONE_MAPPING_MODE::ACES:
+	case TONE_MAPPING_MODE::GT:
 	{
-		SaveACES();
+		SaveGT();
 		break;
 	}
 	default:
@@ -399,6 +571,7 @@ void ToneMappingPass::SaveAgX() const
 	j["fSaturation"] = m_Parameters.Common.fSaturation;
 	j["fInputScale"] = m_Parameters.Common.fInputScale;
 	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
+	j["fLookStrength"] = m_Parameters.Common.fLookStrength;
 
 	// AgXParameters
 	j["fAgXWhite"] = m_Parameters.AgX.fAgXWhite;
@@ -434,6 +607,7 @@ void ToneMappingPass::SaveGT() const
 	j["fSaturation"] = m_Parameters.Common.fSaturation;
 	j["fInputScale"] = m_Parameters.Common.fInputScale;
 	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
+	j["fLookStrength"] = m_Parameters.Common.fLookStrength;
 
 	// GTParameters
 	j["fGTMaxBrightness"] = m_Parameters.GT.fGTMaxBrightness;
@@ -467,6 +641,7 @@ void ToneMappingPass::SaveUC2() const
 	j["fSaturation"] = m_Parameters.Common.fSaturation;
 	j["fInputScale"] = m_Parameters.Common.fInputScale;
 	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
+	j["fLookStrength"] = m_Parameters.Common.fLookStrength;
 
 	// GTParameters
 	j["fUC2A"] = m_Parameters.UC2.fUC2A;
@@ -503,6 +678,7 @@ void ToneMappingPass::SaveACES() const
 	j["fInputScale"] = m_Parameters.Common.fInputScale;
 	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
 	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
+	j["fLookStrength"] = m_Parameters.Common.fLookStrength;
 
 	// GTParameters
 	j["fACESExposureBias"] = m_Parameters.ACES.fACESExposureBias;
@@ -564,8 +740,6 @@ void ToneMappingPass::LoadLook()
 	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
 	nlohmann::json inJson = nlohmann::json::from_bson(bson);;
 
-	m_Parameters.Look.fLookStrength = inJson["fLookStrength"].get<float>();
-
 	m_Parameters.Look.fContrastPivot = inJson["fContrastPivot"].get<float>();
 	m_Parameters.Look.fContrastStrength = inJson["fContrastStrength"].get<float>();
 	m_Parameters.Look.fBlackLift = inJson["fBlackLift"].get<float>();
@@ -612,6 +786,7 @@ void ToneMappingPass::LoadAgX()
 	m_Parameters.Common.fSaturation = inJson["fSaturation"].get<float>();
 	m_Parameters.Common.fInputScale = inJson["fInputScale"].get<float>();
 	m_Parameters.Common.fOutputScale = inJson["fOutputScale"].get<float>();
+	m_Parameters.Common.fLookStrength = inJson["fLookStrength"].get<float>();
 
 	m_Parameters.AgX.fAgXWhite = inJson["fAgXWhite"].get<float>();
 	m_Parameters.AgX.fAgXBlack = inJson["fAgXBlack"].get<float>();
@@ -635,7 +810,7 @@ void ToneMappingPass::LoadGT()
 	m_Parameters.Common.fGamma = inJson["fGamma"].get<float>();
 	m_Parameters.Common.fSaturation = inJson["fSaturation"].get<float>();
 	m_Parameters.Common.fInputScale = inJson["fInputScale"].get<float>();
-	m_Parameters.Common.fOutputScale = inJson["fOutputScale"].get<float>();
+	m_Parameters.Common.fLookStrength = inJson["fLookStrength"].get<float>();
 
 	m_Parameters.GT.fGTMaxBrightness = inJson["fGTMaxBrightness"].get<float>();
 	m_Parameters.GT.fGTContrast = inJson["fGTContrast"].get<float>();
@@ -660,7 +835,7 @@ void ToneMappingPass::LoadUC2()
 	m_Parameters.Common.fGamma = inJson["fGamma"].get<float>();
 	m_Parameters.Common.fSaturation = inJson["fSaturation"].get<float>();
 	m_Parameters.Common.fInputScale = inJson["fInputScale"].get<float>();
-	m_Parameters.Common.fOutputScale = inJson["fOutputScale"].get<float>();
+	m_Parameters.Common.fLookStrength = inJson["fLookStrength"].get<float>();
 
 	m_Parameters.UC2.fUC2A = inJson["fUC2A"].get<float>();
 	m_Parameters.UC2.fUC2B = inJson["fUC2B"].get<float>();
@@ -687,11 +862,58 @@ void ToneMappingPass::LoadACES()
 	m_Parameters.Common.fGamma = inJson["fGamma"].get<float>();
 	m_Parameters.Common.fSaturation = inJson["fSaturation"].get<float>();
 	m_Parameters.Common.fInputScale = inJson["fInputScale"].get<float>();
-	m_Parameters.Common.fOutputScale = inJson["fOutputScale"].get<float>();
+	m_Parameters.Common.fLookStrength = inJson["fLookStrength"].get<float>();
 
 	m_Parameters.ACES.fACESExposureBias = inJson["fACESExposureBias"].get<float>();
 	m_Parameters.ACES.fACESPreSaturation = inJson["fACESPreSaturation"].get<float>();
 	m_Parameters.ACES.fACESPostSaturation = inJson["fACESPostSaturation"].get<float>();
 	m_Parameters.ACES.fACESHighlightDesaturation = inJson["fACESHighlightDesaturation"].get<float>();
 	m_Parameters.ACES.fACESCoreOutputScale = inJson["fACESCoreOutputScale"].get<float>();
+}
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ImGui Helper
+
+bool ToneMappingPass::ShowDragFloat(int cnt, const char* cstrLabel, float* v, float fSpeed, float fMin, float fMax, bool bShowHelp, float fRecommandMin, float fRecommandMax, float fDefault, const char* cstrformat)
+{
+	bool bResult = ImGui::DragFloat(cstrLabel, v, fSpeed, fMin, fMax, cstrformat);
+	ImGui::SameLine();
+
+	if (bShowHelp) {
+		std::string strHelp = std::format("Recommanded range : {} ~ {}\n Default = {}", fRecommandMin, fRecommandMax, fDefault);
+		GuiManager::HelpMarker(strHelp.c_str());
+	}
+
+	std::string strButton = std::format("Default{}", cnt++);
+	if (ImGui::Button(strButton.c_str())) *v = fDefault;
+
+	return bResult;
+}
+
+bool ToneMappingPass::ShowDragFloat3(int cnt, const char* cstrLabel, float* v, float fSpeed, float fMin, float fMax, bool bShowHelp, float fRecommandMin, float fRecommandMax, float fDefault)
+{
+	bool bResult = ImGui::DragFloat3(cstrLabel, v, fSpeed, fMin, fMax);
+	ImGui::SameLine();
+
+	if (bShowHelp) {
+		std::string strHelp = std::format("Recommanded range : {} ~ {}\n Default = {}", fRecommandMin, fRecommandMax, fDefault);
+		GuiManager::HelpMarker(strHelp.c_str());
+	}
+
+	std::string strButton = std::format("Default{}", cnt++);
+	if (ImGui::Button(strButton.c_str())) {
+		Vector3* pv3Value = reinterpret_cast<Vector3*>(v);
+		*pv3Value = Vector3(fDefault, fDefault, fDefault);
+	}
+
+	return bResult;
 }

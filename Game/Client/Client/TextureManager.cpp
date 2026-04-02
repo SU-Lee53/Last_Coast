@@ -292,13 +292,14 @@ TextureRef<DepthStencilTexture> TextureManager::LoadDepthStencilTexture(const st
 	return { SRVFindHandle, DSVFindHandle };
 }
 
-TextureRef<UnorderedAccessTexture> TextureManager::LoadUnorderedAccessTexture(const std::string& strTextureName, uint32 unArraySize, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVUAVFormat)
+TextureRef<UnorderedAccessTexture> TextureManager::LoadUnorderedAccessTexture(const std::string& strTextureName, uint32 unArraySize, uint32 unWidth, uint32 unHeight, uint32 unDepth, DXGI_FORMAT dxgiSRVUAVFormat)
 {
 	TextureHandle SRVFindHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!SRVFindHandle.IsValid()) {
 		std::shared_ptr<UnorderedAccessTexture> pTexture = std::make_shared<UnorderedAccessTexture>();
-		bool bResult = (unArraySize == 1) ? pTexture->Initialize(unWidth, unHeight, dxgiSRVUAVFormat)
-			: pTexture->InitializeArray(unArraySize, unWidth, unHeight, dxgiSRVUAVFormat);
+		bool bResult = (unArraySize == 1) ? (unDepth == 0) ? pTexture->Initialize(unWidth, unHeight, dxgiSRVUAVFormat) 
+			                                               : pTexture->Initialize3D(unWidth, unHeight, unDepth, dxgiSRVUAVFormat)
+			                              : pTexture->InitializeArray(unArraySize, unWidth, unHeight, dxgiSRVUAVFormat);
 		if (!bResult) {
 			return { {}, {} };
 		}
@@ -308,7 +309,7 @@ TextureRef<UnorderedAccessTexture> TextureManager::LoadUnorderedAccessTexture(co
 		TextureTable::ResourceDesc srvDesc;
 		srvDesc.eType = TextureTable::ResourceDesc::TYPE::SRV;
 		if (unArraySize == 1) {
-			srvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
+			srvDesc.eDimension = (unDepth == 0) ?  TextureTable::ResourceDesc::DIMENSION::TEXTURE2D : TextureTable::ResourceDesc::DIMENSION::TEXTURE3D;
 		}
 		else {
 			srvDesc.eDimension = (unArraySize == 6) ? TextureTable::ResourceDesc::DIMENSION::TEXTURECUBE
@@ -333,8 +334,14 @@ TextureRef<UnorderedAccessTexture> TextureManager::LoadUnorderedAccessTexture(co
 		// UAV
 		TextureTable::ResourceDesc uavDesc;
 		uavDesc.eType = TextureTable::ResourceDesc::TYPE::UAV;
-		uavDesc.eDimension = (unArraySize == 1) ? TextureTable::ResourceDesc::DIMENSION::TEXTURE2D
+		uavDesc.eDimension = (unArraySize == 1) ? (unDepth == 0) ? TextureTable::ResourceDesc::DIMENSION::TEXTURE2D
+			                                                     : TextureTable::ResourceDesc::DIMENSION::TEXTURE3D
 			                                    : TextureTable::ResourceDesc::DIMENSION::TEXTURE2DARRAY;
+
+		if (uavDesc.eDimension == TextureTable::ResourceDesc::DIMENSION::TEXTURE3D) {
+			uavDesc.pAdditionalData = (void*)(&unDepth);
+		}
+
 		TextureHandle UAVHandle = m_UAVTextureTable.Register(
 			strTextureName,
 			pTexture,

@@ -8,6 +8,7 @@ struct ToneMappingCommonParameters {
 	float fSaturation = 1.0f;
 	float fInputScale = 1.0f;	
 	float fOutputScale = 1.0f;
+	float fLookStrength = 0.f;
 };
 
 struct AgXParameters {
@@ -63,12 +64,11 @@ struct LookParameters {
 	Vector3 v3HighlightTint;
 	float fHighlightTintStrength;
 
-	float fLookStrength;
 	float fDensity;
 	float fLookSaturation;
 	float fShadowStartLuma;
-
 	float fShadowEndLuma;
+
 	float fHighlightStartLuma;
 	float fHighlightEndLuma;
 };
@@ -106,13 +106,12 @@ struct ToneMappingParameter {
 		.fAgXMaxEV = 4.026069f,
 	};
 
-	constexpr static GTParameters g_DefaultGTParameters{
-		.fGTMaxBrightness = 1.0f,
-		.fGTContrast = 1.0f,
-		.fGTLinearStart = 0.22f,
-		.fGTLinearLength = 0.40f,
-		.fGTBlack = 1.33f, 
-		.fGTPedestal = 0.0f,
+	constexpr static ACESParameters g_DefaultACESParameters{
+		.fACESExposureBias = 1.0f,
+		.fACESPreSaturation = 1.0f,
+		.fACESPostSaturation = 1.0f,
+		.fACESHighlightDesaturation = 0.0f,
+		.fACESCoreOutputScale = 1.0f,
 	};
 
 	constexpr static UC2Parameters g_DefaultUC2Parameters{
@@ -126,12 +125,13 @@ struct ToneMappingParameter {
 		.fUC2ExposureBias = 0.15f,
 	};
 
-	constexpr static ACESParameters g_DefaultACESParameters{
-		.fACESExposureBias = 1.0f,
-		.fACESPreSaturation = 1.0f,
-		.fACESPostSaturation = 1.0f,
-		.fACESHighlightDesaturation = 0.0f,
-		.fACESCoreOutputScale = 1.0f,
+	constexpr static GTParameters g_DefaultGTParameters{
+		.fGTMaxBrightness = 1.0f,
+		.fGTContrast = 1.0f,
+		.fGTLinearStart = 0.22f,
+		.fGTLinearLength = 0.40f,
+		.fGTBlack = 1.33f,
+		.fGTPedestal = 0.0f,
 	};
 
 	constexpr static LookParameters g_DefaultLookParameters{
@@ -154,50 +154,32 @@ struct ToneMappingParameter {
 	};
 };
 
-struct CB_TONE_MAPPING_DATA {
-	uint32 nMode;
-	Vector3 gToneMappingCommon0;	// x = exposure, y = gamma, z = saturation
+struct CB_TONE_MAPPING_LUT_DATA {
+	Vector3 gToneMappingCommon0;	// x = nMode
 	Vector4 gToneMappingCommon1;	// x = inputScale, y = outputScale, zw = reserved
 	Vector4 gToneMappingCommon2;	// xyzw  = reserved
 	Vector4 gToneMappingCommon3;
-	
-	// Common Look Parameters
-	Vector3 v3Slope;
-	float fContrastPivot;
+	Vector4 gToneMappingCommon4;
+	Vector4 gToneMappingCommon5;
+	Vector4 gToneMappingCommon6;
+};
 
-	Vector3 v3Offset;
-	float fContrastStrength;
+struct CB_TONE_MAPPING_DATA {
+	float fExposure;
+	float fGamma;
+	float fSaturation;
+	float fInputScale;
 
-	Vector3 v3Power;
-	float fBlackLift;
-
-	Vector3 v3ShadowTint;
-	float fShadowTintStrength;
-
-	Vector3 v3HighlightTint;
-	float fHighlightTintStrength;
-
+	float fOutputScale;
 	float fLookStrength;
-	float fDensity;
-	float fLookSaturation;
-	float fShadowStartLuma;
-
-	float fShadowEndLuma;
-	float fHighlightStartLuma;
-	float fHighlightEndLuma;
+	Vector2 pad;
 };
 
 class ToneMappingPass : public IRenderPass {
-public:
-	enum class TONE_MAPPING_MODE : uint32 {
-		AGX = 0,
-		GT = 1,
-		UC2 = 2,
-		ACES = 3,
+private:
+	enum class TONE_MAPPING_MODE : uint32 { AGX = 0, ACES, UC2, GT, COUNT, UNDEFINED = std::numeric_limits<uint32>::max() };
+	enum class DIRTY_UPDATE : uint32 { AGX = 0, ACES, UC2, GT, LOOK };
 
-		COUNT,
-		UNDEFINED = std::numeric_limits<uint32>::max()
-	};
 
 public:
 	virtual void Initialize() override;
@@ -225,7 +207,9 @@ public:
 
 private:
 	void CreatePipelineState();
+	void CreateRootSignature();
 
+	CB_TONE_MAPPING_LUT_DATA MakeLUTCBData(DIRTY_UPDATE eDirty) const;
 	CB_TONE_MAPPING_DATA MakeCBData() const;
 	void SetDefaultParameters(TONE_MAPPING_MODE eModeBefore, TONE_MAPPING_MODE eModeAfter);
 
@@ -243,7 +227,7 @@ private:
 	void LoadUC2();
 	void LoadACES();
 
-	void ShowDragFloat(
+	bool ShowDragFloat(
 		int cnt,
 		const char* cstrLabel, 
 		float* v, 
@@ -256,7 +240,7 @@ private:
 		float fDefault = 0.f,
 		const char* cstrformat = "%.3f");
 
-	void ShowDragFloat3(
+	bool ShowDragFloat3(
 		int cnt,
 		const char* cstrLabel,
 		float* v,
@@ -270,11 +254,16 @@ private:
 private:
 	ComPtr<ID3D12PipelineState> m_pd3dPipelineState;
 
-	TONE_MAPPING_MODE m_eMode = TONE_MAPPING_MODE::AGX;
+	ComPtr<ID3D12RootSignature> m_pd3dLUTRootSignature;
+	ComPtr<ID3D12PipelineState> m_pd3dLUTBakingPipelineState[2];	// 0 : Tone map LUT / 1 : Look LUT
 
-	// Common
-	float m_fExposure = 1.f;
-	float m_fGamma = 2.2f;
+	TextureRef<UnorderedAccessTexture> m_ToneMapLUT;
+	mutable bool m_bToneMapLUTDirtyFlags[4] = { true, true, true, true };	// All dirty
+
+	TextureRef<UnorderedAccessTexture> m_LookLUT;
+	mutable bool m_bLookLUTDirtyFlag = true;		// Dirty
+
+	TONE_MAPPING_MODE m_eMode = TONE_MAPPING_MODE::ACES;
 
 	// Parameters
 	ToneMappingParameter m_Parameters;
@@ -283,9 +272,10 @@ private:
 
 	// Debug messages
 	const char* g_cstrModeName[4] = {
-		"AgX", "GT", "UC2", "ACES"
+		"AgX", "ACES", "UC2", "GT"
 	};
 
 
 	inline const static std::string g_strSavePath = "../Resources/ToneMappings";
+	const static uint32 g_unLUTSize = 32;
 };

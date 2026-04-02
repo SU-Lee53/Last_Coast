@@ -629,6 +629,41 @@ bool UnorderedAccessTexture::Initialize(UINT nWidth, UINT nHeight, DXGI_FORMAT d
 	return true;
 }
 
+bool UnorderedAccessTexture::Initialize3D(UINT nWidth, UINT nHeight, UINT nDepth, DXGI_FORMAT dxgiSRVUAVFormat)
+{
+	// TODO : 구현
+	D3D12_RESOURCE_DESC d3dResourceDesc{};
+	{
+		d3dResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+		d3dResourceDesc.Width = nWidth;
+		d3dResourceDesc.Height = nHeight;
+		d3dResourceDesc.DepthOrArraySize = nDepth;
+		d3dResourceDesc.MipLevels = 1;
+		d3dResourceDesc.Format = dxgiSRVUAVFormat;
+		d3dResourceDesc.SampleDesc.Count = 1;
+		d3dResourceDesc.SampleDesc.Quality = 0;
+		d3dResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		d3dResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	}
+
+	HRESULT hr = DEVICE->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&d3dResourceDesc,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		nullptr,
+		IID_PPV_ARGS(m_pd3dResource.GetAddressOf())
+	);
+
+	if (FAILED(hr)) {
+		__debugbreak();
+		return false;
+	}
+
+	m_d3dCurrentState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+	return true;
+}
+
 bool UnorderedAccessTexture::InitializeArray(UINT nArraySize, UINT nWidth, UINT nHeight, DXGI_FORMAT dxgiSRVUAVFormat)
 {
 	D3D12_RESOURCE_DESC d3dResourceDesc{};
@@ -778,6 +813,56 @@ void UnorderedAccessTexture::ShowDebugInfo() const
 			ImGui::Text("Texture2DArray.PlaneSlice : %d", m_d3dUAVDesc.Texture2DArray.PlaneSlice);
 			ImGui::Text("Texture2DArray.ArraySize : %d", m_d3dUAVDesc.Texture2DArray.ArraySize);
 			ImGui::Text("Texture2DArray.FirstArraySlice : %d", m_d3dUAVDesc.Texture2DArray.FirstArraySlice);
+		}
+		ImGui::Unindent(20.f);
+	}
+
+	ImGui::Unindent(20.f);
+}
+
+void RWRenderTargetTexture::ShowDebugInfo() const
+{
+	Texture::ShowDebugInfo();
+
+	ImGui::Indent(20.f);
+	ImGui::Text("Runtime UAVID: %d", m_un64RuntimeUAVID);
+
+	ImGui::SeparatorText("UAVDesc");
+	{
+		ImGui::Text("DXGI format : %s", ::DXGIFormatToString(m_d3dUAVDesc.Format).c_str());
+		ImGui::Text("ViewDimension : %s", ::UAVViewDimensionsToString(m_d3dUAVDesc.ViewDimension).c_str());
+
+		ImGui::Indent(20.f);
+		if (m_d3dUAVDesc.ViewDimension == D3D12_RTV_DIMENSION_TEXTURE2D) {
+			ImGui::Text("Texture2D.MipSlice : %d", m_d3dUAVDesc.Texture2D.MipSlice);
+			ImGui::Text("Texture2D.PlaneSlice : %d", m_d3dUAVDesc.Texture2D.PlaneSlice);
+		}
+		else if (m_d3dUAVDesc.ViewDimension == D3D12_RTV_DIMENSION_TEXTURE2DARRAY) {
+			ImGui::Text("Texture2DArray.MipSlice : %d", m_d3dUAVDesc.Texture2DArray.MipSlice);
+			ImGui::Text("Texture2DArray.PlaneSlice : %d", m_d3dUAVDesc.Texture2DArray.PlaneSlice);
+			ImGui::Text("Texture2DArray.ArraySize : %d", m_d3dUAVDesc.Texture2DArray.ArraySize);
+			ImGui::Text("Texture2DArray.FirstArraySlice : %d", m_d3dUAVDesc.Texture2DArray.FirstArraySlice);
+		}
+		ImGui::Unindent(20.f);
+	}
+
+	ImGui::Text("Runtime RTVID: %d", m_un64RuntimeRTVID);
+
+	ImGui::SeparatorText("RTVDesc");
+	{
+		ImGui::Text("DXGI format : %s", ::DXGIFormatToString(m_d3dRTVDesc.Format).c_str());
+		ImGui::Text("ViewDimension : %s", ::RTVViewDimensionsToString(m_d3dRTVDesc.ViewDimension).c_str());
+
+		ImGui::Indent(20.f);
+		if (m_d3dRTVDesc.ViewDimension == D3D12_RTV_DIMENSION_TEXTURE2D) {
+			ImGui::Text("Texture2D.MipSlice : %d", m_d3dRTVDesc.Texture2D.MipSlice);
+			ImGui::Text("Texture2D.PlaneSlice : %d", m_d3dRTVDesc.Texture2D.PlaneSlice);
+		}
+		else if (m_d3dRTVDesc.ViewDimension == D3D12_RTV_DIMENSION_TEXTURE2DARRAY) {
+			ImGui::Text("Texture2DArray.MipSlice : %d", m_d3dRTVDesc.Texture2DArray.MipSlice);
+			ImGui::Text("Texture2DArray.PlaneSlice : %d", m_d3dRTVDesc.Texture2DArray.PlaneSlice);
+			ImGui::Text("Texture2DArray.ArraySize : %d", m_d3dRTVDesc.Texture2DArray.ArraySize);
+			ImGui::Text("Texture2DArray.FirstArraySlice : %d", m_d3dRTVDesc.Texture2DArray.FirstArraySlice);
 		}
 		ImGui::Unindent(20.f);
 	}

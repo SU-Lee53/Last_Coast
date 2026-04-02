@@ -423,6 +423,8 @@
     <ClInclude Include="Zombie.h">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClInclude>
+    <ClInclude Include="..\Dependencies\Includes\ImGui\imgui_stdlib.h" />
+    <ClInclude Include="DefferedFogPass.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -713,6 +715,8 @@
     <ClCompile Include="ZombieAnimationController.cpp">
       <Filter>02.Game\Animation</Filter>
     </ClCompile>
+    <ClCompile Include="..\Dependencies\Includes\ImGui\imgui_stdlib.cpp" />
+    <ClCompile Include="DefferedFogPass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
@@ -753,9 +757,6 @@
     <FxCompile Include="..\HLSL\Shaders.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
-    <FxCompile Include="..\HLSL\SkyboxShader.hlsl">
-      <Filter>03.Engine\HLSL\Graphics</Filter>
-    </FxCompile>
     <FxCompile Include="..\HLSL\Sprite.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
@@ -772,6 +773,13 @@
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\ShadowMapShader.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\HDRPostProcessing.hlsl" />
+    <FxCompile Include="..\HLSL\LUTBaking.hlsl">
+      <Filter>03.Engine\HLSL\Compute</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\ToneMappingCommon.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
   </ItemGroup>
