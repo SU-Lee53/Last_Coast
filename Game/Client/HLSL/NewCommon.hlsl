@@ -220,7 +220,7 @@ Texture2D gtxtHDRResult : register(t13, space0);
 
 // Tone mapping LUT
 Texture3D gtxtToneMapLUT : register(t14, space0);
-Texture3D gtxtLookTransformLUT : register(t15, space0);
+Texture3D gtxtGradingLUT : register(t15, space0);
 
 // ============ Samplers ============
 SamplerState gSkyboxSamplerState : register(s0, space0);

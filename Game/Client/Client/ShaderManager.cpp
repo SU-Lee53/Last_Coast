@@ -229,7 +229,7 @@ void ShaderManager::CompileShaders()
 	Compile("HDRIToCubeMapCS", L"HDRIToCubeMap.hlsl", L"CSHDRIToCubeMap", SHADER_TYPE::CS);
 
 	Compile("ToneMapLUTCS", L"LUTBaking.hlsl", L"CSToneMapLUT", SHADER_TYPE::CS);
-	Compile("LookLUTCS", L"LUTBaking.hlsl", L"CSLookLUT", SHADER_TYPE::CS);
+	Compile("GradingLUTCS", L"LUTBaking.hlsl", L"CSGradingLUT", SHADER_TYPE::CS);
 
 
 

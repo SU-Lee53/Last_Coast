@@ -11,8 +11,8 @@ void ToneMappingPass::Initialize()
 	std::string strName = "ToneLUT";
 	m_ToneMapLUT = TEXTURE->LoadUnorderedAccessTexture(strName, 1, g_unLUTSize, g_unLUTSize, g_unLUTSize, DXGI_FORMAT_R16G16B16A16_FLOAT);
 
-	strName = "LookLUT";
-	m_LookLUT = TEXTURE->LoadUnorderedAccessTexture(strName, 1, g_unLUTSize, g_unLUTSize, g_unLUTSize, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	strName = "GradingLUT";
+	m_GradingLUT = TEXTURE->LoadUnorderedAccessTexture(strName, 1, g_unLUTSize, g_unLUTSize, g_unLUTSize, DXGI_FORMAT_R16G16B16A16_FLOAT);
 }
 
 void ToneMappingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
@@ -57,18 +57,19 @@ void ToneMappingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 		pUAV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
 		m_bToneMapLUTDirtyFlags[nCurMode] = false;
+		m_fLastToneLUTUpdated = TIME->GetTotalTime();
 	}
 
-	if (true == m_bLookLUTDirtyFlag) {
+	if (true == m_bGradingLUTDirtyFlag) {
 		// Resource barrier first
-		const auto pUAV = static_pointer_cast<UnorderedAccessTexture>(m_LookLUT.GetResource());
+		const auto pUAV = static_pointer_cast<UnorderedAccessTexture>(m_GradingLUT.GetResource());
 		pUAV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 		pd3dCommandList->SetPipelineState(m_pd3dLUTBakingPipelineState[1].Get());
 		pd3dCommandList->SetComputeRootSignature(m_pd3dLUTRootSignature.Get());
 
 		//cbuffer cbToneMappingData : register(b1, space0)
-		CB_TONE_MAPPING_LUT_DATA data = MakeLUTCBData(DIRTY_UPDATE::LOOK);
+		CB_TONE_MAPPING_LUT_DATA data = MakeLUTCBData(DIRTY_UPDATE::GRADING);
 		auto cBuffer = RENDER->AllocCBuffer<CB_TONE_MAPPING_LUT_DATA>();
 		cBuffer.WriteData(&data);
 		pd3dCommandList->SetComputeRootConstantBufferView(0, cBuffer.GPUAddress);
@@ -85,7 +86,8 @@ void ToneMappingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 
 		pUAV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
-		m_bLookLUTDirtyFlag = false;
+		m_bGradingLUTDirtyFlag = false;
+		m_fLastLookLUTUpdated = TIME->GetTotalTime();
 	}
 	
 	// Set PS data
@@ -97,12 +99,12 @@ void ToneMappingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 	cBuffer.WriteData(&data);
 
 	const auto pToneLUTSRV = m_ToneMapLUT.GetResource();
-	const auto pLookLUTSRV = m_LookLUT.GetResource();
+	const auto pGradingLUTSRV = m_GradingLUT.GetResource();
 
 	auto bindHandle = outDescHandle.cpuHandle;
 	DEVICE->CopyDescriptorsSimple(1, bindHandle, cBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, nDescriptorInc), pToneLUTSRV->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, nDescriptorInc), pLookLUTSRV->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, nDescriptorInc), pGradingLUTSRV->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamToneMapping, outDescHandle.gpuHandle);
 	outDescHandle.cpuHandle.Offset(3, nDescriptorInc);
@@ -183,7 +185,7 @@ void ToneMappingPass::CreatePipelineState()
 	hr = DEVICE->CreateComputePipelineState(&d3dComputePipelineDesc, IID_PPV_ARGS(m_pd3dLUTBakingPipelineState[0].GetAddressOf()));
 
 	{
-		d3dComputePipelineDesc.CS = SHADER->GetShaderByteCode("LookLUTCS");
+		d3dComputePipelineDesc.CS = SHADER->GetShaderByteCode("GradingLUTCS");
 	}
 	
 	hr = DEVICE->CreateComputePipelineState(&d3dComputePipelineDesc, IID_PPV_ARGS(m_pd3dLUTBakingPipelineState[1].GetAddressOf()));
@@ -242,32 +244,35 @@ void ToneMappingPass::CreateRootSignature()
 CB_TONE_MAPPING_LUT_DATA ToneMappingPass::MakeLUTCBData(DIRTY_UPDATE eDirty) const
 {
 	CB_TONE_MAPPING_LUT_DATA data{};
-	data.gToneMappingCommon0.x = (float)m_eMode;
 	switch (eDirty)
 	{
 	case ToneMappingPass::DIRTY_UPDATE::AGX:
 	{
+		data.gToneMappingCommon0.x = (float)m_eMode;
 		::memcpy(&data.gToneMappingCommon0.y, &m_Parameters.AgX, sizeof(AgXParameters));
 		break;
 	}
 	case ToneMappingPass::DIRTY_UPDATE::ACES:
 	{
+		data.gToneMappingCommon0.x = (float)m_eMode;
 		::memcpy(&data.gToneMappingCommon0.y, &m_Parameters.ACES, sizeof(ACESParameters));
 		break;
 	}
 	case ToneMappingPass::DIRTY_UPDATE::UC2:
 	{
+		data.gToneMappingCommon0.x = (float)m_eMode;
 		::memcpy(&data.gToneMappingCommon0.y, &m_Parameters.UC2, sizeof(UC2Parameters));
 		break;
 	}
 	case ToneMappingPass::DIRTY_UPDATE::GT:
 	{
+		data.gToneMappingCommon0.x = (float)m_eMode;
 		::memcpy(&data.gToneMappingCommon0.y, &m_Parameters.GT, sizeof(GTParameters));
 		break;
 	}
-	case ToneMappingPass::DIRTY_UPDATE::LOOK:
+	case ToneMappingPass::DIRTY_UPDATE::GRADING:
 	{
-		::memcpy(&data.gToneMappingCommon0.y, &m_Parameters.Look, sizeof(LookParameters));
+		::memcpy(&data, &m_Parameters.Grading, sizeof(GradingParameters));
 		break;
 	}
 	default:
@@ -324,7 +329,7 @@ void ToneMappingPass::SetDefaultParameters(TONE_MAPPING_MODE eModeBefore, TONE_M
 		break;
 	}
 
-	m_Parameters.Look = ToneMappingParameter::g_DefaultLookParameters;
+	m_Parameters.Grading = ToneMappingParameter::g_DefaultGradingParameters;
 
 }
 
@@ -344,6 +349,7 @@ void ToneMappingPass::ShowDebugInfo()
 
 	if (ImGui::Button("Reset Parameters")) {
 		SetDefaultParameters(TONE_MAPPING_MODE::UNDEFINED, m_eMode);
+		m_bToneMapLUTDirtyFlags[unMode] |= true;
 	}
 
 	ImGui::InputText("Save/Load name", &m_strSaveName);
@@ -358,13 +364,16 @@ void ToneMappingPass::ShowDebugInfo()
 	}
 
 	if (ImGui::Button(std::format("Save Look Parameters", g_cstrModeName[unMode]).c_str())) {
-		SaveLook();
+		SaveGrading();
 	}
 
 	ImGui::SameLine();
 	if (ImGui::Button(std::format("Load Look Parameters", g_cstrModeName[unMode]).c_str())) {
-		LoadLook();
+		LoadGrading();
 	}
+
+	ImGui::Text("Last ToneMap LUT Updated : %f", m_fLastToneLUTUpdated);
+	ImGui::Text("Last Look LUT Updated : %f", m_fLastLookLUTUpdated);
 
 	int cnt{};
 
@@ -380,6 +389,8 @@ void ToneMappingPass::ShowDebugInfo()
 
 	bool bToneLUTDirty = false;
 
+	ImGui::SeparatorText("Tone mapper core parameters");
+
 	switch (m_eMode)
 	{
 	case TONE_MAPPING_MODE::AGX:
@@ -387,8 +398,8 @@ void ToneMappingPass::ShowDebugInfo()
 		bToneLUTDirty |= ShowDragFloat(cnt++, "fAgXWhite", reinterpret_cast<float*>(&m_Parameters.AgX.fAgXWhite),		0.001f, 0.8f, 1.2f, true, 0.9f, 1.05f, 1.0f);
 		bToneLUTDirty |= ShowDragFloat(cnt++, "fAgXBlack", reinterpret_cast<float*>(&m_Parameters.AgX.fAgXBlack),		0.001f, 0.0f, 0.15f, true, 0.0f, 0.05f, 0.f);
 		bToneLUTDirty |= ShowDragFloat(cnt++, "fAgXContrast", reinterpret_cast<float*>(&m_Parameters.AgX.fAgXContrast),	0.0001f, 0.6f, 1.4f, true, 0.85f, 1.15f, 1.0f);
-		bToneLUTDirty |= ShowDragFloat(cnt++, "fAgXMinEV", reinterpret_cast<float*>(&m_Parameters.AgX.fAgXMinEV),		0.000001f, -16.0f, -8.0f, true, -13.5f, -10.f, -12.47393f, "%.8f");
-		bToneLUTDirty |= ShowDragFloat(cnt++, "fAgXMaxEV", reinterpret_cast<float*>(&m_Parameters.AgX.fAgXMaxEV),		0.000001f, 2.0f, 8.0f, true, 3.f, 5.f, 4.026069f, "%.8f");
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fAgXMinEV", reinterpret_cast<float*>(&m_Parameters.AgX.fAgXMinEV),		0.001f, -16.0f, -8.0f, true, -13.5f, -10.f, -12.47393f, "%.8f");
+		bToneLUTDirty |= ShowDragFloat(cnt++, "fAgXMaxEV", reinterpret_cast<float*>(&m_Parameters.AgX.fAgXMaxEV),		0.001f, 2.0f, 8.0f, true, 3.f, 5.f, 4.026069f, "%.8f");
 
 		if (m_Parameters.AgX.fAgXMaxEV < m_Parameters.AgX.fAgXMinEV) {
 			m_Parameters.AgX.fAgXMaxEV = std::max(m_Parameters.AgX.fAgXMaxEV, m_Parameters.AgX.fAgXMinEV + 1.0f);
@@ -449,42 +460,38 @@ void ToneMappingPass::ShowDebugInfo()
 	auto nMode = std::to_underlying(m_eMode);
 	m_bToneMapLUTDirtyFlags[nMode] |= bToneLUTDirty;
 
-	bool bLookLUTDirty = false;
+	bool bGradingLUTDirty = false;
 
-	ImGui::SeparatorText("LookParameters");
+	ImGui::SeparatorText("White Balance");
+	bGradingLUTDirty |= ShowDragFloat(cnt++, "fTemperature", reinterpret_cast<float*>(&m_Parameters.Grading.fTemperature), 0.01f, -1.0f, 1.0f, true, -0.3f, 0.3f, 0.0f);
+	bGradingLUTDirty |= ShowDragFloat(cnt++, "fTint", reinterpret_cast<float*>(&m_Parameters.Grading.fTint), 0.01f, -1.0f, 1.0f, true, -0.25f, 0.25f, 0.0f);
 
-	ImGui::SeparatorText("Color modify");
-	bLookLUTDirty |= ShowDragFloat3(cnt++, "v3Slope", reinterpret_cast<float*>(&m_Parameters.Look.v3Slope), 0.001f, 0.5f, 1.5f, true, 0.9f, 1.1f, 1.0f);
-	bLookLUTDirty |= ShowDragFloat3(cnt++, "v3Offset", reinterpret_cast<float*>(&m_Parameters.Look.v3Offset), 0.001f, -0.25f, 0.25f, true, -0.05f, 0.05f, 0.0f);
-	bLookLUTDirty |= ShowDragFloat3(cnt++, "v3Power", reinterpret_cast<float*>(&m_Parameters.Look.v3Power), 0.001f, 0.5f, 1.5f, true, 0.9f, 1.12f, 1.0f);
+	ImGui::SeparatorText("Primary Grading");
+	bGradingLUTDirty |= ShowDragFloat3(cnt++, "v3Slope", reinterpret_cast<float*>(&m_Parameters.Grading.v3Slope), 0.01f, 0.0f, 2.0f, true, 0.8f, 1.2f, 1.0f);
+	bGradingLUTDirty |= ShowDragFloat3(cnt++, "v3Offset", reinterpret_cast<float*>(&m_Parameters.Grading.v3Offset), 0.01f, -1.0f, 1.0f, true, -0.1f, 0.1f, 0.0f);
+	bGradingLUTDirty |= ShowDragFloat3(cnt++, "v3Power", reinterpret_cast<float*>(&m_Parameters.Grading.v3Power), 0.01f, 0.1f, 4.0f, true, 0.8f, 1.2f, 1.0f);
 
-	ImGui::SeparatorText("Sectional hues");
-	bLookLUTDirty |= ShowDragFloat3(cnt++, "v3ShadowTint", reinterpret_cast<float*>(&m_Parameters.Look.v3ShadowTint), 0.001f, 0.f, 1.5f, true, 0.85f, 1.10f, 1.0f);
-	bLookLUTDirty |= ShowDragFloat(cnt++, "fShadowTintStrength", reinterpret_cast<float*>(&m_Parameters.Look.fShadowTintStrength), 0.001f, 0.0f, 1.0f, true, 0.0f, 0.35f, 0.1f);
-	bLookLUTDirty |= ShowDragFloat(cnt++, "fShadowStartLuma", reinterpret_cast<float*>(&m_Parameters.Look.fShadowStartLuma), 0.001f, 0.0f, 0.4f, true, 0.f, 0.f, 0.1f);
-	bLookLUTDirty |= ShowDragFloat(cnt++, "fShadowEndLuma", reinterpret_cast<float*>(&m_Parameters.Look.fShadowEndLuma), 0.001f, 0.1f, 0.8f, true, 0.f, 0.f, 0.55f);
+	ImGui::SeparatorText("Global Grading");
+	bGradingLUTDirty |= ShowDragFloat(cnt++, "fContrast", reinterpret_cast<float*>(&m_Parameters.Grading.fContrast), 0.01f, 0.0f, 2.0f, true, 0.8f, 1.2f, 1.0f);
+	bGradingLUTDirty |= ShowDragFloat(cnt++, "fContrastPivot", reinterpret_cast<float*>(&m_Parameters.Grading.fContrastPivot), 0.01f, 0.0f, 1.0f, true, 0.35f, 0.65f, 0.5f);
+	bGradingLUTDirty |= ShowDragFloat(cnt++, "fSaturation", reinterpret_cast<float*>(&m_Parameters.Grading.fSaturation), 0.01f, 0.0f, 2.0f, true, 0.7f, 1.3f, 1.0f);
+	bGradingLUTDirty |= ShowDragFloat(cnt++, "fDensity", reinterpret_cast<float*>(&m_Parameters.Grading.fDensity), 0.01f, -2.0f, 2.0f, true, -0.5f, 0.5f, 0.0f);
 
-	m_Parameters.Look.fShadowEndLuma = std::max(m_Parameters.Look.fShadowStartLuma + 0.01f, m_Parameters.Look.fShadowEndLuma);
+	ImGui::SeparatorText("Tonal Grading");
+	bGradingLUTDirty |= ShowDragFloat3(cnt++, "v3ShadowTint", reinterpret_cast<float*>(&m_Parameters.Grading.v3ShadowTint), 0.01f, 0.0f, 2.0f, true, 0.7f, 1.3f, 1.0f);
+	bGradingLUTDirty |= ShowDragFloat(cnt++, "fShadowWeight", reinterpret_cast<float*>(&m_Parameters.Grading.fShadowWeight), 0.01f, 0.0f, 2.0f, true, 0.0f, 1.0f, 0.0f);
+	bGradingLUTDirty |= ShowDragFloat3(cnt++, "v3MidtoneTint", reinterpret_cast<float*>(&m_Parameters.Grading.v3MidtoneTint), 0.01f, 0.0f, 2.0f, true, 0.8f, 1.2f, 1.0f);
+	bGradingLUTDirty |= ShowDragFloat(cnt++, "fMidtoneWeight", reinterpret_cast<float*>(&m_Parameters.Grading.fMidtoneWeight), 0.01f, 0.0f, 2.0f, true, 0.0f, 0.8f, 0.0f);
+	bGradingLUTDirty |= ShowDragFloat3(cnt++, "v3HighlightTint", reinterpret_cast<float*>(&m_Parameters.Grading.v3HighlightTint), 0.01f, 0.0f, 2.0f, true, 0.7f, 1.3f, 1.0f);
+	bGradingLUTDirty |= ShowDragFloat(cnt++, "fHighlightWeight", reinterpret_cast<float*>(&m_Parameters.Grading.fHighlightWeight), 0.01f, 0.0f, 2.0f, true, 0.0f, 1.0f, 0.0f);
 
-	bLookLUTDirty |= ShowDragFloat3(cnt++, "v3HighlightTint", reinterpret_cast<float*>(&m_Parameters.Look.v3HighlightTint), 0.001f, 0.0f, 1.5f, true, 0.9f, 1.1f, 1.0f);
-	bLookLUTDirty |= ShowDragFloat(cnt++, "fHighlightTintStrength", reinterpret_cast<float*>(&m_Parameters.Look.fHighlightTintStrength), 0.01f, 0.0f, 1.0f, true, 0.0f, 0.35f, 0.2f);
-	bLookLUTDirty |= ShowDragFloat(cnt++, "fHighlightStartLuma", reinterpret_cast<float*>(&m_Parameters.Look.fHighlightStartLuma), 0.001f, 0.2f, 0.8f, true, 0.f, 0.f, 0.45f);
-	bLookLUTDirty |= ShowDragFloat(cnt++, "fHighlightEndLuma", reinterpret_cast<float*>(&m_Parameters.Look.fHighlightEndLuma), 0.001f, 0.4f, 1.0f, true, 0.f, 0.f, 0.85f);
-
-	m_Parameters.Look.fHighlightEndLuma = std::max(m_Parameters.Look.fHighlightStartLuma + 0.01f, m_Parameters.Look.fHighlightEndLuma);
-
-	ImGui::SeparatorText("Tone Structure");
-	bLookLUTDirty |= ShowDragFloat(cnt++, "fContrastPivot", reinterpret_cast<float*>(&m_Parameters.Look.fContrastPivot), 0.001f, 0.0f, 1.0f, true, 0.18f, 0.5f, 0.4f);
-	bLookLUTDirty |= ShowDragFloat(cnt++, "fContrastStrength", reinterpret_cast<float*>(&m_Parameters.Look.fContrastStrength), 0.001f, 0.5f, 1.5f, true, 0.85f, 1.2f, 1.0f);
-	bLookLUTDirty |= ShowDragFloat(cnt++, "fBlackLift", reinterpret_cast<float*>(&m_Parameters.Look.fBlackLift), 0.001f, 0.0f, 0.2, true, 0.f, 0.06f, 0.02f);
-	bLookLUTDirty |= ShowDragFloat(cnt++, "fDensity", reinterpret_cast<float*>(&m_Parameters.Look.fDensity), 0.01f, 0.0f, 1.5f, true, 0.0f, 0.35f, 0.1f);
-
-
-	ImGui::SeparatorText("Tone Structure");
-	bLookLUTDirty |= ShowDragFloat(cnt++, "fLookSaturation", reinterpret_cast<float*>(&m_Parameters.Look.fLookSaturation), 0.01f, 0.0f, 2.0f, true, 0.8f, 1.2f, 1.0f);
+	ImGui::SeparatorText("Creative final output");
+	bGradingLUTDirty |= ShowDragFloat3(cnt++, "v3ColorFilter", reinterpret_cast<float*>(&m_Parameters.Grading.v3ColorFilter), 0.01f, 0.0f, 2.0f, true, 0.8f, 1.2f, 1.0f);
+	bGradingLUTDirty |= ShowDragFloat(cnt++, "fColorFilterStrength", reinterpret_cast<float*>(&m_Parameters.Grading.fColorFilterStrength), 0.01f, 0.0f, 2.0f, true, 0.0f, 1.0f, 0.0f);
+	bGradingLUTDirty |= ShowDragFloat(cnt++, "fBlackLift", reinterpret_cast<float*>(&m_Parameters.Grading.fBlackLift), 0.01f, -1.0f, 1.0f, true, 0.0f, 0.15f, 0.0f);
 
 	// Set dirty flag if parameter changed
-	m_bLookLUTDirtyFlag |= bToneLUTDirty;
+	m_bGradingLUTDirtyFlag |= bGradingLUTDirty;
 }
 
 void ToneMappingPass::SaveParametersToJson() const
@@ -517,34 +524,36 @@ void ToneMappingPass::SaveParametersToJson() const
 	}
 }
 
-void ToneMappingPass::SaveLook() const
+void ToneMappingPass::SaveGrading() const
 {
 	using namespace nlohmann;
 	namespace fs = std::filesystem;
 
 	json j;
-	// LookParameters
-	j["fContrastPivot"] = m_Parameters.Look.fContrastPivot;
-	j["fContrastStrength"] = m_Parameters.Look.fContrastStrength;
-	j["fBlackLift"] = m_Parameters.Look.fBlackLift;
-	j["fShadowTintStrength"] = m_Parameters.Look.fShadowTintStrength;
-	j["fHighlightTintStrength"] = m_Parameters.Look.fHighlightTintStrength;
-	j["fDensity"] = m_Parameters.Look.fDensity;
-	j["fLookSaturation"] = m_Parameters.Look.fLookSaturation;
 
-	j["fShadowStartLuma"] = m_Parameters.Look.fShadowStartLuma;
-	j["fShadowEndLuma"] = m_Parameters.Look.fShadowEndLuma;
+	// GradingParameters
+	j["fTemperature"] = m_Parameters.Grading.fTemperature;
+	j["fTint"] = m_Parameters.Grading.fTint;
+	j["fColorFilterStrength"] = m_Parameters.Grading.fColorFilterStrength;
+	j["fContrast"] = m_Parameters.Grading.fContrast;
+	j["fContrastPivot"] = m_Parameters.Grading.fContrastPivot;
+	j["fSaturation"] = m_Parameters.Grading.fSaturation;
+	j["fDensity"] = m_Parameters.Grading.fDensity;
+	j["fShadowWeight"] = m_Parameters.Grading.fShadowWeight;
+	j["fMidtoneWeight"] = m_Parameters.Grading.fMidtoneWeight;
+	j["fHighlightWeight"] = m_Parameters.Grading.fHighlightWeight;
+	j["fBlackLift"] = m_Parameters.Grading.fBlackLift;
 
-	j["fHighlightStartLuma"] = m_Parameters.Look.fHighlightStartLuma;
-	j["fHighlightEndLuma"] = m_Parameters.Look.fHighlightEndLuma;
 
-	j["v3Slope"] = { m_Parameters.Look.v3Slope.x, m_Parameters.Look.v3Slope.y, m_Parameters.Look.v3Slope.z };
-	j["v3Offset"] = { m_Parameters.Look.v3Offset.x, m_Parameters.Look.v3Offset.y, m_Parameters.Look.v3Offset.z };
-	j["v3Power"] = { m_Parameters.Look.v3Power.x, m_Parameters.Look.v3Power.y, m_Parameters.Look.v3Power.z };
-	j["v3ShadowTint"] = { m_Parameters.Look.v3ShadowTint.x, m_Parameters.Look.v3ShadowTint.y, m_Parameters.Look.v3ShadowTint.z };
-	j["v3HighlightTint"] = { m_Parameters.Look.v3HighlightTint.x, m_Parameters.Look.v3HighlightTint.y, m_Parameters.Look.v3HighlightTint.z };
+	j["v3Slope"] = { m_Parameters.Grading.v3Slope.x, m_Parameters.Grading.v3Slope.y, m_Parameters.Grading.v3Slope.z };
+	j["v3Offset"] = { m_Parameters.Grading.v3Offset.x, m_Parameters.Grading.v3Offset.y, m_Parameters.Grading.v3Offset.z };
+	j["v3Power"] = { m_Parameters.Grading.v3Power.x, m_Parameters.Grading.v3Power.y, m_Parameters.Grading.v3Power.z };
+	j["v3ShadowTint"] = { m_Parameters.Grading.v3ShadowTint.x, m_Parameters.Grading.v3ShadowTint.y, m_Parameters.Grading.v3ShadowTint.z };
+	j["v3MidtoneTint"] = { m_Parameters.Grading.v3MidtoneTint.x, m_Parameters.Grading.v3MidtoneTint.y, m_Parameters.Grading.v3MidtoneTint.z };
+	j["v3HighlightTint"] = { m_Parameters.Grading.v3HighlightTint.x, m_Parameters.Grading.v3HighlightTint.y, m_Parameters.Grading.v3HighlightTint.z };
+	j["v3ColorFilter"] = { m_Parameters.Grading.v3ColorFilter.x, m_Parameters.Grading.v3ColorFilter.y, m_Parameters.Grading.v3ColorFilter.z };
 
-	std::string strSavePath = std::format("{}/Look_{}.bin", g_strSavePath, m_strSaveName);
+	std::string strSavePath = std::format("{}/Grading_{}.bin", g_strSavePath, m_strSaveName);
 	if (!fs::exists(strSavePath)) {
 		fs::path p = strSavePath;
 		fs::create_directories(p.parent_path());
@@ -729,7 +738,7 @@ void ToneMappingPass::LoadParametersFromJson()
 	}
 }
 
-void ToneMappingPass::LoadLook()
+void ToneMappingPass::LoadGrading()
 {
 	std::string strParametersPath = std::format("{}/Look_{}.bin", g_strSavePath, m_strSaveName);
 	std::ifstream inFile{ strParametersPath, std::ios::binary };
@@ -740,34 +749,40 @@ void ToneMappingPass::LoadLook()
 	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
 	nlohmann::json inJson = nlohmann::json::from_bson(bson);;
 
-	m_Parameters.Look.fContrastPivot = inJson["fContrastPivot"].get<float>();
-	m_Parameters.Look.fContrastStrength = inJson["fContrastStrength"].get<float>();
-	m_Parameters.Look.fBlackLift = inJson["fBlackLift"].get<float>();
-	m_Parameters.Look.fShadowTintStrength = inJson["fShadowTintStrength"].get<float>();
-	m_Parameters.Look.fHighlightTintStrength = inJson["fHighlightTintStrength"].get<float>();
-	m_Parameters.Look.fDensity = inJson["fDensity"].get<float>();
-	m_Parameters.Look.fLookSaturation = inJson["fLookSaturation"].get<float>();
-
-	m_Parameters.Look.fShadowStartLuma = inJson["fShadowStartLuma"].get<float>();
-	m_Parameters.Look.fShadowEndLuma = inJson["fShadowEndLuma"].get<float>();
-	m_Parameters.Look.fHighlightStartLuma = inJson["fHighlightStartLuma"].get<float>();
-	m_Parameters.Look.fHighlightEndLuma = inJson["fHighlightEndLuma"].get<float>();
+	m_Parameters.Grading.fTemperature  = inJson["fTemperature"].get<float>();
+	m_Parameters.Grading.fTint  = inJson["fTint"].get<float>();
+	m_Parameters.Grading.fColorFilterStrength  = inJson["fColorFilterStrength"].get<float>();
+	m_Parameters.Grading.fContrast  = inJson["fContrast"].get<float>();
+	m_Parameters.Grading.fContrastPivot  = inJson["fContrastPivot"].get<float>();
+	m_Parameters.Grading.fSaturation  = inJson["fSaturation"].get<float>();
+	m_Parameters.Grading.fDensity  = inJson["fDensity"].get<float>();
+	m_Parameters.Grading.fShadowWeight  = inJson["fShadowWeight"].get<float>();
+	m_Parameters.Grading.fMidtoneWeight  = inJson["fMidtoneWeight"].get<float>();
+	m_Parameters.Grading.fHighlightWeight  = inJson["fHighlightWeight"].get<float>();
+	m_Parameters.Grading.fBlackLift  = inJson["fBlackLift"].get<float>();
 
 	std::vector<float> f;
+
 	f = inJson["v3Slope"].get<std::vector<float>>();
-	m_Parameters.Look.v3Slope = Vector3(f.data());
+	m_Parameters.Grading.v3Slope = Vector3(f.data());
 
 	f = inJson["v3Offset"].get<std::vector<float>>();
-	m_Parameters.Look.v3Offset = Vector3(f.data());
+	m_Parameters.Grading.v3Offset = Vector3(f.data());
 
 	f = inJson["v3Power"].get<std::vector<float>>();
-	m_Parameters.Look.v3Power = Vector3(f.data());
+	m_Parameters.Grading.v3Power = Vector3(f.data());
 
 	f = inJson["v3ShadowTint"].get<std::vector<float>>();
-	m_Parameters.Look.v3ShadowTint = Vector3(f.data());
+	m_Parameters.Grading.v3ShadowTint = Vector3(f.data());
+
+	f = inJson["v3MidtoneTint"].get<std::vector<float>>();
+	m_Parameters.Grading.v3MidtoneTint = Vector3(f.data());
 
 	f = inJson["v3HighlightTint"].get<std::vector<float>>();
-	m_Parameters.Look.v3HighlightTint = Vector3(f.data());
+	m_Parameters.Grading.v3HighlightTint = Vector3(f.data());
+
+	f = inJson["v3ColorFilter"].get<std::vector<float>>();
+	m_Parameters.Grading.v3ColorFilter = Vector3(f.data());
 }
 
 void ToneMappingPass::LoadAgX()

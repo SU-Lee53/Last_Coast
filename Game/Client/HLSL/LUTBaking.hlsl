@@ -17,6 +17,7 @@ cbuffer cbToneMappingData : register(b0, space0)
 	float4 gToneMappingCommon4;
 	float4 gToneMappingCommon5;
 	float4 gToneMappingCommon6;
+	float4 gToneMappingCommon7;
 };
 
 RWTexture3D<float4> gtxtLUTToBuild : register(u0, space0);
@@ -63,32 +64,6 @@ struct ACESParameters
 	float fACESPostSaturation;
 	float fACESHighlightDesaturation;
 	float fACESCoreOutputScale;
-};
-
-struct LookParameters
-{
-	float3 v3Slope;
-	float fContrastPivot;
-	
-	float3 v3Offset;
-	float fContrastStrength;
-	
-	float3 v3Power;
-	float fBlackLift;
-	
-	float3 v3ShadowTint;
-	float fShadowTintStrength;
-	
-	float3 v3HighlightTint;
-	float fHighlightTintStrength;
-	
-	float fDensity;
-	float fLookSaturation;
-	float fShadowStartLuma;
-	float fShadowEndLuma;
-	
-	float fHighlightStartLuma;
-	float fHighlightEndLuma;
 };
 
 float GetLuminance(float3 color)
@@ -170,143 +145,6 @@ ACESParameters ExtractACESParameters()
 	params.fACESCoreOutputScale = gToneMappingCommon1.y;
 	
 	return params;
-}
-
-LookParameters ExtractLookParameters()
-{
-	LookParameters params;
-	
-	params.v3Slope = gToneMappingCommon0.yzw;
-	
-	params.fContrastPivot = gToneMappingCommon1.x;
-	params.v3Offset = gToneMappingCommon1.yzw;
-	
-	params.fContrastStrength = gToneMappingCommon2.x;
-	params.v3Power = gToneMappingCommon2.yzw;
-	
-	params.fBlackLift = gToneMappingCommon3.x;
-	params.v3ShadowTint = gToneMappingCommon3.yzw;
-	
-	params.fShadowTintStrength = gToneMappingCommon4.x;
-	params.v3HighlightTint = gToneMappingCommon4.yzw;
-	
-	params.fHighlightTintStrength = gToneMappingCommon5.x;
-	params.fDensity = gToneMappingCommon5.y;
-	params.fLookSaturation = gToneMappingCommon5.z;
-	params.fShadowStartLuma = gToneMappingCommon5.w;
-	
-	params.fShadowEndLuma = gToneMappingCommon6.x;
-	params.fHighlightStartLuma = gToneMappingCommon6.y;
-	params.fHighlightEndLuma = gToneMappingCommon6.z;
-
-	return params;
-}
-
-/////////////////////////////////////////////////////////////////////////////////
-// Look Transform
-
-float3 ApplySlopeOffsetPower(float3 color, float3 slope, float3 offset, float3 power)
-{
-	color = color * slope + offset;
-	color = max(color, 0.0f);
-	color = pow(color, max(power, 1e-4f.xxx));
-	return color;
-}
-
-float3 ApplyPivotContrast(float3 color, float fPivot, float fContrastStrength)
-{
-	return (color - fPivot) * fContrastStrength + fPivot;
-}
-
-float3 ApplyBlackLift(float3 color, float blackLift)
-{
-	float fLuma = GetLuminance(color);
-	float fShadowMask = 1.0f - smoothstep(0.0f, 0.25f, fLuma);
-	
-	float fLiftedLuma = fLuma + blackLift * fShadowMask;
-	float fScale = fLiftedLuma / max(fLuma, 1e-4f);
-	
-	fScale = min(fScale, 8.0f);
-	
-	return color * fScale;
-}
-
-float3 ApplyDensity(float3 color, float fDensity)
-{
-	float fLuma = GetLuminance(color);
-
-	// Affects more when darker
-	float weight = 1.0f - saturate(fLuma);
-
-	// More shadow/midtone when density is greater
-	float factor = max(1.0f - fDensity * weight, 0.0f);
-	return color * factor;
-}
-
-float ComputeShadowMask(float fLuma, float fStartLuma, float fEndLuma)
-{
-	return 1.0f - smoothstep(fStartLuma, fEndLuma, fLuma);
-}
-
-float ComputeHighlightMask(float fLuma, float fStartLuma, float fEndLuma)
-{
-	return smoothstep(fStartLuma, fEndLuma, fLuma);
-}
-
-float3 ApplyShadowHighlightTint(float3 color, float3 shadowTint, float fShadowStrength, float2 shadowLuma, float3 highlightTint, float fHighlightStrength, float2 highlightLuma)
-{
-	float fLuma = GetLuminance(color);
-	
-	// Increase shadow mask when darker
-	float shadowMask = ComputeShadowMask(fLuma, shadowLuma.x, shadowLuma.y);
-	
-	// Increase shadow mask when brighter
-	float highlightMask = ComputeHighlightMask(fLuma, highlightLuma.x, highlightLuma.y);
-	
-	float3 shadowed = color * shadowTint;
-	float3 highlighted = color * highlightTint;
-
-	color = lerp(color, shadowed, saturate(shadowMask * fShadowStrength));
-	color = lerp(color, highlighted, saturate(highlightMask * fHighlightStrength));
-
-	return color;
-}
-
-float3 ApplyLook(float3 color, LookParameters params)
-{
-	// 1. Black lift
-	color = ApplyBlackLift(color, params.fBlackLift);
-	
-	// 2. Base color shaping
-	color = ApplySlopeOffsetPower(color, params.v3Slope, params.v3Offset, params.v3Power);
-	
-	// 3. Contrast around pivot
-	color = ApplyPivotContrast(color, params.fContrastPivot, params.fContrastStrength);
-	
-	// 4. Density
-	color = ApplyDensity(color, params.fDensity);
-	
-	// 5. Shadow / highlight tint
-	color = ApplyShadowHighlightTint(
-	color,
-	params.v3ShadowTint, params.fShadowTintStrength, float2(params.fShadowStartLuma, params.fShadowEndLuma),
-	params.v3HighlightTint, params.fHighlightTintStrength, float2(params.fHighlightStartLuma, params.fHighlightEndLuma));
-	
-	// 6. Look-local saturation
-	color = ApplySaturation(color, params.fLookSaturation);
-	
-	return saturate(color);
-}
-
-float3 LUTCoordToUnitColor(uint3 id)
-{
-	return (float3(id) + 0.5f) / float(gnLUTSize);
-}
-
-float3 EvaluateLookLUT(float3 color)
-{
-	LookParameters lookParams = ExtractLookParameters();
-	return ApplyLook(color, lookParams);
 }
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -597,8 +435,209 @@ void CSToneMapLUT(uint3 nDispatchID : SV_DispatchThreadID)
 	gtxtLUTToBuild[nDispatchID] = float4(baked, 1.0f);
 }
 
+
+/////////////////////////////////////////////////////////////////////////////////
+// Grading
+
+struct GradingParameters
+{
+	// White Balance(temterature, tint) + Primary
+	float3 v3Slope;
+	float fTemperature;
+	float3 v3Offset;
+	float fTint;
+	float3 v3Power;
+	float fColorFilterStrength; // This is originally Final parameter. Reordered cBuffer alignment.
+	// Global
+	float fContrast;
+	float fContrastPivot;
+	float fSaturation;
+	float fDensity;
+
+	// Tonal
+	float3 v3ShadowTint;
+	float fShadowWeight;
+	float3 v3MidtoneTint;
+	float fMidtoneWeight;
+	float3 v3HighlightTint;
+	float fHighlightWeight;
+
+	// Creative / Final
+	float3 v3ColorFilter;
+	float fBlackLift;
+};
+
+const static float gfShadowStart	= 0.00f;
+const static float gfShadowEnd		= 0.40f;
+const static float gfHighlightStart	= 0.60f;
+const static float gfHighlightEnd	= 1.00f;
+
+
+GradingParameters ExtractGradingParameters()
+{
+	GradingParameters params;
+	
+	params.v3Slope = gToneMappingCommon0.xyz;
+	params.fTemperature = gToneMappingCommon0.w;
+	
+	params.v3Offset = gToneMappingCommon1.xyz;
+	params.fTint = gToneMappingCommon1.w;
+	
+	params.v3Power = gToneMappingCommon2.xyz;
+	params.fColorFilterStrength = gToneMappingCommon2.w;
+	
+	params.fContrast = gToneMappingCommon3.x;
+	params.fContrastPivot = gToneMappingCommon3.y;
+	params.fSaturation = gToneMappingCommon3.z;
+	params.fDensity = gToneMappingCommon3.w;
+	
+	params.v3ShadowTint = gToneMappingCommon4.xyz;
+	params.fShadowWeight = gToneMappingCommon4.w;
+	
+	params.v3MidtoneTint = gToneMappingCommon5.xyz;
+	params.fMidtoneWeight = gToneMappingCommon5.w;
+	
+	params.v3HighlightTint = gToneMappingCommon6.xyz;
+	params.fHighlightWeight = gToneMappingCommon6.w;
+	
+	params.v3ColorFilter = gToneMappingCommon7.xyz;
+	params.fBlackLift = gToneMappingCommon7.w;
+	
+	return params;
+}
+
+float3 ApplyWhiteBalance(float3 color, float fTemperature, float fTint)
+{
+	float3 tempBalance = float3(1.0f + fTemperature, 1.0f, 1.0f - fTemperature);
+	float3 tintBalance = float3(1.0f + fTint, 1.0f - fTint, 1.0f + fTint);
+	
+	float3 balance = tempBalance * tintBalance;
+	balance = max(balance, 1e-4f.xxx);
+	
+	return color * balance;
+}
+
+float3 ApplySlopeOffsetPower(float3 color, float3 slope, float3 offset, float3 power)
+{
+	color = color * slope + offset;
+	color = max(color, 0.0f.xxx);
+	color = pow(color, max(power, 1e-4f.xxx));
+	return color;
+}
+
+float3 ApplyPivotContrast(float3 color, float fPivot, float fContrast)
+{
+	color = saturate(color);
+
+	float invPivot = max(1.0f - fPivot, 1e-4f);
+	float safePivot = max(fPivot, 1e-4f);
+
+	float3 below = fPivot * pow(saturate(color / safePivot), fContrast.xxx);
+	float3 above = 1.0f - invPivot * pow(saturate((1.0f - color) / invPivot), fContrast.xxx);
+
+	return lerp(below, above, step(fPivot.xxx, color));
+}
+
+float3 ApplyDensity(float3 color, float fDensity)
+{
+	float fLuma = GetLuminance(color);
+	float fWeight = 1.0f - saturate(fLuma);
+	float fFactor = max(1.0f - fDensity * fWeight, 0.0f);
+	return color * fFactor;
+}
+
+float ComputeShadowMask(float fLuma)
+{
+	return 1.0f - smoothstep(gfShadowStart, gfShadowEnd, fLuma);
+}
+
+float ComputeHighlightMask(float fLuma)
+{
+	return smoothstep(gfHighlightStart, gfHighlightEnd, fLuma);
+}
+
+float ComputeMidtoneMask(float fLuma, float fShadowMask, float fHighlightMask)
+{
+	return saturate(1.0f - fShadowMask - fHighlightMask);
+}
+
+float3 ApplyTonalTint(float3 color, float3 shadowTint, float fShadowWeight, float3 midtoneTint, float fMidtoneWeight, float3 highlightTint, float fHighlightWeight)
+{
+	float fLuma = GetLuminance(color);
+	
+	float fShadowMask = ComputeShadowMask(fLuma);
+	float fHighlightMask = ComputeHighlightMask(fLuma);
+	float fMidtoneMask = ComputeMidtoneMask(fLuma, fShadowMask, fHighlightMask);
+	
+	float3 shadowed = color * shadowTint;
+	float3 midtoned = color * midtoneTint;
+	float3 highlighted  = color * highlightTint;
+	
+	color = lerp(color, shadowed, saturate(fShadowMask * fShadowWeight));
+	color = lerp(color, midtoned, saturate(fMidtoneMask * fMidtoneWeight));
+	color = lerp(color, highlighted, saturate(fHighlightMask * fHighlightWeight));
+	
+	return color;
+}
+
+float3 ApplyBlackLift(float3 color, float fBlackLift)
+{
+	float fLuma = GetLuminance(color);
+	float fShadowMask = ComputeShadowMask(fLuma);
+	
+	float fLiftedLuma = fLuma + fBlackLift * fShadowMask;
+	float fScale = fLiftedLuma / max(fLuma, 1e-4f);
+	fScale = min(fScale, 8.0f);
+	
+	return color * fScale;
+}
+
+float3 ApplyColorFilter(float3 color, float3 colorFilter, float fStength)
+{
+	float3 filtered = color * colorFilter;
+	return lerp(color, filtered, saturate(fStength));
+}
+
+float3 GradingCore(float3 color, GradingParameters params)
+{
+	// 1. White Balance
+	color = ApplyWhiteBalance(color, params.fTemperature, params.fTint);
+	
+	// 2. Primary Grading
+	color = ApplySlopeOffsetPower(color, params.v3Slope, params.v3Offset, params.v3Power);
+	
+	// 3. Global Grading
+	color = ApplyPivotContrast(color, params.fContrastPivot, params.fContrast);
+	color = ApplySaturation(color, params.fSaturation);
+	color = ApplyDensity(color, params.fDensity);
+	
+	// 4. Tonal Grading
+	color = ApplyTonalTint(
+		color,
+		params.v3ShadowTint, params.fShadowWeight,
+		params.v3MidtoneTint, params.fMidtoneWeight,
+		params.v3HighlightTint, params.fHighlightWeight);
+	
+	// 5. Final creative
+	color = ApplyBlackLift(color, params.fBlackLift);
+	color = ApplyColorFilter(color, params.v3ColorFilter, params.fColorFilterStrength);
+	
+	return saturate(color);
+}
+
+float3 LUTCoordToUnitColor(uint3 id)
+{
+	return (float3(id) + 0.5f) / float(gnLUTSize);
+}
+
+float3 EvaluateGradingLUT(float3 color)
+{
+	GradingParameters params = ExtractGradingParameters();
+	return GradingCore(color, params);
+}
+
 [numthreads(4, 4, 4)]
-void CSLookLUT(uint3 nDispatchID : SV_DispatchThreadID)
+void CSGradingLUT(uint3 nDispatchID : SV_DispatchThreadID)
 {
 	if (nDispatchID.x >= gnLUTSize || nDispatchID.y >= gnLUTSize || nDispatchID.z >= gnLUTSize)
 	{
@@ -606,7 +645,7 @@ void CSLookLUT(uint3 nDispatchID : SV_DispatchThreadID)
 	}
 	
 	float3 color = LUTCoordToUnitColor(nDispatchID);
-	float3 baked = EvaluateLookLUT(color);
+	float3 baked = EvaluateGradingLUT(color);
 	
 	gtxtLUTToBuild[nDispatchID] = float4(baked, 1.0f);
 }

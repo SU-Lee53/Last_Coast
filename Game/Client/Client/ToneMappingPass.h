@@ -48,34 +48,37 @@ struct ACESParameters {
 	float fACESCoreOutputScale;
 };
 
-struct LookParameters {
+struct GradingParameters {
+	// White Balance(temterature, tint) + Primary
 	Vector3 v3Slope;
-	float fContrastPivot;
-
+	float fTemperature;
 	Vector3 v3Offset;
-	float fContrastStrength;
-
+	float fTint;
 	Vector3 v3Power;
-	float fBlackLift;
+	float fColorFilterStrength; // This is originally Final parameter. Reordered cBuffer alignment.
 
-	Vector3 v3ShadowTint;
-	float fShadowTintStrength;
-
-	Vector3 v3HighlightTint;
-	float fHighlightTintStrength;
-
+	// Global
+	float fContrast;
+	float fContrastPivot;
+	float fSaturation;
 	float fDensity;
-	float fLookSaturation;
-	float fShadowStartLuma;
-	float fShadowEndLuma;
 
-	float fHighlightStartLuma;
-	float fHighlightEndLuma;
+	// Tonal
+	Vector3 v3ShadowTint;
+	float  fShadowWeight;
+	Vector3 v3MidtoneTint;
+	float  fMidtoneWeight;
+	Vector3 v3HighlightTint;
+	float  fHighlightWeight;
+
+	// Creative / Final
+	Vector3 v3ColorFilter;
+	float fBlackLift;
 };
 
 struct ToneMappingParameter {
 	ToneMappingCommonParameters Common;
-	LookParameters Look;
+	GradingParameters Grading;
 
 	union {
 		AgXParameters AgX;
@@ -86,7 +89,7 @@ struct ToneMappingParameter {
 
 	ToneMappingParameter() {
 		Common = g_DefaultCommonParameters;
-		Look = g_DefaultLookParameters;
+		Grading = g_DefaultGradingParameters;
 		AgX = g_DefaultAgXParameters;
 	}
 
@@ -134,34 +137,37 @@ struct ToneMappingParameter {
 		.fGTPedestal = 0.0f,
 	};
 
-	constexpr static LookParameters g_DefaultLookParameters{
-		.v3Slope = Vector3(1.f, 1.f, 1.f),
-		.fContrastPivot = 0.4f,
-		.v3Offset = Vector3(0.0f, 0.0f, 0.0f),
-		.fContrastStrength = 1.0f,
-		.v3Power = Vector3(1.f, 1.f, 1.f),
-		.fBlackLift = 0.02f,
-		.v3ShadowTint = Vector3(1.f, 1.f, 1.f),
-		.fShadowTintStrength = 0.1f,
-		.v3HighlightTint = Vector3(1.f, 1.f, 1.f),
-		.fHighlightTintStrength = 0.2f,
-		.fDensity = 0.1f,
-		.fLookSaturation = 1.0f,
-		.fShadowStartLuma = 0.10f,
-		.fShadowEndLuma = 0.55f,
-		.fHighlightStartLuma = 0.45f,
-		.fHighlightEndLuma = 0.85f,
+	constexpr static GradingParameters g_DefaultGradingParameters{
+		.v3Slope = Vector3(1.f),
+		.fTemperature = 0.f,
+		.v3Offset = Vector3(0.f),
+		.fTint = 0.f,
+		.v3Power = Vector3(1.f),
+		.fColorFilterStrength = 0.f,
+		.fContrast = 1.f,
+		.fContrastPivot = 0.5f,
+		.fSaturation = 1.f,
+		.fDensity = 0.f,
+		.v3ShadowTint = Vector3(1.f),
+		.fShadowWeight = 0.f,
+		.v3MidtoneTint = Vector3(1.f),
+		.fMidtoneWeight = 0.f,
+		.v3HighlightTint = Vector3(1.f),
+		.fHighlightWeight = 0.f,
+		.v3ColorFilter = Vector3(1.f),
+		.fBlackLift = 0.f,
 	};
 };
 
 struct CB_TONE_MAPPING_LUT_DATA {
-	Vector3 gToneMappingCommon0;	// x = nMode
-	Vector4 gToneMappingCommon1;	// x = inputScale, y = outputScale, zw = reserved
-	Vector4 gToneMappingCommon2;	// xyzw  = reserved
+	Vector4 gToneMappingCommon0;	// .x = nMode (reserved, Except grading LUT pass) 
+	Vector4 gToneMappingCommon1;
+	Vector4 gToneMappingCommon2;
 	Vector4 gToneMappingCommon3;
 	Vector4 gToneMappingCommon4;
 	Vector4 gToneMappingCommon5;
 	Vector4 gToneMappingCommon6;
+	Vector4 gToneMappingCommon7;
 };
 
 struct CB_TONE_MAPPING_DATA {
@@ -178,7 +184,7 @@ struct CB_TONE_MAPPING_DATA {
 class ToneMappingPass : public IRenderPass {
 private:
 	enum class TONE_MAPPING_MODE : uint32 { AGX = 0, ACES, UC2, GT, COUNT, UNDEFINED = std::numeric_limits<uint32>::max() };
-	enum class DIRTY_UPDATE : uint32 { AGX = 0, ACES, UC2, GT, LOOK };
+	enum class DIRTY_UPDATE : uint32 { AGX = 0, ACES, UC2, GT, GRADING };
 
 
 public:
@@ -214,14 +220,14 @@ private:
 	void SetDefaultParameters(TONE_MAPPING_MODE eModeBefore, TONE_MAPPING_MODE eModeAfter);
 
 	void SaveParametersToJson() const;
-	void SaveLook() const;
+	void SaveGrading() const;
 	void SaveAgX() const;
 	void SaveGT() const;
 	void SaveUC2() const;
 	void SaveACES() const;
 
 	void LoadParametersFromJson();
-	void LoadLook();
+	void LoadGrading();
 	void LoadAgX();
 	void LoadGT();
 	void LoadUC2();
@@ -260,8 +266,8 @@ private:
 	TextureRef<UnorderedAccessTexture> m_ToneMapLUT;
 	mutable bool m_bToneMapLUTDirtyFlags[4] = { true, true, true, true };	// All dirty
 
-	TextureRef<UnorderedAccessTexture> m_LookLUT;
-	mutable bool m_bLookLUTDirtyFlag = true;		// Dirty
+	TextureRef<UnorderedAccessTexture> m_GradingLUT;
+	mutable bool m_bGradingLUTDirtyFlag = true;		// Dirty
 
 	TONE_MAPPING_MODE m_eMode = TONE_MAPPING_MODE::ACES;
 
@@ -275,6 +281,8 @@ private:
 		"AgX", "ACES", "UC2", "GT"
 	};
 
+	mutable float m_fLastToneLUTUpdated = 0.f;
+	mutable float m_fLastLookLUTUpdated = 0.f;
 
 	inline const static std::string g_strSavePath = "../Resources/ToneMappings";
 	const static uint32 g_unLUTSize = 32;

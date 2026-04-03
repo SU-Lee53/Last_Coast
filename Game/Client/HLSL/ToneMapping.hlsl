@@ -72,11 +72,11 @@ float4 PSToneMapping(VS_QUAD_OUTPUT input) : SV_Target0
 	
 	float3 lookUVW = saturate(mapped);
 	lookUVW = ApplyLUTCoordScaleBias(lookUVW);
-	float3 looked = gtxtLookTransformLUT.SampleLevel(gSamplerState, lookUVW, 0.0f).rgb;
+	float3 looked = gtxtGradingLUT.SampleLevel(gSamplerState, lookUVW, 0.0f).rgb;
 	
 	float3 finalColor = lerp(mapped, looked, saturate(gfLookStrength));
 	
-	finalColor = ApplySaturation(finalColor, gfSaturation);
+	///finalColor = ApplySaturation(finalColor, gfSaturation);
 	finalColor *= gfOutputScale;
 	finalColor = GammaCorrect(finalColor, gfGamma);
 	
