@@ -31,6 +31,7 @@ public:										\
 #define MODEL			GET_SINGLE(ModelManager)
 #define GUI				GET_SINGLE(GuiManager)
 #define NETWORK			GET_SINGLE(NetworkManager)
+//#define SESSION			GET_SINGLE(ServerSession)
 #define EFFECT			GET_SINGLE(EffectManager)
 #define SOUND			GET_SINGLE(SoundManager)
 #define UI				GET_SINGLE(UIManager)

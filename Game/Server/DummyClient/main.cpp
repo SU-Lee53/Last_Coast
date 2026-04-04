@@ -46,7 +46,7 @@ int main()
 {
 	std::this_thread::sleep_for(1s);
 
-	ClientServiceRef service = std::make_shared<ClientService>(NetAddress(L"127.0.0.1", 7777), std::make_shared<IocpCore>(), std::make_shared<ServerSession>, 1);
+	ClientServiceRef service = std::make_shared<ClientService>(NetAddress(L"127.0.0.1", 9000), std::make_shared<IocpCore>(), std::make_shared<ServerSession>, 1);
 
 	ASSERT_CRASH(service->Start());
 

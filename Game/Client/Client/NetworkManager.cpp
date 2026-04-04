@@ -16,6 +16,7 @@ CRITICAL_SECTION NetworkManager::g_hCS{};
 HANDLE NetworkManager::g_hPlayerWritePacketEvent = nullptr;
 HANDLE NetworkManager::g_hPacketReceivedEvent = nullptr;
 HANDLE NetworkManager::g_hNetworkThread = nullptr;
+ConnectState m_connectState = ConnectState::None;
 
 NetworkManager::~NetworkManager()
 {
@@ -25,17 +26,25 @@ NetworkManager::~NetworkManager()
 void NetworkManager::Initialize()
 {
 	WSADATA wsa;
-	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
+	{
 		__debugbreak();
 		PostQuitMessage(0);
 	}
 
 	m_hClientSocket = socket(AF_INET, SOCK_STREAM, 0);
-	if (m_hClientSocket == INVALID_SOCKET) {
+	if (m_hClientSocket == INVALID_SOCKET)
+	{
 		__debugbreak();
 		PostQuitMessage(0);
 	}
 
+	u_long on = 1;
+	if (ioctlsocket(m_hClientSocket, FIONBIO, &on) == INVALID_SOCKET)
+	{
+		__debugbreak();
+		PostQuitMessage(0);
+	}
 
 	InitializeCriticalSection(&g_hCS);
 
@@ -68,12 +77,27 @@ void NetworkManager::ConnectToServer()
 			inet_pton(AF_INET, m_cstrServerIP, &serveraddr.sin_addr);
 			serveraddr.sin_port = htons(SERVERPORT);
 			int retval = connect(m_hClientSocket, (struct sockaddr*)&serveraddr, sizeof(serveraddr));
-			if (retval == SOCKET_ERROR) {
-				m_strErrorLog = err_display("socket()");
+
+			if (retval == SOCKET_ERROR)
+			{
+				int err = WSAGetLastError();
+
+				if (err == WSAEWOULDBLOCK)
+				{
+					m_connectState = ConnectState::Connecting;
+					m_strErrorLog = "Connecting...";
+				}
+				else
+				{
+					m_connectState = ConnectState::Failed;
+					m_strErrorLog = err_display("connect()");
+				}
 			}
-			else {
+			else
+			{
+				m_connectState = ConnectState::Connected;
 				m_bConnected = true;
-				g_hNetworkThread = CreateThread(NULL, 0, ProcessNetwork, (LPVOID)m_hClientSocket, 0, NULL);
+				/*g_hNetworkThread = CreateThread(NULL, 0, ProcessNetwork, (LPVOID)m_hClientSocket, 0, NULL);*/
 			}
 		}
 		ImGui::Text(m_strErrorLog.c_str());
@@ -87,6 +111,58 @@ void NetworkManager::ConnectToServer()
 			ImGui::Text("Wait for game start...");
 		}
 
+		if (m_connectState == ConnectState::Connecting)
+		{
+			fd_set writeSet;
+			FD_ZERO(&writeSet);
+			FD_SET(m_hClientSocket, &writeSet);
+
+			timeval timeout{};
+			timeout.tv_sec = 0;
+			timeout.tv_usec = 0;
+
+			int ret = select(0, nullptr, &writeSet, nullptr, &timeout);
+
+			if (ret > 0)
+			{
+				int err = 0;
+				int len = sizeof(err);
+
+				getsockopt(m_hClientSocket, SOL_SOCKET, SO_ERROR, (char*)&err, &len);
+
+				if (err == 0)
+				{
+					// 진짜 연결 성공
+					m_connectState = ConnectState::Connected;
+					m_bConnected = true;
+					m_strErrorLog = "Connected!";
+
+					g_hNetworkThread = CreateThread(NULL, 0, ProcessNetwork, (LPVOID)m_hClientSocket, 0, NULL);
+				}
+				else
+				{
+					// 연결 실패
+					m_connectState = ConnectState::Failed;
+					m_strErrorLog = "Connect Failed";
+				}
+			}
+		}
+
+		switch (m_connectState)
+		{
+		case ConnectState::None:
+			ImGui::Text("Not connected");
+			break;
+		case ConnectState::Connecting:
+			ImGui::Text("Connecting...");
+			break;
+		case ConnectState::Connected:
+			ImGui::Text("Connected");
+			break;
+		case ConnectState::Failed:
+			ImGui::Text("Failed");
+			break;
+		}
 	}
 	ImGui::End();
 }
@@ -109,7 +185,7 @@ void NetworkManager::ConnectToServer()
 
 bool NetworkManager::SendData()
 {
-	if (!m_bConnected) 
+	if (!m_bConnected)
 		return false;
 
 	assert(m_bConnected);
@@ -159,7 +235,7 @@ void NetworkManager::Disconnect()
 
 bool NetworkManager::ReceiveData()
 {
-	if (!m_bConnected) 
+	if (!m_bConnected)
 		return false;
 	int retval = 0;
 	retval = recv(m_hClientSocket, (char*)&m_PacketReceived, sizeof(ServertoClientPlayerPacket), MSG_WAITALL);
@@ -217,7 +293,7 @@ DWORD WINAPI NetworkManager::ProcessNetwork(LPVOID arg)
 	//while (!NETWORK->m_bConnected) {
 	//	NETWORK->ConnectToServer();
 	//}
-	
+
 	// 2. 시작 대기
 	// TODO : 신호를 받아 Scene 을 변경하려면 새로운 방법이 필요할 수도 있음
 	StartPacket startPacket{};

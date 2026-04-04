@@ -25,7 +25,7 @@ public:
 
 int main()
 {
-	ServerServiceRef service = std::make_shared<ServerService>(NetAddress(L"127.0.0.1", 7777), std::make_shared<IocpCore>(), std::make_shared<GameSession>, 100);
+	ServerServiceRef service = std::make_shared<ServerService>(NetAddress(L"127.0.0.1", 9000), std::make_shared<IocpCore>(), std::make_shared<GameSession>, 100);
 
 
 	ASSERT_CRASH(service->Start());
