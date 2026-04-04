@@ -291,7 +291,7 @@ CB_TONE_MAPPING_DATA ToneMappingPass::MakeCBData() const
 		.fSaturation = m_Parameters.Common.fSaturation,
 		.fInputScale = m_Parameters.Common.fInputScale,
 		.fOutputScale = m_Parameters.Common.fOutputScale,
-		.fLookStrength = m_Parameters.Common.fLookStrength,
+		.fGradingStrength = m_Parameters.Common.fGradingStrength,
 		.pad = Vector2(0.f),
 	};
 }
@@ -363,17 +363,17 @@ void ToneMappingPass::ShowDebugInfo()
 		LoadParametersFromJson();
 	}
 
-	if (ImGui::Button(std::format("Save Look Parameters", g_cstrModeName[unMode]).c_str())) {
+	if (ImGui::Button(std::format("Save Grading Parameters", g_cstrModeName[unMode]).c_str())) {
 		SaveGrading();
 	}
 
 	ImGui::SameLine();
-	if (ImGui::Button(std::format("Load Look Parameters", g_cstrModeName[unMode]).c_str())) {
+	if (ImGui::Button(std::format("Load Grading Parameters", g_cstrModeName[unMode]).c_str())) {
 		LoadGrading();
 	}
 
 	ImGui::Text("Last ToneMap LUT Updated : %f", m_fLastToneLUTUpdated);
-	ImGui::Text("Last Look LUT Updated : %f", m_fLastLookLUTUpdated);
+	ImGui::Text("Last Grading LUT Updated : %f", m_fLastLookLUTUpdated);
 
 	int cnt{};
 
@@ -385,7 +385,7 @@ void ToneMappingPass::ShowDebugInfo()
 	ShowDragFloat(cnt++, "fSaturation", reinterpret_cast<float*>(&m_Parameters.Common.fSaturation), 0.01f, 0.f, 2.f, true, 0.75f, 1.15, 1.f);
 	ShowDragFloat(cnt++, "fInputScale", reinterpret_cast<float*>(&m_Parameters.Common.fInputScale), 0.01f, 0.25f, 4.f, true, 0.5f, 2.0f, 1.f);
 	ShowDragFloat(cnt++, "fOutputScale", reinterpret_cast<float*>(&m_Parameters.Common.fOutputScale), 0.01f, 0.5f, 2.f, true, 0.8, 1.2, 1.f);
-	ShowDragFloat(cnt++, "fLookStrength", reinterpret_cast<float*>(&m_Parameters.Common.fLookStrength), 0.01f, 0.0f, 1.0f, true, 0.0f, 1.0f, 1.0f);
+	ShowDragFloat(cnt++, "fGradingStrength", reinterpret_cast<float*>(&m_Parameters.Common.fGradingStrength), 0.01f, 0.0f, 1.0f, true, 0.0f, 1.0f, 1.0f);
 
 	bool bToneLUTDirty = false;
 
@@ -580,7 +580,7 @@ void ToneMappingPass::SaveAgX() const
 	j["fSaturation"] = m_Parameters.Common.fSaturation;
 	j["fInputScale"] = m_Parameters.Common.fInputScale;
 	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
-	j["fLookStrength"] = m_Parameters.Common.fLookStrength;
+	j["fLookStrength"] = m_Parameters.Common.fGradingStrength;
 
 	// AgXParameters
 	j["fAgXWhite"] = m_Parameters.AgX.fAgXWhite;
@@ -616,7 +616,7 @@ void ToneMappingPass::SaveGT() const
 	j["fSaturation"] = m_Parameters.Common.fSaturation;
 	j["fInputScale"] = m_Parameters.Common.fInputScale;
 	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
-	j["fLookStrength"] = m_Parameters.Common.fLookStrength;
+	j["fLookStrength"] = m_Parameters.Common.fGradingStrength;
 
 	// GTParameters
 	j["fGTMaxBrightness"] = m_Parameters.GT.fGTMaxBrightness;
@@ -650,7 +650,7 @@ void ToneMappingPass::SaveUC2() const
 	j["fSaturation"] = m_Parameters.Common.fSaturation;
 	j["fInputScale"] = m_Parameters.Common.fInputScale;
 	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
-	j["fLookStrength"] = m_Parameters.Common.fLookStrength;
+	j["fLookStrength"] = m_Parameters.Common.fGradingStrength;
 
 	// GTParameters
 	j["fUC2A"] = m_Parameters.UC2.fUC2A;
@@ -687,7 +687,7 @@ void ToneMappingPass::SaveACES() const
 	j["fInputScale"] = m_Parameters.Common.fInputScale;
 	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
 	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
-	j["fLookStrength"] = m_Parameters.Common.fLookStrength;
+	j["fLookStrength"] = m_Parameters.Common.fGradingStrength;
 
 	// GTParameters
 	j["fACESExposureBias"] = m_Parameters.ACES.fACESExposureBias;
@@ -740,7 +740,7 @@ void ToneMappingPass::LoadParametersFromJson()
 
 void ToneMappingPass::LoadGrading()
 {
-	std::string strParametersPath = std::format("{}/Look_{}.bin", g_strSavePath, m_strSaveName);
+	std::string strParametersPath = std::format("{}/Grading_{}.bin", g_strSavePath, m_strSaveName);
 	std::ifstream inFile{ strParametersPath, std::ios::binary };
 	if (!inFile) {
 		return;
@@ -801,7 +801,7 @@ void ToneMappingPass::LoadAgX()
 	m_Parameters.Common.fSaturation = inJson["fSaturation"].get<float>();
 	m_Parameters.Common.fInputScale = inJson["fInputScale"].get<float>();
 	m_Parameters.Common.fOutputScale = inJson["fOutputScale"].get<float>();
-	m_Parameters.Common.fLookStrength = inJson["fLookStrength"].get<float>();
+	m_Parameters.Common.fGradingStrength = inJson["fLookStrength"].get<float>();
 
 	m_Parameters.AgX.fAgXWhite = inJson["fAgXWhite"].get<float>();
 	m_Parameters.AgX.fAgXBlack = inJson["fAgXBlack"].get<float>();
@@ -825,7 +825,7 @@ void ToneMappingPass::LoadGT()
 	m_Parameters.Common.fGamma = inJson["fGamma"].get<float>();
 	m_Parameters.Common.fSaturation = inJson["fSaturation"].get<float>();
 	m_Parameters.Common.fInputScale = inJson["fInputScale"].get<float>();
-	m_Parameters.Common.fLookStrength = inJson["fLookStrength"].get<float>();
+	m_Parameters.Common.fGradingStrength = inJson["fLookStrength"].get<float>();
 
 	m_Parameters.GT.fGTMaxBrightness = inJson["fGTMaxBrightness"].get<float>();
 	m_Parameters.GT.fGTContrast = inJson["fGTContrast"].get<float>();
@@ -850,7 +850,7 @@ void ToneMappingPass::LoadUC2()
 	m_Parameters.Common.fGamma = inJson["fGamma"].get<float>();
 	m_Parameters.Common.fSaturation = inJson["fSaturation"].get<float>();
 	m_Parameters.Common.fInputScale = inJson["fInputScale"].get<float>();
-	m_Parameters.Common.fLookStrength = inJson["fLookStrength"].get<float>();
+	m_Parameters.Common.fGradingStrength = inJson["fLookStrength"].get<float>();
 
 	m_Parameters.UC2.fUC2A = inJson["fUC2A"].get<float>();
 	m_Parameters.UC2.fUC2B = inJson["fUC2B"].get<float>();
@@ -877,7 +877,7 @@ void ToneMappingPass::LoadACES()
 	m_Parameters.Common.fGamma = inJson["fGamma"].get<float>();
 	m_Parameters.Common.fSaturation = inJson["fSaturation"].get<float>();
 	m_Parameters.Common.fInputScale = inJson["fInputScale"].get<float>();
-	m_Parameters.Common.fLookStrength = inJson["fLookStrength"].get<float>();
+	m_Parameters.Common.fGradingStrength = inJson["fLookStrength"].get<float>();
 
 	m_Parameters.ACES.fACESExposureBias = inJson["fACESExposureBias"].get<float>();
 	m_Parameters.ACES.fACESPreSaturation = inJson["fACESPreSaturation"].get<float>();
@@ -909,9 +909,10 @@ bool ToneMappingPass::ShowDragFloat(int cnt, const char* cstrLabel, float* v, fl
 	}
 
 	std::string strButton = std::format("Default{}", cnt++);
-	if (ImGui::Button(strButton.c_str())) *v = fDefault;
+	bool bReset = ImGui::Button(strButton.c_str());
+	if (bReset) *v = fDefault;
 
-	return bResult;
+	return bResult || bReset;
 }
 
 bool ToneMappingPass::ShowDragFloat3(int cnt, const char* cstrLabel, float* v, float fSpeed, float fMin, float fMax, bool bShowHelp, float fRecommandMin, float fRecommandMax, float fDefault)
@@ -925,10 +926,11 @@ bool ToneMappingPass::ShowDragFloat3(int cnt, const char* cstrLabel, float* v, f
 	}
 
 	std::string strButton = std::format("Default{}", cnt++);
-	if (ImGui::Button(strButton.c_str())) {
+	bool bReset = ImGui::Button(strButton.c_str());
+	if (bReset) {
 		Vector3* pv3Value = reinterpret_cast<Vector3*>(v);
 		*pv3Value = Vector3(fDefault, fDefault, fDefault);
 	}
 
-	return bResult;
+	return bResult || bReset;
 }

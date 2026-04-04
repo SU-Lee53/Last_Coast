@@ -150,7 +150,7 @@ ACESParameters ExtractACESParameters()
 /////////////////////////////////////////////////////////////////////////////////
 // ACES
 
-// Krzysztof Narkowicz's simple ACES curve
+// Narkowicz's simple ACES curve
 float3 ACESSimple(float3 x)
 {
 	float a = 2.51;

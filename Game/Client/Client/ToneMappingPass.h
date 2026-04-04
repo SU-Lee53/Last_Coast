@@ -8,7 +8,7 @@ struct ToneMappingCommonParameters {
 	float fSaturation = 1.0f;
 	float fInputScale = 1.0f;	
 	float fOutputScale = 1.0f;
-	float fLookStrength = 0.f;
+	float fGradingStrength = 0.f;
 };
 
 struct AgXParameters {
@@ -177,7 +177,7 @@ struct CB_TONE_MAPPING_DATA {
 	float fInputScale;
 
 	float fOutputScale;
-	float fLookStrength;
+	float fGradingStrength;
 	Vector2 pad;
 };
 
