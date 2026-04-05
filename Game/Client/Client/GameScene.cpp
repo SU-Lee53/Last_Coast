@@ -1,38 +1,36 @@
 ﻿#include "pch.h"
-#include "MapTestScene.h"
+#include "GameScene.h"
 #include "DebugPlayer.h"
 #include "ThirdPersonPlayer.h"
 #include "TerrainObject.h"
 #include "TerrainTestScene.h"
 #include "Skybox.h"
 
-void MapTestScene::BuildObjects()
+void GameScene::BuildObjects()
 {
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize("Day_HDRI.dds", "Night_HDRI.dds");
 
-	//m_pPlayer = std::make_shared<ThirdPersonPlayer>();
-	//m_pPlayer->Initialize();
-
-	m_pPlayer = std::make_shared<DebugPlayer>();
+	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 	m_pPlayer->Initialize();
-
-	LoadFromFiles("LightTest");
+	//LoadFromFiles("LightTest");
+	LoadFromFiles("GameScene");
+	m_pTerrain->LoadFromFiles("GameTerrain");
 }
 
-void MapTestScene::OnEnterScene()
+void GameScene::OnEnterScene()
 {
 }
 
-void MapTestScene::OnLeaveScene()
+void GameScene::OnLeaveScene()
 {
 }
 
-void MapTestScene::ProcessInput()
+void GameScene::ProcessInput()
 {
 }
 
-void MapTestScene::Update()
+void GameScene::Update()
 {
 	ImGui::Begin("Test");
 	{

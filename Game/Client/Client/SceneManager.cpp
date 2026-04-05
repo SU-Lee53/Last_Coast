@@ -8,7 +8,7 @@
 
 void SceneManager::Initialize()
 {
-	m_upCurrentScene = std::make_unique<TerrainTestScene>();
+	m_upCurrentScene = std::make_unique<MapTestScene>();
 	m_upCurrentScene->BuildLights();
 	m_upCurrentScene->BuildObjects();
 	m_upCurrentScene->PostInitialize();

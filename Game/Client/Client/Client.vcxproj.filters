@@ -425,6 +425,9 @@
     </ClInclude>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imgui_stdlib.h" />
     <ClInclude Include="DefferedFogPass.h" />
+    <ClInclude Include="GameScene.h">
+      <Filter>02.Game\Scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -717,6 +720,9 @@
     </ClCompile>
     <ClCompile Include="..\Dependencies\Includes\ImGui\imgui_stdlib.cpp" />
     <ClCompile Include="DefferedFogPass.cpp" />
+    <ClCompile Include="GameScene.cpp">
+      <Filter>02.Game\Scene</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
@@ -775,11 +781,13 @@
     <FxCompile Include="..\HLSL\ShadowMapShader.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
-    <FxCompile Include="..\HLSL\HDRPostProcessing.hlsl" />
     <FxCompile Include="..\HLSL\LUTBaking.hlsl">
       <Filter>03.Engine\HLSL\Compute</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\ToneMappingCommon.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\HDRPostProcessing.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
   </ItemGroup>

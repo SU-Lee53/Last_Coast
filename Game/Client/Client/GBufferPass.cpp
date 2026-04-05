@@ -86,43 +86,28 @@ void GBufferPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 
 void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<std::shared_ptr<IGameObject>>& frustumCulled, OUT DescriptorHandle& outDescHandle) const
 {
-	std::unordered_map<MeshRenderer::ID, size_t> renderItemIndex;
-	renderItemIndex.reserve(frustumCulled.size());
-	std::vector<std::pair<MeshRenderer*, std::vector<const IGameObject*>>> renderItems;
-	renderItems.reserve(frustumCulled.size());
+	m_CachedData.Clear();
 	for (const auto& pObj : frustumCulled) {
 		const auto& pMeshRenderer = pObj->GetComponent<MeshRenderer>();
-		auto it = renderItemIndex.find(pMeshRenderer->GetID());
-		if (it == renderItemIndex.end()) {
-			size_t idx = renderItems.size();
-			renderItemIndex.emplace(pMeshRenderer->GetID(), idx);
-			renderItems.emplace_back(pMeshRenderer.get(), std::vector<const IGameObject*>{pObj.get()});
-		}
-		else {
-			size_t idx = it->second;
-			renderItems[idx].second.push_back(pObj.get());
+		auto [idx, bExist] = m_CachedData.m_FrustumCulledMap.Insert(pMeshRenderer->GetID(), { pMeshRenderer.get(), std::vector<const IGameObject*>{ pObj.get() } });
+		if (!bExist) {
+			m_CachedData.m_FrustumCulledMap[idx].second.push_back(pObj.get());
 		}
 	}
 
 	// materialData
-	std::unordered_map<IMaterial::ID, size_t> materialIdxMap;
-	materialIdxMap.reserve(renderItems.size());
-	std::vector<const MaterialHandle*> pMaterialHandleForBind;
-	pMaterialHandleForBind.reserve(renderItems.size());
-
-	std::unordered_map<Texture::ID, size_t> textureIdxMap;
-	textureIdxMap.reserve(renderItems.size() * 4);
-	std::vector<const TextureRef<Texture>*> pTextureHandleForBind;
-	pTextureHandleForBind.reserve(renderItems.size() * 4);
+	size_t newSize = m_CachedData.m_FrustumCulledMap.Size();
+	m_CachedData.m_MaterialMap.Reserve(newSize);
+	m_CachedData.m_TextureMap.Reserve(newSize * 4);
 
 	m_RenderQueueCached.clear();
 	size_t estimatedRenderQueueSize = 0;
-	for (const auto& [k, v] : renderItems) {
+	for (const auto& [k, v] : m_CachedData.m_FrustumCulledMap.GetElements()) {
 		estimatedRenderQueueSize += k->GetMeshes().size();
 	}
 	m_RenderQueueCached.reserve(estimatedRenderQueueSize);
-	for (auto& [k, v] : renderItems) {
 
+	for (auto& [k, v] : m_CachedData.m_FrustumCulledMap.GetElements()) {
 		// Prepare
 		const auto& pMeshes = k->GetMeshes();
 		const auto& materialHandles = k->GetMaterialHandles();
@@ -132,37 +117,19 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 			RenderParameter renderParameter;
 			CB_INSTANCE_DATA instanceData{};
 
-			auto matIt = materialIdxMap.find(materialHandles[meshIdx].GetID());
-			if (matIt == materialIdxMap.end()) {
-				size_t idx = pMaterialHandleForBind.size();
-				materialIdxMap.emplace(materialHandles[meshIdx].GetID(), idx);
-				pMaterialHandleForBind.push_back(&materialHandles[meshIdx]);
-
-				instanceData.gnMaterialIndex = idx;
-			}
-			else {
-				instanceData.gnMaterialIndex = matIt->second;
-			}
+			auto [idx, bExist] = m_CachedData.m_MaterialMap.Insert(materialHandles[meshIdx].GetID(), materialHandles[meshIdx].GetResource()->GetMaterialData());
+			instanceData.gnMaterialIndex = idx;
 
 			const auto& pMaterial = materialHandles[meshIdx].GetResource();
-			auto& texIDs = pMaterial->GetTextureRefs();
+			auto& texRefs = pMaterial->GetTextureRefs();
 			for (int32 texIdx = 0; texIdx < 4; ++texIdx) {
-				if (!texIDs[texIdx].IsValid()) {
+				if (!texRefs[texIdx].IsValid()) {
 					instanceData.gnTextureIndex[texIdx] = -1;
 					continue;
 				}
 
-				auto texIt = textureIdxMap.find(texIDs[texIdx].GetID());
-				if (texIt == textureIdxMap.end()) {
-					size_t idx = pTextureHandleForBind.size();
-					textureIdxMap.emplace(texIDs[texIdx].GetID(), idx);
-					pTextureHandleForBind.push_back(&texIDs[texIdx]);
-
-					instanceData.gnTextureIndex[texIdx] = idx;
-				}
-				else {
-					instanceData.gnTextureIndex[texIdx] = texIt->second;
-				}
+				auto [idx, bExist] = m_CachedData.m_TextureMap.Insert(texRefs[texIdx].GetID(), &texRefs[texIdx]);
+				instanceData.gnTextureIndex[texIdx] = idx;
 			}
 
 			// Set
@@ -189,12 +156,7 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 	// Bind Material
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
 
-	std::vector<MaterialData> materialDatas;
-	materialDatas.reserve(pMaterialHandleForBind.size());
-	std::transform(pMaterialHandleForBind.begin(), pMaterialHandleForBind.end(), std::back_inserter(materialDatas), [](const auto& handle) {
-		return handle->GetResource()->GetMaterialData();
-	});
-
+	const auto& materialDatas = m_CachedData.m_MaterialMap.GetElements();
 	auto materialSBuffer = RENDER->AllocSBuffer<MaterialData>(materialDatas.size());
 	materialSBuffer.WriteData(materialDatas);
 
@@ -202,8 +164,9 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 	outDescHandle.cpuHandle.Offset(1, unDescriptorInc);
 
 	// Bind Texture
-	const uint32 unNumTextures = pTextureHandleForBind.size();
-	for (const auto& pTexHandle : pTextureHandleForBind) {
+	const auto& texDatas = m_CachedData.m_TextureMap.GetElements();
+	const uint32 unNumTextures = texDatas.size();
+	for (const auto& pTexHandle : texDatas) {
 		CD3DX12_CPU_DESCRIPTOR_HANDLE texCPUHandle = pTexHandle->GetResource()->GetSRVHandle();
 		DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, texCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		outDescHandle.cpuHandle.Offset(1, unDescriptorInc);

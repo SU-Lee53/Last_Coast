@@ -186,6 +186,7 @@
     <ClInclude Include="FirstPersonCamera.h" />
     <ClInclude Include="GameFramework.h" />
     <ClInclude Include="GameObject.h" />
+    <ClInclude Include="GameScene.h" />
     <ClInclude Include="GameTimer.h" />
     <ClInclude Include="GBufferPass.h" />
     <ClInclude Include="GuiManager.h" />
@@ -329,6 +330,7 @@
     <ClCompile Include="FirstPersonCamera.cpp" />
     <ClCompile Include="GameFramework.cpp" />
     <ClCompile Include="GameObject.cpp" />
+    <ClCompile Include="GameScene.cpp" />
     <ClCompile Include="GameTimer.cpp" />
     <ClCompile Include="GBufferPass.cpp" />
     <ClCompile Include="GuiManager.cpp" />
