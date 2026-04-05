@@ -11,11 +11,11 @@ void MapTestScene::BuildObjects()
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize("Day_HDRI.dds", "Night_HDRI.dds");
 
-	//m_pPlayer = std::make_shared<ThirdPersonPlayer>();
-	//m_pPlayer->Initialize();
-
-	m_pPlayer = std::make_shared<DebugPlayer>();
+	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 	m_pPlayer->Initialize();
+
+	//m_pPlayer = std::make_shared<DebugPlayer>();
+	//m_pPlayer->Initialize();
 
 	LoadFromFiles("LightTest");
 }

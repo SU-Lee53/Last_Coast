@@ -21,8 +21,9 @@ struct VS_POSITION_OUTPUT
 VS_POSITION_OUTPUT VSShadowStandard(VS_POSITION_INPUT input, uint nInstanceID : SV_InstanceID)
 {
 	VS_POSITION_OUTPUT output = (VS_POSITION_OUTPUT) 0;
+	int nWorldTransformBase = gnWorldTransformOffset + nInstanceID;
 
-	matrix mtxWorld = gWorldTransforms[nInstanceID].mtxWorld;
+	matrix mtxWorld = gWorldTransforms[nWorldTransformBase].mtxWorld;
     
 	float3 positionW = mul(float4(input.position, 1.f), mtxWorld).xyz;
 	output.position = mul(float4(positionW, 1.f), gmtxLightViewProj);
@@ -33,6 +34,8 @@ VS_POSITION_OUTPUT VSShadowStandard(VS_POSITION_INPUT input, uint nInstanceID : 
 VS_POSITION_OUTPUT VSShadowAnimated(VS_SKINNED_POSITION_INPUT input, uint nInstanceID : SV_InstanceID)
 {
 	VS_POSITION_OUTPUT output = (VS_POSITION_OUTPUT) 0;
+	int nBoneTransformBase = gBoneTransformOffsets[nInstanceID];
+	int nWorldTransformBase = gnWorldTransformOffset + nInstanceID;
 
 	float fWeights[4] = { 0.f, 0.f, 0.f, 0.f };
 	fWeights[0] = input.blendWeights.x;
@@ -47,10 +50,10 @@ VS_POSITION_OUTPUT VSShadowAnimated(VS_SKINNED_POSITION_INPUT input, uint nInsta
 	[unroll(4)]
 	for (int i = 0; i < 4; ++i)
 	{
-		position += fWeights[i] * mul(float4(input.position, 1.f), gBoneTransforms[input.blendInices[i]]).xyz;
+		position += fWeights[i] * mul(float4(input.position, 1.f), gBoneTransforms[nBoneTransformBase + input.blendInices[i]]).xyz;
 	}
 	
-	matrix mtxWorld = gWorldTransforms[nInstanceID].mtxWorld;
+	matrix mtxWorld = gWorldTransforms[nWorldTransformBase].mtxWorld;
 	
 	float3 positionW = mul(float4(position, 1.f), mtxWorld).xyz;
 	output.position = mul(float4(positionW, 1.f), gmtxLightViewProj);

@@ -30,8 +30,8 @@ void SpritePass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const
 			continue;
 		}
 
-		auto bindHandle = outDescHandle.gpuHandle;
 		auto copyHandle = outDescHandle.cpuHandle;
+		copyHandle.Offset(2, unDescriptorInc);
 
 		// Set Empty material data to fits root parameter (NumDescriptors = 2)
 		DEVICE->CopyDescriptorsSimple(1, copyHandle, blankSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -47,14 +47,14 @@ void SpritePass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const
 			rects.push_back(sprite.Rect);
 		}
 
+		pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamPerDraw, outDescHandle.gpuHandle);
+		outDescHandle.cpuHandle.Offset(3 + layer.size(), unDescriptorInc);
+		outDescHandle.gpuHandle.Offset(3 + layer.size(), unDescriptorInc);
+
 		// Set rect data
 		auto rectSBuffer = RENDER->AllocSBuffer<SpriteRect>(layer.size());
 		rectSBuffer.WriteData(rects);
 		pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamSpriteRect, rectSBuffer.GPUAddress);
-
-		pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamPerDraw, bindHandle);
-		outDescHandle.cpuHandle.Offset(1 + layer.size(), unDescriptorInc);
-		outDescHandle.gpuHandle.Offset(1 + layer.size(), unDescriptorInc);
 
 		m_pSpriteQuadMesh->Render(pd3dCommandList, layer.size());
 	}

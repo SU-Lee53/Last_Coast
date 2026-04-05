@@ -411,7 +411,6 @@
     <ClInclude Include="TerrainTestScene.h">
       <Filter>02.Game\Scene\Test</Filter>
     </ClInclude>
-    <ClInclude Include="SpritePass.h" />
     <ClInclude Include="NavMeshDebugRenderer.h" />
     <ClInclude Include="AIManagerWrapper.h" />
     <ClInclude Include="TestScene.h">
@@ -427,6 +426,9 @@
     <ClInclude Include="DefferedFogPass.h" />
     <ClInclude Include="GameScene.h">
       <Filter>02.Game\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SpritePass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -703,7 +705,6 @@
     <ClCompile Include="MapTestScene.cpp">
       <Filter>02.Game\Scene\Test</Filter>
     </ClCompile>
-    <ClCompile Include="SpritePass.cpp" />
     <ClCompile Include="NavMeshDebugRenderer.cpp" />
     <ClCompile Include="AIManagerWrapper.cpp" />
     <ClCompile Include="TestScene.cpp">
@@ -722,6 +723,9 @@
     <ClCompile Include="DefferedFogPass.cpp" />
     <ClCompile Include="GameScene.cpp">
       <Filter>02.Game\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SpritePass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

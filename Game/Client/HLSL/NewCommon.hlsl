@@ -259,13 +259,21 @@ struct MaterialData
 	float2 pad0; // c5.zw
 };
 
+struct WorldTransformData
+{
+	float4x4 mtxWorld;
+	float4x4 mtxInvWorld;
+};
+
 // ============ StructuredBuffers ============
 
-StructuredBuffer<MaterialData> gMaterialData : register(t0, space1);
+StructuredBuffer<WorldTransformData> gWorldTransforms : register(t0, space1);
+StructuredBuffer<matrix> gBoneTransforms : register(t1, space1);
+StructuredBuffer<MaterialData> gMaterialDatas : register(t2, space1);
 
 // ============ Textures ============
 
-Texture2D gtxtTextures[] : register(t1, space1); // Unbounded
+Texture2D gtxtTextures[] : register(t3, space1); // Unbounded
 
 
 
@@ -282,12 +290,6 @@ struct TerrainComponentData
 	int4 i4LayerIndex;
 	int2 v2NumQuadsXZ;
 	int2 pad0;
-};
-
-struct InstanceData
-{
-	float4x4 mtxWorld;
-	float4x4 mtxInvWorld;
 };
 
 struct SpriteData
@@ -314,6 +316,7 @@ cbuffer cbInstanceData : register(b0, space2)
 {
 	int4 gnTextureIndex;	// Diffuse, Normal, Metallic, Emission
 	int gnMaterialIndex;
+	int gnWorldTransformOffset;	// gWorldTransforms[gnWorldTransformOffset + nInstanceID]
 };
 
 #define MAX_LAYER 4
@@ -334,27 +337,23 @@ cbuffer cbTerrainComponentData : register(b2, space2)
 	int2 pad3;
 };
 
-cbuffer cbWorldTransformIndexData : register(b3, space2)
-{
-	int gnWorldTransformIndex;
-};
-
-cbuffer cbLightCameraData : register(b4, space2)
+cbuffer cbLightCameraData : register(b3, space2)
 {
 	matrix gmtxLightViewProj;
 }
 
+cbuffer cbTerrainWorldTransform : register(b4, space2)
+{
+	matrix gmtxTerrainWorld;
+};
+
 // ============ StructuredBuffers ============
 
-StructuredBuffer<InstanceData> gWorldTransforms : register(t0, space2);
-StructuredBuffer<matrix> gBoneTransforms : register(t1, space2);
-
-Texture2D gtxtTerrainAlbedo[4] : register(t2, space2); // t2, t3, t4, t5
-Texture2D gtxtTerrainNormal[4] : register(t6, space2); // t6, t7, t8, t9
-
-Texture2D gtxtTerrainWeightMap : register(t10, space2);
-
-StructuredBuffer<SpriteData> gSpriteData : register(t11, space2);
+StructuredBuffer<int> gBoneTransformOffsets : register(t2, space2);
+Texture2D gtxtTerrainAlbedo[4] : register(t3, space2); // t3, t4, t5, t6
+Texture2D gtxtTerrainNormal[4] : register(t7, space2); // t7, t8, t9, t10
+Texture2D gtxtTerrainWeightMap : register(t11, space2);
+StructuredBuffer<SpriteData> gSpriteData : register(t12, space2);
 
 
 // ================================================================================
@@ -475,7 +474,7 @@ float3 DecodeNormalOcta(float2 enc)
 
 void GetMaterialParams(out float fMetallic, out float fRoughness, out float fAO)
 {
-	MaterialData m = gMaterialData[gnMaterialIndex];
+	MaterialData m = gMaterialDatas[gnMaterialIndex];
 	
 	fMetallic = m.fMetallic;
 	fRoughness = 1.0f - saturate(m.fSmoothness);

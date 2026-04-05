@@ -1,46 +1,12 @@
 ﻿#pragma once
 #include "RenderPass.h"
 
-template<typename KeyType, typename ElemType>
-class IndexMap {
-private:
-	std::unordered_map<KeyType, size_t> m_IndexMap;
-	std::vector<ElemType> m_Elements;
-
-public:
-	void Reserve(size_t newSize) {
-		m_IndexMap.reserve(newSize);
-		m_Elements.reserve(newSize);
-	}
-	
-	std::pair<size_t, bool> Insert(const KeyType& k, const ElemType& v) {
-		auto [idx, bResult] = m_IndexMap.emplace(k, m_Elements.size());
-		if (bResult) {
-			m_Elements.push_back(v);
-		}
-
-		return { idx->second, bResult };
-	}
-
-	void Clear() {
-		m_IndexMap.clear();
-		m_Elements.clear();
-	}
-
-	size_t Size() { return m_Elements.size(); }
-
-	//ElemType& operator[](KeyType key) { return m_Elements[m_IndexMap[key]]; }
-	ElemType& operator[](size_t idx) { return m_Elements[idx]; }
-
-	const std::vector<ElemType>& GetElements() { return m_Elements; }
-};
-
-
 class GBufferPass : public IRenderPass {
 	struct RenderParameter {
-		CB_INSTANCE_DATA cbInstanceData;
-		std::vector<WorldTransformData> sbWorldTransformData;
-		std::vector<AnimationController*> pAnimationControllers;
+		CB_INSTANCE_DATA cbInstanceData{};
+		int32 nInstances = 0;
+		std::vector<int32> nBoneOffsets;
+		ComPtr<ID3D12PipelineState> pd3dPipelineState = nullptr;
 	};
 
 	using RenderQueue = std::vector<std::pair<IMesh*, GBufferPass::RenderParameter>>;
@@ -94,14 +60,28 @@ private:
 	mutable uint32 m_unFrustumCulled = 0;
 
 	mutable struct CachedData {
-		IndexMap<MeshRenderer::ID, std::pair<const MeshRenderer*, std::vector<const IGameObject*>>> m_FrustumCulledMap;
-		IndexMap<IMaterial::ID, MaterialData> m_MaterialMap;
-		IndexMap<Texture::ID, const TextureRef<Texture>*> m_TextureMap;
+		IndexMap<MeshRenderer::ID, std::pair<const MeshRenderer*, std::vector<const IGameObject*>>> frustumCulledMap;
+		IndexMap<IMaterial::ID, MaterialData> materialMap;
+		IndexMap<Texture::ID, const TextureRef<Texture>*> textureMap;
+
+		std::vector<WorldTransformData> sbWorldTransformDatas;
+		std::vector<Matrix> sbBoneTransformDatas;
+
+		struct AnimationInstancingData {
+			int32 unOffset = 0;
+		};
+
+		std::unordered_map<const AnimationController*, AnimationInstancingData> animationInstancingData;
 
 		void Clear() {
-			m_FrustumCulledMap.Clear();
-			m_MaterialMap.Clear();
-			m_TextureMap.Clear();
+			frustumCulledMap.Clear();
+			materialMap.Clear();
+			textureMap.Clear();
+
+			sbWorldTransformDatas.clear();
+			sbBoneTransformDatas.clear();
+
+			animationInstancingData.clear();
 		}
 
 	} m_CachedData;

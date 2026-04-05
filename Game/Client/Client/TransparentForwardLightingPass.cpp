@@ -55,36 +55,26 @@ void TransparentForwardLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandLis
 void TransparentForwardLightingPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
 	constexpr uint32 rootParamInstanceData = std::to_underlying(ROOT_PARAMETER::PER_INSTANCE_DATA);
-	constexpr uint32 rootParamBoneTransform = std::to_underlying(ROOT_PARAMETER::BONE_TRANSFORM);
-	constexpr uint32 rootParamWorldIndex = std::to_underlying(ROOT_PARAMETER::WORLE_TRANSFORM_INDEX);
+	constexpr uint32 rootParamBoneOffset = std::to_underlying(ROOT_PARAMETER::BONE_TRANSFORM_OFFSETS);
 
 	for (auto& [k, v] : m_RenderQueueCached) {
 		ConstantBuffer cbInstanceData = RENDER->AllocCBuffer<CB_INSTANCE_DATA>();
 		cbInstanceData.WriteData(&v.cbInstanceData);
 		pd3dCommandList->SetGraphicsRootConstantBufferView(rootParamInstanceData, cbInstanceData.GPUAddress);
 
-		if (v.pAnimationController) {
-			// Animated
+		if (v.nBoneOffset != -1) {
+			auto boneOffsetSBuffer = RENDER->AllocSBuffer<int32>(1);
+			boneOffsetSBuffer.WriteData(v.nBoneOffset, 0);
+			pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamBoneOffset, boneOffsetSBuffer.GPUAddress);
+
+
 			pd3dCommandList->SetPipelineState(m_pd3dAnimatedPipelineState.Get());
-
-			// Set World Index
-			pd3dCommandList->SetGraphicsRoot32BitConstant(rootParamWorldIndex, v.sbWorldTransformIndex, 0);
-
-			const std::vector<Matrix>& mtxBoneTransforms = v.pAnimationController->GetFinalOutput();
-			StructuredBuffer sbBoneTransforms = RENDER->AllocSBuffer<Matrix>(mtxBoneTransforms.size());
-			sbBoneTransforms.WriteData(mtxBoneTransforms);
-			pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamBoneTransform, sbBoneTransforms.GPUAddress);
-
-			k->Render(pd3dCommandList, 1);
 		}
 		else {
-			// Static
 			pd3dCommandList->SetPipelineState(m_pd3dStandardPipelineState.Get());
-
-			// Set World Index
-			pd3dCommandList->SetGraphicsRoot32BitConstant(rootParamWorldIndex, v.sbWorldTransformIndex, 0);
-			k->Render(pd3dCommandList, 1);
 		}
+
+		k->Render(pd3dCommandList, 1);
 	}
 }
 
@@ -94,103 +84,100 @@ void TransparentForwardLightingPass::OnPostRender(ComPtr<ID3D12GraphicsCommandLi
 
 void TransparentForwardLightingPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<std::shared_ptr<IGameObject>>& frustumCulled, OUT DescriptorHandle& outDescHandle) const
 {
-	// materialData
-	std::unordered_map<uint64_t, size_t> materialIdxMap;
-	materialIdxMap.reserve(frustumCulled.size());
-	std::vector<const MaterialHandle*> pMaterialHandleForBind;
-	pMaterialHandleForBind.reserve(frustumCulled.size());
+	m_CachedData.Clear();
 
-	std::unordered_map<uint64_t, size_t> textureIdxMap;
-	textureIdxMap.reserve(frustumCulled.size() * 4);
-	std::vector<const TextureRef<Texture>*> pTextureHandleForBind;
-	pTextureHandleForBind.reserve(frustumCulled.size() * 4);
+	m_CachedData.materialMap.Reserve(frustumCulled.size());
+	m_CachedData.textureMap.Reserve(frustumCulled.size());
+	m_CachedData.sbWorldTransformDatas.reserve(frustumCulled.size());
 
 	std::unordered_set<std::shared_ptr<IMesh>> pMeshes;
-
-	std::vector<WorldTransformData> sbWorldTransformData;
-	sbWorldTransformData.reserve(frustumCulled.size());
 
 	uint32 unMaterialBindIndex = 0;
 	uint32 unTextureBindIndex = 0;
 	for (const auto& pObj : frustumCulled) {
-		WorldTransformData worldTransformData{
-			.mtxWorld = pObj->GetWorldMatrix().Transpose(),
-			.mtxInvWorld = pObj->GetWorldMatrix().Invert().Transpose()
-		};
-		sbWorldTransformData.push_back(worldTransformData);
-
 		const auto pMeshRenderer = pObj->GetComponent<MeshRenderer>();
 
 		for (const auto& [pMesh, materialHandle] : std::views::zip(pMeshRenderer->GetMeshes(), pMeshRenderer->GetMaterialHandles())) {
 			RenderParameter renderParameter{};
 
-			auto materialIt = materialIdxMap.find(materialHandle.GetID());
-			if (materialIt == materialIdxMap.end()) {
-				materialIdxMap.insert({ materialHandle.GetID(), unMaterialBindIndex++});
-				pMaterialHandleForBind.push_back(&materialHandle);
-
-				auto pMaterial = materialHandle.GetResource();
-				for (const auto& texHandle : pMaterial->GetTextureRefs()) {
-					if (!texHandle.IsValid()) continue;
-					auto texIt = textureIdxMap.find(texHandle.GetID());
-					if (texIt == textureIdxMap.end()) {
-						textureIdxMap.insert({ texHandle.GetID(), unTextureBindIndex++ });
-						pTextureHandleForBind.push_back(&texHandle);
-					}
+			const auto pMaterial = materialHandle.GetResource();
+			auto [idx, bMaterialInserted] = m_CachedData.materialMap.Insert(materialHandle.GetID(), pMaterial->GetMaterialData());
+			if (bMaterialInserted) {
+				auto& texRefs = pMaterial->GetTextureRefs();
+				for (uint32 i = 0; i < 4; ++i) {
+					if (!texRefs[i].IsValid()) continue;
+					auto [idx, bInserted] = m_CachedData.textureMap.Insert(texRefs[i].GetID(), &texRefs[i]);
 				}
 			}
 
-			renderParameter.cbInstanceData.gnMaterialIndex = materialIdxMap[materialHandle.GetID()];
+			renderParameter.cbInstanceData.gnMaterialIndex = m_CachedData.materialMap.GetIndex(materialHandle.GetID());
 
-			auto pMaterial = materialHandle.GetResource();
-			const auto& texHandles = pMaterial->GetTextureRefs();
+			auto& texRefs = pMaterial->GetTextureRefs();
 			for (uint32 i = 0; i < 4; ++i) {
-				auto pTex = pMaterial->GetTexture(i);
-				renderParameter.cbInstanceData.gnTextureIndex[i] = (pTex) ? textureIdxMap[texHandles[i].GetID()] : -1;
+				renderParameter.cbInstanceData.gnTextureIndex[i] = (texRefs[i].IsValid()) ? m_CachedData.textureMap.GetIndex(texRefs[i].GetID()) : -1;
 			}
 
-			renderParameter.sbWorldTransformIndex = sbWorldTransformData.size() - 1;
-			renderParameter.pAnimationController = pObj->GetComponentFromRoot<AnimationController>();
+			renderParameter.cbInstanceData.gnWorldTransformOffset = m_CachedData.sbWorldTransformDatas.size();
+			m_CachedData.sbWorldTransformDatas.emplace_back(
+				pObj->GetWorldMatrix().Transpose(),
+				pObj->GetWorldMatrix().Invert().Transpose()
+			);
+
+			const AnimationController* pAnim = pObj->GetComponentFromRoot<AnimationController>().get();
+
+			if (pAnim) {
+				auto [it, bBoneInserted] = m_CachedData.animationOffsetData.emplace(pAnim, m_CachedData.sbBoneTransformDatas.size());
+				if (bBoneInserted) {
+					renderParameter.nBoneOffset = m_CachedData.sbBoneTransformDatas.size();
+					const auto& boneTransforms = pAnim->GetFinalOutput();
+					m_CachedData.sbBoneTransformDatas.insert(m_CachedData.sbBoneTransformDatas.end(), boneTransforms.begin(), boneTransforms.end());
+				}
+				else {
+					renderParameter.nBoneOffset = it->second.unOffset;
+				}
+			}
 
 			m_RenderQueueCached.emplace_back(pMesh, renderParameter);
 		}
 
 	}
 
-	// Bind
+	// Bind Per pass data
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
-	constexpr uint32 rootParamWorldTransform = std::to_underlying(ROOT_PARAMETER::WORLD_TRANSFORM_DATA);
 	constexpr uint32 rootParamPerPass = std::to_underlying(ROOT_PARAMETER::PER_PASS_DATA);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE bindHandle = outDescHandle.cpuHandle;
 
-	// Bind World Transforms
-	auto worldSBuffer = RENDER->AllocSBuffer<WorldTransformData>(sbWorldTransformData.size());
-	worldSBuffer.WriteData(sbWorldTransformData);
-	pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamWorldTransform, worldSBuffer.GPUAddress);
+	// rootParam[11]
+	const auto& worldTransformDatas = m_CachedData.sbWorldTransformDatas;
+	auto worldTransformSBuffer = RENDER->AllocSBuffer<WorldTransformData>(worldTransformDatas.size());
+	worldTransformSBuffer.WriteData(worldTransformDatas);
+	DEVICE->CopyDescriptorsSimple(1, bindHandle, worldTransformSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	// Bind Material
-	std::vector<MaterialData> sbMaterialDatas;
-	sbMaterialDatas.reserve(pMaterialHandleForBind.size());
-	std::transform(pMaterialHandleForBind.begin(), pMaterialHandleForBind.end(), std::back_inserter(sbMaterialDatas), [](const auto& handle) {
-		return handle->GetResource()->GetMaterialData();
-	});
+	// rootParam[11]
+	const auto& boneTransformDatas = m_CachedData.sbBoneTransformDatas;
+	auto boneTransformSBuffer = RENDER->AllocSBuffer<Matrix>(boneTransformDatas.size());
+	boneTransformSBuffer.WriteData(boneTransformDatas);
+	DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, unDescriptorInc), boneTransformSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	auto materialSBuffer = RENDER->AllocSBuffer<MaterialData>(sbMaterialDatas.size());
-	materialSBuffer.WriteData(sbMaterialDatas);
+	// rootParam[13]
+	const auto& materialDatas = m_CachedData.materialMap.GetElements();
+	auto materialSBuffer = RENDER->AllocSBuffer<MaterialData>(materialDatas.size());
+	materialSBuffer.WriteData(materialDatas);
 
-	DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, materialSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	outDescHandle.cpuHandle.Offset(1, unDescriptorInc);
+	DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, unDescriptorInc), materialSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	// Bind Texture
-	const uint32 unNumTextures = pTextureHandleForBind.size();
-	for (const auto& texHandle : pTextureHandleForBind) {
-		CD3DX12_CPU_DESCRIPTOR_HANDLE texCPUHandle = texHandle->GetResource()->GetSRVHandle();
-		DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, texCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		outDescHandle.cpuHandle.Offset(1, unDescriptorInc);
+	// Bind Texture : rootParam[14]
+	const auto& texDatas = m_CachedData.textureMap.GetElements();
+	const uint32 unNumTextures = texDatas.size();
+	for (const auto& pTexHandle : texDatas) {
+		CD3DX12_CPU_DESCRIPTOR_HANDLE texCPUHandle = pTexHandle->GetResource()->GetSRVHandle();
+		DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, unDescriptorInc), texCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	}
 
 	// Set
-	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamPerPass, outDescHandle.gpuHandle);
-	outDescHandle.gpuHandle.Offset(1 + unNumTextures, unDescriptorInc);
+	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::PER_PASS_DATA), outDescHandle.gpuHandle);
+	outDescHandle.cpuHandle.Offset(1 + 1 + 1 + unNumTextures, unDescriptorInc);
+	outDescHandle.gpuHandle.Offset(1 + 1 + 1 + unNumTextures, unDescriptorInc);
 }
 
 void TransparentForwardLightingPass::CreatePipelineState()
