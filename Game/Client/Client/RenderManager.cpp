@@ -31,7 +31,7 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 
 	for (uint32 i = 0; i < g_unMaxPendingFrames; ++i) {
 		m_DescriptorHeapForDraw[i].Initialize(pd3dDevice, d3dHeapDesc);
-		m_ConstantBufferPool[i].Initialize(1000);
+		m_ConstantBufferPool[i].Initialize(15000);
 		m_StructuredBufferPool[i].Initialize(10'000'000, 3000);
 		m_GBuffers[i].Initialize(i);
 

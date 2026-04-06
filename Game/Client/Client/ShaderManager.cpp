@@ -216,6 +216,7 @@ void ShaderManager::CompileShaders()
 	Compile("ForwardLightingPS", L"ForwardShader.hlsl", L"PSForwardLighting", SHADER_TYPE::PS);
 
 	Compile("ShadowStandardVS", L"ShadowMapShader.hlsl", L"VSShadowStandard", SHADER_TYPE::VS);
+	Compile("ShadowTerrainVS", L"ShadowMapShader.hlsl", L"VSShadowTerrain", SHADER_TYPE::VS);
 	Compile("ShadowAnimatedVS", L"ShadowMapShader.hlsl", L"VSShadowAnimated", SHADER_TYPE::VS);
 
 	Compile("SpriteVS", L"Sprite.hlsl", L"VSSprite", SHADER_TYPE::VS);

@@ -118,6 +118,7 @@ struct MaterialData
 
 	uint32 eAlphaMode;						// c5.y
 	Vector2 pad0;							// c5.zw
+
 };
 
 struct WorldTransformData

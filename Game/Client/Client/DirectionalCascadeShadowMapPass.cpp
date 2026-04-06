@@ -156,7 +156,7 @@ void DirectionalCascadeShadowMapPass::CreatePipelineState()
 		d3dPipelineDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
 		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 		d3dPipelineDesc.RasterizerState.FrontCounterClockwise = FALSE;
-		d3dPipelineDesc.RasterizerState.DepthBias = 8000;
+		d3dPipelineDesc.RasterizerState.DepthBias = 100000;
 		d3dPipelineDesc.RasterizerState.DepthBiasClamp = 0.0f;
 		d3dPipelineDesc.RasterizerState.SlopeScaledDepthBias = 1.0f;
 		d3dPipelineDesc.RasterizerState.DepthClipEnable = TRUE;
@@ -176,6 +176,15 @@ void DirectionalCascadeShadowMapPass::CreatePipelineState()
 	}
 
 	HRESULT hr = DEVICE->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dStandardPipelineState.GetAddressOf()));
+	if (FAILED(hr)) {
+		__debugbreak();
+	}
+
+	{
+		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("ShadowTerrainVS");
+	}
+
+	hr = DEVICE->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dTerrainPipelineState.GetAddressOf()));
 	if (FAILED(hr)) {
 		__debugbreak();
 	}
@@ -357,7 +366,7 @@ void DirectionalCascadeShadowMapPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandLi
 	constexpr uint32 rootParamWorldTransform = std::to_underlying(ROOT_PARAMETER::TERRAIN_WORLD_TRANSFORM);
 	const uint32 unDescriptorInc = D3DCore::g_nCBVSRVDescriptorIncrementSize;
 
-	pd3dCommandList->SetPipelineState(m_pd3dStandardPipelineState.Get());
+	pd3dCommandList->SetPipelineState(m_pd3dTerrainPipelineState.Get());
 
 	Matrix mtxTerrainWorld = pTerrain->GetWorldMatrix().Transpose();
 	auto worldTransformCBuffer = RENDER->AllocCBuffer<Matrix>();

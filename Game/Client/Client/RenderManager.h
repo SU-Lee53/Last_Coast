@@ -203,7 +203,11 @@ inline void RenderManager::Add(std::shared_ptr<T> pObj)
 	auto pMeshRenderer = pObj->GetComponent<MeshRenderer>();
 	auto pBaseColorTex = pMeshRenderer->GetMaterialHandle(0).GetResource()->GetTexture(0);
 
-
+	if (!pBaseColorTex) {
+		std::string strErr = std::format("{} - {} : No BaseColor", __FILE__, __LINE__);
+		//OutputDebugStringA(strErr.c_str());
+		return;
+	}
 	(pBaseColorTex->GetAlphaMode() == Texture::ALPHA_MODE::Transparent)
 		? m_pTransparentObjectsToRender.push_back(pObj)
 	    : m_pObjectsToRender.push_back(pObj);

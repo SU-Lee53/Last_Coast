@@ -129,3 +129,19 @@ void MeshRenderer::SetTexture(const TextureRef<Texture>& texHandle, UINT nMateri
 	pMaterial->SetTexture(texHandle, eTextureType);
 }
 
+void MeshRenderer::ShowControlImGui()
+{
+	int nCnt{};
+	for (auto [pMesh, mat] :std::views::zip(m_pMeshes, m_MaterialIDs)) {
+		std::string strTreeName = std::format("Mesh - Material #{}", nCnt++);
+		if (ImGui::TreeNode(strTreeName.c_str())) {
+			ImGui::SeparatorText("Mesh");
+			pMesh->ShowControlImGui();
+
+			ImGui::SeparatorText("Material");
+			mat.GetResource()->ShowControlToImGui();
+			ImGui::TreePop();
+		}
+	}
+}
+

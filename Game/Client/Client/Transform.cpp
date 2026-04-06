@@ -87,7 +87,8 @@ void Transform::SetRotation(float fPitch, float fYaw, float fRoll)
 
 void Transform::SetRotation(const Vector3& xmf3Rotation)
 {
-	Matrix mtxRotation = Matrix::CreateFromYawPitchRoll(xmf3Rotation);
+	Vector3 v3Rad = Vector3(XMConvertToRadians(xmf3Rotation.x), XMConvertToRadians(xmf3Rotation.y), XMConvertToRadians(xmf3Rotation.z));
+	Matrix mtxRotation = Matrix::CreateFromYawPitchRoll(v3Rad);
 	mtxRotation = mtxRotation * Matrix::CreateTranslation(m_mtxTransform.Translation());
 	m_mtxTransform = mtxRotation;
 }

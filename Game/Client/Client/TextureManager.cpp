@@ -18,16 +18,24 @@ void TextureManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 	m_DSVTextureTable.Initialize(pd3dDevice, 50, true, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
 
 	m_CommandListPool.Initialize(pd3dDevice);
+
+	LoadGameTextures();
 }
 
 void TextureManager::LoadGameTextures()
 {
 	// Font
 	//LoadTexture("font");
+
+	m_DebugAlbedo = LoadTexture("DefaultMaterial_BaseColor_0");
+	m_DebugNormal = LoadTexture("DefaultMaterial_Normal_0");
+
 }
 
 TextureRef<Texture> TextureManager::LoadTexture(const std::string& strTextureName, bool bCheckTransparent)
 {
+	if (strTextureName == "None") return {};
+
 	TextureHandle findHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!findHandle.IsValid()) {
 		std::shared_ptr<Texture> pTexture = std::make_shared<Texture>();

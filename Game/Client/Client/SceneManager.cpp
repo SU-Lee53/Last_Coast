@@ -5,6 +5,7 @@
 #include "TerrainTestScene.h"
 #include "MapTestScene.h"
 #include "TestScene.h"
+#include "GameScene.h"
 
 void SceneManager::Initialize()
 {

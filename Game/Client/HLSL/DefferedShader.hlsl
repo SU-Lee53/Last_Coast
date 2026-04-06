@@ -158,7 +158,7 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 	VS_TERRAIN_OUTPUT output = (VS_TERRAIN_OUTPUT) 0;
 	
 	matrix mtxViewProjection = mul(gCamera.mtxView, gCamera.mtxProjection);
-	matrix mtxWorld = gWorldTransforms[0].mtxWorld;
+	matrix mtxWorld = gmtxTerrainWorld;
 	
 	float3 positionW = mul(float4(input.position, 1.f), mtxWorld).xyz;
 	output.positionW = positionW;

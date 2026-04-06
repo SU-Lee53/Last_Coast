@@ -72,6 +72,7 @@ private:
 
 	ComPtr<ID3D12PipelineState> m_pd3dStandardPipelineState;
 	ComPtr<ID3D12PipelineState> m_pd3dAnimatedPipelineState;
+	ComPtr<ID3D12PipelineState> m_pd3dTerrainPipelineState;
 
 	TextureRef<DepthStencilTexture> m_ShadowMapRef[RenderManager::g_unMaxPendingFrames][g_unNumCascade];
 

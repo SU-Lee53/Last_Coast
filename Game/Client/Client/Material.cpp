@@ -35,6 +35,30 @@ std::shared_ptr<Texture> IMaterial::GetTexture(int nIndex)
 	return m_TextureIDs[nIndex].GetResource();
 }
 
+void IMaterial::ShowControlToImGui()
+{
+	ImGui::Text("%s : (%f, %f, %f, %f)", "v4Ambient", m_MaterialData.v4Ambient.x, m_MaterialData.v4Ambient.x, m_MaterialData.v4Ambient.y, m_MaterialData.v4Ambient.w);
+	ImGui::Text("%s : (%f, %f, %f, %f)", "v4Diffuse", m_MaterialData.v4Diffuse.x, m_MaterialData.v4Diffuse.x, m_MaterialData.v4Diffuse.y, m_MaterialData.v4Diffuse.w);
+	ImGui::Text("%s : (%f, %f, %f, %f)", "v4Specular", m_MaterialData.v4Specular.x, m_MaterialData.v4Specular.x, m_MaterialData.v4Specular.y, m_MaterialData.v4Specular.w);
+	ImGui::Text("%s : (%f, %f, %f, %f)", "v4Emissive", m_MaterialData.v4Emissive.x, m_MaterialData.v4Emissive.x, m_MaterialData.v4Emissive.y, m_MaterialData.v4Emissive.w);
+
+	ImGui::Text("%s : %f", "fGlossiness", m_MaterialData.fGlossiness);
+	ImGui::Text("%s : %f", "fSmoothness", m_MaterialData.fSmoothness);
+	ImGui::Text("%s : %f", "fSpecularHighlight", m_MaterialData.fSpecularHighlight);
+	ImGui::Text("%s : %f", "fMetallic", m_MaterialData.fMetallic);
+	ImGui::Text("%s : %f", "fGlossyReflection", m_MaterialData.fGlossyReflection);
+
+	int nCnt{};
+	for (const auto& texRef : m_TextureIDs) {
+		std::string strTreeName = std::format("Texture #{}", nCnt++);
+		if (ImGui::TreeNode(strTreeName.c_str())) {
+			auto pTex = texRef.GetResource();
+			(pTex) ? pTex->ShowDebugInfo() : ImGui::Text("nullptr");
+			ImGui::TreePop();
+		}
+	}
+}
+
 //////////////////////////////////////////////////////////////////////////////////
 // StandardMaterial
 
@@ -47,6 +71,14 @@ void StandardMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 	m_TextureIDs[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName, false);			// Normal
 	m_TextureIDs[2] = TEXTURE->LoadTexture(materialLoadInfo.strMetallicMapName, false);		// Metallic
 	m_TextureIDs[3] = TEXTURE->LoadTexture(materialLoadInfo.strSpecularMapName, false);		// Specular
+
+	if (!m_TextureIDs[0].IsValid()) {
+		m_TextureIDs[0] = TEXTURE->LoadTexture("DefaultMaterial_BaseColor_0");
+	}
+
+	if (!m_TextureIDs[1].IsValid()) {
+		m_TextureIDs[1] = TEXTURE->LoadTexture("DefaultMaterial_Normal_0");
+	}
 
 	if (m_TextureIDs[0].IsValid()) {
 		m_MaterialData.eAlphaMode = std::to_underlying(m_TextureIDs[0].GetResource()->GetAlphaMode());
@@ -67,6 +99,14 @@ void SkinnedMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 	m_TextureIDs[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName, false);			// Normal
 	m_TextureIDs[2] = TEXTURE->LoadTexture(materialLoadInfo.strMetallicMapName, false);		// Metallic
 	m_TextureIDs[3] = TEXTURE->LoadTexture(materialLoadInfo.strSpecularMapName, false);		// Specular
+
+	if (!m_TextureIDs[0].IsValid()) {
+		m_TextureIDs[0] = TEXTURE->LoadTexture("DefaultMaterial_BaseColor_0");
+	}
+
+	if (!m_TextureIDs[1].IsValid()) {
+		m_TextureIDs[1] = TEXTURE->LoadTexture("DefaultMaterial_Normal_0");
+	}
 
 	if (m_TextureIDs[0].IsValid()) {
 		m_MaterialData.eAlphaMode = std::to_underlying(m_TextureIDs[0].GetResource()->GetAlphaMode());

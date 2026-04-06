@@ -87,6 +87,9 @@ private:
 	static uint32 g_unRTVFromCoreCount;
 	static uint32 g_unDSVFromCoreCount;
 
+	TextureRef<Texture> m_DebugAlbedo{};
+	TextureRef<Texture> m_DebugNormal{};
+
 #pragma region D3D
 private:
 	void CreateCommandList();

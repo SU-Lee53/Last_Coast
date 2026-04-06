@@ -113,6 +113,7 @@ void TerrainObject::BuildTerrainMesh(const TERRAINLOADINFO& terrainInfo)
 	*/
 
 	auto ConvertUEToD3D = [](const Vector3& v) {
+		//return Vector3(v.y, v.z, v.x);
 		return Vector3(v.y, v.z, v.x);
 	};
 
@@ -214,7 +215,7 @@ void TerrainObject::ReadTerrainData(const nlohmann::json& j, OUT TERRAINLOADINFO
 
 		const auto& jHeightMapInfo = jTerrain["HeightMap"];
 		//outTerrainInfo.strHeightMapName = std::format("{}/Images/{}", g_strTerrainPath, jHeightMapInfo["Path"].get<std::string>());	실제 Heightmap 과 이름 안맞음 
-		outTerrainInfo.strHeightMapName = std::format("{}/Images/TEST.raw", g_strTerrainPath);
+		outTerrainInfo.strHeightMapName = std::format("{}/Images/Game.raw", g_strTerrainPath);
 	}
 
 	const nlohmann::json& jComponents = j["Components"];

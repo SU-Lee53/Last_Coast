@@ -31,6 +31,17 @@ VS_POSITION_OUTPUT VSShadowStandard(VS_POSITION_INPUT input, uint nInstanceID : 
 	return output;
 }
 
+VS_POSITION_OUTPUT VSShadowTerrain(VS_POSITION_INPUT input, uint nInstanceID : SV_InstanceID)
+{
+	VS_POSITION_OUTPUT output = (VS_POSITION_OUTPUT) 0;
+	matrix mtxWorld = gmtxTerrainWorld;
+    
+	float3 positionW = mul(float4(input.position, 1.f), mtxWorld).xyz;
+	output.position = mul(float4(positionW, 1.f), gmtxLightViewProj);
+	
+	return output;
+}
+
 VS_POSITION_OUTPUT VSShadowAnimated(VS_SKINNED_POSITION_INPUT input, uint nInstanceID : SV_InstanceID)
 {
 	VS_POSITION_OUTPUT output = (VS_POSITION_OUTPUT) 0;

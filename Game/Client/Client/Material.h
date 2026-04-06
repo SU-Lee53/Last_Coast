@@ -47,6 +47,8 @@ public:
 
 	const std::vector<TextureRef<Texture>>& GetTextureRefs() const { return m_TextureIDs; }
 
+	virtual void ShowControlToImGui();
+
 protected:
 	void InitializeColors(const MATERIALLOADINFO& materialLoadInfo);
 

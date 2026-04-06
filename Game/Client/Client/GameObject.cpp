@@ -116,3 +116,24 @@ std::shared_ptr<IGameObject> IGameObject::FindMeshedFrame(const std::string& str
 
 	return nullptr;
 }
+
+
+void IGameObject::ShowControlImGui()
+{
+	std::string& strTreeNodeName = m_strFrameName;
+
+	if (ImGui::TreeNode(strTreeNodeName.c_str())) {
+		constexpr auto nComponents = std::to_underlying(COMPONENT_TYPE::COUNT);
+		for (int i = 0; i < nComponents; ++i) {
+			if (m_pComponents[i]) {
+				m_pComponents[i]->ShowControlImGui();
+			}
+		}
+
+		for (const auto& pChild : m_pChildren) {
+			pChild->ShowControlImGui();
+		}
+
+		ImGui::TreePop();
+	}
+}
