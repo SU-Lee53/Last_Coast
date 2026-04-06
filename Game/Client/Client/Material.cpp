@@ -74,10 +74,9 @@ void StandardMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 
 	if (!m_TextureIDs[0].IsValid()) {
 		m_TextureIDs[0] = TEXTURE->LoadTexture("DefaultMaterial_BaseColor_0");
-	}
-
-	if (!m_TextureIDs[1].IsValid()) {
-		m_TextureIDs[1] = TEXTURE->LoadTexture("DefaultMaterial_Normal_0");
+		if (!m_TextureIDs[1].IsValid()) {
+			m_TextureIDs[1] = TEXTURE->LoadTexture("DefaultMaterial_Normal_0");
+		}
 	}
 
 	if (m_TextureIDs[0].IsValid()) {
@@ -102,10 +101,9 @@ void SkinnedMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 
 	if (!m_TextureIDs[0].IsValid()) {
 		m_TextureIDs[0] = TEXTURE->LoadTexture("DefaultMaterial_BaseColor_0");
-	}
-
-	if (!m_TextureIDs[1].IsValid()) {
-		m_TextureIDs[1] = TEXTURE->LoadTexture("DefaultMaterial_Normal_0");
+		if (!m_TextureIDs[1].IsValid()) {
+			m_TextureIDs[1] = TEXTURE->LoadTexture("DefaultMaterial_Normal_0");
+		}
 	}
 
 	if (m_TextureIDs[0].IsValid()) {
