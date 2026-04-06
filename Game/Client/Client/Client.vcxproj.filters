@@ -411,6 +411,7 @@
     <ClInclude Include="TerrainTestScene.h">
       <Filter>02.Game\Scene\Test</Filter>
     </ClInclude>
+    <ClInclude Include="SpritePass.h" />
     <ClInclude Include="NavMeshDebugRenderer.h" />
     <ClInclude Include="AIManagerWrapper.h" />
     <ClInclude Include="TestScene.h">
@@ -424,12 +425,6 @@
     </ClInclude>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imgui_stdlib.h" />
     <ClInclude Include="DefferedFogPass.h" />
-    <ClInclude Include="GameScene.h">
-      <Filter>02.Game\Scene</Filter>
-    </ClInclude>
-    <ClInclude Include="SpritePass.h">
-      <Filter>03.Engine\Rendering\RenderPasses</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -601,9 +596,6 @@
     <ClCompile Include="AnimationHelper.cpp">
       <Filter>02.Game\Animation</Filter>
     </ClCompile>
-    <ClCompile Include="AnimationMontage.cpp">
-      <Filter>03.Engine\D3D Resource Management</Filter>
-    </ClCompile>
     <ClCompile Include="CommandListPool.cpp">
       <Filter>03.Engine\D3D Resource Management</Filter>
     </ClCompile>
@@ -705,12 +697,10 @@
     <ClCompile Include="MapTestScene.cpp">
       <Filter>02.Game\Scene\Test</Filter>
     </ClCompile>
+    <ClCompile Include="SpritePass.cpp" />
     <ClCompile Include="NavMeshDebugRenderer.cpp" />
     <ClCompile Include="AIManagerWrapper.cpp" />
     <ClCompile Include="TestScene.cpp">
-      <Filter>02.Game\Scene\Test</Filter>
-    </ClCompile>
-    <ClCompile Include="NetworkManager.cpp">
       <Filter>02.Game\Scene\Test</Filter>
     </ClCompile>
     <ClCompile Include="Zombie.cpp">
@@ -721,11 +711,11 @@
     </ClCompile>
     <ClCompile Include="..\Dependencies\Includes\ImGui\imgui_stdlib.cpp" />
     <ClCompile Include="DefferedFogPass.cpp" />
-    <ClCompile Include="GameScene.cpp">
-      <Filter>02.Game\Scene</Filter>
+    <ClCompile Include="AnimationMontage.cpp">
+      <Filter>02.Game\Animation</Filter>
     </ClCompile>
-    <ClCompile Include="SpritePass.cpp">
-      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    <ClCompile Include="NetworkManager.cpp">
+      <Filter>04.Managers\Game Management</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -785,14 +775,6 @@
     <FxCompile Include="..\HLSL\ShadowMapShader.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
-    <FxCompile Include="..\HLSL\LUTBaking.hlsl">
-      <Filter>03.Engine\HLSL\Compute</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\ToneMappingCommon.hlsl">
-      <Filter>03.Engine\HLSL\Graphics</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\HDRPostProcessing.hlsl">
-      <Filter>03.Engine\HLSL\Graphics</Filter>
-    </FxCompile>
+    <FxCompile Include="..\HLSL\HDRPostProcessing.hlsl" />
   </ItemGroup>
 </Project>

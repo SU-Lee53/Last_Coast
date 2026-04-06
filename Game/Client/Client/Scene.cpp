@@ -139,7 +139,8 @@ void Scene::PostInitialize()
 	for (auto& obj : m_pGameObjects) {
 		auto pZombie = std::dynamic_pointer_cast<Zombie>(obj);
 		if (pZombie) {
-			pZombie->SetPosition(AI->GetNavMesh()->GetRandomPoint()); // Transform + AIAgent 동시에
+			//pZombie->SetPosition(AI->GetNavMesh()->GetRandomPoint()); // Transform + AIAgent 동시에
+			pZombie->SetPosition(m_xmSceneBound.Center); // Transform + AIAgent 동시에
 			pZombie->SetTarget(m_pPlayer);  // shared_ptr 전달
 		}
 	}

@@ -46,6 +46,20 @@ void NetworkManager::Initialize()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 2025.11.06
+// Disconnect() By 민정원
+// 연결해제
+
+void NetworkManager::Disconnect()
+{
+	m_bConnected = false;
+	CloseHandle(g_hNetworkThread);
+	closesocket(m_hClientSocket);
+	DeleteCriticalSection(&g_hCS);
+	WSACleanup();
+}
+/*
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 2025.11.03
 // ConnectToServer() By 이승욱
 // ImGui 를 이용하여 IP 를 입력받고 연결을 시도
@@ -130,19 +144,7 @@ bool NetworkManager::SendData()
 	return nSumOfRetval == nBytesToSend;
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 2025.11.06
-// Disconnect() By 민정원
-// 연결해제
 
-void NetworkManager::Disconnect()
-{
-	m_bConnected = false;
-	CloseHandle(g_hNetworkThread);
-	closesocket(m_hClientSocket);
-	DeleteCriticalSection(&g_hCS);
-	WSACleanup();
-}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 2025.11.04
@@ -239,6 +241,26 @@ DWORD WINAPI NetworkManager::ProcessNetwork(LPVOID arg)
 	}
 
 	return 0;
+}
+*/
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Last Coast
+// WritePlayerState : 내 플레이어 상태를 송신 패킷에 기록
+// StoreSnapshot    : 서버에서 받은 전체 스냅샷을 스레드 안전하게 저장
+
+void NetworkManager::WritePlayerState(const PlayerState& state)
+{
+	EnterCriticalSection(&g_hCS);
+	m_SendPacket.playerState = state;
+	LeaveCriticalSection(&g_hCS);
+}
+
+void NetworkManager::StoreSnapshot(const ServerToClientPacket& packet)
+{
+	EnterCriticalSection(&g_hCS);
+	m_Snapshot = packet;
+	LeaveCriticalSection(&g_hCS);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////

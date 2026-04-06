@@ -17,6 +17,7 @@ public:
 
 	void Shutdown();
 	void SetTarget(std::shared_ptr<IPlayer> player) { m_wpTarget = player; }
+	void TriggerAttackHit();
 	void SetPosition(const Vector3& pos) {
 		GetTransform()->SetPosition(pos);
 		if (m_pAIAgent) 
@@ -26,6 +27,11 @@ public:
 	AIBehaviorState GetBehaviorState() const { return m_pAIAgent ? m_pAIAgent->GetBehaviorState() : AIBehaviorState::Idle; }
 	const PathDebugInfo& GetPathDebugInfo() const { return m_pAIAgent->GetPathDebugInfo(); }
 	float GetMoveSpeedSqXZ() const { return m_fMoveSpeedSqXZ; }
+
+	void TakeDamage(float fAmount) { m_fHP = std::max(0.f, m_fHP - fAmount); }
+	float GetHP() const { return m_fHP; }
+	bool IsDead() const { return m_fHP <= 0.f; }
+	bool IsReadyToRemove() const { return m_bReadyToRemove; }
 
 	Vector3 GetPosition() const;
 
@@ -65,4 +71,7 @@ private:
 
 	bool m_bWasVisible = false;  // 이전 프레임 시야 여부 (경보 전파 rising edge 감지용)
 	float m_fMoveSpeedSqXZ = 0.f;
+	float m_fHP = 100.f;
+	bool m_bDying = false;
+	bool m_bReadyToRemove = false;
 };

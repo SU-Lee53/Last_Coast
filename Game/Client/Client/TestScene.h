@@ -11,6 +11,10 @@ public:
 	void Update() override;
 	
 private:
+	void ProcessPlayerShoot();
+	void RemoveDeadZombies();
+
+private:
 	std::unique_ptr<NavMeshDebugRenderer> m_pNavMeshDebugRenderer;
 };
 

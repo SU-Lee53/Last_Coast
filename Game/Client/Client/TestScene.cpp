@@ -4,6 +4,8 @@
 #include "ThirdPersonPlayer.h"
 #include "Zombie.h"
 #include "Skybox.h"
+#include "ThirdPersonCamera.h"
+#include "Collider.h"
 
 void TestScene::BuildObjects()
 {
@@ -12,7 +14,7 @@ void TestScene::BuildObjects()
 
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 
-	for (int i = 0; i < 50; ++i) {
+	for (int i = 0; i < 1; ++i) {
 		std::shared_ptr<IGameObject> pObj = std::make_shared<Zombie>();
 		m_pGameObjects.push_back(pObj);
 	}
@@ -56,6 +58,15 @@ void TestScene::Update()
 			Vector3 v3PlayerPos = transform->GetPosition();
 			ImGui::Text("Player Position : (%f, %f, %f)", v3PlayerPos.x, v3PlayerPos.y, v3PlayerPos.z);
 
+			// ★ 플레이어 체력
+			ImGui::NewLine();
+			ImGui::Text("====== Player HP ======");
+			float fHP = pPlayer->GetHP();
+			float fMaxHP = pPlayer->GetMaxHP();
+			ImGui::Text("HP : %.0f / %.0f", fHP, fMaxHP);
+			ImGui::ProgressBar(fHP / fMaxHP, ImVec2(-1.f, 0.f));
+			if (pPlayer->IsDead()) ImGui::TextColored(ImVec4(1, 0, 0, 1), "DEAD");
+
 			// ★ 좀비 위치 출력
 			ImGui::NewLine();
 			ImGui::Text("====== Zombie ======");
@@ -68,6 +79,9 @@ void TestScene::Update()
 					ImGui::Text("[%d] Transform Pos : (%.1f, %.1f, %.1f)", zombieIdx, v3ZombiePos.x, v3ZombiePos.y, v3ZombiePos.z);
 					ImGui::Text("[%d] AI State : %d", zombieIdx,
 						(int)pZombie->GetBehaviorState()); // Idle=0, PathRequested=1, Moving=2
+					ImGui::Text("[%d] HP : %.0f", zombieIdx, pZombie->GetHP());
+					ImGui::ProgressBar(pZombie->GetHP() / 100.f, ImVec2(-1.f, 0.f));
+					if (pZombie->IsDead()) ImGui::TextColored(ImVec4(1, 0, 0, 1), "[%d] DEAD", zombieIdx);
 
 					// 경로 디버그 정보
 					// A* 경로 노드를 디버그 렌더러에 반영 (첫 번째 좀비 기준)
@@ -144,4 +158,51 @@ void TestScene::Update()
 	}
 	ImGui::End();
 
+	ProcessPlayerShoot();
+	RemoveDeadZombies();
+
+}
+
+void TestScene::ProcessPlayerShoot()
+{
+	auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(m_pPlayer);
+	if (!pPlayer || !pPlayer->ConsumeFire())
+		return;
+
+	auto pCamera = std::static_pointer_cast<ThirdPersonCamera>(pPlayer->GetCamera());
+	Vector3 v3RayOrigin = pCamera->GetPosition();
+	Vector3 v3RayDir    = pCamera->GetLook();
+
+	float fMinDist = std::numeric_limits<float>::max();
+	std::shared_ptr<Zombie> pHitZombie;
+
+	for (const auto& obj : m_pGameObjects) {
+		auto pZombie = std::dynamic_pointer_cast<Zombie>(obj);
+		if (!pZombie || pZombie->IsDead()) continue;
+
+		auto pCollider = pZombie->GetComponent<PlayerCollider>();
+		if (!pCollider) continue;
+
+		BoundingBox aabb;
+		pCollider->GetCapsuleWorld().CreateAABBFromCapsule(aabb);
+
+		float fDist = 0.f;
+		if (aabb.Intersects(XMLoadFloat3(&v3RayOrigin), XMLoadFloat3(&v3RayDir), fDist)) {
+			if (fDist < fMinDist) {
+				fMinDist = fDist;
+				pHitZombie = pZombie;
+			}
+		}
+	}
+
+	if (pHitZombie)
+		pHitZombie->TakeDamage(25.f);
+}
+
+void TestScene::RemoveDeadZombies()
+{
+	std::erase_if(m_pGameObjects, [](const std::shared_ptr<IGameObject>& obj) {
+		auto pZombie = std::dynamic_pointer_cast<Zombie>(obj);
+		return pZombie && pZombie->IsReadyToRemove();
+	});
 }

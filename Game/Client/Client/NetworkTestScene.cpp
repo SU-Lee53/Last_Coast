@@ -27,7 +27,7 @@ void NetworkTestScene::ProcessInput()
 
 void NetworkTestScene::Update()
 {
-	NETWORK->ConnectToServer();
+	//NETWORK->ConnectToServer();
 
 	//if (ImGui::Button("Change To Scene")) {
 	//	SCENE->ChangeScene<TerrainTestScene>();
