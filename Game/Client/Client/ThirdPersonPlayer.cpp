@@ -97,8 +97,9 @@ void ThirdPersonPlayer::ProcessInput()
 		}
 
 		// Fire
-		if (INPUT->GetButtonPressed(VK_LBUTTON) && m_bAiming) {
+		if (INPUT->GetButtonDown(VK_LBUTTON) && m_bAiming) {
 			pAnimationCtrl->GetMontage()->JumpToSection("Rifle Fire");
+			m_bFiredThisFrame = true;
 		}
 	}
 

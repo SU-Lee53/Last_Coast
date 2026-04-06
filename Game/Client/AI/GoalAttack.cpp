@@ -13,7 +13,7 @@ namespace AIDLL
     void GoalAttack::Activate()
     {
         m_Status = Active;
-        m_fCooldownTimer = 0.0f;  // 활성화 시 쿨타임 리셋 (첫 공격은 windup 후)
+        m_fCooldownTimer = g_fAttackCooldown;  // 활성화 즉시 첫 공격 발동
         auto pOwner = m_pOwner.lock();
         if (!pOwner) { m_Status = Failed; return; }
         pOwner->CancelPath();

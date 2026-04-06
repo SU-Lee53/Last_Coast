@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "AnimationMontage.h"
+#include "Zombie.h"
 
 void AnimationMontage::Initialize(std::shared_ptr<IGameObject> pOwner)
 {
@@ -103,7 +104,7 @@ void AnimationMontage::Update()
 
 	// 최종 Pose 계산
 	const auto& currentSection = m_MontageSections[m_nCurrentSection];
-	float fTimeToPlay = m_fSectionPlayTime + currentSection.fStartTime;
+	float fTimeToPlay = m_fSectionPlayTime;  // 섹션 내 로컬 시간으로 샘플링
 	const auto& bones = m_wpOwner.lock()->GetComponent<Skeleton>()->GetBones();
 	for (const auto& bone : bones) {
 		m_OutputPose[bone.nIndex] = currentSection.pAnimationToPlay->GetKeyFrameSRT(bone.strBoneName, fTimeToPlay, bone.mtxTransform);
@@ -119,6 +120,8 @@ void AnimationMontage::PlayMontage(const std::string& strSectionName)
 	}
 
 	m_bPlaying = true;
+	m_bBlendingOut = false;
+	m_fBlendOutElapsed = 0.f;
 	m_nCurrentSection = it->second;
 	m_fTotalPlaytime = 0.f;
 	m_fSectionPlayTime = 0.f;
@@ -195,6 +198,15 @@ SECTION_TRANSITION AnimationMontage::HandleSection()
 		}
 		break;
 	}
+	case MONTAGE_SECTION_END_RULE::FREEZE:
+	{
+		// 마지막 프레임 고정 — 블렌드아웃 없이 weight 1.0 유지
+		m_fSectionPlayTime = fSectionDuration;
+		m_fBlendWeight = 1.0f;
+		m_bFreezed = true;
+		eResult = SECTION_TRANSITION::NONE;
+		break;
+	}
 	case MONTAGE_SECTION_END_RULE::STOP:
 	default:
 	{
@@ -257,4 +269,27 @@ void PlayerAnimationMontage::BuildMontage()
 	m_MontageSections.push_back(aimSection);
 
 
+}
+
+void ZombieAnimationMontage::BuildMontage()
+{
+	MontageSection attackSection{};
+	attackSection.strName = "Zombie Attack";
+	attackSection.pAnimationToPlay = ANIMATION->Get("Zombie Attack");
+	attackSection.eEndRule = MONTAGE_SECTION_END_RULE::STOP;
+	m_MontageSections.push_back(attackSection);
+
+	MontageSection deathSection{};
+	deathSection.strName = "Zombie Death";
+	deathSection.pAnimationToPlay = ANIMATION->Get("Zombie Death");
+	deathSection.eEndRule = MONTAGE_SECTION_END_RULE::FREEZE;
+	m_MontageSections.push_back(deathSection);
+
+	MontageNotify hitNotify{};
+	hitNotify.nSectionIndex = 0;
+	hitNotify.fTime = 1.2f;
+	hitNotify.pCallback = [](std::shared_ptr<IGameObject> pObj) {
+		std::static_pointer_cast<Zombie>(pObj)->TriggerAttackHit();
+	};
+	m_Notifies.push_back(hitNotify);
 }

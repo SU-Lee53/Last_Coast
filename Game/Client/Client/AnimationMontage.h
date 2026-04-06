@@ -4,7 +4,8 @@ enum class MONTAGE_SECTION_END_RULE {
 	NEXT,	// 다음 Section 으로
 	LOOP,	// 자기 자신 Loop
 	JUMP,	// 특정 Section 으로
-	STOP	// Montage 중지
+	STOP,	// Montage 중지
+	FREEZE	// 마지막 프레임 고정
 };
 
 enum class SECTION_TRANSITION {
@@ -43,6 +44,7 @@ public:
 
 	const std::vector<AnimationKey>& GetOutputPose() const { return m_OutputPose; }
 	float GetBlendWeight() const { return m_fBlendWeight; }
+	bool IsFreezed() const { return m_bFreezed; }
 
 protected:
 	virtual void BuildMontage() {}
@@ -67,6 +69,7 @@ protected:
 
 	bool m_bPlaying = false;
 	bool m_bAdditive = false;
+	bool m_bFreezed = false;
 
 	std::unordered_map<std::string, UINT> m_SectionIndexMap;
 	std::vector<MontageSection> m_MontageSections;
@@ -81,4 +84,10 @@ public:
 	virtual void BuildMontage() override;
 
 
+};
+
+
+class ZombieAnimationMontage : public AnimationMontage {
+public:
+	virtual void BuildMontage() override;
 };

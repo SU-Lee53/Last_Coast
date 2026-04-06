@@ -13,6 +13,8 @@ void AnimationManager::LoadGameAnimations()
 	LoadAndAdd("Jog Forward");
 	LoadAndAdd("Rifle Aiming Idle");
 	LoadAndAdd("Firing Rifle");
+	LoadAndAdd("Zombie Attack");
+	LoadAndAdd("Zombie Death");
 }
 
 std::shared_ptr<Animation> AnimationManager::LoadAndAdd(const std::string& strName)

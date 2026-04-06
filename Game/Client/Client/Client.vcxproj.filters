@@ -423,6 +423,8 @@
     <ClInclude Include="Zombie.h">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClInclude>
+    <ClInclude Include="..\Dependencies\Includes\ImGui\imgui_stdlib.h" />
+    <ClInclude Include="DefferedFogPass.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -594,9 +596,6 @@
     <ClCompile Include="AnimationHelper.cpp">
       <Filter>02.Game\Animation</Filter>
     </ClCompile>
-    <ClCompile Include="AnimationMontage.cpp">
-      <Filter>03.Engine\D3D Resource Management</Filter>
-    </ClCompile>
     <ClCompile Include="CommandListPool.cpp">
       <Filter>03.Engine\D3D Resource Management</Filter>
     </ClCompile>
@@ -704,14 +703,19 @@
     <ClCompile Include="TestScene.cpp">
       <Filter>02.Game\Scene\Test</Filter>
     </ClCompile>
-    <ClCompile Include="NetworkManager.cpp">
-      <Filter>02.Game\Scene\Test</Filter>
-    </ClCompile>
     <ClCompile Include="Zombie.cpp">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClCompile>
     <ClCompile Include="ZombieAnimationController.cpp">
       <Filter>02.Game\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\Includes\ImGui\imgui_stdlib.cpp" />
+    <ClCompile Include="DefferedFogPass.cpp" />
+    <ClCompile Include="AnimationMontage.cpp">
+      <Filter>02.Game\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkManager.cpp">
+      <Filter>04.Managers\Game Management</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -753,9 +757,6 @@
     <FxCompile Include="..\HLSL\Shaders.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
-    <FxCompile Include="..\HLSL\SkyboxShader.hlsl">
-      <Filter>03.Engine\HLSL\Graphics</Filter>
-    </FxCompile>
     <FxCompile Include="..\HLSL\Sprite.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
@@ -774,5 +775,6 @@
     <FxCompile Include="..\HLSL\ShadowMapShader.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
+    <FxCompile Include="..\HLSL\HDRPostProcessing.hlsl" />
   </ItemGroup>
 </Project>

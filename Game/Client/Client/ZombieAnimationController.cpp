@@ -57,6 +57,9 @@ void ZombieAnimationController::Initialize()
 	m_pStateMachine = std::make_unique<ZombieAnimationStateMachine>();
 	m_pStateMachine->Initialize(m_wpOwner.lock(), m_fTotalTimeElapsed);
 
+	m_pAnimationMontage = std::make_unique<ZombieAnimationMontage>();
+	m_pAnimationMontage->Initialize(m_wpOwner.lock());
+
 	int nBones = GetOwnerBones().size();
 	m_mtxCachedLocalBoneTransforms.resize(nBones);
 	m_mtxFinalBoneTransforms.resize(nBones);
@@ -66,10 +69,18 @@ void ZombieAnimationController::ComputeAnimation()
 {
 	const std::vector<Bone>& ownerBones = GetOwnerBones();
 	const std::vector<AnimationKey>& basePose = m_pStateMachine->GetOutputPose();
+	float fMontageWeight = m_pAnimationMontage->GetBlendWeight();
 
 	m_mtxCachedLocalBoneTransforms.resize(ownerBones.size());
-	for (int i = 0; i < (int)basePose.size(); ++i)
-		m_mtxCachedLocalBoneTransforms[i] = basePose[i].CreateSRT();
+	if (fMontageWeight > 0.f) {
+		const std::vector<AnimationKey>& montagePose = m_pAnimationMontage->GetOutputPose();
+		for (int i = 0; i < (int)ownerBones.size(); ++i)
+			m_mtxCachedLocalBoneTransforms[i] = AnimationKey::Lerp(basePose[i], montagePose[i], fMontageWeight).CreateSRT();
+	}
+	else {
+		for (int i = 0; i < (int)basePose.size(); ++i)
+			m_mtxCachedLocalBoneTransforms[i] = basePose[i].CreateSRT();
+	}
 }
 
 std::shared_ptr<IComponent> ZombieAnimationController::Copy(std::shared_ptr<IGameObject> pNewOwner) const
