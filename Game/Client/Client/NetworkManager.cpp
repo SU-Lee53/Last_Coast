@@ -62,7 +62,7 @@ void NetworkManager::ConnectToServer()
 			{
 				m_connectState = ConnectState::Connected;
 				m_bConnected = true;
-				/*g_hNetworkThread = CreateThread(NULL, 0, ProcessNetwork, (LPVOID)m_hClientSocket, 0, NULL);*/
+				g_hNetworkThread = CreateThread(NULL, 0, ProcessNetwork, this, 0, NULL);
 			}
 		}
 		ImGui::Text(m_strErrorLog.c_str());
@@ -147,32 +147,50 @@ void NetworkManager::SendData()
 	packet.size = sizeof(C2S_Move);
 	packet.type = C2S_MOVE;
 
-	if (INPUT->GetButtonPressed('W')) {
+	if (INPUT->GetButtonDown('W')) {
 		packet.dir = UP;
 	}
-	if (INPUT->GetButtonPressed('S')) {
+	if (INPUT->GetButtonDown('S')) {
 		packet.dir = DOWN;
 	}
-	if (INPUT->GetButtonPressed('A')) {
+	if (INPUT->GetButtonDown('A')) {
 		packet.dir = LEFT;
 	}
-	if (INPUT->GetButtonPressed('D')) {
+	if (INPUT->GetButtonDown('D')) {
 		packet.dir = RIGHT;
 	}
-	memcpy(&m_wsabuf, &packet, sizeof(packet));
-	WSASend(m_hClientSocket, &m_wsabuf, 1, 0, 0, m_over, send_callback);
+	m_wsabuf.buf = reinterpret_cast<char*>(&packet);
+	m_wsabuf.len = sizeof(packet);
+	WSASend(m_hClientSocket, &m_wsabuf, 1, 0, 0, &m_over, send_callback);
 }
 
 void NetworkManager::ReceiveData()
 {
-	WSARecv(m_hClientSocket, &m_wsabuf, 1, 0, 0, m_over, recv_callback);
+	DWORD flags = 0;
+
+	m_wsabuf.buf = m_Buffer;
+	m_wsabuf.len = BUF_SIZE;
+
+	ZeroMemory(&m_over, sizeof(m_over));
+
+	int ret = WSARecv(m_hClientSocket, &m_wsabuf, 1, nullptr, &flags, &m_over, recv_callback);
+
+	if (ret == SOCKET_ERROR)
+	{
+		int err = WSAGetLastError();
+		if (err != WSA_IO_PENDING)
+		{
+			printf("WSARecv error: %d\n", err);
+		}
+	}
+
 }
 
 void NetworkManager::send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED over, DWORD flags)
 {
 	NetworkManager* N = NetworkManager::GetInstance();
-	N->m_over = over;
-	memset(over, 0, sizeof(*over));
+	N->m_over = *over;
+	memset(over, 0, sizeof(over));
 	N->ReceiveData();
 }
 
@@ -181,7 +199,7 @@ void NetworkManager::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED o
 	// TODO : 좌표 값 받아서 처리하는 로직
 
 	NetworkManager* N = NetworkManager::GetInstance();
-	N->m_over = over;
+	N->m_over = *over;
 	N->SendData();
 }
 
@@ -193,7 +211,7 @@ DWORD WINAPI NetworkManager::ProcessNetwork(LPVOID arg)
 
 	while (self->m_bConnected)
 		SleepEx(100, true);
-	
+
 	self->Disconnect();
 
 	return 0;

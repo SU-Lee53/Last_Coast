@@ -1,50 +1,4 @@
-﻿//#include "pch.h"
-//#include <iostream>
-//
-//#include "ThreadManager.h"
-//
-//#include "Service.h"
-//#include "Session.h"
-//
-//class GameSession : public Session
-//{
-//public:
-//	virtual int32 OnRecv(BYTE* buffer, int32 len) override
-//	{
-//		//	Echo
-//		std::cout << "OnRecv Len = " << len << std::endl;
-//		Send(buffer, len);
-//		return len;
-//	}
-//
-//	virtual void OnSend(int32 len) override
-//	{
-//		std::cout << "OnSend Len = " << len << std::endl;
-//	}
-//};
-//
-//int main()
-//{
-//	ServerServiceRef service = std::make_shared<ServerService>(NetAddress(L"127.0.0.1", 9000), std::make_shared<IocpCore>(), std::make_shared<GameSession>, 100);
-//
-//
-//	ASSERT_CRASH(service->Start());
-//
-//	for (int32 i = 0; i < 5; ++i)
-//	{
-//		GThreadManager->Launch([=]()
-//			{
-//				while (true)
-//				{
-//					service->GetIocpCore()->Dispatch();
-//				}
-//			});
-//	}
-//
-//	GThreadManager->Join();
-//}
-
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // 게임서버프로그래밍 강의 서버
 
 #include <iostream>
@@ -56,8 +10,6 @@
 #pragma comment(lib, "MSWSock.lib")
 #pragma comment(lib, "WS2_32.lib")
 using namespace std;
-
-constexpr int BUF_SIZE = 200;
 
 enum IOType { IO_SEND, IO_RECV, IO_ACCEPT };
 
@@ -197,11 +149,16 @@ void SESSION::process_packet(unsigned char* p)
 	case C2S_MOVE: {
 		C2S_Move* packet = reinterpret_cast<C2S_Move*>(p);
 		DIRECTION dir = packet->dir;
+		// TODO : Move 로직
 		switch (dir) {
-		case UP: m_y = max(0, m_y - 1); break;
-		case DOWN: m_y = min(WORLD_HEIGHT - 1, m_y + 1); break;
-		case LEFT: m_x = max(0, m_x - 1); break;
-		case RIGHT: m_x = min(WORLD_WIDTH - 1, m_x + 1); break;
+		case UP: m_y++;
+			break;
+		case DOWN: m_y--;
+			break;
+		case LEFT: m_x--;
+			break;
+		case RIGHT: m_x++;
+			break;
 		}
 		cout << "Player[" << m_id << "] moved to (" << m_x << ", " << m_y << ")\n";
 		for (auto& cl : clients)
@@ -285,9 +242,10 @@ int main()
 
 		EXP_OVER* exp_over = reinterpret_cast<EXP_OVER*>(over);
 
-		switch (exp_over->m_iotype){
+		switch (exp_over->m_iotype) {
 
 		case IO_ACCEPT:
+		{
 			cout << "Client connected." << endl;
 			player_index = -1;
 			for (int i = 0; i < MAX_PLAYERS; ++i)
@@ -328,9 +286,11 @@ int main()
 			AcceptEx(server, client_socket, &accept_over.m_buff, 0,
 				sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16,
 				NULL, &accept_over.m_over);
-			break;
+		}
+		break;
 
 		case IO_RECV:
+		{
 			int player_index = static_cast<int>(key);
 			SESSION& cl = clients[player_index];
 			unsigned char* p = reinterpret_cast<unsigned char*>(exp_over->m_buff);
@@ -348,14 +308,17 @@ int main()
 				memmove(cl.m_recv_over.m_buff, p, data_size);
 				cl.m_prev_recv = data_size;
 			}
-			cl.do_recv();		
-			break;
+			cl.do_recv();
+		}
+		break;
 
 		case IO_SEND:
+		{
 			cout << "Message sent. to client[" << key << "]\n";
 			EXP_OVER* o = reinterpret_cast<EXP_OVER*>(over);
 			delete o;
-			break;
+		}
+		break;
 
 		default:
 			cout << "Unknown IO type." << endl;

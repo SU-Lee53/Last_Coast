@@ -5,6 +5,7 @@ constexpr short PORT = 9000;
 //constexpr int WORLD_HEIGHT = 8;
 constexpr int MAX_PLAYERS = 4;
 constexpr int MAX_NAME_LEN = 20;
+constexpr int BUF_SIZE = 200;
 
 enum PACKET_TYPE { C2S_LOGIN, C2S_MOVE, S2C_LOGIN_RESULT, S2C_AVATAR_INFO, S2C_ADD_PLAYER, S2C_REMOVE_PLAYER, S2C_MOVE_PLAYER };
 enum DIRECTION { UP, DOWN, LEFT, RIGHT };

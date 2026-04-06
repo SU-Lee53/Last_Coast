@@ -45,9 +45,10 @@ public:
 	const std::string&		GetErrorLog() { return m_strErrorLog; }
 
 private:
-	WSAOVERLAPPED* m_over;
+	WSAOVERLAPPED			m_over = {};
 	WSABUF					m_wsabuf;
 	SOCKET					m_hClientSocket;
+	char					m_Buffer[BUF_SIZE];
 	char					m_cstrServerIP[16] = "127.0.0.1";
 	bool					m_bConnected = false;
 	std::string				m_strErrorLog;
