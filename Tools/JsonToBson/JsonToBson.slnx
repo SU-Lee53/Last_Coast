@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="JsonToBson/JsonToBson.vcxproj" />
+  <Project Path="JsonToBson/JsonToBson.vcxproj" Id="e153488e-dce0-462e-a5b6-6077fcb95427" />
 </Solution>

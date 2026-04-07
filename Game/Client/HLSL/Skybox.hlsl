@@ -326,6 +326,7 @@ float3 ApplySkyFog(float3 color, float3 dir, float fStrengthMul)
 	return lerp(color, gfogColor.rgb, saturate(fFogFactor));
 }
 
+[earlydepthstencil]
 float4 PSSkybox(VS_SKYBOX_OUTPUT input) : SV_Target
 {
 	float3 inDir = normalize(input.dir);
@@ -403,6 +404,7 @@ float4 PSSkybox(VS_SKYBOX_OUTPUT input) : SV_Target
 	return float4(finalColor, 1.0f);
 }
 
+[earlydepthstencil]
 float4 PSCelestialDisk(VS_SKYBOX_OUTPUT input) : SV_Target
 {
 	float3 dir = normalize(input.dir);

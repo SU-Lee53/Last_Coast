@@ -171,6 +171,7 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 	return output;
 }
 
+[earlydepthstencil]
 PS_GBUFFER_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
 {
 	PS_GBUFFER_OUTPUT output = (PS_GBUFFER_OUTPUT) 0;
