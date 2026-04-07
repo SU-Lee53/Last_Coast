@@ -32,5 +32,8 @@
     <ClInclude Include="pch.h">
       <Filter>Pch</Filter>
     </ClInclude>
+    <ClInclude Include="protocol.h">
+      <Filter>Server</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
