@@ -247,11 +247,15 @@ float ComputeCascadeShadow(float3 worldPos)
 	float3 viewPos = mul(float4(worldPos, 1.f), gCamera.mtxView).xyz;
 	float fViewDepth = viewPos.z;
 	
+	if (fViewDepth > gCamera.gvCascadeSplits[NUM_CASCADES - 1])
+	{
+		return 1.0f;
+	}
+	
 	int nCascadeIndex = GetCascadeIndex(fViewDepth);
 	
 	float4 shadowPos = mul(float4(worldPos, 1.f), gmtxCascadeShadows[nCascadeIndex]);
 	shadowPos.xyz /= shadowPos.w;
-	
 	float fShadow = gtxtCascadeShadowMaps[nCascadeIndex].SampleCmpLevelZero(gShadowMapSamplerState, shadowPos.xy, shadowPos.z);
 	return fShadow;
 }

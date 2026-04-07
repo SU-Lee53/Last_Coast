@@ -156,7 +156,7 @@ void DirectionalCascadeShadowMapPass::CreatePipelineState()
 		d3dPipelineDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
 		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 		d3dPipelineDesc.RasterizerState.FrontCounterClockwise = FALSE;
-		d3dPipelineDesc.RasterizerState.DepthBias = 100000;
+		d3dPipelineDesc.RasterizerState.DepthBias = 10000;
 		d3dPipelineDesc.RasterizerState.DepthBiasClamp = 0.0f;
 		d3dPipelineDesc.RasterizerState.SlopeScaledDepthBias = 1.0f;
 		d3dPipelineDesc.RasterizerState.DepthClipEnable = TRUE;
@@ -383,8 +383,10 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 {
 	auto pCamera = CUR_SCENE->GetCamera();
 	auto xmFrustum = pCamera->GetFrustumWorld();
-	float fNearToFar = xmFrustum.Far - xmFrustum.Near;
-	float fDistancePerCascade = fNearToFar / static_cast<float>(g_unNumCascade);
+	//float fNearToFar = xmFrustum.Far - xmFrustum.Near;
+	//float fDistancePerCascade = fNearToFar / static_cast<float>(g_unNumCascade);
+	float fCascadeNearBase = xmFrustum.Near;
+	float fCascadeFarBase = std::min(xmFrustum.Far, g_fMaxShadowDistance);
 
 	float fFovY = pCamera->GetFovYInRadian();
 	float fAspectRatio = pCamera->GetAspectRatio();
@@ -393,8 +395,25 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 		// 1. Generate cascade camera frustum
 		BoundingFrustum xmCascadeFrustum;
 
-		float fCascadeNear = xmFrustum.Near + (i * fDistancePerCascade);
-		float fCascadeFar = xmFrustum.Near + ((i + 1) * fDistancePerCascade);
+		// uniform split
+		//float fCascadeNear = xmFrustum.Near + (i * fDistancePerCascade);
+		//float fCascadeFar = xmFrustum.Near + ((i + 1) * fDistancePerCascade);
+
+		// Practical split
+		float n = fCascadeNearBase, f = fCascadeFarBase;
+
+		float p0 = static_cast<float>(i) / static_cast<float>(g_unNumCascade);
+		float p1 = static_cast<float>(i + 1) / static_cast<float>(g_unNumCascade);
+
+		float fLogNear = n * std::powf(f / n, p0);
+		float fLogFar = n * std::powf(f / n, p1);
+
+		float fUniformNear = n + (f - n) * p0;
+		float fUniformFar = n + (f - n) * p1;
+
+		float fCascadeNear = std::lerp(fUniformNear, fLogNear, g_fLambda);
+		float fCascadeFar = std::lerp(fUniformFar, fLogFar, g_fLambda);
+
 		Matrix mtxCascadeCameraProj = XMMatrixPerspectiveFovLH(fFovY, fAspectRatio, fCascadeNear, fCascadeFar);
 		BoundingFrustum::CreateFromMatrix(xmCascadeFrustum, mtxCascadeCameraProj);
 		xmCascadeFrustum.Transform(xmCascadeFrustum, pCamera->GetCameraWorldTransfromMatrix());
@@ -425,7 +444,9 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 		float fBackoff = *std::ranges::max_element(r);
 		fBackoff = std::sqrt(fBackoff);
 
-		Vector3 v3LightPos = v3FrustumCenter - (v3LightDir * fBackoff * ((g_unNumCascade - i) * 2.f));
+		//Vector3 v3LightPos = v3FrustumCenter - (v3LightDir * fBackoff * ((g_unNumCascade - i) * 2.f));
+		Vector3 v3LightPos = v3FrustumCenter - (v3LightDir * (fBackoff + g_fLightDistanceMargin));
+		
 		Matrix mtxLightView = XMMatrixLookToLH(v3LightPos, v3LightDir, v3LightUpReal);
 
 		// 5. Calculate bounds using corners transformed into light space
@@ -439,9 +460,9 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 		float fMaxX = v3MaxX->x, fMaxY = v3MaxY->y, fMaxZ = v3MaxZ->z;
 
 		// 6. Add z-margin
-		//float fMargin = 50.0f;
-		//fMinZ -= fMargin;
-		//fMaxZ += fMargin;
+		float fMargin = 50.0f;
+		fMinZ -= fMargin;
+		fMaxZ += fMargin;
 
 		// 7. off-center orthographic project
 		const float fShadowMapSize = static_cast<float>(g_unCascadeShadowMapSize[i]);

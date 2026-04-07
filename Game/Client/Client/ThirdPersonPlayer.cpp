@@ -19,7 +19,7 @@ void ThirdPersonPlayer::Initialize()
 		m_pCamera->SetViewport(0, 0, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight, 0.f, 1.f);
 		m_pCamera->SetScissorRect(0, 0, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight);
 		m_pCamera->GenerateViewMatrix(XMFLOAT3(0.f, 0.f, -15.f), XMFLOAT3(0.f, 0.f, 1.f), XMFLOAT3(0.f, 1.f, 0.f));
-		m_pCamera->GenerateProjectionMatrix(10.f, 500_m, ((float)WinCore::g_dwClientWidth / (float)WinCore::g_dwClientHeight), 60.0f);
+		m_pCamera->GenerateProjectionMatrix(10.f, 300_m, ((float)WinCore::g_dwClientWidth / (float)WinCore::g_dwClientHeight), 60.0f);
 		m_pCamera->SetOwner(shared_from_this());
 
 		// Model
@@ -170,7 +170,36 @@ void ThirdPersonPlayer::OnEndCollision(const CollisionResult& collisionResult)
 
 void ThirdPersonPlayer::PostUpdate()
 {
-	auto pTransform = GetTransform();
+	auto& pTransform = GetTransform();
+
+	HandleCollision();
+	ApplyGravity();
+
+	if (m_bMoved) {
+		// 플레이어가 이동 방향을 바라보도록 돌린다
+		float fYaw = std::atan2f(m_v3MoveDirection.x, m_v3MoveDirection.z);
+		pTransform->SetRotation(0.f, fYaw, 0.f);
+	}
+
+	if (m_bAiming) {
+		auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
+		Vector3 v3LookDirection = pThirdPersonCamera->GetForwardXZ();
+		float fYaw = std::atan2f(v3LookDirection.x, v3LookDirection.z);
+		GetTransform()->SetRotation(0.f, fYaw, 0.f);
+	}
+
+	IPlayer::PostUpdate();
+
+	m_xmOBBCollided.clear();
+}
+
+void ThirdPersonPlayer::HandleCollision()
+{
+	// 문제점
+	// 1. TryUp 이 ResolveCollision 에서만 호출되면서, Terrain -> Box 위로 올라설 수 없음
+	// 2. Terrain 이 Box 와 Ground 를 무시하고 일정 거리 안이면 그냥 땅에 붙어버림
+
+	auto& pTransform = GetTransform();
 
 	const bool bWasGrounded = m_bGrounded;
 	m_bGrounded = false;
@@ -202,43 +231,7 @@ void ThirdPersonPlayer::PostUpdate()
 		}
 	}
 
-	// Ground Check (not terrain)
-	//Vector3 v3GroundNormal;
-	//if (!m_bGrounded) {
-	//	if (CheckGround(0.3f, v3GroundNormal)) {
-	//		m_bGrounded = true;
-	//		m_fVerticalVelocity = 0.f;
-	//	}
-	//}
-
-	//ImGui::Text("======= Ground Hit Result =======");
-	//ImGui::Text("m_bGrounded : %s", m_bGrounded ? "TRUE" : "FALSE");
-	//ImGui::Text("======= Terrain Hit Result =======");
-	//ImGui::Text("hit.bGrounded : %s", hit.bGrounded ? "TRUE" : "FALSE");
-	//ImGui::Text("hit.fHeight : %f", hit.fHeight);
-	//ImGui::Text("hit.fPenetratioon : %f", hit.fPenetrationDepth);
-	//ImGui::Text("hit.v3Normal : (%f, %f, %f)", hit.v3Normal.x, hit.v3Normal.y, hit.v3Normal.z);
-
-	ApplyGravity();
-
-	if (m_bMoved) {
-		// 플레이어가 이동 방향을 바라보도록 돌린다
-		float fYaw = std::atan2f(m_v3MoveDirection.x, m_v3MoveDirection.z);
-		pTransform->SetRotation(0.f, fYaw, 0.f);
-	}
-
 	pTransform->Move(v3Delta, 1.f);
-
-	if (m_bAiming) {
-		auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
-		Vector3 v3LookDirection = pThirdPersonCamera->GetForwardXZ();
-		float fYaw = std::atan2f(v3LookDirection.x, v3LookDirection.z);
-		GetTransform()->SetRotation(0.f, fYaw, 0.f);
-	}
-
-	IPlayer::PostUpdate();
-
-	m_xmOBBCollided.clear();
 }
 
 float ThirdPersonPlayer::GetMoveSpeedXZ() const

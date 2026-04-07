@@ -28,6 +28,7 @@ public:
 	virtual void OnEndCollision(const CollisionResult& collisionResult) override;
 
 private:
+	void HandleCollision();
 	void ApplyGravity();
 	void ResolveCollision(OUT Vector3& outv3Delta);
 	bool CheckGround(float fMaxDistance, OUT Vector3& outv3Normal);
@@ -49,7 +50,7 @@ private:
 	uint32			m_unGroundGraceFrames = 0;
 	const uint32	m_unMaxGroundGraceFrames = 4;
 	const float		m_fGroundDeadZoneY = 0.02_cm;
-	const float		m_fStepHeight = 30_cm;
+	const float		m_fStepHeight = 50_cm;
 	
 	const float	m_fMouseSensitivity = 0.1f;
 
