@@ -5,6 +5,7 @@
 #include "TerrainObject.h"
 #include "TerrainTestScene.h"
 #include "Skybox.h"
+#include "NetworkTestScene.h"
 
 void GameScene::BuildObjects()
 {
@@ -16,7 +17,6 @@ void GameScene::BuildObjects()
 
 	m_pPlayer = std::make_shared<DebugPlayer>();
 	m_pPlayer->Initialize();
-
 
 	//LoadFromFiles("LightTest");
 	LoadFromFiles("Game");
@@ -41,6 +41,12 @@ void GameScene::Update()
 {
 	ImGui::Begin("Test");
 	{
+		if (ImGui::Button("Change Scene")) {
+			SCENE->ChangeScene<NetworkTestScene>();
+			ImGui::End();
+			return;
+		}
+
 		ImGui::InputFloat3("Set Pos", reinterpret_cast<float*>(&v3PlayerPos));
 		if (ImGui::Button("Move To Pos")) {
 			m_pPlayer->GetTransform()->SetPosition(v3PlayerPos);
