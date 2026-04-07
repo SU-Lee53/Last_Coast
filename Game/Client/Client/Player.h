@@ -11,9 +11,6 @@ public:
 	virtual void PostUpdate() override;
 
 public:
-	virtual ClientToServerPacket MakePacketToSend() { return ClientToServerPacket{}; }
-
-public:
 	const std::shared_ptr<Camera>& GetCamera() const { return m_pCamera; };
 
 	virtual void TakeDamage(float fAmount) { m_fHP = std::max(0.f, m_fHP - fAmount); }

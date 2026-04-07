@@ -155,3 +155,13 @@ using namespace AIDLL;
 //#include "CollisionManager.h"
 #include "MaterialManager.h"
 #include "ComputeManager.h"
+
+
+// ServerCore
+#ifdef _DEBUG
+#pragma comment(lib, "ServerCore/Debug/ServerCore.lib")
+#else
+#pragma comment(lib, "ServerCore/Debug/ServerCore.lib")
+#endif
+
+#include <ServerCore/CorePch.h>

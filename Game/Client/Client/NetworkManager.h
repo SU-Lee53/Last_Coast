@@ -1,5 +1,22 @@
 ﻿#pragma once
 #define SERVERPORT 9000
+#include "ServerCore/Session.h"
+#include "../../../Server/Server/protocol.h"
+
+class NetworkManager;
+
+enum class ConnectState
+{
+	None,
+	Connecting,
+	Connected,
+	Failed
+};
+
+struct OverEx {
+	WSAOVERLAPPED over;
+	NetworkManager* owner;
+};
 
 class NetworkManager {
 
@@ -7,59 +24,39 @@ class NetworkManager {
 	~NetworkManager();
 
 public:
-	void Initialize();
-	//void ConnectToServer();
+	void					Initialize();
+	void					ConnectToServer();
+	void					Disconnect();
 
 private:
-	void Disconnect();
+	void					SendData();
+	void					ReceiveData();
 
-	//bool SendData();
-	//bool ReceiveData();
-	//void MakePacketToSend(ClientToServerPacket& packet ,const std::shared_ptr<Player> Player);
+	static void CALLBACK	send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED over, DWORD flags);
+	static void CALLBACK	recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED over, DWORD flags);
 
 public:
-	//void WritePacketData(const ClientToServerPacket& packet);
-	//ServertoClientPlayerPacket GetReceivedPacketData() const;
+	bool					IsConnected() const { return m_bConnected; }
+	bool					IsGameStarted() const { return m_bGameBegin; }
+	bool					IsOffline() const { return m_bOfflineMode; }
 
-	//ServertoClientRockPacket GetReceivedRockPacketData();
-	bool IsConnected() const { return m_bConnected; }
-	bool IsGameStarted() const { return m_bGameBegin; }
-	bool IsOffline() const { return m_bOfflineMode; }
+	int						GetPlayerID() const { return m_nPlayerID; }
 
-	int GetPlayerID() const { return m_nPlayerID; }
-
-	// Last Coast
-	void WritePlayerState(const PlayerState& state);
-	void StoreSnapshot(const ServerToClientPacket& packet);
-	const ServerToClientPacket& GetSnapshot() const { return m_Snapshot; }
-
-	const std::string& GetErrorLog() { return m_strErrorLog; }
+	const std::string&		GetErrorLog() { return m_strErrorLog; }
 
 private:
-	WSADATA m_wsa;
-	SOCKET m_hClientSocket;
-	char m_cstrServerIP[16] = "127.0.0.1";
-	bool m_bConnected = false;
-	std::string m_strErrorLog;
-	int m_nPlayerID;
+	WSAOVERLAPPED			m_over = {};
+	WSABUF					m_wsabuf;
+	SOCKET					m_hClientSocket;
+	char					m_Buffer[BUF_SIZE];
+	char					m_cstrServerIP[16] = "127.0.0.1";
+	bool					m_bConnected = false;
+	std::string				m_strErrorLog;
+	int						m_nPlayerID;
 
-	static HANDLE g_hNetworkThread;
-	//static DWORD WINAPI ProcessNetwork(LPVOID arg);
+	static HANDLE			g_hNetworkThread;
+	static DWORD WINAPI		ProcessNetwork(LPVOID arg);
 
-	static CRITICAL_SECTION g_hCS;	// 이벤트로 순서제어 중이므로 사용 안될듯함 (아직 모름)
-	static HANDLE g_hPlayerWritePacketEvent;
-	static HANDLE g_hPacketReceivedEvent;
-
-	ClientToServerPacket m_PacketToSend{};
-	//ServertoClientPlayerPacket m_PacketReceived{};
-
-	//ServertoClientRockPacket m_PacketRocksReceived{};
-
-	bool m_bGameBegin = false;
-
-	bool m_bOfflineMode = true;
-
-	// Last Coast
-	ClientToServerPacket m_SendPacket{};
-	ServerToClientPacket m_Snapshot{};
+	bool					m_bGameBegin = false;
+	bool					m_bOfflineMode = true;
 };
