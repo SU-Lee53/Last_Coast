@@ -50,6 +50,7 @@ private:
 
 	void DrawTerrain(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
+		int nCascadeIndex, 
 		OUT DescriptorHandle& outDescHandle) const;
 
 	void ComputeCascade() const;

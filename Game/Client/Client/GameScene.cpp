@@ -9,20 +9,20 @@
 
 void GameScene::BuildObjects()
 {
+	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize("Day_HDRI.dds", "Night_HDRI.dds");
-
-	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
-	m_pPlayer->Initialize();
 
 	//m_pPlayer = std::make_shared<DebugPlayer>();
 	//m_pPlayer->Initialize();
 
+	m_pTerrain = std::make_shared<TerrainObject>();
+	m_pTerrain->LoadFromFiles("Game");
+
 	//LoadFromFiles("LightTest");
 	LoadFromFiles("Game");
 
-	m_pTerrain = std::make_shared<TerrainObject>();
-	m_pTerrain->LoadFromFiles("Game");
 }
 
 void GameScene::OnEnterScene()
@@ -71,8 +71,8 @@ void GameScene::Update()
 					Vector3 v3PlayerPos = transform->GetPosition();
 					ImGui::Text("Player Position : (%f, %f, %f)", v3PlayerPos.x, v3PlayerPos.y, v3PlayerPos.z);
 	
-					const auto& spaceDesc = GetSpacePartitionDesc();
-					SpacePartitionDesc::CellCoord cdPlayer = spaceDesc.WorldToCellXZ(v3PlayerPos);
+					const auto& spaceDesc = GetSpacePartition();
+					ScenePartition::CellCoord cdPlayer = spaceDesc.WorldToCellXZ(v3PlayerPos);
 					int32 cellIndex = spaceDesc.CellToIndex(cdPlayer.x, cdPlayer.y);
 					ImGui::NewLine();
 					ImGui::Text("====== Space Partition ======");

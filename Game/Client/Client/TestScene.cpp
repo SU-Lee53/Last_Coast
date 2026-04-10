@@ -138,8 +138,8 @@ void TestScene::Update()
 			}
 			if (zombieIdx == 0) ImGui::Text("No Zombies");
 
-			const auto& spaceDesc = GetSpacePartitionDesc();
-			SpacePartitionDesc::CellCoord cdPlayer = spaceDesc.WorldToCellXZ(v3PlayerPos);
+			const auto& spaceDesc = GetSpacePartition();
+			ScenePartition::CellCoord cdPlayer = spaceDesc.WorldToCellXZ(v3PlayerPos);
 			int32 cellIndex = spaceDesc.CellToIndex(cdPlayer.x, cdPlayer.y);
 			ImGui::NewLine();
 			ImGui::Text("====== Space Partition ======");

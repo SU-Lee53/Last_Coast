@@ -241,6 +241,9 @@ void RenderManager::ShowDebugOptions()
 
 	ImGui::Text("Current Context : %d", m_unCurrentContextIndex);
 
+	ImGui::Text("IGameObject in current scene : %d", CUR_SCENE->GetObjectsInScene().size());
+	ImGui::Text("IGameObject Render Candidates : %d", m_pObjectsToRender.size());
+
 	ImGui::SeparatorText("Render Queue");
 	ImGui::Text("Opaque : %d", m_pObjectsToRender.size());
 	ImGui::Text("Transparent: %d", m_pTransparentObjectsToRender.size());
@@ -363,8 +366,6 @@ void RenderManager::BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dComma
 {
 	// descRange[0]  :  cbSceneData					1
 	// descRange[1]  :  gLightData					1
-
-
 	uint32 unDescIncrementSize = D3DCore::g_nCBVSRVDescriptorIncrementSize;
 
 	// Cache

@@ -103,5 +103,61 @@ float3 SpotLight(float3 worldPos, float3 normal, float3 viewDir, float3 albedo, 
 	return diffuse + specular;
 }
 
+/////////////////////////////////////////////////////////////////////////////
+// Shadow
+
+int GetCascadeIndex(float fViewDepth)
+{
+	int idx = 0;
+	
+	[unroll(NUM_CASCADES)]
+	for (int i = 0; i < NUM_CASCADES - 1; ++i)
+	{
+		idx += (fViewDepth > gCamera.gvCascadeSplits[i]) ? 1 : 0;
+	}
+	
+	return idx;
+}
+
+float Compute3x3PCF(float4 shadowPos, int nCascadeIndex)
+{
+	const float fCascadeSize[4] = { 4096, 2048, 1024, 512 };
+	float fSum = 0.f;
+	
+	const float2 texelSize = (1.0f / fCascadeSize[nCascadeIndex]).xx;
+	
+	[unroll]
+	for (int y = -1; y <= 1; ++y)
+	{
+		for (int x = -1; x <= 1; ++x)
+		{
+			float2 offset = float2(x, y) * texelSize;
+			fSum += gtxtCascadeShadowMaps[nCascadeIndex].SampleCmpLevelZero(gShadowMapSamplerState, shadowPos.xy + offset, shadowPos.z);
+		}
+	}
+	
+	return fSum / 9.f;
+}
+
+float ComputeCascadeShadow(float3 worldPos)
+{
+	float3 viewPos = mul(float4(worldPos, 1.f), gCamera.mtxView).xyz;
+	float fViewDepth = viewPos.z;
+	
+	if (fViewDepth > gCamera.gvCascadeSplits[NUM_CASCADES - 1])
+	{
+		return 1.0f;
+	}
+	
+	int nCascadeIndex = GetCascadeIndex(fViewDepth);
+	
+	float4 shadowPos = mul(float4(worldPos, 1.f), gmtxCascadeShadows[nCascadeIndex]);
+	shadowPos.xyz /= shadowPos.w;
+	
+	//float fShadow = (nCascadeIndex == 0) ? Compute3x3PCF(shadowPos, nCascadeIndex) : gtxtCascadeShadowMaps[nCascadeIndex].SampleCmpLevelZero(gShadowMapSamplerState, shadowPos.xy, shadowPos.z);
+	float fShadow = gtxtCascadeShadowMaps[nCascadeIndex].SampleCmpLevelZero(gShadowMapSamplerState, shadowPos.xy, shadowPos.z);
+	return fShadow;
+}
+
 
 #endif

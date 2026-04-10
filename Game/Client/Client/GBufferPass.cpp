@@ -57,26 +57,29 @@ void GBufferPass::SetRenderTargets(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 
 void GBufferPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
+	m_CachedData.Clear();
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
 
 	// Frustum Culling
-	std::vector<std::shared_ptr<IGameObject>> frustumCulled;
+	const BoundingFrustum& xmFrustumWorld = CUR_SCENE->GetCamera()->GetFrustumWorld();
+
 	{
 		const std::vector<std::shared_ptr<IGameObject>>& inputResource = RENDER->GetObjectsToRender();
-		frustumCulled.reserve(inputResource.size());
+		m_CachedData.pObjFrustumCulled.reserve(inputResource.size());
 
-		const BoundingFrustum& xmFrustumWorld = CUR_SCENE->GetCamera()->GetFrustumWorld();
-		std::copy_if(inputResource.begin(), inputResource.end(), std::back_inserter(frustumCulled), [&xmFrustumWorld](const auto& pObj) {
+		std::copy_if(inputResource.begin(), inputResource.end(), std::back_inserter(m_CachedData.pObjFrustumCulled), [&xmFrustumWorld](const auto& pObj) {
 			const auto pCollider = pObj->GetComponentFromRoot<ICollider>();
 			return (pCollider) ? pCollider->IsInFrustum(xmFrustumWorld) : true;
 		});
 	}
 
-	m_unFrustumCulled = frustumCulled.size();
+	m_unFrustumCulled = m_CachedData.pObjFrustumCulled.size();
+
 	// Gather draw unit
-	BindGeometryData(pd3dCommandList, frustumCulled, outDescHandle);
+	BindGeometryData(pd3dCommandList, outDescHandle);
 
 	if (CUR_SCENE->GetTerrain() != nullptr) {
+		m_CachedData.pTerrainComponentFrustumCulled = CUR_SCENE->GetSpacePartition().TerrainBroadPhaseFrustumCulling(xmFrustumWorld);
 		BindTerrainData(pd3dCommandList, outDescHandle);
 	}
 
@@ -84,10 +87,9 @@ void GBufferPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 	SetRenderTargets(pd3dCommandList);
 }
 
-void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<std::shared_ptr<IGameObject>>& frustumCulled, OUT DescriptorHandle& outDescHandle) const
+void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) const
 {
-	m_CachedData.Clear();
-	for (const auto& pObj : frustumCulled) {
+	for (const auto& pObj : m_CachedData.pObjFrustumCulled) {
 		const auto& pMeshRenderer = pObj->GetComponent<MeshRenderer>();
 		auto [idx, bInserted] = m_CachedData.frustumCulledMap.Insert(pMeshRenderer->GetID(), { pMeshRenderer.get(), std::vector<const IGameObject*>{ pObj.get() } });
 		if (!bInserted) {
@@ -304,7 +306,7 @@ void GBufferPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 	worldTransformCBuffer.WriteData(&mtxTerrainWorld);
 	pd3dCommandList->SetGraphicsRootConstantBufferView(rootParamWorldTransform, worldTransformCBuffer.GPUAddress);
 
-	for (const auto& pComponent : pTerrainComponents) {
+	for (const auto& pComponent : m_CachedData.pTerrainComponentFrustumCulled) {
 		// Component
 		CB_TERRAIN_COMPONENT_DATA cbData = pComponent->MakeCBData();
 		ConstantBuffer cbTerrainComponents = RENDER->AllocCBuffer<CB_TERRAIN_COMPONENT_DATA>();
@@ -359,30 +361,55 @@ void GBufferPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList
 
 void GBufferPass::ShowDebugInfo()
 {
-	ImGui::Text("Frustum Culled : %d", m_unFrustumCulled);
+	ImGui::Text("Render items in frustum: %d", m_CachedData.pObjFrustumCulled.size());
+	ImGui::Text("Terrain components in frustum: %d", m_CachedData.pTerrainComponentFrustumCulled.size());
 	
-	for (const auto& param : m_RenderQueueCached) {
-		std::string str = std::format(
-			"IMesh {} - Instance : {}, Anim? : {}", 
-			(void*)param.first, 
-			param.second.nInstances,
-			(param.second.nBoneOffsets.size() != 0) ? "TRUE" : "FALSE");
+	if (ImGui::TreeNode("Objs to draw")) {
+		for (const auto& param : m_RenderQueueCached) {
+			std::string str = std::format(
+				"IMesh {} - Instance : {}, Anim? : {}",
+				(void*)param.first,
+				param.second.nInstances,
+				(param.second.nBoneOffsets.size() != 0) ? "TRUE" : "FALSE");
 
-		if (ImGui::TreeNode(str.c_str())) {
-			ImGui::Indent(20.f);
-			{
-				ImGui::Text("cbInstanceData.Material Index : %d", param.second.cbInstanceData.gnMaterialIndex);
-				ImGui::Text("cbInstanceData.Albedo Index : %d", param.second.cbInstanceData.gnTextureIndex[0]);
-				ImGui::Text("cbInstanceData.Normal Index : %d", param.second.cbInstanceData.gnTextureIndex[1]);
-				ImGui::Text("cbInstanceData.Metaillic Index : %d", param.second.cbInstanceData.gnTextureIndex[2]);
-				ImGui::Text("cbInstanceData.Emissive Index : %d", param.second.cbInstanceData.gnTextureIndex[3]);
+			if (ImGui::TreeNode(str.c_str())) {
+				ImGui::Indent(20.f);
+				{
+					ImGui::Text("cbInstanceData.Material Index : %d", param.second.cbInstanceData.gnMaterialIndex);
+					ImGui::Text("cbInstanceData.Albedo Index : %d", param.second.cbInstanceData.gnTextureIndex[0]);
+					ImGui::Text("cbInstanceData.Normal Index : %d", param.second.cbInstanceData.gnTextureIndex[1]);
+					ImGui::Text("cbInstanceData.Metaillic Index : %d", param.second.cbInstanceData.gnTextureIndex[2]);
+					ImGui::Text("cbInstanceData.Emissive Index : %d", param.second.cbInstanceData.gnTextureIndex[3]);
 
-				//ImGui::Text("pAnimationControllers.size() : %d", param.second.pAnimationControllers.size());
-				//ImGui::Text("sbWorldTransformData.size() : %d", param.second.sbWorldTransformData.size());
+					//ImGui::Text("pAnimationControllers.size() : %d", param.second.pAnimationControllers.size());
+					//ImGui::Text("sbWorldTransformData.size() : %d", param.second.sbWorldTransformData.size());
+				}
+				ImGui::Unindent(20.f);
+
+				ImGui::TreePop();
 			}
-			ImGui::Unindent(20.f);
-
-			ImGui::TreePop();
 		}
+
+		ImGui::TreePop();
 	}
+
+	if (ImGui::TreeNode("Terrain to draw")) {
+		int cnt = 0;
+		for (const auto& pTerrainComp : m_CachedData.pTerrainComponentFrustumCulled) {
+			std::string strTreeName = std::format("Terrain component #{}", cnt++);
+			if (ImGui::TreeNode(strTreeName.c_str())) {
+				Vector2 v2ComponentSize = pTerrainComp->GetComponentSize();
+				auto indexRange = pTerrainComp->GetIndexRange();
+
+				ImGui::Text("Component Size : %f, %f", v2ComponentSize.x, v2ComponentSize.y);
+				ImGui::Text("Index begins : %d", indexRange.unStartIndex);
+				ImGui::Text("Index count : %d", indexRange.unIndexCount);
+
+				ImGui::TreePop();
+			}
+		}
+
+		ImGui::TreePop();
+	}
+
 }

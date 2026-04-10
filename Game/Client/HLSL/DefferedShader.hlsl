@@ -229,37 +229,6 @@ VS_QUAD_OUTPUT VSDefferedLighting(VS_QUAD_INPUT input)
 	return output;
 }
 
-int GetCascadeIndex(float fViewDepth)
-{
-	int idx = 0;
-	
-	[unroll(NUM_CASCADES)]
-	for (int i = 0; i < NUM_CASCADES - 1; ++i)
-	{
-		idx += (fViewDepth > gCamera.gvCascadeSplits[i]) ? 1 : 0;
-	}
-	
-	return idx;
-}
-
-float ComputeCascadeShadow(float3 worldPos)
-{
-	float3 viewPos = mul(float4(worldPos, 1.f), gCamera.mtxView).xyz;
-	float fViewDepth = viewPos.z;
-	
-	if (fViewDepth > gCamera.gvCascadeSplits[NUM_CASCADES - 1])
-	{
-		return 1.0f;
-	}
-	
-	int nCascadeIndex = GetCascadeIndex(fViewDepth);
-	
-	float4 shadowPos = mul(float4(worldPos, 1.f), gmtxCascadeShadows[nCascadeIndex]);
-	shadowPos.xyz /= shadowPos.w;
-	float fShadow = gtxtCascadeShadowMaps[nCascadeIndex].SampleCmpLevelZero(gShadowMapSamplerState, shadowPos.xy, shadowPos.z);
-	return fShadow;
-}
-
 float4 PSDefferedLighting(VS_QUAD_OUTPUT input) : SV_Target0
 {
 	int2 pixelPos = int2(input.position.xy);

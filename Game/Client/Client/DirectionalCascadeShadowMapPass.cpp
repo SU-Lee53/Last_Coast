@@ -68,7 +68,7 @@ void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> p
 			std::copy_if(AABBCulled.begin(), AABBCulled.end(), std::back_inserter(frustumCulled), [&xmFrsutum](const auto& pObj) {
 				const auto pCollider = pObj->GetComponentFromRoot<ICollider>();
 				return (pCollider) ? pCollider->IsInFrustum(xmFrsutum) : true;
-			});
+				});
 		}
 
 		BindGeometryData(pd3dCommandList, frustumCulled, outDescHandle);
@@ -81,7 +81,7 @@ void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> p
 		DrawGeometry(pd3dCommandList, outDescHandle);
 
 		if (CUR_SCENE->GetTerrain() != nullptr) {
-			DrawTerrain(pd3dCommandList, outDescHandle);
+			DrawTerrain(pd3dCommandList, i, outDescHandle);
 		}
 	}
 }
@@ -154,11 +154,11 @@ void DirectionalCascadeShadowMapPass::CreatePipelineState()
 		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("ShadowStandardVS");
 		d3dPipelineDesc.PS = { nullptr, 0 };
 		d3dPipelineDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
 		d3dPipelineDesc.RasterizerState.FrontCounterClockwise = FALSE;
-		d3dPipelineDesc.RasterizerState.DepthBias = 10000;
+		d3dPipelineDesc.RasterizerState.DepthBias = 1000;
 		d3dPipelineDesc.RasterizerState.DepthBiasClamp = 0.0f;
-		d3dPipelineDesc.RasterizerState.SlopeScaledDepthBias = 1.0f;
+		d3dPipelineDesc.RasterizerState.SlopeScaledDepthBias = 2.0f;
 		d3dPipelineDesc.RasterizerState.DepthClipEnable = TRUE;
 		d3dPipelineDesc.RasterizerState.MultisampleEnable = FALSE;
 		d3dPipelineDesc.RasterizerState.AntialiasedLineEnable = FALSE;
@@ -357,7 +357,7 @@ void DirectionalCascadeShadowMapPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandL
 	}
 }
 
-void DirectionalCascadeShadowMapPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) const
+void DirectionalCascadeShadowMapPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, int nCascadeIndex, OUT DescriptorHandle& outDescHandle) const
 {
 	const auto& pTerrain = CUR_SCENE->GetTerrain();
 	const auto& pTerrainComponents = pTerrain->GetTerrainComponents();
@@ -373,9 +373,9 @@ void DirectionalCascadeShadowMapPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandLi
 	worldTransformCBuffer.WriteData(&mtxTerrainWorld);
 	pd3dCommandList->SetGraphicsRootConstantBufferView(rootParamWorldTransform, worldTransformCBuffer.GPUAddress);
 
-	for (const auto& pComponent : pTerrainComponents) {
+	for (const auto& pComponent : CUR_SCENE->GetSpacePartition().TerrainBroadPhaseFrustumCulling(m_CascadeCached[nCascadeIndex].xmFrustum)) {
 		const auto& terrainIndexRange = pComponent->GetIndexRange();
-		pTerrainMesh->Render(pd3dCommandList, 1, terrainIndexRange.unStartIndex, terrainIndexRange.unIndexCount);
+		pTerrainMesh->RenderPosition(pd3dCommandList, 1, terrainIndexRange.unStartIndex, terrainIndexRange.unIndexCount);
 	}
 }
 

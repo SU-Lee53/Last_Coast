@@ -44,6 +44,8 @@ void ThirdPersonPlayer::Initialize()
 
 	AddComponent<PlayerCollider>();
 	GetComponent<PlayerCollider>()->Initialize();
+
+	m_bInitialized = true;
 }
 
 void ThirdPersonPlayer::ProcessInput()
