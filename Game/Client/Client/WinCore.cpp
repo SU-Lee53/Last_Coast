@@ -40,11 +40,10 @@ void WinCore::Run()
                 DispatchMessage(&msg);
             }
         }
-        else {
-            // Framework Update
-            m_pGameFramework->Update();
-            m_pGameFramework->Render();
-        }
+
+		// Framework Update
+		m_pGameFramework->Update();
+		m_pGameFramework->Render();
     }
 
 	RENDER->WaitForGPUComplete();
@@ -119,6 +118,11 @@ LRESULT WinCore::WndProc(HWND handle, UINT message, WPARAM wParam, LPARAM lParam
 		default:
 			break;
 		}
+		break;
+
+	case WM_KILLFOCUS:
+		::ClipCursor(nullptr);
+		INPUT->ShowCursor();
 		break;
 
     case WM_DESTROY:

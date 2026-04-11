@@ -153,6 +153,9 @@ public:
 	constexpr static float g_fWorldMinX = -500_m;
 	constexpr static float g_fWorldMaxX = +500_m;
 
+	constexpr static float g_fWorldMinY = -500_m;
+	constexpr static float g_fWorldMaxY = +500_m;
+
 	constexpr static float g_fWorldMinZ = -500_m;
 	constexpr static float g_fWorldMaxZ = +500_m;
 

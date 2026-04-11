@@ -27,6 +27,13 @@ public:
 	virtual void OnWhileCollision(const CollisionResult& collisionResult) override;
 	virtual void OnEndCollision(const CollisionResult& collisionResult) override;
 
+
+private:
+	void ToggleMouseLook();
+	void OnBeginMouseLook();
+	void OnEndMouseLook();
+	void UpdateMouseLookData();
+
 private:
 	void HandleCollision();
 	void ApplyGravity();
@@ -53,14 +60,18 @@ private:
 	const float		m_fStepHeight = 50_cm;
 	
 	const float	m_fMouseSensitivity = 0.1f;
+	POINT m_ptMouseCenterClientPos = {};
+	POINT m_ptMouseCenterScreenPos = {};
+	RECT  m_MouseClipScreenRect = {};
 
 	std::vector<BoundingOrientedBox> m_xmOBBCollided;
 
 	bool m_bMoved = false;
 	bool m_bAiming = false;
 	bool m_bRunning = false;
-	bool m_bMouseInUse = false;
 	bool m_bFiredThisFrame = false;
 
+	bool m_bMouseInUse = false;
+	bool m_bSkipMouseDeltaThisFrame = false;	// To prevent twitch when mouse look enabled
 };
 

@@ -5,6 +5,7 @@ void InputManager::Initialize(HWND hWnd)
 {
 	m_hWnd = hWnd;
 	std::fill(m_eKeyStates.begin(), m_eKeyStates.end(), KEY_STATE::NONE);
+
 }
 
 void InputManager::Update()
@@ -30,7 +31,7 @@ bool InputManager::GetButtonUp(UCHAR key)
 
 void InputManager::UpdateKeyboard()
 {
-	HWND hWnd = ::GetActiveWindow();
+	HWND hWnd = ::GetForegroundWindow();
 	if (m_hWnd != hWnd) {
 		std::fill(m_eKeyStates.begin(), m_eKeyStates.end(), KEY_STATE::NONE);
 		return;

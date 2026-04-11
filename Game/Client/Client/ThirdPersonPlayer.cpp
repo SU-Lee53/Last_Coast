@@ -56,35 +56,27 @@ void ThirdPersonPlayer::ProcessInput()
 
 	// 디버그용 마우스 사용/헤제
 	if (INPUT->GetButtonDown(VK_OEM_3)) {	// " ` " -> 물결표 그 버튼임
-		m_bMouseInUse = !m_bMouseInUse;
+		ToggleMouseLook();
 	}
 
 	// Camera Rotate
 	if (m_bMouseInUse) {
-		HWND hWnd = ::GetActiveWindow();
+		if (m_bSkipMouseDeltaThisFrame) {
+			m_bSkipMouseDeltaThisFrame = false;
+			goto lb_breakMouseInput;
+		}
+		const POINT& ptCursorPos = INPUT->GetCurrentCursorPos();
 
-		::SetCursor(NULL);
+		POINT ptDelta{};
+		ptDelta.x = ptCursorPos.x - m_ptMouseCenterClientPos.x;
+		ptDelta.y = ptCursorPos.y - m_ptMouseCenterClientPos.y;
 
-		RECT rtClientRect;
-		::GetClientRect(hWnd, &rtClientRect);
-		::ClientToScreen(hWnd, (LPPOINT)&rtClientRect.left);
-		::ClientToScreen(hWnd, (LPPOINT)&rtClientRect.right);
-
-		int nScreenCenterX = 0, nScreenCenterY = 0;
-		nScreenCenterX = rtClientRect.left + WinCore::g_dwClientWidth / 2;
-		nScreenCenterY = rtClientRect.top + WinCore::g_dwClientHeight / 2;
-
-		POINT ptCursorPos;
-		::GetCursorPos(&ptCursorPos);
-
-		POINT ptDelta{ (ptCursorPos.x - nScreenCenterX), (ptCursorPos.y - nScreenCenterY) };
-
-		auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
-		pThirdPersonCamera->AddYaw(ptDelta.x * m_fMouseSensitivity);
-		pThirdPersonCamera->AddPitch(ptDelta.y * m_fMouseSensitivity);
-
-
-		::SetCursorPos(nScreenCenterX, nScreenCenterY);
+		if (ptDelta.x != 0 || ptDelta.y != 0) {
+			pThirdPersonCamera->AddYaw(static_cast<float>(ptDelta.x) * m_fMouseSensitivity);
+			pThirdPersonCamera->AddPitch(static_cast<float>(ptDelta.y) * m_fMouseSensitivity);
+		
+			::SetCursorPos(m_ptMouseCenterScreenPos.x, m_ptMouseCenterScreenPos.y);
+		}
 
 		// Aim
 		if (INPUT->GetButtonDown(VK_RBUTTON)) {
@@ -103,6 +95,22 @@ void ThirdPersonPlayer::ProcessInput()
 			pAnimationCtrl->GetMontage()->JumpToSection("Rifle Fire");
 			m_bFiredThisFrame = true;
 		}
+	}
+
+lb_breakMouseInput:
+
+	// Cam rotation debug
+	if (INPUT->GetButtonPressed(VK_UP)) {
+		pThirdPersonCamera->AddPitch(-500.f * m_fMouseSensitivity * DT);
+	}
+	if (INPUT->GetButtonPressed(VK_DOWN)) {
+		pThirdPersonCamera->AddPitch(500.f * m_fMouseSensitivity * DT);
+	}
+	if (INPUT->GetButtonPressed(VK_LEFT)) {
+		pThirdPersonCamera->AddYaw(-500.f * m_fMouseSensitivity * DT);
+	}
+	if (INPUT->GetButtonPressed(VK_RIGHT)) {
+		pThirdPersonCamera->AddYaw(500.f * m_fMouseSensitivity * DT);
 	}
 
 	// Move
@@ -135,6 +143,7 @@ void ThirdPersonPlayer::ProcessInput()
 		m_v3MoveDirection += -pTransform->GetUp();
 		bMoved = true;
 	}
+
 	m_bMoved = bMoved;
 
 	// Run
@@ -193,6 +202,64 @@ void ThirdPersonPlayer::PostUpdate()
 	IPlayer::PostUpdate();
 
 	m_xmOBBCollided.clear();
+}
+
+void ThirdPersonPlayer::ToggleMouseLook()
+{
+	m_bMouseInUse = !m_bMouseInUse;
+
+	if (m_bMouseInUse) {
+		OnBeginMouseLook();
+	}
+	else {
+		OnEndMouseLook();
+	}
+}
+
+void ThirdPersonPlayer::OnBeginMouseLook()
+{
+	UpdateMouseLookData();
+	INPUT->HideCursor();
+	::ClipCursor(&m_MouseClipScreenRect);
+	::SetCursorPos(m_ptMouseCenterScreenPos.x, m_ptMouseCenterScreenPos.y);
+
+	m_bSkipMouseDeltaThisFrame = true;
+}
+
+void ThirdPersonPlayer::OnEndMouseLook()
+{
+	::ClipCursor(nullptr);
+	INPUT->ShowCursor();
+}
+
+void ThirdPersonPlayer::UpdateMouseLookData()
+{
+	RECT rtClientRect{};
+	::GetClientRect(WinCore::g_hWnd, &rtClientRect);
+
+	// Client center
+	m_ptMouseCenterClientPos.x = (rtClientRect.right - rtClientRect.left) / 2;
+	m_ptMouseCenterClientPos.y = (rtClientRect.bottom - rtClientRect.top) / 2;
+
+	// Screen center
+	m_ptMouseCenterScreenPos = m_ptMouseCenterClientPos;
+	::ClientToScreen(WinCore::g_hWnd, &m_ptMouseCenterScreenPos);
+
+	// Clip rect in screen space
+	POINT ptLeftTop{};
+	ptLeftTop.x = rtClientRect.left;
+	ptLeftTop.y = rtClientRect.top;
+	::ClientToScreen(WinCore::g_hWnd, &ptLeftTop);
+
+	POINT ptRightBottom{};
+	ptRightBottom.x = rtClientRect.right;
+	ptRightBottom.y = rtClientRect.bottom;
+	::ClientToScreen(WinCore::g_hWnd, &ptRightBottom);
+
+	m_MouseClipScreenRect.left = ptLeftTop.x;
+	m_MouseClipScreenRect.top = ptLeftTop.y;
+	m_MouseClipScreenRect.right = ptRightBottom.x;
+	m_MouseClipScreenRect.bottom = ptRightBottom.y;
 }
 
 void ThirdPersonPlayer::HandleCollision()

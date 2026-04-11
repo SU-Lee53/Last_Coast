@@ -618,6 +618,10 @@ void Scene::CellPartition(const Vector2& v2OriginXZ, const Vector2& v2SizePerCel
 		m_SpacePartition.SetMinHeight(m_pTerrain->GetMinHeight());
 		m_SpacePartition.SetMaxHeight(m_pTerrain->GetMaxHeight());
 	}
+	else {
+		m_SpacePartition.SetMinHeight(g_fWorldMinY);
+		m_SpacePartition.SetMaxHeight(g_fWorldMaxY);
+	}
 
 	// 4. Generate cell bounds
 	m_SpacePartition.GenerateCellBounds();
