@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/GitHub/Last_Coast/Game/Client -type f -name *Scene.h)",
+      "Bash(wc -l /c/GitHub/Last_Coast/Game/Client/Client/*.cpp)",
+      "Bash(wc -l /c/GitHub/Last_Coast/Game/Client/AI/*.cpp)"
+    ]
+  }
+}
