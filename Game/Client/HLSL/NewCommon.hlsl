@@ -226,7 +226,8 @@ Texture3D gtxtGradingLUT : register(t15, space0);
 SamplerState gSkyboxSamplerState : register(s0, space0);
 SamplerState gWeightMapSamplerState : register(s1, space0);
 SamplerState gSamplerState : register(s2, space0);
-SamplerComparisonState gShadowMapSamplerState : register(s3, space0);
+SamplerState gAnisotropicSamplerState : register(s3, space0);
+SamplerComparisonState gShadowMapSamplerState : register(s4, space0);
 
 
 
@@ -376,7 +377,7 @@ float3 BlendTerrainNormal(float2 localXZ, float weights[MAX_LAYER], float3 norma
 			continue;
 
 		float2 uv = localXZ * gv4LayerTiling[layer];
-		float3 nTS = gtxtTerrainNormal[layer].Sample(gSamplerState, uv).xyz * 2 - 1;
+		float3 nTS = gtxtTerrainNormal[layer].Sample(gAnisotropicSamplerState, uv).xyz * 2 - 1;
 
         // TBN
 		float3 nW =
@@ -429,7 +430,7 @@ float4 BlendTerrainAlbedo(float2 localXZ, out float weights[MAX_LAYER])
 		if (fWeight > 1e-6f)
 		{
 			float2 vTileUV = localXZ * gv4LayerTiling[layer];
-			float4 cAlbedo = gtxtTerrainAlbedo[layer].Sample(gSamplerState, vTileUV);
+			float4 cAlbedo = gtxtTerrainAlbedo[layer].Sample(gAnisotropicSamplerState, vTileUV);
 			cFinalColor += cAlbedo * fWeight;
 		}
 	}

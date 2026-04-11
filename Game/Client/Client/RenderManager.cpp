@@ -130,7 +130,7 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	d3dRootParameters[13].InitAsConstantBufferView(4, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_ALL);		// gnWorldTransformIndex
 	d3dRootParameters[14].InitAsShaderResourceView(12, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_ALL);		// gSpriteData
 
-	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[4];
+	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[5];
 	// s0 : SkyboxSampler
 	d3dSamplerDesc[0].Init(0);
 	d3dSamplerDesc[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -158,21 +158,28 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	d3dSamplerDesc[2].MaxLOD = D3D12_FLOAT32_MAX;
 	d3dSamplerDesc[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	// s3 : ComparisonSampler
+	// s3 : Anistropic
 	d3dSamplerDesc[3].Init(3);
-	d3dSamplerDesc[3].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-	d3dSamplerDesc[3].AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	d3dSamplerDesc[3].AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	d3dSamplerDesc[3].AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	d3dSamplerDesc[3].MipLODBias = 0.0f;
-	d3dSamplerDesc[3].MaxAnisotropy = 1;
-	d3dSamplerDesc[3].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-	d3dSamplerDesc[3].BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
+	d3dSamplerDesc[3].Filter = D3D12_FILTER_ANISOTROPIC;
 	d3dSamplerDesc[3].MinLOD = 0;
 	d3dSamplerDesc[3].MaxLOD = D3D12_FLOAT32_MAX;
-	d3dSamplerDesc[3].ShaderRegister = 3;
-	d3dSamplerDesc[3].RegisterSpace = 0;
 	d3dSamplerDesc[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	// s4 : ComparisonSampler
+	d3dSamplerDesc[4].Init(4);
+	d3dSamplerDesc[4].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+	d3dSamplerDesc[4].AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	d3dSamplerDesc[4].AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	d3dSamplerDesc[4].AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	d3dSamplerDesc[4].MipLODBias = 0.0f;
+	d3dSamplerDesc[4].MaxAnisotropy = 1;
+	d3dSamplerDesc[4].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	d3dSamplerDesc[4].BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
+	d3dSamplerDesc[4].MinLOD = 0;
+	d3dSamplerDesc[4].MaxLOD = D3D12_FLOAT32_MAX;
+	d3dSamplerDesc[4].ShaderRegister = 4;
+	d3dSamplerDesc[4].RegisterSpace = 0;
+	d3dSamplerDesc[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 		| D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS

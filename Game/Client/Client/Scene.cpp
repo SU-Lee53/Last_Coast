@@ -680,7 +680,7 @@ void Scene::BuildLights()
 
 HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 {
-	std::string strFilePath = std::format("{}/{}.json", g_strSceneBasePath, strFileName);
+	std::string strFilePath = std::format("{}/{}.bin", g_strSceneBasePath, strFileName);
 
 	std::ifstream inFile{ strFilePath, std::ios::binary };
 	if (!inFile) {
@@ -691,7 +691,10 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 	//std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
 	//nlohmann::json j = nlohmann::json::from_bson(bson);
 
-	nlohmann::json jScene = nlohmann::json::parse(inFile);
+	//nlohmann::json jScene = nlohmann::json::parse(inFile);
+
+	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
+	nlohmann::json jScene = nlohmann::json::from_bson(bson);;
 
 	if (jScene.contains("StaticMeshActors")) {
 		for (const auto& jObject : jScene["StaticMeshActors"]) {
