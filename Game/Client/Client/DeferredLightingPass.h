@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-class DefferedLightingPass : public IRenderPass {
+class DeferredLightingPass : public IRenderPass {
 public:
 	virtual void Initialize() override;
 

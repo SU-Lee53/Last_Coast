@@ -1,7 +1,11 @@
 ﻿#pragma once
 #include "UIComponent.h"
 
-class Sprite : public UIComponent {
+class UIBoard {
 public:
-protected:
+
+private:
+
+
 };
+

@@ -25,7 +25,7 @@ struct CB_FOG_DATA
 	Vector3 pad;
 };
 
-class DefferedFogPass : public IRenderPass {
+class DeferredFogPass : public IRenderPass {
 public:
 	virtual void Initialize() override;
 

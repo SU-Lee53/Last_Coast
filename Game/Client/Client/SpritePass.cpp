@@ -16,48 +16,6 @@ void SpritePass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
 
 void SpritePass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
 {
-	auto sprites = RENDER->GetSprites();
-	auto unDescriptorInc = D3DCore::g_nCBVSRVDescriptorIncrementSize;
-	constexpr auto rootParamPerDraw = std::to_underlying(ROOT_PARAMETER::PER_PASS_DATA);
-	constexpr auto rootParamSpriteRect = std::to_underlying(ROOT_PARAMETER::SPRITE_DATA);
-
-	auto blankSBuffer = RENDER->AllocSBuffer<MaterialData>(1);
-
-	pd3dCommandList->SetPipelineState(m_pd3dPipelineState.Get());
-
-	for (const auto& layer : std::views::reverse(sprites)) {
-		if (layer.size() == 0) {
-			continue;
-		}
-
-		auto copyHandle = outDescHandle.cpuHandle;
-		copyHandle.Offset(2, unDescriptorInc);
-
-		// Set Empty material data to fits root parameter (NumDescriptors = 2)
-		DEVICE->CopyDescriptorsSimple(1, copyHandle, blankSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		copyHandle.Offset(1, unDescriptorInc);
-
-		std::vector<SpriteRect> rects;
-		rects.reserve(layer.size());
-		for (const auto& sprite : layer) {
-			auto cpuHandle = sprite.texHandle.GetResource()->GetSRVHandle();
-			DEVICE->CopyDescriptorsSimple(1, copyHandle, cpuHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			copyHandle.Offset(1, unDescriptorInc);
-
-			rects.push_back(sprite.Rect);
-		}
-
-		pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamPerDraw, outDescHandle.gpuHandle);
-		outDescHandle.cpuHandle.Offset(3 + layer.size(), unDescriptorInc);
-		outDescHandle.gpuHandle.Offset(3 + layer.size(), unDescriptorInc);
-
-		// Set rect data
-		auto rectSBuffer = RENDER->AllocSBuffer<SpriteRect>(layer.size());
-		rectSBuffer.WriteData(rects);
-		pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamSpriteRect, rectSBuffer.GPUAddress);
-
-		m_pSpriteQuadMesh->Render(pd3dCommandList, layer.size());
-	}
 }
 
 void SpritePass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const

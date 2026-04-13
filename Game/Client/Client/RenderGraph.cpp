@@ -1,13 +1,13 @@
 ﻿#include "pch.h"
 #include "RenderGraph.h"
 #include "GBufferPass.h"
-#include "DefferedLightingPass.h"
+#include "DeferredLightingPass.h"
 #include "TransparentForwardLightingPass.h"
 #include "DirectionalCascadeShadowMapPass.h"
 #include "ToneMappingPass.h"
 #include "SkyboxPass.h"
 #include "SpritePass.h"
-#include "DefferedFogPass.h"
+#include "DeferredFogPass.h"
 #include <queue>
 
 void RenderGraph::BuildGraph()
@@ -39,11 +39,11 @@ void RenderGraph::BuildGraph()
 	pGBufferPass->Initialize();
 	m_pAdjLists.push_back(pGBufferPass);
 	
-	std::shared_ptr<IRenderPass> pDefferedLightingPass = std::make_shared<DefferedLightingPass>();
+	std::shared_ptr<IRenderPass> pDefferedLightingPass = std::make_shared<DeferredLightingPass>();
 	pDefferedLightingPass->Initialize();
 	m_pAdjLists.push_back(pDefferedLightingPass);
 	
-	std::shared_ptr<IRenderPass> pDefferedFogPass = std::make_shared<DefferedFogPass>();
+	std::shared_ptr<IRenderPass> pDefferedFogPass = std::make_shared<DeferredFogPass>();
 	pDefferedFogPass->Initialize();
 	m_pAdjLists.push_back(pDefferedFogPass);
 	
@@ -59,9 +59,9 @@ void RenderGraph::BuildGraph()
 	pToneMappingPass->Initialize();
 	m_pAdjLists.push_back(pToneMappingPass);
 
-	std::shared_ptr<IRenderPass> pSpritePass = std::make_shared<SpritePass>();
-	pSpritePass->Initialize();
-	m_pAdjLists.push_back(pSpritePass);
+	//std::shared_ptr<IRenderPass> pSpritePass = std::make_shared<SpritePass>();
+	//pSpritePass->Initialize();
+	//m_pAdjLists.push_back(pSpritePass);
 	
 	pDirectionalCascadeShadowMapPass->Connect(pGBufferPass);
 	pGBufferPass->Connect(pDefferedLightingPass);
@@ -69,7 +69,7 @@ void RenderGraph::BuildGraph()
 	pDefferedFogPass->Connect(pTransparentForwardPass);
 	pTransparentForwardPass->Connect(pSkyboxPass);
 	pSkyboxPass->Connect(pToneMappingPass);
-	pToneMappingPass->Connect(pSpritePass);
+	//pToneMappingPass->Connect(pSpritePass);
 
 	m_unEntryNodeIndex = 0;
 }

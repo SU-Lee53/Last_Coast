@@ -220,6 +220,7 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 	std::vector<float> fAABBExtents = aabbData["Extents"].get<std::vector<float>>();
 	meshLoadInfo.v3AABBExtents = Vector3(fAABBExtents[0], fAABBExtents[1], fAABBExtents[2]);
 
+
 	// Material
 	const nlohmann::json& materialData = inJson["Material"];
 	materialLoadInfo = LoadMaterialInfoFromFiles(materialData[0]);

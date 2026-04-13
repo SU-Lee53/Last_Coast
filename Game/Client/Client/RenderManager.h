@@ -56,12 +56,6 @@ public:
 	void Add(std::shared_ptr<T> pObj);
 	void Reset();
 
-	// Sprites
-	void AddSprite(const TextureRef<Texture>& texHandle, const SpriteRect& rect, uint32 unLayer);
-	void AddSprite(const TextureRef<RenderTargetTexture>& texHandle, const SpriteRect& rect, uint32 unLayer);
-	void AddSprite(const TextureRef<DepthStencilTexture>& texHandle, const SpriteRect& rect, uint32 unLayer);
-	void AddSprite(const TextureRef<UnorderedAccessTexture>& texHandle, const SpriteRect& rect, uint32 unLayer);
-
 	const std::shared_ptr<IMesh> GetQuadMesh() const { return m_pQuadMesh; }
 
 public:
@@ -84,7 +78,6 @@ public:
 	// Renderable Items Getter
 	const auto& GetObjectsToRender() const { return m_pObjectsToRender; }
 	const auto& GetTransparentObjectsToRender() const { return m_pTransparentObjectsToRender; }
-	const auto& GetSprites() const { return m_pSpritesToRender; }
 
 private:
 	void BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle);
@@ -107,20 +100,6 @@ private:
 	std::shared_ptr<IMesh> m_pQuadMesh;
 
 private:
-	// Sprite
-	struct SpriteRenderParameter {
-		const TextureHandle& texHandle;
-		SpriteRect Rect;
-
-		SpriteRenderParameter(const TextureRef<Texture>& texHandle, const SpriteRect& r) : texHandle{ texHandle.srvHandle }, Rect{ r } {}
-		SpriteRenderParameter(const TextureRef<RenderTargetTexture>& texHandle, const SpriteRect& r) : texHandle{ texHandle.srvHandle }, Rect{ r } {}
-		SpriteRenderParameter(const TextureRef<DepthStencilTexture>& texHandle, const SpriteRect& r) : texHandle{ texHandle.srvHandle }, Rect{ r } {}
-		SpriteRenderParameter(const TextureRef<UnorderedAccessTexture>& texHandle, const SpriteRect& r) : texHandle{ texHandle.srvHandle }, Rect{ r } {}
-	};
-
-	std::array<std::vector<SpriteRenderParameter>, g_unMaxSpriteLayers> m_pSpritesToRender;
-
-private:
 	// Frame Resources
 	DescriptorHeap			m_DescriptorHeapForDraw[g_unMaxPendingFrames];
 	ConstantBufferPool		m_ConstantBufferPool[g_unMaxPendingFrames];
@@ -128,8 +107,6 @@ private:
 
 	GBuffer									m_GBuffers[g_unMaxPendingFrames];
 	TextureRef<RenderTargetTexture>			m_HDRRenderTargetIDs[2][g_unMaxPendingFrames];
-
-
 	TextureRef<RenderTargetTexture>			m_LDRRenderTargetIDs[g_unMaxPendingFrames];
 
 

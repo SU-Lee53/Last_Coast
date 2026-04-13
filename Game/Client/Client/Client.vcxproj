@@ -177,7 +177,7 @@
     <ClInclude Include="ConstantBufferPool.h" />
     <ClInclude Include="D3DCore.h" />
     <ClInclude Include="DebugPlayer.h" />
-    <ClInclude Include="DefferedLightingPass.h" />
+    <ClInclude Include="DeferredLightingPass.h" />
     <ClInclude Include="Defines.h" />
     <ClInclude Include="DescriptorHeap.h" />
     <ClInclude Include="DirectionalCascadeShadowMapPass.h" />
@@ -191,7 +191,7 @@
     <ClInclude Include="GameTimer.h" />
     <ClInclude Include="GBufferPass.h" />
     <ClInclude Include="GuiManager.h" />
-    <ClInclude Include="DefferedFogPass.h" />
+    <ClInclude Include="DeferredFogPass.h" />
     <ClInclude Include="HeightMapRawImage.h" />
     <ClInclude Include="IDGenerator.h" />
     <ClInclude Include="InputManager.h" />
@@ -236,6 +236,7 @@
     <ClInclude Include="TerrainObject.h" />
     <ClInclude Include="TerrainTestScene.h" />
     <ClInclude Include="TestScene.h" />
+    <ClInclude Include="TextBox.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TextureManager.h" />
     <ClInclude Include="ThirdPersonCamera.h" />
@@ -244,6 +245,8 @@
     <ClInclude Include="Transform.h" />
     <ClInclude Include="TransparentForwardLightingPass.h" />
     <ClInclude Include="Typedef.h" />
+    <ClInclude Include="UIBoard.h" />
+    <ClInclude Include="UIComponent.h" />
     <ClInclude Include="UIManager.h" />
     <ClInclude Include="Utility.h" />
     <ClInclude Include="WinCore.h" />
@@ -320,7 +323,7 @@
     <ClCompile Include="ConstantBufferPool.cpp" />
     <ClCompile Include="D3DCore.cpp" />
     <ClCompile Include="DebugPlayer.cpp" />
-    <ClCompile Include="DefferedLightingPass.cpp" />
+    <ClCompile Include="DeferredLightingPass.cpp" />
     <ClCompile Include="Defines.cpp" />
     <ClCompile Include="DescriptorHeap.cpp" />
     <ClCompile Include="DirectionalCascadeShadowMapPass.cpp" />
@@ -335,7 +338,7 @@
     <ClCompile Include="GameTimer.cpp" />
     <ClCompile Include="GBufferPass.cpp" />
     <ClCompile Include="GuiManager.cpp" />
-    <ClCompile Include="DefferedFogPass.cpp" />
+    <ClCompile Include="DeferredFogPass.cpp" />
     <ClCompile Include="HeightMapRawImage.cpp" />
     <ClCompile Include="IDGenerator.cpp" />
     <ClCompile Include="InputManager.cpp" />
@@ -380,6 +383,7 @@
     <ClCompile Include="TerrainObject.cpp" />
     <ClCompile Include="TerrainTestScene.cpp" />
     <ClCompile Include="TestScene.cpp" />
+    <ClCompile Include="TextBox.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="TextureManager.cpp" />
     <ClCompile Include="ThirdPersonCamera.cpp" />
@@ -387,6 +391,8 @@
     <ClCompile Include="ToneMappingPass.cpp" />
     <ClCompile Include="Transform.cpp" />
     <ClCompile Include="TransparentForwardLightingPass.cpp" />
+    <ClCompile Include="UIBoard.cpp" />
+    <ClCompile Include="UIComponent.cpp" />
     <ClCompile Include="UIManager.cpp" />
     <ClCompile Include="Utility.cpp" />
     <ClCompile Include="WinCore.cpp" />

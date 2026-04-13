@@ -125,6 +125,15 @@
     <Filter Include="03.Engine\HLSL\Graphics">
       <UniqueIdentifier>{828009b6-9e11-49d7-8085-9254128fa4a5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02.Game\UI">
+      <UniqueIdentifier>{a898ed8b-54dc-47f0-8df4-e00a43ef3d75}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Game\UI\UIComponent">
+      <UniqueIdentifier>{7818da78-c717-4419-997a-a40213ef8a86}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Game\UI\UIComponent\Components">
+      <UniqueIdentifier>{dd161558-19d2-43cc-ab43-2a2b63200a9e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h">
@@ -219,9 +228,6 @@
     </ClInclude>
     <ClInclude Include="Shader.h">
       <Filter>03.Engine\Shader</Filter>
-    </ClInclude>
-    <ClInclude Include="Sprite.h">
-      <Filter>03.Engine\Graphic Components</Filter>
     </ClInclude>
     <ClInclude Include="ShaderResource.h">
       <Filter>03.Engine\Resources</Filter>
@@ -385,8 +391,6 @@
     <ClInclude Include="Skybox.h">
       <Filter>02.Game\Skybox</Filter>
     </ClInclude>
-    <ClInclude Include="ComputeManager.h" />
-    <ClInclude Include="CommandListAllocator.h" />
     <ClInclude Include="..\Dependencies\Includes\DirectXTex\DDSTextureLoader12.h">
       <Filter>99.Library\DirectXTex</Filter>
     </ClInclude>
@@ -396,7 +400,7 @@
     <ClInclude Include="SkyboxPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
-    <ClInclude Include="DefferedLightingPass.h">
+    <ClInclude Include="DeferredLightingPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
     <ClInclude Include="DirectionalCascadeShadowMapPass.h">
@@ -411,7 +415,6 @@
     <ClInclude Include="TerrainTestScene.h">
       <Filter>02.Game\Scene\Test</Filter>
     </ClInclude>
-    <ClInclude Include="SpritePass.h" />
     <ClInclude Include="NavMeshDebugRenderer.h" />
     <ClInclude Include="AIManagerWrapper.h" />
     <ClInclude Include="TestScene.h">
@@ -423,8 +426,36 @@
     <ClInclude Include="Zombie.h">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClInclude>
-    <ClInclude Include="..\Dependencies\Includes\ImGui\imgui_stdlib.h" />
-    <ClInclude Include="DefferedFogPass.h" />
+    <ClInclude Include="UIBoard.h">
+      <Filter>02.Game\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="CommandListAllocator.h">
+      <Filter>03.Engine\D3D Resource Management</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\Includes\ImGui\imgui_stdlib.h">
+      <Filter>99.Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="DeferredFogPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="SpritePass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="GameScene.h">
+      <Filter>02.Game\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="ComputeManager.h">
+      <Filter>04.Managers\Resource Management</Filter>
+    </ClInclude>
+    <ClInclude Include="UIComponent.h">
+      <Filter>02.Game\UI\UIComponent</Filter>
+    </ClInclude>
+    <ClInclude Include="TextBox.h">
+      <Filter>02.Game\UI\UIComponent\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Sprite.h">
+      <Filter>02.Game\UI\UIComponent\Components</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -523,9 +554,6 @@
     </ClCompile>
     <ClCompile Include="Shader.cpp">
       <Filter>03.Engine\Shader</Filter>
-    </ClCompile>
-    <ClCompile Include="Sprite.cpp">
-      <Filter>03.Engine\Graphic Components</Filter>
     </ClCompile>
     <ClCompile Include="ShaderResource.cpp">
       <Filter>03.Engine\Resources</Filter>
@@ -671,9 +699,7 @@
     <ClCompile Include="Skybox.cpp">
       <Filter>02.Game\Skybox</Filter>
     </ClCompile>
-    <ClCompile Include="ComputeManager.cpp" />
-    <ClCompile Include="CommandListAllocator.cpp" />
-    <ClCompile Include="DefferedLightingPass.cpp">
+    <ClCompile Include="DeferredLightingPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
     <ClCompile Include="SkyboxPass.cpp">
@@ -697,7 +723,6 @@
     <ClCompile Include="MapTestScene.cpp">
       <Filter>02.Game\Scene\Test</Filter>
     </ClCompile>
-    <ClCompile Include="SpritePass.cpp" />
     <ClCompile Include="NavMeshDebugRenderer.cpp" />
     <ClCompile Include="AIManagerWrapper.cpp" />
     <ClCompile Include="TestScene.cpp">
@@ -709,13 +734,41 @@
     <ClCompile Include="ZombieAnimationController.cpp">
       <Filter>02.Game\Animation</Filter>
     </ClCompile>
-    <ClCompile Include="..\Dependencies\Includes\ImGui\imgui_stdlib.cpp" />
-    <ClCompile Include="DefferedFogPass.cpp" />
     <ClCompile Include="AnimationMontage.cpp">
       <Filter>02.Game\Animation</Filter>
     </ClCompile>
     <ClCompile Include="NetworkManager.cpp">
       <Filter>04.Managers\Game Management</Filter>
+    </ClCompile>
+    <ClCompile Include="UIBoard.cpp">
+      <Filter>02.Game\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="CommandListAllocator.cpp">
+      <Filter>03.Engine\D3D Resource Management</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\Includes\ImGui\imgui_stdlib.cpp">
+      <Filter>99.Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="DeferredFogPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="SpritePass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="GameScene.cpp">
+      <Filter>02.Game\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="ComputeManager.cpp">
+      <Filter>04.Managers\Resource Management</Filter>
+    </ClCompile>
+    <ClCompile Include="UIComponent.cpp">
+      <Filter>02.Game\UI\UIComponent</Filter>
+    </ClCompile>
+    <ClCompile Include="TextBox.cpp">
+      <Filter>02.Game\UI\UIComponent\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Sprite.cpp">
+      <Filter>02.Game\UI\UIComponent\Components</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -775,6 +828,14 @@
     <FxCompile Include="..\HLSL\ShadowMapShader.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
-    <FxCompile Include="..\HLSL\HDRPostProcessing.hlsl" />
+    <FxCompile Include="..\HLSL\ToneMappingCommon.hlsl">
+      <Filter>03.Engine\HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\LUTBaking.hlsl">
+      <Filter>03.Engine\HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\HDRPostProcessing.hlsl">
+      <Filter>03.Engine\HLSL</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
