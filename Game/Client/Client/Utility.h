@@ -1,10 +1,12 @@
 ﻿#pragma once
 
-template<typename KeyType, typename ElemType>
+template<typename KeyType, typename ElemType, typename Hasher = typename std::hash<KeyType>>
 class IndexMap {
 private:
-	std::unordered_map<KeyType, size_t> m_IndexMap;
+	std::unordered_map<KeyType, size_t, Hasher> m_IndexMap;
 	std::vector<ElemType> m_Elements;
+
+	std::vector<size_t> m_FreeIndices{};
 
 public:
 	void Reserve(size_t newSize) {
@@ -28,8 +30,30 @@ public:
 
 	size_t Size() { return m_Elements.size(); }
 
+	bool Contains(const KeyType& k) const {
+		return m_IndexMap.find(k) != m_IndexMap.end();
+	}
+
+	size_t GetIndex(const KeyType& k) const {
+		auto it = m_IndexMap.find(k);
+		return (it != m_IndexMap.end()) ? it->second : INVALID_ID;
+	}
+
+	ElemType* Find(const KeyType& k) {
+		auto it = m_IndexMap.find(k);
+		if (it == m_IndexMap.end())
+			return nullptr;
+		return &m_Elements[it->second];
+	}
+
+	const ElemType* Find(const KeyType& k) const {
+		auto it = m_IndexMap.find(k);
+		if (it == m_IndexMap.end())
+			return nullptr;
+		return &m_Elements[it->second];
+	}
+
 	//ElemType& operator[](KeyType key) { return m_Elements[m_IndexMap[key]]; }
-	size_t GetIndex(const KeyType& k) { return m_IndexMap[k]; }
 	ElemType& operator[](size_t idx) { return m_Elements[idx]; }
 
 	const std::vector<ElemType>& GetElements() { return m_Elements; }

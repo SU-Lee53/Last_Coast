@@ -37,7 +37,7 @@ public:
 		D3D12_RESOURCE_STATES d3dAfterState,
 		bool bChangeState = false);
 
-	ComPtr<ID3D12Resource> GetResource() const { return m_pd3dResource; }
+	ComPtr<ID3D12Resource> GetResourcePtr() const { return m_pd3dResource; }
 	CD3DX12_CPU_DESCRIPTOR_HANDLE GetSRVHandle() { return m_d3dSRVHandle; }
 	const D3D12_SHADER_RESOURCE_VIEW_DESC& GetSRVDesc() const { return m_d3dSRVDesc; }
 

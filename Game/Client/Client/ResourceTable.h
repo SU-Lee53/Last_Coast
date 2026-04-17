@@ -15,16 +15,16 @@ struct ResourceEntry {
 	KeyType key{};
 };
 
-template<typename KeyType, typename ResourceType>
+template<typename KeyType, typename ResourceType, typename Hasher = typename std::hash<KeyType>>
 class ResourceTable;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ResourceHandle
 
-template<typename KeyType, typename ResourceType>
+template<typename KeyType, typename ResourceType, typename Hasher = typename std::hash<KeyType>>
 class ResourceHandle {
 public:
-	using TableType = ResourceTable<KeyType, ResourceType>;
+	using TableType = ResourceTable<KeyType, ResourceType, Hasher>;
 	using ID = typename TableType::ID;
 	using ResourcePtr = typename TableType::ResourcePtr;
 
@@ -98,7 +98,7 @@ public:
 		return m_id;
 	}
 
-	ResourcePtr GetResource() const {
+	const ResourcePtr& GetResource() const {
 		if (!IsValid()) {
 			return nullptr;
 		}
@@ -124,15 +124,21 @@ using TextureHandle = ResourceHandle<std::string, Texture>;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ResourceTable
 
-template<typename KeyType, typename ResourceType>
+template<typename KeyType, typename ResourceType, typename Hasher>
 class ResourceTable {
 public:
-	friend class ResourceHandle<KeyType, ResourceType>;
+	friend class ResourceHandle<KeyType, ResourceType, Hasher>;
 
 	using ResourcePtr = typename ResourceEntry<KeyType, ResourceType>::ResourcePtr;
 	using ID = uint64_t;
-	using Handle = ResourceHandle<KeyType, ResourceType>;
+	using Handle = ResourceHandle<KeyType, ResourceType, Hasher>;
 	constexpr static ID InvalidID = INVALID_ID;
+
+	using CleanUpFn = std::function<void(const ResourcePtr&)>;
+	void SetCleanUpCallback(CleanUpFn fn) {
+		m_CleanUpFn = std::move(fn);
+	}
+
 
 
 public:
@@ -166,7 +172,7 @@ public:
 	}
 	
 	// Look Up
-	Handle GetHandle(const KeyType& key) {
+	Handle GetHandle(const KeyType& key) const {
 		auto it = m_KeyIDMap.find(key);
 		if (it == m_KeyIDMap.end()) {
 			return {};
@@ -204,8 +210,12 @@ public:
 		return m_ResourceEntries[id].pResource;
 	}
 
+	const std::vector<ResourceEntry<KeyType, ResourceType>>& GetEntries() const {
+		return m_ResourceEntries;
+	}
+
 private:
-	bool AddRef(ID id) {
+	bool AddRef(ID id) const {
 		if (id >= m_unMaxSize) {
 			return false;
 		}
@@ -219,7 +229,7 @@ private:
 		return true;
 	}
 
-	bool Release(ID id) {
+	bool Release(ID id) const {
 		if (id >= m_unMaxSize) {
 			return false;
 		}
@@ -233,6 +243,12 @@ private:
 		--entry.nRefCount;
 
 		if (entry.nRefCount == 0) {
+			auto& pResource = entry.pResource;
+			if (m_CleanUpFn && pResource) {
+				m_CleanUpFn(pResource);
+			}
+
+
 			m_KeyIDMap.erase(entry.key);
 
 			//entry.pResource.reset();
@@ -273,9 +289,11 @@ private:
 	}
 
 private:
+	CleanUpFn m_CleanUpFn;
+
 	ComPtr<ID3D12DescriptorHeap> m_pd3dDescriptorHeap;
 	std::vector<ResourceEntry<KeyType, ResourceType>> m_ResourceEntries;
-	std::unordered_map<KeyType, ID> m_KeyIDMap;
+	std::unordered_map<KeyType, ID, Hasher> m_KeyIDMap;
 	size_t m_unMaxSize = 0;
 
 	std::vector<ID> m_FreeIDs;

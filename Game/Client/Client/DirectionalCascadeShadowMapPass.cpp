@@ -122,20 +122,6 @@ void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandL
 	auto pCamera = CUR_SCENE->GetCamera();
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 
-
-	if (m_bShowShadowMaps) {
-		constexpr float fSize = 0.2f;
-		for (const auto& [idx, texRef] : m_ShadowMapRef[unCurrentContext] | std::views::enumerate) {
-			SpriteRect r;
-			{
-				r.fLeft = 0.f;
-				r.fTop = (float)idx * fSize;
-				r.fRight = r.fLeft + fSize;
-				r.fBottom = r.fTop + fSize;
-			}
-			RENDER->AddSprite(texRef, r, 0);
-		}
-	}
 }
 
 void DirectionalCascadeShadowMapPass::CreatePipelineState()

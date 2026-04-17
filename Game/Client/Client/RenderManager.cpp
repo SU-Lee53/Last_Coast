@@ -254,9 +254,9 @@ void RenderManager::ShowDebugOptions()
 	ImGui::SeparatorText("Render Queue");
 	ImGui::Text("Opaque : %d", m_pObjectsToRender.size());
 	ImGui::Text("Transparent: %d", m_pTransparentObjectsToRender.size());
-	for (uint32 i = 0; i < g_unMaxSpriteLayers; ++i) {
-		ImGui::Text("Sprite Layer[%d] : %d", i, m_pSpritesToRender[i].size());
-	}
+	//for (uint32 i = 0; i < g_unMaxSpriteLayers; ++i) {
+	//	ImGui::Text("Sprite Layer[%d] : %d", i, m_pSpritesToRender[i].size());
+	//}
 
 	ImGui::SeparatorText("Render Graph");
 	m_RenderGraph.ShowDebugInfo();
@@ -335,35 +335,10 @@ void RenderManager::ShowDebugOptions()
 	ImGui::End();
 }
 
-void RenderManager::AddSprite(const TextureRef<Texture>& texHandle, const SpriteRect& rect, uint32 unLayer)
-{
-	m_pSpritesToRender[unLayer].emplace_back(texHandle, rect);
-}
-
-void RenderManager::AddSprite(const TextureRef<RenderTargetTexture>& texHandle, const SpriteRect& rect, uint32 unLayer)
-{
-	m_pSpritesToRender[unLayer].emplace_back(texHandle, rect);
-}
-
-void RenderManager::AddSprite(const TextureRef<DepthStencilTexture>& texHandle, const SpriteRect& rect, uint32 unLayer)
-{
-	m_pSpritesToRender[unLayer].emplace_back(texHandle, rect);
-}
-
-void RenderManager::AddSprite(const TextureRef<UnorderedAccessTexture>& texHandle, const SpriteRect& rect, uint32 unLayer)
-{
-	m_pSpritesToRender[unLayer].emplace_back(texHandle, rect);
-}
-
 void RenderManager::Reset()
 {
 	m_pObjectsToRender.clear();
 	m_pTransparentObjectsToRender.clear();
-
-	for (uint32 i = 0; i < g_unMaxSpriteLayers; ++i) {
-		m_pSpritesToRender[i].clear();
-	}
-
 
 	m_ConstantBufferPool[m_unCurrentContextIndex].Reset();
 	m_StructuredBufferPool[m_unCurrentContextIndex].Reset();

@@ -53,9 +53,6 @@ public:
 		uint32 unDepth = 0,
 		DXGI_FORMAT dxgiSRVUAVFormat = DXGI_FORMAT_UNKNOWN);
 	
-	// TODO : 아래를 구현
-
-
 	std::shared_ptr<Texture> GetTextureByName(const std::string& strTextureName, TEXTURE_RESOURCE_TYPE eResourceType) const;
 	std::shared_ptr<Texture> GetTextureByHandle(const TextureHandle& handle, TEXTURE_RESOURCE_TYPE eResourceType) const;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCPUHandleByHandle(const TextureHandle& handle, TEXTURE_RESOURCE_TYPE eResourceType) const;

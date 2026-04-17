@@ -259,9 +259,6 @@
     <ClInclude Include="RenderManager.h">
       <Filter>04.Managers\Rendering Management</Filter>
     </ClInclude>
-    <ClInclude Include="UIManager.h">
-      <Filter>04.Managers\Rendering Management</Filter>
-    </ClInclude>
     <ClInclude Include="SceneManager.h">
       <Filter>04.Managers\Game Management</Filter>
     </ClInclude>
@@ -456,6 +453,9 @@
     <ClInclude Include="Sprite.h">
       <Filter>02.Game\UI\UIComponent\Components</Filter>
     </ClInclude>
+    <ClInclude Include="TextManager.h">
+      <Filter>03.Engine\Graphic Components</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -580,9 +580,6 @@
       <Filter>04.Managers\Resource Management</Filter>
     </ClCompile>
     <ClCompile Include="RenderManager.cpp">
-      <Filter>04.Managers\Rendering Management</Filter>
-    </ClCompile>
-    <ClCompile Include="UIManager.cpp">
       <Filter>04.Managers\Rendering Management</Filter>
     </ClCompile>
     <ClCompile Include="SceneManager.cpp">
@@ -770,12 +767,21 @@
     <ClCompile Include="Sprite.cpp">
       <Filter>02.Game\UI\UIComponent\Components</Filter>
     </ClCompile>
+    <ClCompile Include="TextManager.cpp">
+      <Filter>03.Engine\Graphic Components</Filter>
+    </ClCompile>
+    <ClCompile Include="TextAtlas.cpp">
+      <Filter>99.Utility</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
       <Filter>99.Utility</Filter>
     </None>
     <None Include="imgui.ini">
+      <Filter>99.Utility</Filter>
+    </None>
+    <None Include="TextAtlas.h">
       <Filter>99.Utility</Filter>
     </None>
   </ItemGroup>

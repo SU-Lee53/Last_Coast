@@ -19,6 +19,8 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 	RENDER->Initialize(g_pD3DCore->GetDevice());
 	SHADER->Initialize(g_pD3DCore->GetDevice());
 
+	TEXT->Initialize(RENDER->GetCommandQueue());
+
 	MODEL->Initialize();
 	ANIMATION->Initialize();
 

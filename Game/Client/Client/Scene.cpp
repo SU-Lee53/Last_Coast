@@ -332,7 +332,7 @@ void Scene::InitializeObjects()
 void Scene::CleanUp()
 {
 	m_pGameObjects.clear();
-	m_pSprites.clear();
+	//m_pSprites.clear();
 	m_pLights.clear();
 
 	m_pPlayer.reset();
@@ -471,9 +471,9 @@ void Scene::PrepareRender()
 		pObj->Render();
 	}
 
-	for (auto& pSprite : m_pSprites) {
-		pSprite->AddToUI(pSprite->GetLayerIndex());
-	}
+	//for (auto& pSprite : m_pSprites) {
+	//	pSprite->AddToUI(pSprite->GetLayerIndex());
+	//}
 }
 
 void Scene::CheckCollision()

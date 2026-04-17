@@ -35,6 +35,7 @@
 #include <filesystem>
 #include <typeindex>
 #include <random>
+#include <funtional>
 
 
 #include "Typedef.h"

@@ -6,7 +6,6 @@
 #include "DirectionalCascadeShadowMapPass.h"
 #include "ToneMappingPass.h"
 #include "SkyboxPass.h"
-#include "SpritePass.h"
 #include "DeferredFogPass.h"
 #include <queue>
 

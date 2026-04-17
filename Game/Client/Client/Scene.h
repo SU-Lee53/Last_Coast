@@ -7,7 +7,8 @@
 class TerrainComponent;
 class TerrainObject;
 class Skybox;
-class Sprite;
+//class Sprite;
+class UIBoard;
 
 using CollisionPair = std::pair<std::shared_ptr<IGameObject>, std::shared_ptr<IGameObject>>;
 
@@ -134,7 +135,7 @@ protected:
 
 protected:
 	std::vector<std::shared_ptr<IGameObject>>	m_pGameObjects = {};
-	std::vector<std::shared_ptr<Sprite>>		m_pSprites;
+	//std::vector<std::shared_ptr<Sprite>>		m_pSprites;
 	std::vector<std::shared_ptr<Light>>			m_pLights = {};
 	
 	std::shared_ptr<IPlayer>					m_pPlayer = nullptr;
@@ -144,6 +145,9 @@ protected:
 	//std::vector<GridCell> m_GridCells;
 	ScenePartition m_SpacePartition{};
 	BoundingBox m_xmSceneBound{};
+	
+	UIBoard* m_pUIBoard;
+
 
 	std::unordered_set<CollisionResult> m_pCollisionPairs;
 

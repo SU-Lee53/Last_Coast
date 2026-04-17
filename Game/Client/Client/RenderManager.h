@@ -43,7 +43,6 @@ class RenderManager {
 
 public:
 	constexpr static uint32 g_unMaxPendingFrames = 3;
-	constexpr static uint32 g_unMaxSpriteLayers = 3;
 
 public:
 	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
@@ -128,7 +127,8 @@ public:
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentHDRBufferHandle(int nIndex) const;
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentLDRBufferHandle() const;
 
-	ComPtr<ID3D12GraphicsCommandList> GetCommandList() const { return m_ppd3dCommandList[m_unCurrentContextIndex]; }
+	const ComPtr<ID3D12GraphicsCommandList>& GetCommandList() const { return m_ppd3dCommandList[m_unCurrentContextIndex]; }
+	const ComPtr<ID3D12CommandQueue>& GetCommandQueue() const { return m_pd3dCommandQueue; }
 
 	void WaitForGPUComplete();
 

@@ -46,6 +46,14 @@
 #include <dxgidebug.h>
 #include <d3dx/d3dx12.h>
 
+// D3D11On12
+#include <d3d11.h>
+#include <d3d11on12.h>
+
+// D2D1 / DrectXWritr
+#include <d2d1_3.h>
+#include <dwrite_3.h>
+
 
 // D3DCompiler
 #include <dxcapi.h>
@@ -80,6 +88,11 @@ using namespace Microsoft::WRL;
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "dxguid.lib")
+
+#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "d2d1.lib")
+#pragma comment(lib, "dwrite.lib")
+//#pragma comment(lib, "d3d11on12.lib")
 
 
 // fmod sound library
@@ -149,12 +162,12 @@ using namespace AIDLL;
 #include "NetworkManager.h"
 #include "EffectManager.h"
 #include "SoundManager.h"
-#include "UIManager.h"
 #include "AnimationManager.h"
 #include "AIManagerWrapper.h"
 //#include "CollisionManager.h"
 #include "MaterialManager.h"
 #include "ComputeManager.h"
+#include "TextManager.h"
 
 
 // ServerCore
