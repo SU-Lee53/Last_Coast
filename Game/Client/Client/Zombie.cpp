@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "Zombie.h"
+#include "ZombiePool.h"
 #include "NodeObject.h"
 #include "ZombieAnimationController.h"
 // #include "Player.h"           ← 프로젝트에 맞게 include
@@ -49,11 +50,12 @@ void Zombie::Initialize()
 
 void Zombie::ProcessInput()
 {
-
 }
 
 void Zombie::Update()
 {
+	if (!m_bPoolActive) return;
+
 	for (const auto& pChild : m_pChildren) {
 		pChild->Update();
 	}
@@ -65,13 +67,44 @@ void Zombie::Shutdown()
 	m_pAIAgent.reset();
 }
 
+void Zombie::PoolReset()
+{
+	m_bPoolActive       = false;
+	m_nActiveIndex      = -1;
+	m_fHP               = 100.f;
+	m_bDying            = false;
+	m_bReadyToRemove    = false;
+	m_fVerticalVelocity = 0.f;
+	m_fMoveSpeedSqXZ    = 0.f;
+	m_bWasVisible       = false;
+	m_xmOBBCollided.clear();
+	// AI 에이전트 상태는 재활성화 시 SetPosition/SetTarget으로 재설정됨
+}
+
+void Zombie::PoolActivate()
+{
+	m_bPoolActive       = true;
+	m_fHP               = 100.f;
+	m_bDying            = false;
+	m_bReadyToRemove    = false;
+	m_fVerticalVelocity = 0.f;
+	m_fMoveSpeedSqXZ    = 0.f;
+	m_bWasVisible       = false;
+	m_xmOBBCollided.clear();
+}
+
 void Zombie::PostUpdate()
 {
+	if (!m_bPoolActive) return;
+
 	// ── 사망 처리 ────────────────────────────────────────────────────────────
 	if (m_bDying) {
 		auto pAC = GetComponent<ZombieAnimationController>();
-		if (pAC && pAC->GetMontage() && pAC->GetMontage()->IsFreezed())
+		if (pAC && pAC->GetMontage() && pAC->GetMontage()->IsFreezed() && !m_bReadyToRemove)
+		{
 			m_bReadyToRemove = true;
+			if (m_pPool) m_pPool->MarkForRelease(std::static_pointer_cast<Zombie>(shared_from_this()));
+		}
 		DynamicObject::PostUpdate();
 		return;
 	}
@@ -227,11 +260,13 @@ void Zombie::ResolveCollision(Vector3& outv3Delta)
 
 void Zombie::OnBeginCollision(const CollisionResult& collisionResult)
 {
+	if (!m_bPoolActive) return;
 	m_xmOBBCollided.push_back(collisionResult.DecomposeRef().second.GetOBBWorld());
 }
 
 void Zombie::OnWhileCollision(const CollisionResult& collisionResult)
 {
+	if (!m_bPoolActive) return;
 	m_xmOBBCollided.push_back(collisionResult.DecomposeRef().second.GetOBBWorld());
 }
 

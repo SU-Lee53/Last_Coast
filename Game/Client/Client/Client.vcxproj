@@ -250,6 +250,7 @@
     <ClInclude Include="WInSockCommon.h" />
     <ClInclude Include="Zombie.h" />
     <ClInclude Include="ZombieAnimationController.h" />
+    <ClInclude Include="ZombiePool.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc" />
@@ -392,6 +393,7 @@
     <ClCompile Include="WinCore.cpp" />
     <ClCompile Include="Zombie.cpp" />
     <ClCompile Include="ZombieAnimationController.cpp" />
+    <ClCompile Include="ZombiePool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui.ini" />

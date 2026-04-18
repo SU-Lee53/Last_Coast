@@ -15,10 +15,8 @@ void TestScene::BuildObjects()
 
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 
-	for (int i = 0; i < 100; ++i) {
-		std::shared_ptr<IGameObject> pObj = std::make_shared<Zombie>();
-		m_pGameObjects.push_back(pObj);
-	}
+	for (auto& pZombie : m_ZombiePool.Initialize(100))
+		m_pGameObjects.push_back(pZombie);
 
 	LoadFromFiles("TEST1");
 
@@ -208,8 +206,15 @@ void TestScene::ProcessPlayerShoot()
 
 void TestScene::RemoveDeadZombies()
 {
-	std::erase_if(m_pGameObjects, [](const std::shared_ptr<IGameObject>& obj) {
-		auto pZombie = std::dynamic_pointer_cast<Zombie>(obj);
-		return pZombie && pZombie->IsReadyToRemove();
-	});
+	// 죽은 좀비를 풀로 반환 (swap-with-last O(1), 소멸자 호출 없음)
+	m_ZombiePool.Collect();
+}
+
+void TestScene::SpawnZombie()
+{
+	auto pZombie = m_ZombiePool.Acquire();
+	if (!pZombie) return; // 풀 고갈
+
+	pZombie->SetPosition(AI->GetNavMesh()->GetRandomPoint());
+	pZombie->SetTarget(m_pPlayer);
 }

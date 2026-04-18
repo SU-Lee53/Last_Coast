@@ -425,6 +425,10 @@
     </ClInclude>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imgui_stdlib.h" />
     <ClInclude Include="DefferedFogPass.h" />
+    <ClInclude Include="GameScene.h" />
+    <ClInclude Include="ZombiePool.h">
+      <Filter>03.Engine\Resources\Buffer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -717,6 +721,10 @@
     <ClCompile Include="NetworkManager.cpp">
       <Filter>04.Managers\Game Management</Filter>
     </ClCompile>
+    <ClCompile Include="GameScene.cpp" />
+    <ClCompile Include="ZombiePool.cpp">
+      <Filter>03.Engine\Resources\Buffer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
@@ -776,5 +784,7 @@
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\HDRPostProcessing.hlsl" />
+    <FxCompile Include="..\HLSL\LUTBaking.hlsl" />
+    <FxCompile Include="..\HLSL\ToneMappingCommon.hlsl" />
   </ItemGroup>
 </Project>

@@ -2,6 +2,7 @@
 #include "DynamicObject.h"
 
 class IPlayer;
+class ZombiePool;
 
 class Zombie : public DynamicObject
 {
@@ -32,6 +33,12 @@ public:
 	float GetHP() const { return m_fHP; }
 	bool IsDead() const { return m_fHP <= 0.f; }
 	bool IsReadyToRemove() const { return m_bReadyToRemove; }
+
+	// 메모리 풀 인터페이스 ─────────────────────────────────────────────────────
+	// ZombiePool이 호출. 외부에서 직접 호출 금지.
+	bool IsPoolActive() const { return m_bPoolActive; }
+	void PoolActivate(); // m_Free → m_Active: 상태 초기화 후 활성화
+	void PoolReset();    // m_Active → m_Free: 비활성화 (객체는 재사용 대기)
 
 	Vector3 GetPosition() const;
 
@@ -74,4 +81,13 @@ private:
 	float m_fHP = 100.f;
 	bool m_bDying = false;
 	bool m_bReadyToRemove = false;
+
+	// 풀 상태. true = active(게임플레이 중), false = dormant(재사용 대기)
+	// dormant 상태에서는 Update/PostUpdate/Render가 early-return
+	bool m_bPoolActive = true;
+
+	// ZombiePool 전용 — 외부에서 직접 접근 금지
+	friend class ZombiePool;
+	ZombiePool* m_pPool        = nullptr; // 소속 풀 (back-pointer)
+	int         m_nActiveIndex = -1;      // m_Active 내 현재 인덱스 (O(1) 제거용)
 };

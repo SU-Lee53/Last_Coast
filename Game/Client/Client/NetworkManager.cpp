@@ -375,7 +375,8 @@ bool NetworkManager::GetInterpolatedPosition(int playerId, Vector3& outPos) cons
 {
 	std::lock_guard<std::mutex> lock(m_Mutex);
 	auto it = m_RemotePlayers.find(playerId);
-	if (it == m_RemotePlayers.end() || !it->second.active) return false;
+	if (it == m_RemotePlayers.end() || !it->second.active) 
+		return false;
 	outPos = it->second.interpolatedPos;
 	return true;
 }
