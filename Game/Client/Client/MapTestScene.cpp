@@ -2,10 +2,9 @@
 #include "MapTestScene.h"
 #include "DebugPlayer.h"
 #include "ThirdPersonPlayer.h"
-#include "TerrainObject.h"
-#include "TerrainTestScene.h"
 #include "Skybox.h"
 #include "GameScene.h"
+#include "TextBox.h"
 
 void MapTestScene::BuildObjects()
 {
@@ -17,6 +16,36 @@ void MapTestScene::BuildObjects()
 
 	//m_pPlayer = std::make_shared<DebugPlayer>();
 	//m_pPlayer->Initialize();
+
+	m_pUIBoard = std::make_unique<UIBoard>();
+	
+	m_pFPSText = std::make_shared<TextBox>(L"Malgun Gothic");
+	m_pFPSText->SetText(L"Test");
+	m_pFPSText->SetLayer(0);
+	m_pFPSText->SetAnchor(Vector2{ 0,0 });
+	m_pFPSText->SetPivot(Vector2{ 0,0 });
+	m_pFPSText->SetPosition(Vector2{ 0,50 });
+	m_pFPSText->SetSize(Vector2{ 100,50 });
+
+	m_pTimeText = std::make_shared<TextBox>(L"Malgun Gothic");
+	m_pTimeText->SetText(L"Test");
+	m_pTimeText->SetLayer(0);
+	m_pTimeText->SetAnchor(Vector2{ 0,0 });
+	m_pTimeText->SetPivot(Vector2{ 0,0 });
+	m_pTimeText->SetPosition(Vector2{ 200,50 });
+	m_pTimeText->SetSize(Vector2{ 100,50 });
+
+	m_pKoreanText = std::make_shared<TextBox>(L"Malgun Gothic");
+	m_pKoreanText->SetText(L"한국어 출력 테스트 1234567890");
+	m_pKoreanText->SetLayer(0);
+	m_pKoreanText->SetAnchor(Vector2{ 0,0 });
+	m_pKoreanText->SetPivot(Vector2{ 0,0 });
+	m_pKoreanText->SetPosition(Vector2{ 350,50 });
+	m_pKoreanText->SetSize(Vector2{ 250,50 });
+
+	m_pUIBoard->InsertText(m_pFPSText);
+	m_pUIBoard->InsertText(m_pTimeText);
+	m_pUIBoard->InsertText(m_pKoreanText);
 
 	LoadFromFiles("LightTest");
 }
@@ -35,6 +64,16 @@ void MapTestScene::ProcessInput()
 
 void MapTestScene::Update()
 {
+	// Update text test
+	std::wstring wstrFrameRate;
+	wstrFrameRate = std::format(L"FPS : {}", TIME->GetCurrentFrameRate());
+	m_pFPSText->SetText(wstrFrameRate);
+
+	std::wstring wstrTime;
+	wstrTime = std::format(L"TIME : {:.3f}", TIME->GetTotalTime());
+	m_pTimeText->SetText(wstrTime);
+
+
 	ImGui::Begin("Test");
 	{
 		if (ImGui::Button("Change Scene")) {

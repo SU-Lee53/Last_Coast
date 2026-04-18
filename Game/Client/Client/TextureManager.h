@@ -31,7 +31,8 @@ public:
 		uint32 unWidth,
 		uint32 unHeight,
 		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN,
-		DXGI_FORMAT dxgiRTVFormat = DXGI_FORMAT_UNKNOWN);
+		DXGI_FORMAT dxgiRTVFormat = DXGI_FORMAT_UNKNOWN,
+		D3D12_RESOURCE_STATES d3dInitialState = D3D12_RESOURCE_STATE_PRESENT);
 	
 	TextureRef<RenderTargetTexture> LoadRenderTargetTexture(
 		ComPtr<ID3D12Resource> pd3dRTVResourceFromSwapChain,

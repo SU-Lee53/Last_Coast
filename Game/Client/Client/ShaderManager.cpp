@@ -219,8 +219,10 @@ void ShaderManager::CompileShaders()
 	Compile("ShadowTerrainVS", L"ShadowMapShader.hlsl", L"VSShadowTerrain", SHADER_TYPE::VS);
 	Compile("ShadowAnimatedVS", L"ShadowMapShader.hlsl", L"VSShadowAnimated", SHADER_TYPE::VS);
 
-	Compile("SpriteVS", L"Sprite.hlsl", L"VSSprite", SHADER_TYPE::VS);
-	Compile("SpritePS", L"Sprite.hlsl", L"PSSprite", SHADER_TYPE::PS);
+	Compile("UIRectVS", L"Sprite.hlsl", L"VSUIRect", SHADER_TYPE::VS);
+
+	Compile("UITextPS", L"Sprite.hlsl", L"PSUIText", SHADER_TYPE::PS);
+	Compile("UISpritePS", L"Sprite.hlsl", L"PSUISprite", SHADER_TYPE::PS);
 
 	// PostProcess
 	Compile("DefferedFogVS", L"HDRPostProcessing.hlsl", L"VSDefferedFog", SHADER_TYPE::VS);

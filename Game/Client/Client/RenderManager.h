@@ -4,6 +4,7 @@
 #include "ConstantBufferPool.h"
 #include "StructuredBufferPool.h"
 
+#include "TextRenderer.h"
 #include "RenderGraph.h"
 
 enum class ROOT_PARAMETER : uint32 {
@@ -14,14 +15,15 @@ enum class ROOT_PARAMETER : uint32 {
 	HDR_RESULT								= 4,
 	TONE_MAPPING_DATA						= 5,
 	FOG_DATA								= 6,
-	PER_PASS_DATA							= 7,
-	PER_INSTANCE_DATA						= 8,
-	BONE_TRANSFORM_OFFSETS					= 9,
-	LIGHT_CAMERA_DATA						= 10,
-	TERRAIN_LAYER							= 11,
-	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 12,
-	TERRAIN_WORLD_TRANSFORM					= 13,
-	SPRITE_DATA								= 14,
+	PER_PASS_BUFFERS						= 7,
+	PER_PASS_TEXTURES						= 8,
+	PER_INSTANCE_DATA						= 9,
+	BONE_TRANSFORM_OFFSETS					= 10,
+	LIGHT_CAMERA_DATA						= 11,
+	TERRAIN_LAYER							= 12,
+	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 13,
+	TERRAIN_WORLD_TRANSFORM					= 14,
+	UI_DATA									= 15,
 };
 
 struct GBuffer {
@@ -56,6 +58,7 @@ public:
 	void Reset();
 
 	const std::shared_ptr<IMesh> GetQuadMesh() const { return m_pQuadMesh; }
+	TextRenderer& GetTextRenderer() { return m_TextRenderer; }
 
 public:
 	DescriptorHeap& GetDescriptorHeap() { return m_DescriptorHeapForDraw[m_unCurrentContextIndex]; }
@@ -90,6 +93,11 @@ public:
 	
 	// Mesh
 	static ComPtr<ID3D12RootSignature> g_pd3dGlobalRootSignature;
+	
+	// TextRenderer
+	TextRenderer m_TextRenderer;
+
+
 
 private:
 	// Objects Ready-To-Draw
@@ -132,6 +140,13 @@ public:
 
 	void WaitForGPUComplete();
 
+	void ImmediateStateTransition(
+		const ComPtr<ID3D12Resource>& pResource,
+		OUT D3D12_RESOURCE_STATES& outd3dState,
+		D3D12_RESOURCE_STATES d3dTargetState
+	);
+
+
 private:
 	void OnPrepareRender();
 	void OnPostRender();
@@ -156,9 +171,14 @@ private:
 	const DXGI_FORMAT m_dxgiRenderTargetFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 	uint32 m_unBackBufferIndex = 0;
 
-	ComPtr<ID3D12CommandQueue>			m_pd3dCommandQueue								= nullptr;
-	ComPtr<ID3D12CommandAllocator>		m_ppd3dCommandAllocator[g_unMaxPendingFrames]	= {};
-	ComPtr<ID3D12GraphicsCommandList>	m_ppd3dCommandList[g_unMaxPendingFrames]		= {};
+	ComPtr<ID3D12CommandQueue>			m_pd3dCommandQueue = nullptr;
+	ComPtr<ID3D12CommandAllocator>		m_ppd3dCommandAllocator[g_unMaxPendingFrames] = {};
+	ComPtr<ID3D12GraphicsCommandList>	m_ppd3dCommandList[g_unMaxPendingFrames] = {};
+
+	//ComPtr<ID3D12CommandAllocator>		m_ppd3dImmediateTransitionCommandAllocator[g_unMaxPendingFrames] = {};
+	//ComPtr<ID3D12GraphicsCommandList>	m_ppd3dImmediateTransitionCommandList[g_unMaxPendingFrames] = {};
+	CommandListAllocator m_ImmediateTransitionCmsLists;
+
 
 	ComPtr<ID3D12Fence> m_pd3dFence							= nullptr;
 	HANDLE m_hFenceEvent									= nullptr;

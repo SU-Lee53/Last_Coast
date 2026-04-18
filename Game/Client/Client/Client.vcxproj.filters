@@ -453,9 +453,10 @@
     <ClInclude Include="Sprite.h">
       <Filter>02.Game\UI\UIComponent\Components</Filter>
     </ClInclude>
-    <ClInclude Include="TextManager.h">
+    <ClInclude Include="TextRenderer.h">
       <Filter>03.Engine\Graphic Components</Filter>
     </ClInclude>
+    <ClInclude Include="UIPass.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -767,12 +768,13 @@
     <ClCompile Include="Sprite.cpp">
       <Filter>02.Game\UI\UIComponent\Components</Filter>
     </ClCompile>
-    <ClCompile Include="TextManager.cpp">
+    <ClCompile Include="TextRenderer.cpp">
       <Filter>03.Engine\Graphic Components</Filter>
     </ClCompile>
     <ClCompile Include="TextAtlas.cpp">
       <Filter>99.Utility</Filter>
     </ClCompile>
+    <ClCompile Include="UIPass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">

@@ -7,7 +7,7 @@ void DeferredLightingPass::Initialize()
 	CreatePipelineState();
 }
 
-void DeferredLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DeferredLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	// Set Render Targets
 	auto pHDRRenderTarget = std::static_pointer_cast<RenderTargetTexture>(RENDER->GetCurrentHDRBuffer(0).GetResource());
@@ -25,7 +25,7 @@ void DeferredLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCom
 	pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, nullptr);
 }
 
-void DeferredLightingPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DeferredLightingPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	pd3dCommandList->SetPipelineState(m_pd3dPipelineState.Get());
 
@@ -33,7 +33,7 @@ void DeferredLightingPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 	pQuadMesh->Render(pd3dCommandList, 1);
 }
 
-void DeferredLightingPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DeferredLightingPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	// Fog 를 위해 HDR Result 에 HDR0 을 Bind
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();

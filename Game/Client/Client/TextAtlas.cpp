@@ -50,8 +50,8 @@ HRESULT TextAtlas::Initialize(uint32 unWidth, uint32 unHeight, uint32 unPadding 
 	m_unHeight = unHeight;
 	m_unPadding = unPadding;
 
-	m_renderTarget = TEXTURE->LoadRenderTargetTexture("font_atlas", m_unWidth, m_unHeight, DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_B8G8R8A8_UNORM);
-	const auto& texResource = m_renderTarget.GetResource();
+	m_RenderTarget = TEXTURE->LoadRenderTargetTexture("font_atlas", m_unWidth, m_unHeight, DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_B8G8R8A8_UNORM, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	const auto& texResource = m_RenderTarget.GetResource();
 
 	m_srvCPUHandle = texResource->GetSRVHandle();
 	m_bHasSRV = true;
@@ -66,11 +66,11 @@ HRESULT TextAtlas::Initialize(uint32 unWidth, uint32 unHeight, uint32 unPadding 
 	d3d11ResourceFlags.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
 	// 2. CreateWrappedResource
-	hr = TEXT->GetD3D11On12Device()->CreateWrappedResource(
+	hr = RENDER->GetTextRenderer().GetD3D11On12Device()->CreateWrappedResource(
 		pd3d12Resource.Get(),
 		&d3d11ResourceFlags,
 		D3D12_RESOURCE_STATE_RENDER_TARGET,
-		D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		IID_PPV_ARGS(m_pWrapped11Resource.GetAddressOf())
 	);
 
@@ -88,8 +88,8 @@ HRESULT TextAtlas::Initialize(uint32 unWidth, uint32 unHeight, uint32 unPadding 
 	}
 
 	// 4. CreateD2D target bitmap
-	float fDpiX = TEXT->GetDpiX();
-	float fDpiY = TEXT->GetDpiY();
+	float fDpiX = RENDER->GetTextRenderer().GetDpiX();
+	float fDpiY = RENDER->GetTextRenderer().GetDpiY();
 
 	D2D1_BITMAP_PROPERTIES1 d2dBitmapProps = D2D1::BitmapProperties1(
 		D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
@@ -98,7 +98,7 @@ HRESULT TextAtlas::Initialize(uint32 unWidth, uint32 unHeight, uint32 unPadding 
 		fDpiY
 	);
 
-	hr = TEXT->GetD2DDeviceContext()->CreateBitmapFromDxgiSurface(
+	hr = RENDER->GetTextRenderer().GetD2DDeviceContext()->CreateBitmapFromDxgiSurface(
 		pdxgiSurface.Get(),
 		&d2dBitmapProps,
 		m_pd2dTargetBitmap.GetAddressOf()
@@ -128,10 +128,11 @@ HRESULT TextAtlas::DrawTextToAtlas(const TextLayout& layout, uint32 unAtlasX, ui
 
 	HRESULT hr = S_OK;
 
-	const ComPtr<ID3D11On12Device>& pd3d11On12Device = TEXT->GetD3D11On12Device();
-	const ComPtr<ID3D11DeviceContext>& pd3d11DeviceContext = TEXT->GetD3D11DeviceContext();
-	const ComPtr<ID2D1DeviceContext2>& pd2dDeviceContext = TEXT->GetD2DDeviceContext();
-	const ComPtr<ID2D1SolidColorBrush>& pBrush = TEXT->GetBrush();
+	TextRenderer& textRenderer = RENDER->GetTextRenderer();
+	const ComPtr<ID3D11On12Device>& pd3d11On12Device = textRenderer.GetD3D11On12Device();
+	const ComPtr<ID3D11DeviceContext>& pd3d11DeviceContext = textRenderer.GetD3D11DeviceContext();
+	const ComPtr<ID2D1DeviceContext2>& pd2dDeviceContext = textRenderer.GetD2DDeviceContext();
+	const ComPtr<ID2D1SolidColorBrush>& pBrush = textRenderer.GetBrush();
 
 	// 1. AcquireWrappedResource()
 	ID3D11Resource* ppd3d11Resources[] = { m_pWrapped11Resource.Get() };
@@ -157,24 +158,23 @@ HRESULT TextAtlas::DrawTextToAtlas(const TextLayout& layout, uint32 unAtlasX, ui
 	pd2dDeviceContext->PopAxisAlignedClip();
 
 	// 5. Draw text layout
-	pd2dDeviceContext->SetTransform(
-		D2D1::Matrix3x2F::Translation(
-			static_cast<float>(unAtlasX),
-			static_cast<float>(unAtlasY)
-		)
-	);
+
+	pd2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
 	pd2dDeviceContext->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
 
 	pd2dDeviceContext->DrawTextLayout(
-		D2D1::Point2F(0.f, 0.f),
+		D2D1::Point2F(
+			static_cast<float>(unAtlasX),
+			static_cast<float>(unAtlasY)
+		),
 		layout.pdwTextLayout.Get(),
 		pBrush.Get(),
 		D2D1_DRAW_TEXT_OPTIONS_NONE
 	);
 
+
 	// 6. EndDraw
 	hr = pd2dDeviceContext->EndDraw();
-	pd2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
 
 	// 7. SetTarget(nullptr)
 	pd2dDeviceContext->SetTarget(nullptr);
@@ -202,10 +202,10 @@ HRESULT TextAtlas::Clear()
 
 	HRESULT hr = S_OK;
 
-	const ComPtr<ID3D11On12Device>& pd3d11On12Device = TEXT->GetD3D11On12Device();
-	const ComPtr<ID3D11DeviceContext>& pd3d11DeviceContext = TEXT->GetD3D11DeviceContext();
-	const ComPtr<ID2D1DeviceContext2>& pd2dDeviceContext = TEXT->GetD2DDeviceContext();
-	const ComPtr<ID2D1SolidColorBrush>& pBrush = TEXT->GetBrush();
+	const ComPtr<ID3D11On12Device>& pd3d11On12Device = RENDER->GetTextRenderer().GetD3D11On12Device();
+	const ComPtr<ID3D11DeviceContext>& pd3d11DeviceContext = RENDER->GetTextRenderer().GetD3D11DeviceContext();
+	const ComPtr<ID2D1DeviceContext2>& pd2dDeviceContext = RENDER->GetTextRenderer().GetD2DDeviceContext();
+	const ComPtr<ID2D1SolidColorBrush>& pBrush = RENDER->GetTextRenderer().GetBrush();
 
 	ID3D11Resource* ppd3d11Resources[] = { m_pWrapped11Resource.Get() };
 	pd3d11On12Device->AcquireWrappedResources(ppd3d11Resources, 1);
@@ -274,17 +274,17 @@ bool TextAtlas::AllocateAtlasRect(uint32 unWidth, uint32 unHeight, OUT AtlasRect
 	/*
 		           chosen.w
 		        +------------+-------------------------+
-	   chosen.h	|   chosen   |                         |
-				+------------+                         |
-				|            |                         |
-				|            |                         |
-				|  New       |     New free rect       |
-				|  free rect |                         |
-				|            |                         |
-				|            |                         |
-				|            |                         |
-				|            |                         |
-				+------------+-------------------------+
+	   chosen.h	|   chosen   |      New free rect      |
+				+------------+-------------------------|
+				|                                      |
+				|                                      |
+				|                                      |
+				|            New free rect             |
+				|                                      |
+				|                                      |
+				|                                      |
+				|                                      |
+				+--------------------------------------+
 	*/
 
 	// Right leftovers
@@ -292,7 +292,7 @@ bool TextAtlas::AllocateAtlasRect(uint32 unWidth, uint32 unHeight, OUT AtlasRect
 		uint32 x = chosen.x + unRequiredWidth;
 		uint32 y = chosen.y;
 		uint32 w = unRemainRightWidth;
-		uint32 h = chosen.h;
+		uint32 h = unRequiredHeight;
 		m_FreeRects.emplace_back(x, y, w, h);
 	}
 
@@ -300,7 +300,7 @@ bool TextAtlas::AllocateAtlasRect(uint32 unWidth, uint32 unHeight, OUT AtlasRect
 	if (unRemainBottomHeight > 0) {
 		uint32 x = chosen.x;
 		uint32 y = chosen.y + unRequiredHeight;
-		uint32 w = unRequiredWidth;
+		uint32 w = chosen.w;
 		uint32 h = unRemainBottomHeight;
 		m_FreeRects.emplace_back(x, y, w, h);
 	}
@@ -308,7 +308,7 @@ bool TextAtlas::AllocateAtlasRect(uint32 unWidth, uint32 unHeight, OUT AtlasRect
 	// Erase small rects
 	std::erase_if(m_FreeRects, [](const AtlasRect& r) { return r.w == 0 || r.h == 0; });
 
-	//MergeAtlasRect();
+	MergeAtlasRect();
 	return true;
 }
 

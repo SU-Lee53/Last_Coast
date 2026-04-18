@@ -28,7 +28,7 @@ public:
 		m_Elements.clear();
 	}
 
-	size_t Size() { return m_Elements.size(); }
+	size_t Size() const { return m_Elements.size(); }
 
 	bool Contains(const KeyType& k) const {
 		return m_IndexMap.find(k) != m_IndexMap.end();

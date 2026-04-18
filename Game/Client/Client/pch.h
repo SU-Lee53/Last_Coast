@@ -34,6 +34,7 @@
 #include <utility>
 #include <filesystem>
 #include <typeindex>
+#include <functional>
 
 
 // Direct3D related headers
@@ -133,6 +134,7 @@ using namespace AIDLL;
 #include "RandomGenerator.h"
 #include "AnimationHelper.h"
 #include "ResourceTable.h"
+
 #include "GameObject.h"
 #include "Component.h"
 
@@ -167,7 +169,8 @@ using namespace AIDLL;
 //#include "CollisionManager.h"
 #include "MaterialManager.h"
 #include "ComputeManager.h"
-#include "TextManager.h"
+
+#include "TextRenderer.h"
 
 
 // ServerCore

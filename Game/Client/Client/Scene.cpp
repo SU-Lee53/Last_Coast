@@ -450,6 +450,8 @@ void Scene::PostUpdate()
 		m_pSkybox->Update();
 	}
 
+	// Update UI Components
+	m_pUIBoard->Update();
 }
 
 void Scene::PrepareRender()

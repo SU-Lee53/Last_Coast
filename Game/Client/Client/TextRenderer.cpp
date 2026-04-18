@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
-#include "TextManager.h"
+#include "TextRenderer.h"
 
-void TextManager::Initialize(const ComPtr<ID3D12CommandQueue>& pd3dCommandQueue)
+void TextRenderer::Initialize(const ComPtr<ID3D12CommandQueue>& pd3dCommandQueue)
 {
 	m_pd3dCommandQueue = pd3dCommandQueue;
 
@@ -35,7 +35,7 @@ void TextManager::Initialize(const ComPtr<ID3D12CommandQueue>& pd3dCommandQueue)
 		return;
 	}
 
-	hr = CreateMainAtlas(2048, 2048);
+	hr = CreateMainAtlas(g_unAtlasWidth, g_unAtlasHeight);
 	if (FAILED(hr)) {
 		__debugbreak();
 		return;
@@ -47,7 +47,7 @@ void TextManager::Initialize(const ComPtr<ID3D12CommandQueue>& pd3dCommandQueue)
 			if (!pCached) return;
 
 			if (pCached->bValid) {
-				m_TextAtlas.FreeAtlasRect(pCached->Rect);
+				m_TextAtlas->FreeAtlasRect(pCached->Rect);
 				pCached->bValid = false;
 				pCached->bDirty = false;
 				pCached->Rect = {};
@@ -59,20 +59,12 @@ void TextManager::Initialize(const ComPtr<ID3D12CommandQueue>& pd3dCommandQueue)
 	// test
 	FontDesc desc;
 	desc.wstrFamilyName = L"Malgun Gothic";
-	desc.fFontSize = 24.0f;
 
 	Font::ID fontID = RegisterFont(desc);
 
-	CachedText cached{};
-	hr = CacheText(fontID, L"Test Text", cached);
-	if (FAILED(hr)) {
-		__debugbreak();
-		return;
-	}
-
 }
 
-TextHandle TextManager::GetOrCacheText(Font::ID fontID, const std::wstring& wstrText)
+TextHandle TextRenderer::GetOrCacheText(Font::ID fontID, const std::wstring& wstrText)
 {
 	HRESULT hr = S_OK;
 
@@ -95,17 +87,21 @@ TextHandle TextManager::GetOrCacheText(Font::ID fontID, const std::wstring& wstr
 		return exist;
 	}
 
-	CachedText cached{};
-	hr = CacheText(fontID, wstrText, cached);
-	if (FAILED(hr)) {
+	auto handle = CacheText(fontID, wstrText);
+	if (!handle.IsValid()) {
 		__debugbreak();
 		return {};
 	}
 
-	return m_TextTable.GetHandle(key);
+	return handle;
 }
 
-Font::ID TextManager::RegisterFont(const FontDesc& desc)
+const TextureRef<RenderTargetTexture>& TextRenderer::GetAtlasTextureRef() const
+{
+	return m_TextAtlas->GetRenderTarget();
+}
+
+Font::ID TextRenderer::RegisterFont(const FontDesc& desc)
 {
 	if (!m_pdwFactory) return INVALID_ID;
 
@@ -120,7 +116,7 @@ Font::ID TextManager::RegisterFont(const FontDesc& desc)
 		desc.fontWeight,
 		desc.fontStyle,
 		desc.fontStretch,
-		desc.fFontSize,
+		Font::g_fFontSize,
 		L"ko-KR",
 		font.pdwTextFormat.GetAddressOf()
 	);
@@ -144,30 +140,58 @@ Font::ID TextManager::RegisterFont(const FontDesc& desc)
 
 	font.bValid = true;
 
-	m_Fonts.push_back(font);
-	return m_Fonts.size() - 1;
+	//m_Fonts.push_back(font);
+	auto [id, res] = m_FontMap.Insert(desc.wstrFamilyName, font);
+
+	// WarmUp
+	CacheText(id, L"0123456789");
+	CacheText(id, L"ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+	CacheText(id, L"abcdefghijklmnopqrstuvwxyz");
+	CacheText(id, L"가나다라마바사아자차카타파하");
+	CacheText(id, L"The Quick Brown Fox Jumps Over The Lazy Dog");
+	CacheText(id, L"다람쥐 헌 쳇바퀴에 타고파");
+
+	return id;
 }
 
-void TextManager::DestroyFont(const Font::ID& id)
+void TextRenderer::DestroyFont(const Font::ID& id)
 {
 	if (id == INVALID_ID) return;
-	if (id >= m_Fonts.size()) return;
+	if (id >= m_FontMap.Size()) return;
 
-	m_Fonts[id].pdwTextFormat.Reset();
-	m_Fonts[id].bValid = false;
+	m_FontMap[id].pdwTextFormat.Reset();
+	m_FontMap[id].bValid = false;
 }
 
-const Font* TextManager::GetFont(Font::ID id) const
+void TextRenderer::DestroyFont(const std::wstring& wstrName)
+{
+	auto pFont = m_FontMap.Find(wstrName);
+	if (!pFont) return;
+
+	pFont->pdwTextFormat.Reset();
+	pFont->bValid = false;
+}
+
+const Font* TextRenderer::GetFont(Font::ID id)
 {
 	if (id == INVALID_ID) return nullptr;
-	if (id >= m_Fonts.size()) return nullptr;
-	if (m_Fonts[id].bValid == false) return nullptr;
+	if (id >= m_FontMap.Size()) return nullptr;
+	if (m_FontMap[id].bValid == false) return nullptr;
 
-	return &m_Fonts[id];
-
+	return &m_FontMap[id];
 }
 
-HRESULT TextManager::CreateTextLayout(Font::ID fontID, const std::wstring& wstrText, float fMaxWidth, float fMaxHeight, OUT TextLayout& outLayout)
+const Font* TextRenderer::GetFont(const std::wstring& wstrName)
+{
+	return m_FontMap.Find(wstrName);
+}
+
+const Font::ID TextRenderer::GetFontID(const std::wstring& wstrName)
+{
+	return m_FontMap.GetIndex(wstrName);
+}
+
+HRESULT TextRenderer::CreateTextLayout(Font::ID fontID, const std::wstring& wstrText, float fMaxWidth, float fMaxHeight, OUT TextLayout& outLayout)
 {
 	HRESULT hr = S_OK;
 
@@ -209,10 +233,8 @@ HRESULT TextManager::CreateTextLayout(Font::ID fontID, const std::wstring& wstrT
 	return S_OK;
 }
 
-HRESULT TextManager::CacheText(Font::ID fontID, const wstring& wstrText, OUT CachedText& outCachedText)
+TextHandle TextRenderer::CacheText(Font::ID fontID, const wstring& wstrText)
 {
-	outCachedText = {};
-
 	HRESULT hr = S_OK;
 	TextCacheKey key{ fontID, wstrText };
 	auto exist = m_TextTable.GetHandle(key);
@@ -220,64 +242,70 @@ HRESULT TextManager::CacheText(Font::ID fontID, const wstring& wstrText, OUT Cac
 	if (exist.IsValid()) {
 		const auto& pExist = exist.GetResource();
 		if (!pExist) {
-			return E_FAIL;
+			return {};
 		}
 
 		if (pExist->bDirty == true) {
 			hr = UpdateCachedText(*pExist);
 			if (FAILED(hr)) {
 				__debugbreak();
-				return hr;
+				return {};
 			}
 		}
-		outCachedText = *pExist;
-		return S_OK;
+		return {};
 	}
 
 	TextLayout layout{};
 	hr = CreateTextLayout(fontID, wstrText, 4096.f, 4096.f, layout);
 	if (FAILED(hr)) {
 		__debugbreak();
-		return hr;
+		return {};
 	}
 
 	TextAtlas::AtlasRect rect{};
-	bool bAllocateResult = m_TextAtlas.AllocateAtlasRect(static_cast<uint32>(layout.fWidth), static_cast<uint32>(layout.fHeight), rect);
+	bool bAllocateResult = m_TextAtlas->AllocateAtlasRect(static_cast<uint32>(layout.fWidth), static_cast<uint32>(layout.fHeight), rect);
 	if (!bAllocateResult) {
-		TextAtlas::RebuildAlert eAlert = m_TextAtlas.NeedsAtlasRebuild(static_cast<uint32>(layout.fWidth), static_cast<uint32>(layout.fHeight));
+		TextAtlas::RebuildAlert eAlert = m_TextAtlas->NeedsAtlasRebuild(static_cast<uint32>(layout.fWidth), static_cast<uint32>(layout.fHeight));
 
 		switch (eAlert)
 		{
 		case TextAtlas::RebuildAlert::NOT_ENOUGH_SPACE:
 		{
-			return E_OUTOFMEMORY;
+			return {};
 		}
 		case TextAtlas::RebuildAlert::SEVERE_FRAGMENTATION:
 		{
 			hr = RebuildAtlas();
 			if (FAILED(hr)) {
 				__debugbreak();
-				return hr;
+				return {};
 			}
 			
-			return CacheText(fontID, wstrText, outCachedText);	// Retry after rebuild
+			return CacheText(fontID, wstrText);	// Retry after rebuild
 
 		}
 		case TextAtlas::RebuildAlert::INVALID_REQUEST:
 		{
-			return E_INVALIDARG;
+			return {};
 		}
 		default:
 			break;
 		}
 
-		return E_FAIL;
+		return {};
 	}
 
-	hr = m_TextAtlas.DrawTextToAtlas(layout, rect.x, rect.y);
+	TransitionAtlasToRenderTarget();
+	hr = m_TextAtlas->DrawTextToAtlas(layout, rect.x, rect.y);
+
+	auto pAtlasRes = m_TextAtlas->GetRenderTarget().GetResource();
+	if (pAtlasRes) {
+		pAtlasRes->GetCurrentStateRef() = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+	}
+
 	if (FAILED(hr)) {
-		m_TextAtlas.FreeAtlasRect(rect);
-		return hr;
+		m_TextAtlas->FreeAtlasRect(rect);
+		return {};
 	}
 
 	std::shared_ptr<CachedText> pCached = std::make_shared<CachedText>();
@@ -287,16 +315,10 @@ HRESULT TextManager::CacheText(Font::ID fontID, const wstring& wstrText, OUT Cac
 	pCached->bValid = true;
 	pCached->bDirty = false;
 
-	m_TextTable.Register(key, pCached);
-	outCachedText = *pCached;
-
-	//auto [index, inserted] = m_CachedTextMap.Insert(key, cached);
-	//outCachedText = m_CachedTextMap[index];
-
-	return hr;
+	return m_TextTable.Register(key, pCached);;
 }
 
-HRESULT TextManager::UpdateCachedText(OUT CachedText& cachedText)
+HRESULT TextRenderer::UpdateCachedText(OUT CachedText& cachedText)
 {
 	if (!cachedText.bValid) {
 		return E_FAIL;
@@ -324,7 +346,15 @@ HRESULT TextManager::UpdateCachedText(OUT CachedText& cachedText)
 
 	// 1. Recycle rect if fits
 	if (bFitsInPlace) {
-		hr = m_TextAtlas.DrawTextToAtlas(layout, cachedText.Rect.x, cachedText.Rect.y);
+		TransitionAtlasToRenderTarget();
+		hr = m_TextAtlas->DrawTextToAtlas(layout, cachedText.Rect.x, cachedText.Rect.y);
+
+		auto pAtlasRes = m_TextAtlas->GetRenderTarget().GetResource();
+		if (pAtlasRes) {
+			pAtlasRes->GetCurrentStateRef() = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		}
+
+
 		if (FAILED(hr)) {
 			__debugbreak();
 			return hr;
@@ -336,10 +366,10 @@ HRESULT TextManager::UpdateCachedText(OUT CachedText& cachedText)
 
 	// 2. Try reallocate text if not fits
 	TextAtlas::AtlasRect newRect{};
-	bool bAllocResult = m_TextAtlas.AllocateAtlasRect(unNewWidth, unNewHeight, newRect);
+	bool bAllocResult = m_TextAtlas->AllocateAtlasRect(unNewWidth, unNewHeight, newRect);
 	
 	if (!bAllocResult) {
-		TextAtlas::RebuildAlert eAlert = m_TextAtlas.NeedsAtlasRebuild(unNewWidth, unNewHeight);
+		TextAtlas::RebuildAlert eAlert = m_TextAtlas->NeedsAtlasRebuild(unNewWidth, unNewHeight);
 		
 		// Rebuild atlas if fragmentation is severe
 		if (eAlert == TextAtlas::RebuildAlert::SEVERE_FRAGMENTATION) {
@@ -368,18 +398,26 @@ HRESULT TextManager::UpdateCachedText(OUT CachedText& cachedText)
 	}
 
 	// 3. Reallocation successful, draw new text
-	hr = m_TextAtlas.DrawTextToAtlas(layout, newRect.x, newRect.y);
+	TransitionAtlasToRenderTarget();
+	hr = m_TextAtlas->DrawTextToAtlas(layout, newRect.x, newRect.y);
+
+	auto pAtlasRes = m_TextAtlas->GetRenderTarget().GetResource();
+	if (pAtlasRes) {
+		pAtlasRes->GetCurrentStateRef() = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+	}
+
+
 	if (FAILED(hr)) {
 		__debugbreak();
 
 		// Free new rect
-		m_TextAtlas.FreeAtlasRect(newRect);
+		m_TextAtlas->FreeAtlasRect(newRect);
 		cachedText.bDirty = true;
 		return hr;
 	}
 
 	// 4. Free old rect 
-	m_TextAtlas.FreeAtlasRect(cachedText.Rect);
+	m_TextAtlas->FreeAtlasRect(cachedText.Rect);
 
 	// 5. Set cachedText to new rect
 	cachedText.Rect = newRect;
@@ -388,24 +426,28 @@ HRESULT TextManager::UpdateCachedText(OUT CachedText& cachedText)
 	return hr;
 }
 
-HRESULT TextManager::CreateMainAtlas(uint32 unWidth, uint32 unHeight)
+HRESULT TextRenderer::CreateMainAtlas(uint32 unWidth, uint32 unHeight)
 {
 	if (unWidth == 0 || unHeight == 0) {
 		return E_INVALIDARG;
 	}
 
-	return m_TextAtlas.Initialize(unWidth, unHeight, 2);
+	m_TextAtlas = std::make_unique<TextAtlas>();
+	return m_TextAtlas->Initialize(unWidth, unHeight, 2);
 }
 
-HRESULT TextManager::RebuildAtlas()
+HRESULT TextRenderer::RebuildAtlas()
 {
 	HRESULT hr = S_OK;
 
-	if (!m_TextAtlas.GetRenderTarget().IsValid()) {
+	if (!m_TextAtlas->GetRenderTarget().IsValid()) {
 		return E_FAIL;
 	}
-	m_TextAtlas.Reset();
-	hr = m_TextAtlas.Clear();
+
+	TransitionAtlasToRenderTarget();
+
+	m_TextAtlas->Reset();
+	hr = m_TextAtlas->Clear();
 	if (FAILED(hr)) {
 		__debugbreak();
 		return hr;
@@ -429,7 +471,7 @@ HRESULT TextManager::RebuildAtlas()
 		}
 
 		TextAtlas::AtlasRect rect{};
-		bool bAllocResult = m_TextAtlas.AllocateAtlasRect(
+		bool bAllocResult = m_TextAtlas->AllocateAtlasRect(
 			static_cast<uint32>(layout.fWidth),
 			static_cast<uint32>(layout.fHeight),
 			rect
@@ -440,20 +482,37 @@ HRESULT TextManager::RebuildAtlas()
 			return E_FAIL;
 		}
 
-		hr = m_TextAtlas.DrawTextToAtlas(layout, rect.x, rect.y);
+		hr = m_TextAtlas->DrawTextToAtlas(layout, rect.x, rect.y);
 		if (FAILED(hr)) {
 			__debugbreak();
 			return hr;
 		}
 
-		cached.rect = rect;
+		cached.Rect = rect;
 		cached.bDirty = false;
+	}
+	
+	auto pAtlasRes = m_TextAtlas->GetRenderTarget().GetResource();
+	if (pAtlasRes) {
+		pAtlasRes->GetCurrentStateRef() = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 	}
 
 	return hr;
 }
 
-HRESULT TextManager::InitializeD3D11On12(const ComPtr<ID3D12CommandQueue>& pd3dCommandQueue)
+void TextRenderer::TransitionAtlasToRenderTarget()
+{
+	const auto& pAtlasTex = m_TextAtlas->GetRenderTarget().GetResource();
+	if (!pAtlasTex) return;
+
+	RENDER->ImmediateStateTransition(
+		pAtlasTex->GetResourcePtr().Get(),
+		pAtlasTex->GetCurrentStateRef(),
+		D3D12_RESOURCE_STATE_RENDER_TARGET
+	);
+}
+
+HRESULT TextRenderer::InitializeD3D11On12(const ComPtr<ID3D12CommandQueue>& pd3dCommandQueue)
 {
 	HRESULT hr = S_OK;
 	UINT d3d11Flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
@@ -492,7 +551,7 @@ HRESULT TextManager::InitializeD3D11On12(const ComPtr<ID3D12CommandQueue>& pd3dC
 	return hr;
 }
 
-HRESULT TextManager::InitializeD2D1()
+HRESULT TextRenderer::InitializeD2D1()
 {
 	HRESULT hr = S_OK;
 
@@ -531,7 +590,7 @@ HRESULT TextManager::InitializeD2D1()
 	return hr;
 }
 
-HRESULT TextManager::InitializeDirectWrite()
+HRESULT TextRenderer::InitializeDirectWrite()
 {
 	HRESULT hr = S_OK;
 	hr = ::DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory5), (IUnknown**)(m_pdwFactory.GetAddressOf()));
@@ -544,7 +603,7 @@ HRESULT TextManager::InitializeDirectWrite()
 }
 
 // Create D2D1 <-> D3D shared resources
-HRESULT TextManager::CreateSharedResources()
+HRESULT TextRenderer::CreateSharedResources()
 {
 	HRESULT hr = S_OK;
 

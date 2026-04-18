@@ -20,7 +20,7 @@ void DirectionalCascadeShadowMapPass::Initialize()
 	CreatePipelineState();
 }
 
-void DirectionalCascadeShadowMapPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DirectionalCascadeShadowMapPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
 
@@ -34,7 +34,7 @@ void DirectionalCascadeShadowMapPass::OnPreRender(ComPtr<ID3D12GraphicsCommandLi
 	ComputeCascade();
 }
 
-void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	constexpr uint32 rootParamLightCameraData = std::to_underlying(ROOT_PARAMETER::LIGHT_CAMERA_DATA);
 
@@ -86,7 +86,7 @@ void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> p
 	}
 }
 
-void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
 
@@ -297,7 +297,7 @@ void DirectionalCascadeShadowMapPass::BindGeometryData(ComPtr<ID3D12GraphicsComm
 
 	// Bind Per pass data
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
-	constexpr uint32 rootParamPerPass = std::to_underlying(ROOT_PARAMETER::PER_PASS_DATA);
+	constexpr uint32 rootParamPerPass = std::to_underlying(ROOT_PARAMETER::PER_PASS_BUFFERS);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE bindHandle = outDescHandle.cpuHandle;
 
 	// rootParam[11]
@@ -313,9 +313,9 @@ void DirectionalCascadeShadowMapPass::BindGeometryData(ComPtr<ID3D12GraphicsComm
 	DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, unDescriptorInc), boneTransformSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	// Set
-	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::PER_PASS_DATA), outDescHandle.gpuHandle);
-	outDescHandle.cpuHandle.Offset(4, unDescriptorInc);
-	outDescHandle.gpuHandle.Offset(4, unDescriptorInc);
+	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamPerPass, outDescHandle.gpuHandle);
+	outDescHandle.cpuHandle.Offset(3, unDescriptorInc);
+	outDescHandle.gpuHandle.Offset(3, unDescriptorInc);
 }
 
 void DirectionalCascadeShadowMapPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) const

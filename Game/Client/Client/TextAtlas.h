@@ -1,10 +1,10 @@
 ﻿#pragma once
 
+struct TextLayout;
+
 class TextAtlas {
 public:
-	friend class TextManager;
-
-	enum class RebuildAlert { OK, NOT_ENOUGH_SPACE, SEVERE_FRAGMENTATION, INVALID_REQUEST };
+	friend class TextRenderer;
 
 	class AtlasRect {
 	public:
@@ -25,6 +25,8 @@ public:
 		uint32 h = 0;
 	};
 
+	enum class RebuildAlert { OK, NOT_ENOUGH_SPACE, SEVERE_FRAGMENTATION, INVALID_REQUEST };
+
 public:
 	HRESULT Initialize(uint32 unWidth, uint32 unHeight, uint32 unPadding = 2);
 	HRESULT DrawTextToAtlas(const TextLayout& layout, uint32 unAtlasX, uint32 unAtlasY);
@@ -34,19 +36,19 @@ public:
 	uint32 GetHeight() const { return m_unHeight; }
 	uint32 GetPadding() const { return m_unPadding; }
 
-	const TextureRef<RenderTargetTexture>& GetRenderTarget() const { return m_renderTarget;}
+	const TextureRef<RenderTargetTexture>& GetRenderTarget() const { return m_RenderTarget; }
 	const ComPtr<ID3D11Resource>& GetWrapped11Resource() const { return m_pWrapped11Resource; }
 	const ComPtr<ID2D1Bitmap1>& GetD2DTargetBitmap() const { return m_pd2dTargetBitmap; }
 
 	D3D12_CPU_DESCRIPTOR_HANDLE GetSRVHandle() { return m_srvCPUHandle; }
 
-	const vector<AtlasRect>& GetFreeRects() const { return m_FreeRects; }
+	const std::vector<AtlasRect>& GetFreeRects() const { return m_FreeRects; }
 
 	// Atlas Management
 	HRESULT Clear();
 
-	bool AllocateAtlasRect(uint32 unWidth, uint32 unHeight, OUT TextAtlas::AtlasRect& outRect);
-	void FreeAtlasRect(const TextAtlas::AtlasRect& rect);
+	bool AllocateAtlasRect(uint32 unWidth, uint32 unHeight, OUT AtlasRect& outRect);
+	void FreeAtlasRect(const AtlasRect& rect);
 	void MergeAtlasRect();
 	RebuildAlert NeedsAtlasRebuild(uint32 unRequestWidth, uint32 unRequestHeight) const;
 	void Reset();
@@ -56,7 +58,7 @@ private:
 	uint32 m_unHeight = 0;
 	uint32 m_unPadding = 2;
 
-	TextureRef<RenderTargetTexture>	m_renderTarget{};
+	TextureRef<RenderTargetTexture>	m_RenderTarget{};
 	ComPtr<ID3D11Resource>			m_pWrapped11Resource = nullptr;
 	ComPtr<ID2D1Bitmap1>			m_pd2dTargetBitmap = nullptr;
 

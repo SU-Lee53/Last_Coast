@@ -7,7 +7,7 @@ void DeferredFogPass::Initialize()
 	CreatePipelineState();
 }
 
-void DeferredFogPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DeferredFogPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	// Update Height Fog base height
 
@@ -27,7 +27,7 @@ void DeferredFogPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 	pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, nullptr);
 }
 
-void DeferredFogPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DeferredFogPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	constexpr auto rootParamFog = std::to_underlying(ROOT_PARAMETER::FOG_DATA);
 	
@@ -41,7 +41,7 @@ void DeferredFogPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
 	pQuadMesh->Render(pd3dCommandList, 1);
 }
 
-void DeferredFogPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DeferredFogPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 }
 

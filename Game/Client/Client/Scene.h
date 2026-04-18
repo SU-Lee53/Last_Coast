@@ -3,12 +3,12 @@
 #include "Player.h"	// Includes GameObject
 #include "Camera.h"
 #include "Light.h"
+#include "UIBoard.h"
 
 class TerrainComponent;
 class TerrainObject;
 class Skybox;
 //class Sprite;
-class UIBoard;
 
 using CollisionPair = std::pair<std::shared_ptr<IGameObject>, std::shared_ptr<IGameObject>>;
 
@@ -123,6 +123,7 @@ public:
 	const std::vector<std::shared_ptr<IGameObject>>& GetObjectsInScene() const { return m_pGameObjects; }
 	const std::vector<std::shared_ptr<Light>>& GetLightsInScene() const { return m_pLights; }
 	const Vector4& GetGlobalAmbient() const { return m_v4GlobalAmbient; }
+	const std::unique_ptr<UIBoard>& GetUIBoard() const { return m_pUIBoard; }
 
 	const ScenePartition& GetSpacePartition() const { return m_SpacePartition; }
 
@@ -146,7 +147,7 @@ protected:
 	ScenePartition m_SpacePartition{};
 	BoundingBox m_xmSceneBound{};
 	
-	UIBoard* m_pUIBoard;
+	std::unique_ptr<UIBoard> m_pUIBoard{};
 
 
 	std::unordered_set<CollisionResult> m_pCollisionPairs;

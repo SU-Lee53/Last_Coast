@@ -39,7 +39,7 @@ public:										\
 #define AI				GET_SINGLE(AIManagerWrapper)
 #define MATERIAL		GET_SINGLE(MaterialManager)
 #define COMPUTE			GET_SINGLE(ComputeManager)
-#define TEXT			GET_SINGLE(TextManager)
+//#define TEXT			GET_SINGLE(TextManager)
 
 #define CUR_SCENE		SCENE->GetCurrentScene()
 #define DT				TIME->GetTimeElapsed()
@@ -120,13 +120,6 @@ struct EffectParameter {
 	float		fElapsedTime = 0.f;
 	Vector3		xmf3Force;
 	float		fAdditionalData = 0.f;
-};
-
-struct SpriteRect {
-	float fLeft;
-	float fTop;
-	float fRight;
-	float fBottom;
 };
 
 struct Bone {

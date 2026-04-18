@@ -172,7 +172,7 @@ public:
 	}
 	
 	// Look Up
-	Handle GetHandle(const KeyType& key) const {
+	Handle GetHandle(const KeyType& key) {
 		auto it = m_KeyIDMap.find(key);
 		if (it == m_KeyIDMap.end()) {
 			return {};
@@ -181,7 +181,7 @@ public:
 		return { this, it->second };
 	}
 	
-	ResourcePtr GetResourceByID(ID id) const {
+	const ResourcePtr& GetResourceByID(ID id) const {
 		if (id >= m_ResourceEntries.size()) {
 			return nullptr;
 		}
@@ -215,7 +215,7 @@ public:
 	}
 
 private:
-	bool AddRef(ID id) const {
+	bool AddRef(ID id) {
 		if (id >= m_unMaxSize) {
 			return false;
 		}
@@ -229,7 +229,7 @@ private:
 		return true;
 	}
 
-	bool Release(ID id) const {
+	bool Release(ID id) {
 		if (id >= m_unMaxSize) {
 			return false;
 		}
@@ -391,7 +391,7 @@ public:
 		entry.un64DescriptorIndex = id;
 
 		if (pResource != nullptr && pResourceDesc != nullptr) {	
-			RegisterView(pResource->GetResource(), id, pResourceDesc, pContext, nContextSize);
+			RegisterView(pResource->GetResourcePtr(), id, pResourceDesc, pContext, nContextSize);
 		}
 
 		m_KeyIDMap.emplace(key, id);
@@ -460,7 +460,7 @@ public:
 		return { this, it->second };
 	}
 
-	ResourcePtr GetResourceByID(ID id) const {
+	const ResourcePtr& GetResourceByID(ID id) const {
 		if (id >= m_ResourceEntries.size()) {
 			return nullptr;
 		}
@@ -476,7 +476,7 @@ public:
 		return handle.GetResource();
 	}
 
-	ResourcePtr GetResourceByName(const KeyType& key) const {
+	const ResourcePtr& GetResourceByName(const KeyType& key) const {
 		auto it = m_KeyIDMap.find(key);
 		if (it == m_KeyIDMap.end())
 			return nullptr;

@@ -18,6 +18,7 @@ public:
 	float GetTotalTime();
 
 	unsigned long GetFrameRate(const std::wstring& wsvGameName, std::wstring& wstrString);
+	unsigned long GetCurrentFrameRate() { return m_nCurrentFrameRate; }
 
 private:
 	float							m_fTimeScale;

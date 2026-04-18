@@ -46,6 +46,8 @@ public:
 
 	virtual void ShowDebugInfo() const;
 
+	D3D12_RESOURCE_STATES& GetCurrentStateRef() { return m_d3dCurrentState; }
+
 private:
 	bool CreateTextureFromFile(const std::wstring& wstrTexturePath, bool bCheckTransparent);
 	bool CreateTextureArrayFromFile(const std::wstring& wstrTexturePath);
@@ -183,7 +185,8 @@ private:
 		uint32 unWidth, 
 		uint32 unHeight, 
 		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN, 
-		DXGI_FORMAT dxgiRTVFormat = DXGI_FORMAT_UNKNOWN);
+		DXGI_FORMAT dxgiRTVFormat = DXGI_FORMAT_UNKNOWN,
+		D3D12_RESOURCE_STATES d3dInitialState = D3D12_RESOURCE_STATE_PRESENT);
 	
 	bool Initialize(ComPtr<ID3D12Resource> pd3dRTVResource);
 
@@ -350,7 +353,7 @@ struct TextureRef<RWRenderTargetTexture> {
 		return srvHandle.GetID();
 	}
 
-	std::shared_ptr<RWRenderTargetTexture> GetResource() const {
+	const std::shared_ptr<RWRenderTargetTexture>& GetResource() const {
 		return std::static_pointer_cast<RWRenderTargetTexture>(uavHandle.GetResource());
 	}
 };

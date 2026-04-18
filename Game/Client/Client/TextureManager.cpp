@@ -133,12 +133,12 @@ TextureRef<Texture> TextureManager::LoadTextureArray(const std::string& strTextu
 	return { findHandle };
 }
 
-TextureRef<RenderTargetTexture> TextureManager::LoadRenderTargetTexture(const std::string& strTextureName, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat)
+TextureRef<RenderTargetTexture> TextureManager::LoadRenderTargetTexture(const std::string& strTextureName, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat, D3D12_RESOURCE_STATES d3dInitialState)
 {
 	TextureHandle SRVFindHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!SRVFindHandle.IsValid()) {
 		std::shared_ptr<RenderTargetTexture> pTexture = std::make_shared<RenderTargetTexture>();
-		bool bResult = pTexture->Initialize(unWidth, unHeight, dxgiSRVFormat, dxgiRTVFormat);;
+		bool bResult = pTexture->Initialize(unWidth, unHeight, dxgiSRVFormat, dxgiRTVFormat, d3dInitialState);
 		if (!bResult) {
 			return { {}, {} };
 		}

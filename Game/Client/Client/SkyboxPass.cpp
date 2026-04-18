@@ -7,7 +7,7 @@ void SkyboxPass::Initialize()
 	CreatePipelineState();
 }
 
-void SkyboxPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void SkyboxPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	auto pRTV = static_pointer_cast<RenderTargetTexture>(RENDER->GetCurrentHDRBuffer(1).GetResource());
 	auto pDSV = static_pointer_cast<DepthStencilTexture>(RENDER->GetDepthStencilBuffer().GetResource());
@@ -19,7 +19,7 @@ void SkyboxPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
 	pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, &d3dDSVCPUDescriptorHandle);
 }
 
-void SkyboxPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void SkyboxPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	pd3dCommandList->SetPipelineState(m_pd3dSkyboxPipelineState.Get());
 	m_pCubeMesh->Render(pd3dCommandList, 1);
@@ -28,7 +28,7 @@ void SkyboxPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const
 	m_pCubeMesh->Render(pd3dCommandList, 1);
 }
 
-void SkyboxPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void SkyboxPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
 	auto pRTV = RENDER->GetCurrentHDRBuffer(1).GetResource();

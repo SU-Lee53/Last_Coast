@@ -3,13 +3,14 @@
 
 struct FontDesc {
 	std::wstring wstrFamilyName;
-	float fFontSize;
+	//float fFontSize;
 	DWRITE_FONT_WEIGHT fontWeight = DWRITE_FONT_WEIGHT_NORMAL;
 	DWRITE_FONT_STYLE fontStyle = DWRITE_FONT_STYLE_NORMAL;
 	DWRITE_FONT_STRETCH fontStretch = DWRITE_FONT_STRETCH_NORMAL;
 };
 
 struct Font {
+	constexpr static float g_fFontSize = 24.f;
 	using ID = uint64_t;
 
 	FontDesc desc;
@@ -53,14 +54,19 @@ struct CachedText {
 using CachedTextTable = ResourceTable<TextCacheKey, CachedText, TextCacheKeyHasher>;
 using TextHandle = ResourceHandle<TextCacheKey, CachedText, TextCacheKeyHasher>;
 
-class TextManager {
-
-	DECLARE_SINGLE(TextManager);
+class TextRenderer {
+public:
+	constexpr static uint32 g_unAtlasWidth = 2048;
+	constexpr static uint32 g_unAtlasHeight = 2048;
 
 public:
+	// Prevents copy
+	TextRenderer() = default;
+	TextRenderer(const TextRenderer& t) = delete;
+	TextRenderer(TextRenderer&& t) noexcept = delete;
+
 	void Initialize(const ComPtr<ID3D12CommandQueue>& pd3dCommandQueue);
 	TextHandle GetOrCacheText(Font::ID fontID, const std::wstring& wstrText);
-
 
 	const ComPtr<ID3D11On12Device>& GetD3D11On12Device() const { return m_pd3d11On12Device; };
 	const ComPtr<ID3D11DeviceContext>& GetD3D11DeviceContext() const { return m_pd3d11DeviceContext; };
@@ -71,13 +77,21 @@ public:
 	float GetDpiX() const { return m_fDpiX; }
 	float GetDpiY() const { return m_fDpiY; }
 
+	const TextureRef<RenderTargetTexture>& GetAtlasTextureRef() const;
+
 public:
 	// Font handling
 	Font::ID RegisterFont(const FontDesc& desc);
+
 	void DestroyFont(const Font::ID& id);
-	const Font* GetFont(Font::ID id) const;
+	void DestroyFont(const std::wstring& wstrName);
+
+	const Font::ID GetFontID(const std::wstring& wstrName);
 
 private:
+	const Font* GetFont(Font::ID id);
+	const Font* GetFont(const std::wstring& wstrName);
+
 	HRESULT CreateTextLayout(
 		Font::ID fontID,
 		const std::wstring& wstrText,
@@ -85,10 +99,9 @@ private:
 		float fMaxHeight,
 		OUT TextLayout& outLayout);
 
-	HRESULT CacheText(
+	TextHandle CacheText(
 		Font::ID fontID,
-		const wstring& wstrText,
-		OUT CachedText& outCachedText);
+		const std::wstring& wstrText);
 
 	HRESULT UpdateCachedText(OUT CachedText& cachedText);
 
@@ -96,16 +109,20 @@ private:
 	HRESULT CreateMainAtlas(uint32 unWidth, uint32 unHeight);
 	HRESULT RebuildAtlas();
 
+	void TransitionAtlasToRenderTarget();
+
 private:
 	// DPI : Dots Per Inch 
 	float m_fDpiX = 96.f;
 	float m_fDpiY = 96.f;
 
 	// Fonts
-	std::vector<Font> m_Fonts;
+	//std::vector<Font> m_Fonts;
+	//std::unordered_map<std::wstring, Font> m_FontMap;
+	IndexMap<std::wstring, Font> m_FontMap;
 
 	// Text atlas
-	TextAtlas m_TextAtlas;
+	std::unique_ptr<TextAtlas> m_TextAtlas;
 
 	// Text Cache
 	//std::vector<CachedText> m_CachedText;

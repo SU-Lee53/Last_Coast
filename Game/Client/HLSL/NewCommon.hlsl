@@ -293,12 +293,11 @@ struct TerrainComponentData
 	int2 pad0;
 };
 
-struct SpriteData
+struct UIRectData
 {
-	float fLeft;
-	float fTop;
-	float fRight;
-	float fBottom;
+	float4 v4ScreenRect;	// left top right bottom
+	float4 v4UVRect;
+	float4 v4TextColorOrTexIndex;	// Text -> float4 color / Sprite -> float4.x texIndex
 };
 
 #define MAX_BONES 100
@@ -354,7 +353,9 @@ StructuredBuffer<int> gBoneTransformOffsets : register(t2, space2);
 Texture2D gtxtTerrainAlbedo[4] : register(t3, space2); // t3, t4, t5, t6
 Texture2D gtxtTerrainNormal[4] : register(t7, space2); // t7, t8, t9, t10
 Texture2D gtxtTerrainWeightMap : register(t11, space2);
-StructuredBuffer<SpriteData> gSpriteData : register(t12, space2);
+
+// UI
+StructuredBuffer<UIRectData> gUIData : register(t12, space2);
 
 
 // ================================================================================

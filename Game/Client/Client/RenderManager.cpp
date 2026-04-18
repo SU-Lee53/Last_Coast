@@ -17,9 +17,6 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 	CreateDepthStencil();
 
 	CreateGlobalRootSignature(pd3dDevice);
-
-	//m_pForwardPass = std::make_shared<ForwardPass>(pd3dDevice, pd3dCommandList);
-
 	// DescriptorHandle Heap For Draw
 	D3D12_DESCRIPTOR_HEAP_DESC d3dHeapDesc;
 	{
@@ -64,6 +61,8 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 	}
 
 	m_pQuadMesh = std::make_shared<QuadMesh>(-1, 1);
+
+	m_TextRenderer.Initialize(m_pd3dCommandQueue);
 }
 
 void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
@@ -107,7 +106,7 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	d3dDescriptorRanges[18].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbTerrainComponentData 
 	d3dDescriptorRanges[19].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 11, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainWeightMap
 
-	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[15];
+	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[16];
 	// Per Scene
 	d3dRootParameters[0].InitAsDescriptorTable(2, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);	// Per Draw
 	d3dRootParameters[1].InitAsDescriptorTable(2, &d3dDescriptorRanges[2], D3D12_SHADER_VISIBILITY_ALL);	// Cascade Shadow maps
@@ -118,17 +117,18 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	d3dRootParameters[6].InitAsConstantBufferView(3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// Fog parameters
 	
 	// Per Pass
-	d3dRootParameters[7].InitAsDescriptorTable(4, &d3dDescriptorRanges[11], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass
+	d3dRootParameters[7].InitAsDescriptorTable(3, &d3dDescriptorRanges[11], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass
+	d3dRootParameters[8].InitAsDescriptorTable(1, &d3dDescriptorRanges[14], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass textures
 
 	// Per Instance(Draw)
-	d3dRootParameters[8]. InitAsConstantBufferView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE,			D3D12_SHADER_VISIBILITY_ALL);		// cbInstanceData
-	d3dRootParameters[9]. InitAsShaderResourceView(2, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE,	D3D12_SHADER_VISIBILITY_ALL);		// gBoneTransformOffsets
-	d3dRootParameters[10].InitAsConstantBufferView(3, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE,			D3D12_SHADER_VISIBILITY_ALL);		// cbLightCameraData
+	d3dRootParameters[9]. InitAsConstantBufferView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE,			D3D12_SHADER_VISIBILITY_ALL);		// cbInstanceData
+	d3dRootParameters[10]. InitAsShaderResourceView(2, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE,	D3D12_SHADER_VISIBILITY_ALL);		// gBoneTransformOffsets
+	d3dRootParameters[11].InitAsConstantBufferView(3, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE,			D3D12_SHADER_VISIBILITY_ALL);		// cbLightCameraData
 
-	d3dRootParameters[11].InitAsDescriptorTable(3, &d3dDescriptorRanges[15], D3D12_SHADER_VISIBILITY_ALL);								// TerrainLayer
-	d3dRootParameters[12].InitAsDescriptorTable(2, &d3dDescriptorRanges[18], D3D12_SHADER_VISIBILITY_ALL);								// TerrainComponent
-	d3dRootParameters[13].InitAsConstantBufferView(4, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_ALL);		// gnWorldTransformIndex
-	d3dRootParameters[14].InitAsShaderResourceView(12, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_ALL);		// gSpriteData
+	d3dRootParameters[12].InitAsDescriptorTable(3, &d3dDescriptorRanges[15], D3D12_SHADER_VISIBILITY_ALL);								// TerrainLayer
+	d3dRootParameters[13].InitAsDescriptorTable(2, &d3dDescriptorRanges[18], D3D12_SHADER_VISIBILITY_ALL);								// TerrainComponent
+	d3dRootParameters[14].InitAsConstantBufferView(4, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_ALL);		// gnWorldTransformIndex
+	d3dRootParameters[15].InitAsShaderResourceView(12, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_ALL);		// gUIData
 
 	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[5];
 	// s0 : SkyboxSampler
@@ -456,7 +456,10 @@ void RenderManager::OnPrepareRender()
 	GetDepthStencilBuffer().GetResource()->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = GetCurrentBackBufferHandle();
-	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dDSVDescriptorHandle = GetDepthStencilBufferHandle();
+
+	const auto& dsvRef = RENDER->GetDepthStencilBuffer();
+	auto pDSV = dsvRef.GetResource();
+	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dDSVDescriptorHandle = pDSV->GetDSVHandle();
 
 	float pfClearColor[4] = { 0.f, 0.0f, 0.0f, 1.0f };
 	pd3dCommandList->ClearRenderTargetView(d3dRTVCPUDescriptorHandle, pfClearColor, 0, NULL);
@@ -500,8 +503,8 @@ void RenderManager::CreateCommandQueueAndList()
 		SHOW_ERROR("Failed to create CommandQueue");
 	}
 
-	// Create Command Allocator
 	for (uint32 i = 0; i < g_unMaxPendingFrames; ++i) {
+		// Create Command Allocator
 		hr = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_ppd3dCommandAllocator[i].GetAddressOf()));
 		if (FAILED(hr)) {
 			SHOW_ERROR("Failed to create CommandAllocator");
@@ -514,8 +517,10 @@ void RenderManager::CreateCommandQueueAndList()
 		}
 		// Close Command List(default is opened)
 		hr = m_ppd3dCommandList[i]->Close();
+
 	}
 
+	m_ImmediateTransitionCmsLists.Initialize(30);
 }
 
 void RenderManager::CreateSwapChain()
@@ -646,6 +651,36 @@ void RenderManager::WaitForGPUComplete()
 	for (uint32 i = 0; i < g_unMaxPendingFrames; ++i) {
 		WaitForFenceValue(m_un64LastFenceValues[i]);
 	}
+}
+
+void RenderManager::ImmediateStateTransition(const ComPtr<ID3D12Resource>& pResource, OUT D3D12_RESOURCE_STATES& outd3dState, D3D12_RESOURCE_STATES d3dTargetState)
+{
+	if (!pResource) return;
+	if (outd3dState == d3dTargetState) return;
+
+	const uint64 un64CompleteFenceValue = m_pd3dFence->GetCompletedValue();
+	
+	auto* pCmdPair = m_ImmediateTransitionCmsLists.AllocateSafe(un64CompleteFenceValue);
+	if (!pCmdPair) {
+		//__debugbreak();
+		return ImmediateStateTransition(pResource, outd3dState, d3dTargetState);	// Recursive Retry
+	}
+
+	auto cmdList = pCmdPair->pd3dCommandList;
+
+	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(pResource.Get(), outd3dState, d3dTargetState);
+
+	cmdList->ResourceBarrier(1, &barrier);
+	cmdList->Close();
+
+	ID3D12CommandList* ppLists[] = { cmdList.Get() };
+	m_pd3dCommandQueue->ExecuteCommandLists(1, ppLists);
+
+	const uint64 un64FenceValue = Fence();
+	m_ImmediateTransitionCmsLists.MarkSubmitted(pCmdPair->id, un64FenceValue);
+
+
+	outd3dState = d3dTargetState;
 }
 
 void RenderManager::ChangeSwapChainState()

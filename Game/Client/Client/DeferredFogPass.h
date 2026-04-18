@@ -33,19 +33,19 @@ public:
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const RenderPassInput& input,
 		OUT RenderPassOutput& output,
-		OUT DescriptorHandle& outDescHandle) const override;
+		OUT DescriptorHandle& outDescHandle) override;
 
 	virtual void Render(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const RenderPassInput& input,
 		OUT RenderPassOutput& output,
-		OUT DescriptorHandle& outDescHandle) const override;
+		OUT DescriptorHandle& outDescHandle) override;
 
 	virtual void OnPostRender(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const RenderPassInput& input,
 		OUT RenderPassOutput& output,
-		OUT DescriptorHandle& outDescHandle) const override;
+		OUT DescriptorHandle& outDescHandle) override;
 
 	virtual void ShowDebugInfo() override;
 
