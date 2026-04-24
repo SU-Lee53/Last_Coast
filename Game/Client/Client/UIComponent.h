@@ -12,6 +12,8 @@ public:
 	virtual ~IUIComponent() = default;
 
 	virtual void Update() {};
+	bool CheckClicked(POINT ptClicked);
+	void OnClicked() { if (m_fnCallback) m_fnCallback(this); }
 
 public:
 	void SetVisible(bool bVisible) { m_bVisible = bVisible; }
@@ -21,7 +23,13 @@ public:
 	void SetPosition(const Vector2& v2Pos) { m_v2Position = v2Pos; }
 	void SetSize(const Vector2& v2Size) { m_v2Size = v2Size; }
 	
-	bool GetVisible() const { return m_bVisible; }
+	void SetButtonCallback(std::function<void(IUIComponent*)> fnCallback) {
+		m_bClickable = true;
+		m_fnCallback = fnCallback;
+	}
+
+	bool IsVisible() const { return m_bVisible; }
+	bool IsClickable() const { return m_bClickable && m_bVisible; }
 	uint32 GetLayer() const { return m_unLayer; }
 	const Vector2& GetAnchor() const { return m_v2Anchor; }
 	const Vector2& GetPivot() const { return m_v2Pivot; }
@@ -38,9 +46,14 @@ protected:
 	Vector2 m_v2Anchor = Vector2{0.f, 0.f};	// 0 ~ 1 정규화 기준점
 	Vector2 m_v2Pivot = Vector2{0.f, 0.f};	// 박스 내부 기준점
 
-	Vector2 m_v2Position{};	// anchor 기준 픽셀 오프셋
-	Vector2 m_v2Size{};		// 픽셀 크기
+	Vector2 m_v2Position = Vector2{ 0.f, 0.f };	// anchor 기준 픽셀 오프셋
+	Vector2 m_v2Size = Vector2{ 0.f, 0.f };		// 픽셀 크기
 
 	bool m_bVisible = true;
+
+	// Button
+	bool m_bClickable = false;
+	std::function<void(IUIComponent*)> m_fnCallback;
+
 };
 

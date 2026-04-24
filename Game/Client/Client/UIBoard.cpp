@@ -29,14 +29,33 @@ void UIBoard::RemoveSprite(const std::shared_ptr<IUIComponent>& pComponent)
 
 void UIBoard::Update()
 {
+	bool bClicked = INPUT->GetButtonDown(VK_LBUTTON);
+	POINT ptCursorPos = (bClicked) ? INPUT->GetCurrentCursorPos() : POINT{0, 0};
+
 	for (auto& layer : m_SpriteLayers) {
 		for (auto& pComp : layer) {
+			if (bClicked) {
+				if (pComp->IsClickable()) {
+					if (pComp->CheckClicked(ptCursorPos)) {
+						pComp->OnClicked();
+					}
+				}
+			}
+
 			pComp->Update();
 		}
 	}
 
 	for (auto& layer : m_TextLayers) {
 		for (auto& pComp : layer) {
+			if (bClicked) {
+				if (pComp->IsClickable()) {
+					if (pComp->CheckClicked(ptCursorPos)) {
+						pComp->OnClicked();
+					}
+				}
+			}
+
 			pComp->Update();
 		}
 	}

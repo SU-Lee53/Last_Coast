@@ -73,5 +73,8 @@ private:
 
 	bool m_bMouseInUse = false;
 	bool m_bSkipMouseDeltaThisFrame = false;	// To prevent twitch when mouse look enabled
+
+	std::shared_ptr<class Crosshair> m_pCrosshair = nullptr;
+
 };
 

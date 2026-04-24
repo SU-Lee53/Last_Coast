@@ -520,7 +520,7 @@ void RenderManager::CreateCommandQueueAndList()
 
 	}
 
-	m_ImmediateTransitionCmsLists.Initialize(30);
+	m_ImmediateTransitionCmdLists.Initialize(30);
 }
 
 void RenderManager::CreateSwapChain()
@@ -660,7 +660,7 @@ void RenderManager::ImmediateStateTransition(const ComPtr<ID3D12Resource>& pReso
 
 	const uint64 un64CompleteFenceValue = m_pd3dFence->GetCompletedValue();
 	
-	auto* pCmdPair = m_ImmediateTransitionCmsLists.AllocateSafe(un64CompleteFenceValue);
+	auto* pCmdPair = m_ImmediateTransitionCmdLists.AllocateSafe(un64CompleteFenceValue);
 	if (!pCmdPair) {
 		//__debugbreak();
 		return ImmediateStateTransition(pResource, outd3dState, d3dTargetState);	// Recursive Retry
@@ -677,7 +677,7 @@ void RenderManager::ImmediateStateTransition(const ComPtr<ID3D12Resource>& pReso
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppLists);
 
 	const uint64 un64FenceValue = Fence();
-	m_ImmediateTransitionCmsLists.MarkSubmitted(pCmdPair->id, un64FenceValue);
+	m_ImmediateTransitionCmdLists.MarkSubmitted(pCmdPair->id, un64FenceValue);
 
 
 	outd3dState = d3dTargetState;

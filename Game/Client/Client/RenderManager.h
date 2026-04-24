@@ -175,9 +175,7 @@ private:
 	ComPtr<ID3D12CommandAllocator>		m_ppd3dCommandAllocator[g_unMaxPendingFrames] = {};
 	ComPtr<ID3D12GraphicsCommandList>	m_ppd3dCommandList[g_unMaxPendingFrames] = {};
 
-	//ComPtr<ID3D12CommandAllocator>		m_ppd3dImmediateTransitionCommandAllocator[g_unMaxPendingFrames] = {};
-	//ComPtr<ID3D12GraphicsCommandList>	m_ppd3dImmediateTransitionCommandList[g_unMaxPendingFrames] = {};
-	CommandListAllocator m_ImmediateTransitionCmsLists;
+	CommandListAllocator m_ImmediateTransitionCmdLists;
 
 
 	ComPtr<ID3D12Fence> m_pd3dFence							= nullptr;

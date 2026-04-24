@@ -37,19 +37,22 @@ void UIPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, cons
 		}
 
 		for (auto& pSprites : spritesInLayer | std::views::transform([](const auto& p) { return std::static_pointer_cast<Sprite>(p); })) {
+			if (!pSprites->IsVisible()) {
+				continue;
+			}
 			auto UIData = pSprites->MakeSBData();
 			const auto& texRef = pSprites->GetTextureRef();
 
 			auto [id, bInserted] = m_CachedData.textureMap.Insert(texRef.GetID(), &texRef);
 
-			UIData.v4TextColorOrTexIndex.x = static_cast<float>(id);
+			UIData.v4TextColorOrTexIndex.x = static_cast<float>(id + 1);	// 0번에 Atlas 가 보관되므로 +1 index 에 원하는 Texture 가 바인딩됨
 
-			m_CachedData.textDatas[i].push_back(UIData);
+			m_CachedData.spriteDatas[i].push_back(UIData);
 		}
 	}
 
 	for (const auto& pTex : m_CachedData.textureMap.GetElements() | std::views::transform([](const auto& ref) { return ref->GetResource(); })) {
-		DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, unDescriptorInc), pAtlas->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, unDescriptorInc), pTex->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	}
 
 	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamTextures, outDescHandle.gpuHandle);

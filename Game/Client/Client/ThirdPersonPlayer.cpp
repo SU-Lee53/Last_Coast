@@ -2,6 +2,7 @@
 #include "ThirdPersonPlayer.h"
 #include "ThirdPersonCamera.h"
 #include "NodeObject.h"
+#include "Sprite.h"
 
 ThirdPersonPlayer::ThirdPersonPlayer()
 {
@@ -30,6 +31,9 @@ void ThirdPersonPlayer::Initialize()
 
 		// AnimationController
 		AddComponent<PlayerAnimationController>();
+
+		m_pCrosshair = std::make_shared<Crosshair>();
+		CUR_SCENE->GetUIBoard()->InsertSprite(m_pCrosshair);
 	}
 
 	for (auto& component : m_pComponents) {
@@ -83,11 +87,15 @@ void ThirdPersonPlayer::ProcessInput()
 			m_bAiming = true;
 			pThirdPersonCamera->EnterAimMode();
 			pAnimationCtrl->GetMontage()->PlayMontage("Rifle Aiming Idle");
+
+			m_pCrosshair->SetVisible(true);
 		}
 		if (INPUT->GetButtonUp(VK_RBUTTON)) {
 			m_bAiming = false;
 			pThirdPersonCamera->LeaveAimMode();
 			pAnimationCtrl->GetMontage()->StopMontage();
+
+			m_pCrosshair->SetVisible(false);
 		}
 
 		// Fire

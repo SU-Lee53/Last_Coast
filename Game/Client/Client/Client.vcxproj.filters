@@ -456,7 +456,9 @@
     <ClInclude Include="TextRenderer.h">
       <Filter>03.Engine\Graphic Components</Filter>
     </ClInclude>
-    <ClInclude Include="UIPass.h" />
+    <ClInclude Include="UIPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -774,7 +776,9 @@
     <ClCompile Include="TextAtlas.cpp">
       <Filter>99.Utility</Filter>
     </ClCompile>
-    <ClCompile Include="UIPass.cpp" />
+    <ClCompile Include="UIPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">

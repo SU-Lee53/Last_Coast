@@ -8,6 +8,8 @@
 
 void MapTestScene::BuildObjects()
 {
+	m_pUIBoard = std::make_unique<UIBoard>();
+
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize("Day_HDRI.dds", "Night_HDRI.dds");
 
@@ -17,8 +19,6 @@ void MapTestScene::BuildObjects()
 	//m_pPlayer = std::make_shared<DebugPlayer>();
 	//m_pPlayer->Initialize();
 
-	m_pUIBoard = std::make_unique<UIBoard>();
-	
 	m_pFPSText = std::make_shared<TextBox>(L"Malgun Gothic");
 	m_pFPSText->SetText(L"Test");
 	m_pFPSText->SetLayer(0);
@@ -42,6 +42,13 @@ void MapTestScene::BuildObjects()
 	m_pKoreanText->SetPivot(Vector2{ 0,0 });
 	m_pKoreanText->SetPosition(Vector2{ 350,50 });
 	m_pKoreanText->SetSize(Vector2{ 250,50 });
+	
+	auto fnCallback = [](IUIComponent* pComp) {
+		auto pText = static_cast<TextBox*>(pComp);
+		pText->SetTextColor(RandomGenerator::GenerateRandomColor());
+	};
+
+	m_pKoreanText->SetButtonCallback(fnCallback);
 
 	m_pUIBoard->InsertText(m_pFPSText);
 	m_pUIBoard->InsertText(m_pTimeText);
