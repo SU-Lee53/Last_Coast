@@ -15,9 +15,13 @@ void Session::do_recv()
 {
 	DWORD recv_flag = 0;
 	memset(&m_recv_over.m_over, 0, sizeof(m_recv_over.m_over));
+
+	// 패킷 잘릴 수 있어서
+	m_recv_over.m_wsa.buf = m_recv_over.m_buff + m_prev_recv;
+	m_recv_over.m_wsa.len = BUF_SIZE - m_prev_recv;
+
 	WSARecv(m_client, &m_recv_over.m_wsa, 1, 0, &recv_flag, &m_recv_over.m_over, nullptr);
 }
-
 void Session::send_add_player(int player_id)
 {
 	S2C_AddPlayer packet;
@@ -31,7 +35,7 @@ void Session::send_add_player(int player_id)
 	do_send(packet.size, reinterpret_cast<char*>(&packet));
 }
 
-void Session::process_packet(unsigned char* p)
+bool Session::process_packet(unsigned char* p)
 {
 	PACKET_TYPE type = *reinterpret_cast<PACKET_TYPE*>(&p[1]);
 	switch (type) {
@@ -62,8 +66,9 @@ void Session::process_packet(unsigned char* p)
 				 break;
 	default:
 		std::cout << "Unknown packet type received from player[" << m_id << "].\n";
-		break;
+		return false;
 	}
+	return true;
 }
 
 void Session::send_move_packet(int mover)
