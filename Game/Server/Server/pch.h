@@ -1,11 +1,18 @@
 ﻿#pragma once
 
-#define WIN32_LEAN_AND_MEAN
+#include <iostream>
+#include <WS2tcpip.h>
+#include <MSWSock.h>
 
-#ifdef _DEBUG
-#pragma comment(lib, "Debug\\ServerCore.lib")
-#else
-#pragma comment(lib, "Release\\ServerCore.lib")
-#endif
+#include <array>
+#include <vector>
 
-#include "CorePch.h"
+#include <thread>
+#include <atomic>
+#include <mutex>
+
+#include "protocol.h"
+
+#pragma comment(lib, "MSWSock.lib")
+#pragma comment(lib, "WS2_32.lib")
+
