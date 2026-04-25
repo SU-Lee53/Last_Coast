@@ -18,6 +18,7 @@ private:
 	std::shared_ptr<TextBox> m_pFPSText;
 	std::shared_ptr<TextBox> m_pTimeText;
 	std::shared_ptr<TextBox> m_pKoreanText;
+	std::shared_ptr<TextBox> m_pLoadTimeText;
 
 };
 

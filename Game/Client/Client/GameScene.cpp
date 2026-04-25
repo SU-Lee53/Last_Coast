@@ -6,9 +6,13 @@
 #include "TerrainTestScene.h"
 #include "Skybox.h"
 #include "MapTestScene.h"
+#include "TextBox.h"
 
 void GameScene::BuildObjects()
 {
+	using namespace std::chrono;
+
+	m_pUIBoard = std::make_unique<UIBoard>();
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 
 	m_pSkybox = std::make_shared<Skybox>();
@@ -20,8 +24,21 @@ void GameScene::BuildObjects()
 	m_pTerrain = std::make_shared<TerrainObject>();
 	m_pTerrain->LoadFromFiles("Game");
 
-	//LoadFromFiles("LightTest");
+	auto begin = high_resolution_clock::now();
 	LoadFromFiles("Game");
+	auto end = high_resolution_clock::now();
+
+	long long llLoadTime = duration_cast<milliseconds>(end - begin).count();
+
+
+	std::shared_ptr<TextBox> pText = std::make_shared<TextBox>(L"Malgun Gothic");
+	pText->SetText(std::format(L"로딩 시간 : {}ms", llLoadTime));
+	pText->SetLayer(0);
+	pText->SetAnchor(Vector2{ 0,0 });
+	pText->SetPivot(Vector2{ 0,0 });
+	pText->SetPosition(Vector2{ 10,150 });
+	pText->SetSize(Vector2{ 250,50 });
+	m_pUIBoard->InsertUI(pText);
 
 }
 
