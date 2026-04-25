@@ -274,6 +274,31 @@ void Zombie::OnEndCollision(const CollisionResult& collisionResult)
 {
 }
 
+void Zombie::ApplyServerState(float serverX, float serverZ,
+                               float waypointX, float waypointZ,
+                               ZombieBehaviorState /*state*/)
+{
+	if (!m_pAIAgent) return;
+
+	// ── XZ 보정 — 클라이언트 위치가 서버와 300cm 이상 벗어날 때만 스냅 ────
+	Vector3 v3AgentPos = m_pAIAgent->GetPosition();
+	float fErrSq = (v3AgentPos.x - serverX) * (v3AgentPos.x - serverX)
+	             + (v3AgentPos.z - serverZ) * (v3AgentPos.z - serverZ);
+	static constexpr float CORRECTION_THRESHOLD_SQ = 300.f * 300.f;
+	if (fErrSq > CORRECTION_THRESHOLD_SQ)
+		m_pAIAgent->SyncPosition(Vector3(serverX, v3AgentPos.y, serverZ));
+
+	// ── waypoint 변경 시에만 MoveToPosition 재요청 (A* 폭풍 방지) ────────
+	Vector3 v3NewWaypoint(waypointX, v3AgentPos.y, waypointZ);
+	float fWaypointChangeSq = Vector3::DistanceSquared(m_v3LastWaypoint, v3NewWaypoint);
+	static constexpr float WAYPOINT_CHANGE_THRESHOLD_SQ = 50.f * 50.f;
+	if (fWaypointChangeSq > WAYPOINT_CHANGE_THRESHOLD_SQ)
+	{
+		m_v3LastWaypoint = v3NewWaypoint;
+		m_pAIAgent->MoveToPosition(v3NewWaypoint);
+	}
+}
+
 void Zombie::TriggerAttackHit()
 {
 	auto pTarget = m_wpTarget.lock();

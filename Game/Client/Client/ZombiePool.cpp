@@ -1,18 +1,32 @@
 ﻿#include "pch.h"
 #include "ZombiePool.h"
 
-std::vector<std::shared_ptr<Zombie>> ZombiePool::Initialize(int capacity)
+std::vector<std::shared_ptr<Zombie>> ZombiePool::Initialize(int capacity, bool bStartDormant)
 {
     m_All.reserve(capacity);
-    m_Active.reserve(capacity);
+    if (bStartDormant)
+        m_Free.reserve(capacity);
+    else
+        m_Active.reserve(capacity);
 
     for (int i = 0; i < capacity; ++i)
     {
         auto pZombie = std::make_shared<Zombie>();
-        pZombie->m_pPool        = this;
-        pZombie->m_nActiveIndex = i;
+        pZombie->m_pPool = this;
         m_All.push_back(pZombie);
-        m_Active.push_back(pZombie);
+
+        if (bStartDormant)
+        {
+            // dormant: m_Free에 넣고 비활성 상태로 초기화
+            pZombie->m_nActiveIndex = -1;
+            pZombie->m_bPoolActive  = false;
+            m_Free.push_back(pZombie);
+        }
+        else
+        {
+            pZombie->m_nActiveIndex = i;
+            m_Active.push_back(pZombie);
+        }
     }
 
     return m_All;

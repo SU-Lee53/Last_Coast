@@ -62,6 +62,7 @@ void NetworkManager::ConnectToServer()
 			{
 				m_connectState = ConnectState::Connected;
 				m_bConnected = true;
+				m_bOfflineMode = false;
 				g_hNetworkThread = CreateThread(NULL, 0, ProcessNetwork, this, 0, NULL);
 			}
 		}
@@ -100,6 +101,7 @@ void NetworkManager::ConnectToServer()
 					// 진짜 연결 성공
 					m_connectState = ConnectState::Connected;
 					m_bConnected = true;
+					m_bOfflineMode = false;
 					m_strErrorLog = "Connected!";
 
 					g_hNetworkThread = CreateThread(NULL, 0, ProcessNetwork, this, 0, NULL);
@@ -295,9 +297,123 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 			state.snapshots.pop_front();
 		break;
 	}
+	case S2C_SPAWN_ZOMBIE:
+	{
+		if (size < static_cast<int>(sizeof(S2C_SpawnZombie))) return;
+		auto* p = reinterpret_cast<const S2C_SpawnZombie*>(data);
+		SpawnEvent ev{ p->zombieId, Vector3(p->x, p->y, p->z) };
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		m_PendingSpawns.push_back(ev);
+		break;
+	}
+	case S2C_DESPAWN_ZOMBIE:
+	{
+		if (size < static_cast<int>(sizeof(S2C_DespawnZombie))) return;
+		auto* p = reinterpret_cast<const S2C_DespawnZombie*>(data);
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		m_PendingDespawns.push_back(p->zombieId);
+		m_ZombieStates.erase(p->zombieId);
+		break;
+	}
+	case S2C_ZOMBIE_STATE:
+	{
+		if (size < static_cast<int>(sizeof(S2C_ZombieState))) return;
+		auto* p = reinterpret_cast<const S2C_ZombieState*>(data);
+		ZombieServerState state;
+		state.x             = p->x;
+		state.z             = p->z;
+		state.yaw           = p->yaw;
+		state.waypointX     = p->waypointX;
+		state.waypointZ     = p->waypointZ;
+		state.behaviorState = p->behaviorState;
+		state.receivedTime  = GetNetTimeSec();
+		state.valid         = true;
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		m_ZombieStates[p->zombieId] = state;
+		break;
+	}
+	case S2C_ZOMBIE_ATTACK:
+	{
+		if (size < static_cast<int>(sizeof(S2C_ZombieAttack))) return;
+		auto* p = reinterpret_cast<const S2C_ZombieAttack*>(data);
+		AttackEvent ev{ p->zombieId, p->targetPlayerId, p->damage };
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		m_PendingAttacks.push_back(ev);
+		break;
+	}
 	default:
 		break;
 	}
+}
+
+// -----------------------------------------------------------------------
+// 플레이어 위치 전송 (Task 5)
+// -----------------------------------------------------------------------
+
+void NetworkManager::SetLocalPlayerInfo(const Vector3& pos, float yaw)
+{
+	m_v3LocalPlayerPos = pos;
+	m_fLocalPlayerYaw  = yaw;
+}
+
+void NetworkManager::TrySendPlayerPosition()
+{
+	if (!m_bConnected || m_bOfflineMode) return;
+
+	float fNow = GetNetTimeSec();
+	if (fNow - m_fLastPosSendTime < POS_SEND_INTERVAL) return;
+	m_fLastPosSendTime = fNow;
+
+	C2S_PlayerPosition p;
+	p.size = sizeof(C2S_PlayerPosition);
+	p.type = C2S_PLAYER_POSITION;
+	p.x    = m_v3LocalPlayerPos.x;
+	p.y    = m_v3LocalPlayerPos.y;
+	p.z    = m_v3LocalPlayerPos.z;
+	p.yaw  = m_fLocalPlayerYaw;
+
+	// 소켓이 non-blocking overlapped 이므로 WSASend 사용 (nullptr overlapped = best-effort)
+	WSABUF wsa;
+	wsa.buf = reinterpret_cast<char*>(&p);
+	wsa.len = p.size;
+	WSASend(m_hClientSocket, &wsa, 1, nullptr, 0, nullptr, nullptr);
+}
+
+// -----------------------------------------------------------------------
+// 좀비 이벤트 소비 (Task 6/7/9)
+// -----------------------------------------------------------------------
+
+std::vector<SpawnEvent> NetworkManager::ConsumeSpawnEvents()
+{
+	std::vector<SpawnEvent> out;
+	std::lock_guard<std::mutex> lock(m_Mutex);
+	out.swap(m_PendingSpawns);
+	return out;
+}
+
+std::vector<int> NetworkManager::ConsumeDespawnEvents()
+{
+	std::vector<int> out;
+	std::lock_guard<std::mutex> lock(m_Mutex);
+	out.swap(m_PendingDespawns);
+	return out;
+}
+
+std::vector<AttackEvent> NetworkManager::ConsumeAttackEvents()
+{
+	std::vector<AttackEvent> out;
+	std::lock_guard<std::mutex> lock(m_Mutex);
+	out.swap(m_PendingAttacks);
+	return out;
+}
+
+bool NetworkManager::GetLatestZombieState(int zombieId, ZombieServerState& outState) const
+{
+	std::lock_guard<std::mutex> lock(m_Mutex);
+	auto it = m_ZombieStates.find(zombieId);
+	if (it == m_ZombieStates.end() || !it->second.valid) return false;
+	outState = it->second;
+	return true;
 }
 
 // -----------------------------------------------------------------------

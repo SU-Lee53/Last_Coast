@@ -12,8 +12,9 @@ class ZombiePool {
 public:
     // capacity만큼 Zombie를 미리 생성 후 반환.
     // 반환된 shared_ptr들을 호출자가 m_pGameObjects에 추가해야 함.
-    // 모든 좀비는 즉시 active 상태로 시작.
-    std::vector<std::shared_ptr<Zombie>> Initialize(int capacity);
+    // bStartDormant=false(기본): 모든 좀비가 즉시 active 상태로 시작.
+    // bStartDormant=true       : 모든 좀비가 m_Free에 대기 (서버 스폰 대기).
+    std::vector<std::shared_ptr<Zombie>> Initialize(int capacity, bool bStartDormant = false);
 
     // m_Free에서 좀비 하나를 꺼내 활성화. 풀 고갈 시 nullptr.
     std::shared_ptr<Zombie> Acquire();

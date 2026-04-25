@@ -34,6 +34,17 @@ public:
 	bool IsDead() const { return m_fHP <= 0.f; }
 	bool IsReadyToRemove() const { return m_bReadyToRemove; }
 
+	// 서버 ID (서버에서 할당한 좀비 식별자 — 로컬 AI 전용 좀비는 -1)
+	int  GetServerId() const { return m_nServerId; }
+	void SetServerId(int id)  { m_nServerId = id; }
+
+	// 서버에서 수신한 상태 적용:
+	//   - XZ 오차 > 임계값이면 AI agent 위치 보정
+	//   - waypoint 변경 시 MoveToPosition 재요청
+	void ApplyServerState(float serverX, float serverZ,
+	                      float waypointX, float waypointZ,
+	                      ZombieBehaviorState state);
+
 	// 메모리 풀 인터페이스 ─────────────────────────────────────────────────────
 	// ZombiePool이 호출. 외부에서 직접 호출 금지.
 	bool IsPoolActive() const { return m_bPoolActive; }
@@ -78,6 +89,8 @@ private:
 
 	bool m_bWasVisible = false;  // 이전 프레임 시야 여부 (경보 전파 rising edge 감지용)
 	float m_fMoveSpeedSqXZ = 0.f;
+	int   m_nServerId = -1;           // 서버 할당 ID (-1 = 로컬 AI 전용)
+	Vector3 m_v3LastWaypoint = {};    // 마지막으로 요청한 waypoint (중복 MoveToPosition 방지)
 	float m_fHP = 100.f;
 	bool m_bDying = false;
 	bool m_bReadyToRemove = false;
