@@ -725,6 +725,8 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 	nlohmann::json jScene = nlohmann::json::from_bson(bson);;
 
 	if (jScene.contains("StaticMeshActors")) {
+		size_t nObjects = jScene["StaticMeshActors"].size();
+		m_pStaticObjects.reserve(nObjects);
 		for (const auto& jObject : jScene["StaticMeshActors"]) {
 			std::shared_ptr<IGameObject> pObj = std::make_shared<StaticObject>();
 			pObj->SetName(jObject["ActorName"].get<std::string>());
@@ -745,6 +747,8 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 	// Lights 로드
 
 	if (jScene.contains("Lights")) {
+		size_t nLights = jScene["Lights"].size();
+		m_pLights.reserve(nLights);
 		for (const auto& jLight : jScene["Lights"]) {
 			std::string strType = jLight["Type"].get<std::string>();
 

@@ -163,7 +163,7 @@ inline void CreateAABBFromOBB(OUT BoundingBox& outxmAABB, IN const BoundingOrien
 	BoundingBox::CreateFromPoints(outxmAABB, BoundingOrientedBox::CORNER_COUNT, pxmf3Corners, sizeof(XMFLOAT3));
 }
 
-std::vector<uint8> ReadBinaryFile(const std::string& strPath)
+inline std::vector<uint8> ReadBinaryFile(const std::string& strPath)
 {
 	std::ifstream inFile(strPath, std::ios::binary | std::ios::ate);
 	if (!inFile) {
@@ -185,6 +185,45 @@ std::vector<uint8> ReadBinaryFile(const std::string& strPath)
 
 	return buf;
 }
+
+inline Matrix ReadMatrixFromJson(const nlohmann::json& j)
+{
+	Matrix m;
+
+	m._11 = j[0].get<float>();  m._12 = j[1].get<float>();
+	m._13 = j[2].get<float>();  m._14 = j[3].get<float>();
+
+	m._21 = j[4].get<float>();  m._22 = j[5].get<float>();
+	m._23 = j[6].get<float>();  m._24 = j[7].get<float>();
+
+	m._31 = j[8].get<float>();  m._32 = j[9].get<float>();
+	m._33 = j[10].get<float>(); m._34 = j[11].get<float>();
+
+	m._41 = j[12].get<float>(); m._42 = j[13].get<float>();
+	m._43 = j[14].get<float>(); m._44 = j[15].get<float>();
+
+	return m;
+}
+
+inline Vector4 ReadVector4FromJson(const nlohmann::json& j)
+{
+	return Vector4{
+		j[0].get<float>(),
+		j[1].get<float>(),
+		j[2].get<float>(),
+		j[3].get<float>()
+	};
+}
+
+inline Vector3 ReadVector3FromJson(const nlohmann::json& j)
+{
+	return Vector3{
+		j[0].get<float>(),
+		j[1].get<float>(),
+		j[2].get<float>(),
+	};
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////
 // Unit Conversion + Literals

@@ -177,6 +177,10 @@ struct AnimationKey {
 	Quaternion v4RotationQuat{ 0.f, 0.f, 0.f, 1.f };
 	Vector3 v3Scale{ 1.f, 1.f, 1.f };
 
+	AnimationKey() = default;
+	AnimationKey(const Vector3& t, const Quaternion& r, const Vector3& s) : v3Translation{ t }, v4RotationQuat{ r }, v3Scale{ s } {}
+	//AnimationKey(const Vector3& t, const Vector3& r, const Vector3& s) : v3Translation{ t }, v4RotationQuat{ r }, v3Scale{ s } {}
+
 	Matrix CreateSRT() const {
 		Matrix mtxScale = Matrix::CreateScale(v3Scale);
 		Matrix mtxRotation = Matrix::CreateFromQuaternion(v4RotationQuat);
