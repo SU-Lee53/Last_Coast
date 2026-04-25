@@ -269,7 +269,7 @@ private:
 	TextureRef<UnorderedAccessTexture> m_GradingLUT;
 	mutable bool m_bGradingLUTDirtyFlag = true;		// Dirty
 
-	TONE_MAPPING_MODE m_eMode = TONE_MAPPING_MODE::ACES;
+	TONE_MAPPING_MODE m_eMode = TONE_MAPPING_MODE::AGX;
 
 	// Parameters
 	ToneMappingParameter m_Parameters;

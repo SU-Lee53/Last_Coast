@@ -3,7 +3,7 @@
 #include "ComputePass.h"
 
 
-void Skybox::Initialize(const std::string& strDay, const std::string& strNight)
+void Skybox::Initialize()
 {
 	// Initialize parameters
 	std::string strParametersPath = g_strSkyboxBasePath + "SkyboxParameters.bin";

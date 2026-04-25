@@ -163,6 +163,29 @@ inline void CreateAABBFromOBB(OUT BoundingBox& outxmAABB, IN const BoundingOrien
 	BoundingBox::CreateFromPoints(outxmAABB, BoundingOrientedBox::CORNER_COUNT, pxmf3Corners, sizeof(XMFLOAT3));
 }
 
+std::vector<uint8> ReadBinaryFile(const std::string& strPath)
+{
+	std::ifstream inFile(strPath, std::ios::binary | std::ios::ate);
+	if (!inFile) {
+		return {};
+	}
+
+	const size_t size = inFile.tellg();
+	if (size <= 0) {
+		return {};
+	}
+
+	std::vector<uint8> buf(size);
+	inFile.seekg(0, std::ios::beg);
+	inFile.read(reinterpret_cast<char*>(buf.data()), size);
+
+	if (!inFile) {
+		return {};
+	}
+
+	return buf;
+}
+
 /////////////////////////////////////////////////////////////////////////////////
 // Unit Conversion + Literals
 

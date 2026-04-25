@@ -3,6 +3,7 @@
 
 TextBox::TextBox(Font::ID font)
 {
+	m_v4Color = Vector4(1.f, 1.f, 1.f, 1.f);
 	m_fontID = font;
 	m_bDirty = true;
 }
@@ -62,12 +63,14 @@ UIRectData TextBox::MakeSBData() const
 	auto pCached = m_TextHandle.GetResource();
 	if (!pCached || pCached->bDirty == true || pCached->bValid == false) {
 		data.v4UVRect = Vector4{ 0,0,0,0 };
-		data.v4TextColorOrTexIndex = m_v4TextColor;
+		data.v4Color = m_v4Color;
 		return data;
 	}
 
 	data.v4UVRect = GetTextUV();
-	data.v4TextColorOrTexIndex = m_v4TextColor;
+	data.v4Color = m_v4Color;
+
+	data.nTexIndex = 0;
 
 	return data;
 }

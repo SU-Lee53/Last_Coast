@@ -12,7 +12,7 @@ public:
 	};
 
 public:
-	void Initialize(const std::string& strDay, const std::string& strNight);
+	void Initialize();
 	void Update();
 
 	Texture::ID GetDaySkyBoxTextureID() const { return m_CubeMapDay.srvID; }

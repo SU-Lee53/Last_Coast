@@ -221,7 +221,7 @@ void ShaderManager::CompileShaders()
 
 	Compile("UIRectVS", L"Sprite.hlsl", L"VSUIRect", SHADER_TYPE::VS);
 
-	Compile("UITextPS", L"Sprite.hlsl", L"PSUIText", SHADER_TYPE::PS);
+	//Compile("UITextPS", L"Sprite.hlsl", L"PSUIText", SHADER_TYPE::PS);
 	Compile("UISpritePS", L"Sprite.hlsl", L"PSUISprite", SHADER_TYPE::PS);
 
 	// PostProcess

@@ -248,7 +248,7 @@ void RenderManager::ShowDebugOptions()
 
 	ImGui::Text("Current Context : %d", m_unCurrentContextIndex);
 
-	ImGui::Text("IGameObject in current scene : %d", CUR_SCENE->GetObjectsInScene().size());
+	ImGui::Text("IGameObject in current scene : %d", CUR_SCENE->GetStaticObjectsInScene().size() + CUR_SCENE->GetDynamicObjectsInScene().size());
 	ImGui::Text("IGameObject Render Candidates : %d", m_pObjectsToRender.size());
 
 	ImGui::SeparatorText("Render Queue");

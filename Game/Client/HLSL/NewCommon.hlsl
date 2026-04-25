@@ -298,6 +298,7 @@ struct UIRectData
 	float4 v4ScreenRect;	// left top right bottom
 	float4 v4UVRect;
 	float4 v4TextColorOrTexIndex;	// Text -> float4 color / Sprite -> float4.x texIndex
+	int nTexIndex;
 };
 
 #define MAX_BONES 100

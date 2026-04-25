@@ -3,28 +3,16 @@
 #include "TextBox.h"
 #include "Sprite.h"
 
-void UIBoard::InsertText(const std::shared_ptr<IUIComponent>& pComponent)
+void UIBoard::InsertUI(const std::shared_ptr<IUIComponent>& pComponent)
 {
 	uint32 unLayer = pComponent->GetLayer();
-	m_TextLayers[unLayer].push_back(pComponent);
+	m_UILayers[unLayer].push_back(pComponent);
 }
 
-void UIBoard::RemoveText(const std::shared_ptr<IUIComponent>& pComponent)
+void UIBoard::RemoveUI(const std::shared_ptr<IUIComponent>& pComponent)
 {
 	uint32 unLayer = pComponent->GetLayer();
-	m_TextLayers[unLayer].erase(std::remove(m_TextLayers[unLayer].begin(), m_TextLayers[unLayer].end(), pComponent), m_TextLayers[unLayer].end());
-}
-
-void UIBoard::InsertSprite(const std::shared_ptr<IUIComponent>& pComponent)
-{
-	uint32 unLayer = pComponent->GetLayer();
-	m_SpriteLayers[unLayer].push_back(pComponent);
-}
-
-void UIBoard::RemoveSprite(const std::shared_ptr<IUIComponent>& pComponent)
-{
-	uint32 unLayer = pComponent->GetLayer();
-	m_SpriteLayers[unLayer].erase(std::remove(m_SpriteLayers[unLayer].begin(), m_SpriteLayers[unLayer].end(), pComponent), m_SpriteLayers[unLayer].end());
+	m_UILayers[unLayer].erase(std::remove(m_UILayers[unLayer].begin(), m_UILayers[unLayer].end(), pComponent), m_UILayers[unLayer].end());
 }
 
 void UIBoard::Update()
@@ -32,7 +20,7 @@ void UIBoard::Update()
 	bool bClicked = INPUT->GetButtonDown(VK_LBUTTON);
 	POINT ptCursorPos = (bClicked) ? INPUT->GetCurrentCursorPos() : POINT{0, 0};
 
-	for (auto& layer : m_SpriteLayers) {
+	for (auto& layer : m_UILayers) {
 		for (auto& pComp : layer) {
 			if (bClicked) {
 				if (pComp->IsClickable()) {
@@ -46,17 +34,4 @@ void UIBoard::Update()
 		}
 	}
 
-	for (auto& layer : m_TextLayers) {
-		for (auto& pComp : layer) {
-			if (bClicked) {
-				if (pComp->IsClickable()) {
-					if (pComp->CheckClicked(ptCursorPos)) {
-						pComp->OnClicked();
-					}
-				}
-			}
-
-			pComp->Update();
-		}
-	}
 }

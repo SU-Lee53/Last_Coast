@@ -9,7 +9,7 @@
 void TerrainTestScene::BuildObjects()
 {
 	m_pSkybox = std::make_shared<Skybox>();
-	m_pSkybox->Initialize("Day_HDRI.dds", "Night_HDRI.dds");
+	m_pSkybox->Initialize();
 
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 

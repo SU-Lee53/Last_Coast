@@ -49,15 +49,8 @@ VS_QUAD_OUTPUT VSUIRect(VS_QUAD_INPUT input, uint nInstanceID : SV_InstanceID)
 	return output;
 }
 
-float4 PSUIText(VS_QUAD_OUTPUT input) : SV_Target
-{
-	float4 atlasSample = gtxtTextures[0].Sample(gSamplerState, input.uv);
-	//return float4(gUIData[input.nInstance].v4TextColorOrTexIndex.rgb, gUIData[input.nInstance].v4TextColorOrTexIndex.a * atlasSample.a);
-	return float4(atlasSample * gUIData[input.nInstance].v4TextColorOrTexIndex);
-}
-
 float4 PSUISprite(VS_QUAD_OUTPUT input) : SV_Target
 {
-	uint nTexIndex = (uint)gUIData[input.nInstance].v4TextColorOrTexIndex.x;
-	return gtxtTextures[nTexIndex].Sample(gSamplerState, input.uv);
+	float4 sampledColor = gtxtTextures[gUIData[input.nInstance].nTexIndex].Sample(gSamplerState, input.uv);
+	return float4(sampledColor * gUIData[input.nInstance].v4TextColorOrTexIndex);
 }

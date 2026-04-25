@@ -11,7 +11,7 @@ void MapTestScene::BuildObjects()
 	m_pUIBoard = std::make_unique<UIBoard>();
 
 	m_pSkybox = std::make_shared<Skybox>();
-	m_pSkybox->Initialize("Day_HDRI.dds", "Night_HDRI.dds");
+	m_pSkybox->Initialize();
 
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 	m_pPlayer->Initialize();
@@ -36,7 +36,7 @@ void MapTestScene::BuildObjects()
 	m_pTimeText->SetSize(Vector2{ 100,50 });
 
 	m_pKoreanText = std::make_shared<TextBox>(L"Malgun Gothic");
-	m_pKoreanText->SetText(L"한국어 출력 테스트 1234567890");
+	m_pKoreanText->SetText(L"클릭하면 글자색이 바뀜");
 	m_pKoreanText->SetLayer(0);
 	m_pKoreanText->SetAnchor(Vector2{ 0,0 });
 	m_pKoreanText->SetPivot(Vector2{ 0,0 });
@@ -45,14 +45,14 @@ void MapTestScene::BuildObjects()
 	
 	auto fnCallback = [](IUIComponent* pComp) {
 		auto pText = static_cast<TextBox*>(pComp);
-		pText->SetTextColor(RandomGenerator::GenerateRandomColor());
+		pText->SetTextColor(RandomGenerator::GenerateRandomColor3());
 	};
 
 	m_pKoreanText->SetButtonCallback(fnCallback);
 
-	m_pUIBoard->InsertText(m_pFPSText);
-	m_pUIBoard->InsertText(m_pTimeText);
-	m_pUIBoard->InsertText(m_pKoreanText);
+	m_pUIBoard->InsertUI(m_pFPSText);
+	m_pUIBoard->InsertUI(m_pTimeText);
+	m_pUIBoard->InsertUI(m_pKoreanText);
 
 	LoadFromFiles("LightTest");
 }

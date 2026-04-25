@@ -77,7 +77,9 @@ public:
 
 public:
 	void AddObject(std::shared_ptr<IGameObject> pObj) {
-		m_pGameObjects.push_back(pObj);
+		//m_pGameObjects.push_back(pObj);
+		(pObj->GetObjectType() == OBJECT_MOBILITY_TYPE::STATIC) ? m_pStaticObjects.push_back(pObj) 
+			                                                    : m_pDynamicObjects.push_back(pObj);
 	}
 
 	template<typename... Objs, 
@@ -116,11 +118,13 @@ public:
 	virtual void SyncSceneWithServer() {}
 
 public:
+	const std::vector<std::shared_ptr<IGameObject>>& GetStaticObjectsInScene() const { return m_pStaticObjects; }
+	const std::vector<std::shared_ptr<IGameObject>>& GetDynamicObjectsInScene() const { return m_pDynamicObjects; }
+
 	const std::shared_ptr<IPlayer>& GetPlayer() const { return m_pPlayer; }
 	const std::shared_ptr<TerrainObject>& GetTerrain() const { return m_pTerrain; }
 	const std::shared_ptr<Skybox>& GetSkybox() const { return m_pSkybox; }
 	const std::shared_ptr<Camera>& GetCamera() const { return m_pPlayer->GetCamera(); }
-	const std::vector<std::shared_ptr<IGameObject>>& GetObjectsInScene() const { return m_pGameObjects; }
 	const std::vector<std::shared_ptr<Light>>& GetLightsInScene() const { return m_pLights; }
 	const Vector4& GetGlobalAmbient() const { return m_v4GlobalAmbient; }
 	const std::unique_ptr<UIBoard>& GetUIBoard() const { return m_pUIBoard; }
@@ -131,12 +135,14 @@ public:
 
 	TerrainHit QueryTerrainHit(const Vector3& v3WorldPos);
 
-protected:
+private:
 	void InitializeObjects();
 
+
 protected:
-	std::vector<std::shared_ptr<IGameObject>>	m_pGameObjects = {};
-	//std::vector<std::shared_ptr<Sprite>>		m_pSprites;
+	std::vector<std::shared_ptr<IGameObject>>	m_pStaticObjects = {};
+	std::vector<std::shared_ptr<IGameObject>>	m_pDynamicObjects = {};
+
 	std::vector<std::shared_ptr<Light>>			m_pLights = {};
 	
 	std::shared_ptr<IPlayer>					m_pPlayer = nullptr;

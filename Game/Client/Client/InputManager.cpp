@@ -32,33 +32,27 @@ bool InputManager::GetButtonUp(UCHAR key)
 void InputManager::UpdateKeyboard()
 {
 	HWND hWnd = ::GetForegroundWindow();
+
 	if (m_hWnd != hWnd) {
 		std::fill(m_eKeyStates.begin(), m_eKeyStates.end(), KEY_STATE::NONE);
 		return;
 	}
 
-	std::array<BYTE, KEY_TYPE_COUNT> KeyBuffer;
-	if (::GetKeyboardState(KeyBuffer.data()) == FALSE) {
-		std::fill(m_eKeyStates.begin(), m_eKeyStates.end(), KEY_STATE::NONE);
-		return;
-	}
-
 	for (int key = 0; key < KEY_TYPE_COUNT; ++key) {
-		if (KeyBuffer[key] & 0xF0) {
-			KEY_STATE& state = m_eKeyStates[key];
+		const bool bPressedNow = (::GetAsyncKeyState(key) & 0x8000) != 0;
 
-			if (state == KEY_STATE::PRESS || state == KEY_STATE::DOWN) {
-				state = KEY_STATE::PRESS;
-			}
-			else {
+		KEY_STATE& state = m_eKeyStates[key];
+
+		if (bPressedNow) {
+			if (state == KEY_STATE::NONE || state == KEY_STATE::UP) {
 				state = KEY_STATE::DOWN;
 			}
-
+			else {
+				state = KEY_STATE::PRESS;
+			}
 		}
 		else {
-			KEY_STATE& state = m_eKeyStates[key];
-
-			if (state == KEY_STATE::PRESS || state == KEY_STATE::DOWN) {
+			if (state == KEY_STATE::DOWN || state == KEY_STATE::PRESS) {
 				state = KEY_STATE::UP;
 			}
 			else {

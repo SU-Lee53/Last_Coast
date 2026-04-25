@@ -43,20 +43,14 @@ std::shared_ptr<IGameObject> ModelManager::LoadOrGet(const std::string& strFileN
 
 std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& strFileName)
 {
-	std::string strFilePath = std::format("{}/{}.bin", g_strModelBasePath, strFileName);
-
 	if (auto pObj = Get(strFileName)) {
 		return pObj;
 	}
 
-	std::ifstream inFile{ strFilePath, std::ios::binary };
-	if (!inFile) {
-		__debugbreak();
-		return nullptr;
-	}
+	std::string strFilePath = std::format("{}/{}.bin", g_strModelBasePath, strFileName);
 
-	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {}); 
-	nlohmann::json j = nlohmann::json::from_bson(bson);;
+	auto buf = ::ReadBinaryFile(strFilePath);
+	nlohmann::json j = nlohmann::json::from_bson(buf);
 
 	std::shared_ptr<IGameObject> pGameObject;
 	pGameObject = LoadFrameHierarchyFromFile(nullptr, nullptr, j["Hierarchy"]);

@@ -27,21 +27,20 @@ private:
 	void CreatePipelineState();
 
 private:
-	ComPtr<ID3D12PipelineState> m_pd3dTextPipelineState;
+	//ComPtr<ID3D12PipelineState> m_pd3dTextPipelineState;
 	ComPtr<ID3D12PipelineState> m_pd3dSpritePipelineState;
 
 private:
 	// Cache
 	struct CachedData {
-		std::array<std::vector<UIRectData>, UIBoard::g_unUILayers> textDatas;
-		std::array<std::vector<UIRectData>, UIBoard::g_unUILayers> spriteDatas;
+		//std::array<std::vector<UIRectData>, UIBoard::g_unUILayers> textDatas;
+		std::array<std::vector<UIRectData>, UIBoard::g_unUILayers> uiDatas;
 
 		IndexMap<Texture::ID, const TextureRef<Texture>*> textureMap;
 
 		void Clear() {
 			for (int i = 0; i < UIBoard::g_unUILayers; ++i) {
-				textDatas[i].clear();
-				spriteDatas[i].clear();
+				uiDatas[i].clear();
 			}
 
 			textureMap.Clear();

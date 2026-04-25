@@ -29,7 +29,7 @@ const GridCell* ScenePartition::GetCellData(const CellCoord& cdCell) const {
 std::vector<std::shared_ptr<IGameObject>> ScenePartition::BroadPhaseDFS(const CellCoord& cdStart, int32 nMaxDepth) const
 {
 	std::vector<std::shared_ptr<IGameObject>> pObjs;
-	pObjs.reserve(CUR_SCENE->GetObjectsInScene().size());
+	pObjs.reserve(CUR_SCENE->GetStaticObjectsInScene().size() + CUR_SCENE->GetDynamicObjectsInScene().size());
 	std::unordered_set<IGameObject*> pObjectsSeen;
 
 	std::vector<std::vector<bool>> visited(xmui2NumCellsXZ.y, std::vector<bool>(xmui2NumCellsXZ.x, false));
@@ -71,7 +71,7 @@ std::vector<std::shared_ptr<IGameObject>> ScenePartition::BroadPhaseDFS(const Ce
 std::vector<std::shared_ptr<IGameObject>> ScenePartition::ObjectBroadPhaseFrustumCulling(const BoundingFrustum& xmFrustumWorld) const
 {
 	std::vector<std::shared_ptr<IGameObject>> pObjs;
-	pObjs.reserve(CUR_SCENE->GetObjectsInScene().size());
+	pObjs.reserve(CUR_SCENE->GetDynamicObjectsInScene().size());
 	std::unordered_set<IGameObject*> pObjectsSeen;
 
 	const int32 nCellsX = static_cast<int32>(xmui2NumCellsXZ.x);
@@ -324,14 +324,19 @@ void Scene::InitializeObjects()
 		m_pTerrain->Initialize();
 	}
 
-	for (auto& obj : m_pGameObjects) {
+	for (auto& obj : m_pStaticObjects) {
+		obj->Initialize();
+	}
+
+	for (auto& obj : m_pDynamicObjects) {
 		obj->Initialize();
 	}
 }
 
 void Scene::CleanUp()
 {
-	m_pGameObjects.clear();
+	m_pStaticObjects.clear();
+	m_pDynamicObjects.clear();
 	//m_pSprites.clear();
 	m_pLights.clear();
 
@@ -374,8 +379,7 @@ void Scene::PostInitialize()
 		m_pPlayer->GetTransform()->SetPosition(m_xmSceneBound.Center);
 	}
 
-
-	for (auto& obj : m_pGameObjects) {
+	for (auto& obj : m_pDynamicObjects) {
 		auto pZombie = std::dynamic_pointer_cast<Zombie>(obj);
 		if (pZombie) {
 			pZombie->SetPosition(AI->GetNavMesh()->GetRandomPoint()); // Transform + AIAgent 동시에
@@ -397,7 +401,11 @@ void Scene::PostProcessInput()
 		m_pPlayer->ProcessInput();
 	}
 
-	for (auto& obj : m_pGameObjects) {
+	for (auto& obj : m_pStaticObjects) {
+		obj->ProcessInput();
+	}
+
+	for (auto& obj : m_pDynamicObjects) {
 		obj->ProcessInput();
 	}
 }
@@ -408,7 +416,11 @@ void Scene::PreUpdate()
 		m_pPlayer->PreUpdate();
 	}
 
-	for (auto& obj : m_pGameObjects) {
+	for (auto& obj : m_pStaticObjects) {
+		obj->PreUpdate();
+	}
+
+	for (auto& obj : m_pDynamicObjects) {
 		obj->PreUpdate();
 	}
 }
@@ -424,7 +436,11 @@ void Scene::FixedUpdate()
 		m_pTerrain->Update();
 	}
 
-	for (auto& obj : m_pGameObjects) {
+	for (auto& obj : m_pStaticObjects) {
+		obj->Update();
+	}
+
+	for (auto& obj : m_pDynamicObjects) {
 		obj->Update();
 	}
 
@@ -442,7 +458,11 @@ void Scene::PostUpdate()
 		m_pTerrain->PostUpdate();
 	}
 
-	for (auto& obj : m_pGameObjects) {
+	for (auto& obj : m_pStaticObjects) {
+		obj->PostUpdate();
+	}
+
+	for (auto& obj : m_pDynamicObjects) {
 		obj->PostUpdate();
 	}
 
@@ -451,7 +471,9 @@ void Scene::PostUpdate()
 	}
 
 	// Update UI Components
-	m_pUIBoard->Update();
+	if (m_pUIBoard) {
+		m_pUIBoard->Update();
+	}
 }
 
 void Scene::PrepareRender()
@@ -470,6 +492,10 @@ void Scene::PrepareRender()
 	//}
 	
 	for (auto& pObj : m_SpacePartition.ObjectBroadPhaseFrustumCulling(GetCamera()->GetFrustumWorld())) {
+		pObj->Render();
+	}
+
+	for (auto& pObj : m_pDynamicObjects) {
 		pObj->Render();
 	}
 
@@ -530,8 +556,9 @@ void Scene::CheckCollision()
 	}
 
 	// ── 좀비 vs 정적 오브젝트 ──────────────────────────────────────────────
-	for (auto& obj : m_pGameObjects) {
-		auto pZombie = std::dynamic_pointer_cast<Zombie>(obj);
+	for (auto& obj : GetDynamicObjectsInScene()) {
+		if(obj->GetObjectType() != OBJECT_MOBILITY_TYPE::DYNAMIC) continue;
+		auto pZombie = std::static_pointer_cast<Zombie>(obj);
 		if (!pZombie)
 			continue;
 
@@ -582,7 +609,7 @@ void Scene::CheckCollision()
 
 void Scene::GenerateSceneBound()
 {
-	for (const auto& pObj : m_pGameObjects) {
+	for (const auto& pObj : GetStaticObjectsInScene()) {
 		const auto& pCollider = pObj->GetComponent<ICollider>();
 		if (!pCollider) {
 			continue;
@@ -607,7 +634,7 @@ void Scene::CellPartition(const Vector2& v2OriginXZ, const Vector2& v2SizePerCel
 	m_SpacePartition.Cells.resize(unCellsX * unCellsZ);
 
 	// 2. Check objects in cells
-	for (const auto& pObj : m_pGameObjects) {
+	for (const auto& pObj : GetStaticObjectsInScene()) {
 		m_SpacePartition.Insert(pObj);
 	}
 
@@ -694,11 +721,6 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 		return E_INVALIDARG;
 	}
 
-	//std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
-	//nlohmann::json j = nlohmann::json::from_bson(bson);
-
-	//nlohmann::json jScene = nlohmann::json::parse(inFile);
-
 	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
 	nlohmann::json jScene = nlohmann::json::from_bson(bson);;
 
@@ -715,7 +737,8 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 			auto pMeshObject = MODEL->LoadOrGet(strMeshName)->CopyObject<NodeObject>();
 			pObj->SetChild(pMeshObject);
 
-			m_pGameObjects.push_back(pObj);
+			//m_pGameObjects.push_back(pObj);
+			AddObject(pObj);
 		}
 	}
 
@@ -739,11 +762,6 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 				float colorX = jLight["Color"]["X"].get<float>();
 				float colorY = jLight["Color"]["Y"].get<float>();
 				float colorZ = jLight["Color"]["Z"].get<float>();
-
-				//pLight->m_v4Diffuse.x = colorX * intensity;
-				//pLight->m_v4Diffuse.y = colorY * intensity;
-				//pLight->m_v4Diffuse.z = colorZ * intensity;
-				//pLight->m_v4Diffuse.w = 1.0f;
 
 				pLight->m_v3Color = Vector3(colorX, colorY, colorZ);
 				pLight->m_fIntensity = intensity;

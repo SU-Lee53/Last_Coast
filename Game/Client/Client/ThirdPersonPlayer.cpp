@@ -32,8 +32,10 @@ void ThirdPersonPlayer::Initialize()
 		// AnimationController
 		AddComponent<PlayerAnimationController>();
 
-		m_pCrosshair = std::make_shared<Crosshair>();
-		CUR_SCENE->GetUIBoard()->InsertSprite(m_pCrosshair);
+		if (auto& pUIBoard = CUR_SCENE->GetUIBoard(); pUIBoard) {
+			m_pCrosshair = std::make_shared<Crosshair>();
+			pUIBoard->InsertUI(m_pCrosshair);
+		}
 	}
 
 	for (auto& component : m_pComponents) {
@@ -88,14 +90,18 @@ void ThirdPersonPlayer::ProcessInput()
 			pThirdPersonCamera->EnterAimMode();
 			pAnimationCtrl->GetMontage()->PlayMontage("Rifle Aiming Idle");
 
-			m_pCrosshair->SetVisible(true);
+			if (m_pCrosshair) {
+				m_pCrosshair->SetVisible(true);
+			}
 		}
 		if (INPUT->GetButtonUp(VK_RBUTTON)) {
 			m_bAiming = false;
 			pThirdPersonCamera->LeaveAimMode();
 			pAnimationCtrl->GetMontage()->StopMontage();
 
-			m_pCrosshair->SetVisible(false);
+			if (m_pCrosshair) {
+				m_pCrosshair->SetVisible(false);
+			}
 		}
 
 		// Fire

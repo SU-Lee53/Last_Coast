@@ -1,10 +1,15 @@
 ﻿#include "pch.h"
 #include "Sprite.h"
 
+Sprite::Sprite(const std::string& strTexturePath)
+{
+	m_v4Color = Vector4(1.f, 1.f, 1.f, 1.f);
+	m_TextureHandle = TEXTURE->LoadTexture(strTexturePath);
+}
+
 UIRectData Sprite::MakeSBData() const
 {
 	RECT screenRect = GetScreenRect();
-	RECT uvRect = {};
 
 	UIRectData data;
 	data.v4ScreenRect.x = static_cast<float>(screenRect.left);
@@ -17,6 +22,7 @@ UIRectData Sprite::MakeSBData() const
 	data.v4UVRect.z = 1.f;
 	data.v4UVRect.w = 1.f;
 
+	data.v4Color = m_v4Color;
 	//data.v4TextColorOrTexIndex = m_v4TextColor;
 
 	return data;

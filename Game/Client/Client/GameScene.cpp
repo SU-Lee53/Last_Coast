@@ -12,7 +12,7 @@ void GameScene::BuildObjects()
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 
 	m_pSkybox = std::make_shared<Skybox>();
-	m_pSkybox->Initialize("Day_HDRI.dds", "Night_HDRI.dds");
+	m_pSkybox->Initialize();
 
 	//m_pPlayer = std::make_shared<DebugPlayer>();
 	//m_pPlayer->Initialize();
@@ -113,7 +113,7 @@ void GameScene::Update()
 			}
 	
 			if (ImGui::BeginTabItem("Objects")) {
-				for (const auto& pObj : m_pGameObjects) {
+				for (const auto& pObj : GetStaticObjectsInScene()) {
 					if (ImGui::TreeNode(pObj->GetName().c_str())) {
 						auto pTransform = pObj->GetTransform();
 						const Vector3 v3Position = pTransform->GetPosition();

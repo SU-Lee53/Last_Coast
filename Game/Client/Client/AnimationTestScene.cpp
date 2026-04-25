@@ -8,7 +8,7 @@
 void AnimationTestScene::BuildObjects()
 {
 	m_pSkybox = std::make_shared<Skybox>();
-	m_pSkybox->Initialize("Day_HDRI.dds", "Night_HDRI.dds");
+	m_pSkybox->Initialize();
 
 	auto pLight = std::make_shared<DirectionalLight>();
 	{
