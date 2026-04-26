@@ -31,6 +31,12 @@ public:
 	bool GetHeightNormalWorld(const Vector3& v3WorldPos, OUT float& outfHeight, OUT Vector3& outv3Normal);
 	CB_TERRAIN_LAYER_DATA MakeLayerCBData();
 
+	float GetMinHeight() const { return m_fMinTerrainHeight; };
+	float GetMaxHeight() const { return m_fMaxTerrainHeight; };
+
+	std::vector<std::shared_ptr<TerrainComponent>> GetTerrainComponentsInFrustum(const BoundingFrustum& xmFrustumWorld) const;
+
+
 public:
 	HRESULT LoadFromFiles(const std::string& strFilename);
 
@@ -42,8 +48,11 @@ private:
 
 private:
 	std::unique_ptr<HeightMapRawImage> m_pHeightMapRawImage;
-	std::vector<std::unique_ptr<TerrainComponent>> m_pTerrainComponents;
+	std::vector<std::shared_ptr<TerrainComponent>> m_pTerrainComponents;
 	Vector3 m_v3TerrainScale;
+
+	float m_fMinTerrainHeight = std::numeric_limits<float>::max();
+	float m_fMaxTerrainHeight = -std::numeric_limits<float>::max();
 
 	const static std::string g_strTerrainPath;
 

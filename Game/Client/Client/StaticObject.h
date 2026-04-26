@@ -2,6 +2,8 @@
 #include "GameObject.h"
 class StaticObject : public IGameObject {
 public:
+	StaticObject() : IGameObject{ OBJECT_MOBILITY_TYPE::STATIC } {}
+
 	virtual void Initialize() override;
 	virtual void ProcessInput() override;
 	virtual void PreUpdate() override;

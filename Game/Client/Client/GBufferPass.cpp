@@ -49,34 +49,41 @@ void GBufferPass::SetRenderTargets(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 		pd3dCommandList->ClearRenderTargetView(pd3dRTVCPUDescriptorHandle[i], pfClearColor, 0, NULL);
 	}
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dDSVDescriptorHandle = RENDER->GetDepthStencilBufferHandle();
+	//CD3DX12_CPU_DESCRIPTOR_HANDLE d3dDSVDescriptorHandle = RENDER->GetDepthStencilBufferHandle();
+
+	const auto& dsvRef = RENDER->GetDepthStencilBuffer();
+	auto pDSV = dsvRef.GetResource();
+	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dDSVDescriptorHandle = pDSV->GetDSVHandle();
 	pd3dCommandList->ClearDepthStencilView(d3dDSVDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, NULL);
 
 	pd3dCommandList->OMSetRenderTargets(_countof(pd3dRTVCPUDescriptorHandle), pd3dRTVCPUDescriptorHandle, FALSE, &d3dDSVDescriptorHandle);
 }
 
-void GBufferPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void GBufferPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
+	m_CachedData.Clear();
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
 
 	// Frustum Culling
-	std::vector<std::shared_ptr<IGameObject>> frustumCulled;
+	const BoundingFrustum& xmFrustumWorld = CUR_SCENE->GetCamera()->GetFrustumWorld();
+
 	{
 		const std::vector<std::shared_ptr<IGameObject>>& inputResource = RENDER->GetObjectsToRender();
-		frustumCulled.reserve(inputResource.size());
+		m_CachedData.pObjFrustumCulled.reserve(inputResource.size());
 
-		const BoundingFrustum& xmFrustumWorld = CUR_SCENE->GetCamera()->GetFrustumWorld();
-		std::copy_if(inputResource.begin(), inputResource.end(), std::back_inserter(frustumCulled), [&xmFrustumWorld](const auto& pObj) {
+		std::copy_if(inputResource.begin(), inputResource.end(), std::back_inserter(m_CachedData.pObjFrustumCulled), [&xmFrustumWorld](const auto& pObj) {
 			const auto pCollider = pObj->GetComponentFromRoot<ICollider>();
 			return (pCollider) ? pCollider->IsInFrustum(xmFrustumWorld) : true;
 		});
 	}
 
-	m_unFrustumCulled = frustumCulled.size();
+	m_unFrustumCulled = m_CachedData.pObjFrustumCulled.size();
+
 	// Gather draw unit
-	BindGeometryData(pd3dCommandList, frustumCulled, outDescHandle);
+	BindGeometryData(pd3dCommandList, outDescHandle);
 
 	if (CUR_SCENE->GetTerrain() != nullptr) {
+		m_CachedData.pTerrainComponentFrustumCulled = CUR_SCENE->GetSpacePartition().TerrainBroadPhaseFrustumCulling(xmFrustumWorld);
 		BindTerrainData(pd3dCommandList, outDescHandle);
 	}
 
@@ -84,10 +91,9 @@ void GBufferPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 	SetRenderTargets(pd3dCommandList);
 }
 
-void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<std::shared_ptr<IGameObject>>& frustumCulled, OUT DescriptorHandle& outDescHandle) const
+void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) const
 {
-	m_CachedData.Clear();
-	for (const auto& pObj : frustumCulled) {
+	for (const auto& pObj : m_CachedData.pObjFrustumCulled) {
 		const auto& pMeshRenderer = pObj->GetComponent<MeshRenderer>();
 		auto [idx, bInserted] = m_CachedData.frustumCulledMap.Insert(pMeshRenderer->GetID(), { pMeshRenderer.get(), std::vector<const IGameObject*>{ pObj.get() } });
 		if (!bInserted) {
@@ -172,7 +178,6 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 
 	// Bind Per pass data
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
-	constexpr uint32 rootParamPerPass = std::to_underlying(ROOT_PARAMETER::PER_PASS_DATA);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE bindHandle = outDescHandle.cpuHandle;
 
 	// rootParam[11]
@@ -194,6 +199,11 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 
 	DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, unDescriptorInc), materialSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
+	// Set
+	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::PER_PASS_BUFFERS), outDescHandle.gpuHandle);
+	outDescHandle.cpuHandle.Offset(1 + 1 + 1, unDescriptorInc);
+	outDescHandle.gpuHandle.Offset(1 + 1 + 1, unDescriptorInc);
+
 	// Bind Texture : rootParam[14]
 	const auto& texDatas = m_CachedData.textureMap.GetElements();
 	const uint32 unNumTextures = texDatas.size();
@@ -203,9 +213,9 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 	}
 
 	// Set
-	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::PER_PASS_DATA), outDescHandle.gpuHandle);
-	outDescHandle.cpuHandle.Offset(1 + 1 + 1 + unNumTextures, unDescriptorInc);
-	outDescHandle.gpuHandle.Offset(1 + 1 + 1 + unNumTextures, unDescriptorInc);
+	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::PER_PASS_TEXTURES), outDescHandle.gpuHandle);
+	outDescHandle.cpuHandle.Offset(unNumTextures, unDescriptorInc);
+	outDescHandle.gpuHandle.Offset(unNumTextures, unDescriptorInc);
 }
 
 void GBufferPass::BindTerrainData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) const
@@ -254,7 +264,7 @@ void GBufferPass::BindTerrainData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 	outDescHandle.gpuHandle.Offset(9, unDescriptorInc);
 }
 
-void GBufferPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void GBufferPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	DrawGeometry(pd3dCommandList, outDescHandle);
 	
@@ -304,7 +314,7 @@ void GBufferPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 	worldTransformCBuffer.WriteData(&mtxTerrainWorld);
 	pd3dCommandList->SetGraphicsRootConstantBufferView(rootParamWorldTransform, worldTransformCBuffer.GPUAddress);
 
-	for (const auto& pComponent : pTerrainComponents) {
+	for (const auto& pComponent : m_CachedData.pTerrainComponentFrustumCulled) {
 		// Component
 		CB_TERRAIN_COMPONENT_DATA cbData = pComponent->MakeCBData();
 		ConstantBuffer cbTerrainComponents = RENDER->AllocCBuffer<CB_TERRAIN_COMPONENT_DATA>();
@@ -327,7 +337,7 @@ void GBufferPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 	}
 }
 
-void GBufferPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void GBufferPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
 	const auto& currentGBuffer = RENDER->GetCurrentGBuffer();
@@ -359,30 +369,55 @@ void GBufferPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList
 
 void GBufferPass::ShowDebugInfo()
 {
-	ImGui::Text("Frustum Culled : %d", m_unFrustumCulled);
+	ImGui::Text("Render items in frustum: %d", m_CachedData.pObjFrustumCulled.size());
+	ImGui::Text("Terrain components in frustum: %d", m_CachedData.pTerrainComponentFrustumCulled.size());
 	
-	for (const auto& param : m_RenderQueueCached) {
-		std::string str = std::format(
-			"IMesh {} - Instance : {}, Anim? : {}", 
-			(void*)param.first, 
-			param.second.nInstances,
-			(param.second.nBoneOffsets.size() != 0) ? "TRUE" : "FALSE");
+	if (ImGui::TreeNode("Objs to draw")) {
+		for (const auto& param : m_RenderQueueCached) {
+			std::string str = std::format(
+				"IMesh {} - Instance : {}, Anim? : {}",
+				(void*)param.first,
+				param.second.nInstances,
+				(param.second.nBoneOffsets.size() != 0) ? "TRUE" : "FALSE");
 
-		if (ImGui::TreeNode(str.c_str())) {
-			ImGui::Indent(20.f);
-			{
-				ImGui::Text("cbInstanceData.Material Index : %d", param.second.cbInstanceData.gnMaterialIndex);
-				ImGui::Text("cbInstanceData.Albedo Index : %d", param.second.cbInstanceData.gnTextureIndex[0]);
-				ImGui::Text("cbInstanceData.Normal Index : %d", param.second.cbInstanceData.gnTextureIndex[1]);
-				ImGui::Text("cbInstanceData.Metaillic Index : %d", param.second.cbInstanceData.gnTextureIndex[2]);
-				ImGui::Text("cbInstanceData.Emissive Index : %d", param.second.cbInstanceData.gnTextureIndex[3]);
+			if (ImGui::TreeNode(str.c_str())) {
+				ImGui::Indent(20.f);
+				{
+					ImGui::Text("cbInstanceData.Material Index : %d", param.second.cbInstanceData.gnMaterialIndex);
+					ImGui::Text("cbInstanceData.Albedo Index : %d", param.second.cbInstanceData.gnTextureIndex[0]);
+					ImGui::Text("cbInstanceData.Normal Index : %d", param.second.cbInstanceData.gnTextureIndex[1]);
+					ImGui::Text("cbInstanceData.Metaillic Index : %d", param.second.cbInstanceData.gnTextureIndex[2]);
+					ImGui::Text("cbInstanceData.Emissive Index : %d", param.second.cbInstanceData.gnTextureIndex[3]);
 
-				//ImGui::Text("pAnimationControllers.size() : %d", param.second.pAnimationControllers.size());
-				//ImGui::Text("sbWorldTransformData.size() : %d", param.second.sbWorldTransformData.size());
+					//ImGui::Text("pAnimationControllers.size() : %d", param.second.pAnimationControllers.size());
+					//ImGui::Text("sbWorldTransformData.size() : %d", param.second.sbWorldTransformData.size());
+				}
+				ImGui::Unindent(20.f);
+
+				ImGui::TreePop();
 			}
-			ImGui::Unindent(20.f);
-
-			ImGui::TreePop();
 		}
+
+		ImGui::TreePop();
 	}
+
+	if (ImGui::TreeNode("Terrain to draw")) {
+		int cnt = 0;
+		for (const auto& pTerrainComp : m_CachedData.pTerrainComponentFrustumCulled) {
+			std::string strTreeName = std::format("Terrain component #{}", cnt++);
+			if (ImGui::TreeNode(strTreeName.c_str())) {
+				Vector2 v2ComponentSize = pTerrainComp->GetComponentSize();
+				auto indexRange = pTerrainComp->GetIndexRange();
+
+				ImGui::Text("Component Size : %f, %f", v2ComponentSize.x, v2ComponentSize.y);
+				ImGui::Text("Index begins : %d", indexRange.unStartIndex);
+				ImGui::Text("Index count : %d", indexRange.unIndexCount);
+
+				ImGui::TreePop();
+			}
+		}
+
+		ImGui::TreePop();
+	}
+
 }

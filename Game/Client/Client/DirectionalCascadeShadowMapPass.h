@@ -8,6 +8,10 @@ public:
 		2048, 1024, 512, 256
 	};
 
+	constexpr static float g_fMaxShadowDistance = 200_m;
+	constexpr static float g_fLightDistanceMargin = 30.f;
+	constexpr static float g_fLambda = 0.7f; // 0 : Uniform / 1 : log scale
+
 public:
 	virtual void Initialize() override;
 
@@ -15,20 +19,20 @@ public:
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const RenderPassInput& input,
 		OUT RenderPassOutput& output,
-		OUT DescriptorHandle& outDescHandle) const override;
+		OUT DescriptorHandle& outDescHandle) override;
 
 	virtual void OnPreRender(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const RenderPassInput& input,
 		OUT RenderPassOutput& output,
-		OUT DescriptorHandle& outDescHandle) const override;
+		OUT DescriptorHandle& outDescHandle) override;
 
 
 	virtual void OnPostRender(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const RenderPassInput& input,
 		OUT RenderPassOutput& output,
-		OUT DescriptorHandle& outDescHandle) const override;
+		OUT DescriptorHandle& outDescHandle) override;
 
 private:
 	void CreatePipelineState();
@@ -46,6 +50,7 @@ private:
 
 	void DrawTerrain(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
+		int nCascadeIndex, 
 		OUT DescriptorHandle& outDescHandle) const;
 
 	void ComputeCascade() const;
@@ -75,7 +80,6 @@ private:
 	ComPtr<ID3D12PipelineState> m_pd3dTerrainPipelineState;
 
 	TextureRef<DepthStencilTexture> m_ShadowMapRef[RenderManager::g_unMaxPendingFrames][g_unNumCascade];
-
 	mutable bool m_bShowShadowMaps;
 
 	mutable struct CachedData {

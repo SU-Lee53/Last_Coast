@@ -9,8 +9,6 @@ void NetworkTestScene::BuildObjects()
 	m_pPlayer = std::make_shared<DebugPlayer>();
 	//std::shared_ptr<TexturedSprite> pTextureSprite = std::make_shared<TexturedSprite>("Opening", 0.f, 0.f, 1.0f, 1.0f);
 	//m_pSprites.push_back(pTextureSprite);
-
-	Scene::InitializeObjects();
 }
 
 void NetworkTestScene::OnEnterScene()

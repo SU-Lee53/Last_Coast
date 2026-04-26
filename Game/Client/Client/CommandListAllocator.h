@@ -41,6 +41,8 @@ public:
 			// Close Command List(default is opened)
 			hr = m_CmdPairs[i].pd3dCommandList->Close();
 		}
+
+		m_un64LastFenceValues.resize(nCmdLists, 0);
 	}
 
 	CommandListPair& Allocate() {
@@ -54,13 +56,45 @@ public:
 			__debugbreak();
 		}
 
-		hr = cmdPair.pd3dCommandList->Reset(cmdPair.pd3dCommandAllocator.Get(), NULL);
+		hr = cmdPair.pd3dCommandList->Reset(cmdPair.pd3dCommandAllocator.Get(), nullptr);
 		if (FAILED(hr)) {
 			SHOW_ERROR("Faied to reset CommandList");
 			__debugbreak();
 		}
 
 		return cmdPair;
+	}
+
+	CommandListPair* AllocateSafe(uint64 un64CompletedFenceValue) {
+		HRESULT hr;
+
+		for (uint32 i = 0; i < m_unCmdCount; ++i) {
+			if (m_un64LastFenceValues[i] > un64CompletedFenceValue) {
+				continue;
+			}
+
+			auto& cmdPair = m_CmdPairs[i];
+			hr = cmdPair.pd3dCommandAllocator->Reset();
+			if (FAILED(hr)) {
+				SHOW_ERROR("Faied to reset CommandAllocator");
+				__debugbreak();
+				return nullptr;
+			}
+
+			hr = cmdPair.pd3dCommandList->Reset(cmdPair.pd3dCommandAllocator.Get(), nullptr);
+			if (FAILED(hr)) {
+				SHOW_ERROR("Faied to reset CommandList");
+				__debugbreak();
+			}
+
+			return &cmdPair;
+		}
+
+		return nullptr;
+	}
+
+	void MarkSubmitted(uint32 id, uint64 fenceValue) {
+		m_un64LastFenceValues[id] = fenceValue;
 	}
 
 	void Reset() {
@@ -72,6 +106,6 @@ private:
 
 	uint32 m_unCmdCount = 0;
 	uint32 m_unAllocated = 0;
-
+	std::vector<uint64> m_un64LastFenceValues;
 };
 

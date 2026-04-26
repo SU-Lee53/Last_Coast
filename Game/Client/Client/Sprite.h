@@ -1,91 +1,31 @@
 ﻿#pragma once
+#include "UIComponent.h"
 
-class Sprite : public std::enable_shared_from_this<Sprite> {
+class Sprite : public IUIComponent {
 public:
-	Sprite(float fLeft, float fTop, float fRight, float fBottom, UINT uiLayerIndex = 0, bool bClickable = false);
-	virtual ~Sprite() {};
+	Sprite(const std::string& strTexturePath);
 
-	virtual void CreateShaderVariables(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
-	virtual void AddToUI(UINT nLayerIndex) = 0;
-	virtual void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle) const = 0;
-
-	void SetLayerIndex(UINT uiLayerIndex);
-	UINT GetLayerIndex() const { return m_nLayerIndex; };
-
-	bool IsCursorInSprite(float x, float y) const;
-
-	TextureRef<Texture> GetImageHandle() { return m_ImageHandle; }
+	virtual const TextureRef<Texture>& GetTextureRef() const override { return m_TextureHandle; }
+	
+	virtual UIRectData MakeSBData() const override;
 
 protected:
-	TextureRef<Texture> m_ImageHandle;
-
-	SpriteRect m_Rect;	// 윈도우 좌표계를 기준
-	bool m_bClickable;
-	UINT m_nLayerIndex;
+	TextureRef<Texture> m_TextureHandle{};
 
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TexturedSprite
-
-class Texture;
-
-class TexturedSprite : public Sprite {
+class Crosshair : public Sprite {
 public:
-	TexturedSprite(const std::string& strTextureName, float fLeft, float fTop, float fRight, float fBottom, UINT uiLayerIndex = 0, bool bClickable = false);
-	virtual ~TexturedSprite() {};
+	Crosshair() : Sprite("Crosshair") {
+		m_v2Anchor = Vector2{ 0,0 };
+		m_v2Pivot = Vector2{0.5f, 0.5f};
+		m_v2Position = Vector2{
+			static_cast<float>(WinCore::g_dwClientWidth) / 2.0f,
+			static_cast<float>(WinCore::g_dwClientHeight) / 2.0f
+		};
+		m_v2Size = Vector2{ 100.f,100.f };
 
-	void SetTexture(std::shared_ptr<Texture> pTexture);
-
-	virtual void AddToUI(UINT nLayerIndex) override;
-	virtual void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle) const override;
-
-private:
-	std::shared_ptr<Texture> m_pTexture;
-
+		m_unLayer = 0;
+		m_bVisible = false;
+	}
 };
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// TextSprite
-
-class TextSprite : public Sprite {
-public:
-	TextSprite(const std::string& strText, float fLeft, float fTop, float fRight, float fBottom, XMFLOAT4 xmf4TextColor = XMFLOAT4(1, 1, 1, 1), UINT uiLayerIndex = 0, bool bClickable = false);
-	virtual ~TextSprite() {};
-
-	void SetText(const std::string& strText);
-	void SetTextColor(const XMFLOAT4& xmf4TextColor);
-
-	virtual void CreateShaderVariables(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList) override;
-	virtual void AddToUI(UINT nLayerIndex) override;
-	virtual void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle) const override;
-
-private:
-	char m_cstrText[MAX_CHARACTER_PER_SPRITE];
-	int m_nTextLength = 0;
-	XMFLOAT4 m_xmf4TextColor{ 1.f, 1.f, 1.f, 1.f };
-
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// BillboardSprite
-
-class BillboardSprite : public Sprite {
-public:
-	BillboardSprite(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::string& strTextureName, XMFLOAT3 xmf3Position, XMFLOAT2 xmf2Size);
-	virtual ~BillboardSprite() {};
-
-	void SetTexture(std::shared_ptr<Texture> pTexture);
-	void SetPosition(XMFLOAT3 xmf3Position);
-	void SetSize(XMFLOAT2 xmf2Size);
-
-	virtual void AddToUI(UINT nLayerIndex) override;
-	virtual void Render(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, DescriptorHandle& descHandle) const override;
-
-private:
-	std::shared_ptr<Texture> m_pTexture;
-	XMFLOAT3 m_xmf3Position;
-	XMFLOAT2 m_xmf2Size;
-};
-

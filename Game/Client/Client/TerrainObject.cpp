@@ -46,6 +46,32 @@ CB_TERRAIN_LAYER_DATA TerrainObject::MakeLayerCBData()
 	return layerData;
 }
 
+std::vector<std::shared_ptr<TerrainComponent>> TerrainObject::GetTerrainComponentsInFrustum(const BoundingFrustum& xmFrustumWorld) const
+{
+	auto it = std::find_if(m_pTerrainComponents.begin(), m_pTerrainComponents.end(), [&xmFrustumWorld](const auto& pComponent) {
+		return xmFrustumWorld.Intersects(pComponent->GetBounds());
+	});
+
+	if (it == m_pTerrainComponents.end()) {
+		return {};
+	}
+
+	std::vector<std::shared_ptr<TerrainComponent>> pComponentsIntersected;
+	std::queue<size_t> q;
+	std::vector<bool> visited(m_pTerrainComponents.size(), false);
+
+	while (q.size() != 0) {
+		auto pComp = m_pTerrainComponents[q.front()];
+		q.pop();
+
+		if (xmFrustumWorld.Intersects(pComp->GetBounds())) {
+			pComponentsIntersected.push_back(pComp);
+		}
+	}
+
+
+}
+
 HRESULT TerrainObject::LoadFromFiles(const std::string& strFilename)
 {
 	// TODO : Height 조절 필요
@@ -57,7 +83,7 @@ HRESULT TerrainObject::LoadFromFiles(const std::string& strFilename)
 	nlohmann::json jTerrain = nlohmann::json::parse(in);
 	ReadTerrainData(jTerrain, terrainInfo);
 
-	// 2. Heightmap
+	// 2. Height map
 	m_pHeightMapRawImage = std::make_unique<HeightMapRawImage>();
 	hr = m_pHeightMapRawImage->LoadFromFile(
 		terrainInfo.strHeightMapName,
@@ -74,6 +100,7 @@ HRESULT TerrainObject::LoadFromFiles(const std::string& strFilename)
 		__debugbreak();
 		return E_FAIL;
 	}
+
 
 	// TerrainMesh + Component
 	BuildTerrainMesh(terrainInfo);
@@ -132,6 +159,11 @@ void TerrainObject::BuildTerrainMesh(const TERRAINLOADINFO& terrainInfo)
 			meshLoadInfo.v3Positions[unIndex] = ConvertUEToD3D(v3UEPosition);
 			meshLoadInfo.v3Normals[unIndex] = v3UENormal;
 			meshLoadInfo.v3Tangents[unIndex] = v3UETangent;
+
+
+			// Update height min/max
+			m_fMinTerrainHeight = std::min(m_fMinTerrainHeight, fUELocalZ);
+			m_fMaxTerrainHeight = std::max(m_fMaxTerrainHeight, fUELocalZ);
 		}
 	}
 
@@ -180,9 +212,38 @@ void TerrainObject::BuildTerrainMesh(const TERRAINLOADINFO& terrainInfo)
 				unIndices.insert(unIndices.end(), { v1, v3, v2 });
 			}
 		}
+
+		// Generate bounds
+		const uint32 unEndX = unBaseX + componentInfo.xmi2NumQuadsXZ.x;
+		const uint32 unEndZ = unBaseZ + componentInfo.xmi2NumQuadsXZ.y;
+
+		float fMinHeight = std::numeric_limits<float>::max(), fMaxHeight = -std::numeric_limits<float>::max();
+		for (uint32 z = unBaseZ; z <= unEndZ; ++z) {
+			for (uint32 x = unBaseX; x <= unEndX; ++x) {
+				const float fLocalX = static_cast<float>(x) * terrainInfo.v3TerrainScale.x;
+				const float fLocalZ = static_cast<float>(z) * terrainInfo.v3TerrainScale.z;
+				const float fHeight = m_pHeightMapRawImage->GetHeightLocal(fLocalX, fLocalZ);
+
+				fMinHeight = std::min(fMinHeight, fHeight);
+				fMaxHeight = std::max(fMaxHeight, fHeight);
+			}
+		}
+
+		const float fUEMinX = static_cast<float>(unBaseX) * terrainInfo.v3TerrainScale.x;
+		const float fUEMaxX = static_cast<float>(unEndX) * terrainInfo.v3TerrainScale.x;
+
+		const float fUEMinY = static_cast<float>(unBaseZ) * terrainInfo.v3TerrainScale.z;
+		const float fUEMaxY = static_cast<float>(unEndZ) * terrainInfo.v3TerrainScale.z;
+
+		Vector3 v3Min{fUEMinY, fMinHeight, fUEMinX};
+		Vector3 v3Max{fUEMaxY, fMaxHeight, fUEMaxX};
+
+		BoundingBox xmAABB;
+		BoundingBox::CreateFromPoints(xmAABB, v3Min, v3Max);
+
 		indexRange.unIndexCount = static_cast<uint32>(unIndices.size()) - indexRange.unStartIndex;
 		m_pTerrainComponents[i] = std::make_unique<TerrainComponent>();
-		m_pTerrainComponents[i]->Initialize(componentInfo, terrainInfo.v3TerrainScale, indexRange);
+		m_pTerrainComponents[i]->Initialize(componentInfo, terrainInfo.v3TerrainScale, indexRange, xmAABB);
 	}
 
 	// Material

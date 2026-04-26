@@ -5,24 +5,39 @@
 #include "TerrainObject.h"
 #include "TerrainTestScene.h"
 #include "Skybox.h"
-#include "NetworkTestScene.h"
+#include "MapTestScene.h"
+#include "TextBox.h"
 
 void GameScene::BuildObjects()
 {
+	using namespace std::chrono;
+
+	m_pUIBoard = std::make_unique<UIBoard>();
+	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+
 	m_pSkybox = std::make_shared<Skybox>();
-	m_pSkybox->Initialize("Day_HDRI.dds", "Night_HDRI.dds");
+	m_pSkybox->Initialize();
 
-	//m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	//m_pPlayer = std::make_shared<DebugPlayer>();
 	//m_pPlayer->Initialize();
-
-	m_pPlayer = std::make_shared<DebugPlayer>();
-	m_pPlayer->Initialize();
-
-	//LoadFromFiles("LightTest");
-	LoadFromFiles("Game");
 
 	m_pTerrain = std::make_shared<TerrainObject>();
 	m_pTerrain->LoadFromFiles("Game");
+
+	auto begin = high_resolution_clock::now();
+	LoadFromFiles("Game");
+	auto end = high_resolution_clock::now();
+	long long llLoadTime = duration_cast<milliseconds>(end - begin).count();
+
+	std::shared_ptr<TextBox> pText = std::make_shared<TextBox>(L"Malgun Gothic");
+	pText->SetText(std::format(L"로딩 시간 : {}ms", llLoadTime));
+	pText->SetLayer(0);
+	pText->SetAnchor(Vector2{ 0,0 });
+	pText->SetPivot(Vector2{ 0,0 });
+	pText->SetPosition(Vector2{ 10,150 });
+	pText->SetSize(Vector2{ 250,50 });
+	m_pUIBoard->InsertUI(pText);
+
 }
 
 void GameScene::OnEnterScene()
@@ -42,7 +57,7 @@ void GameScene::Update()
 	ImGui::Begin("Test");
 	{
 		if (ImGui::Button("Change Scene")) {
-			SCENE->ChangeScene<NetworkTestScene>();
+			SCENE->ChangeScene<MapTestScene>();
 			ImGui::End();
 			return;
 		}
@@ -71,8 +86,8 @@ void GameScene::Update()
 					Vector3 v3PlayerPos = transform->GetPosition();
 					ImGui::Text("Player Position : (%f, %f, %f)", v3PlayerPos.x, v3PlayerPos.y, v3PlayerPos.z);
 	
-					const auto& spaceDesc = GetSpacePartitionDesc();
-					SpacePartitionDesc::CellCoord cdPlayer = spaceDesc.WorldToCellXZ(v3PlayerPos);
+					const auto& spaceDesc = GetSpacePartition();
+					ScenePartition::CellCoord cdPlayer = spaceDesc.WorldToCellXZ(v3PlayerPos);
 					int32 cellIndex = spaceDesc.CellToIndex(cdPlayer.x, cdPlayer.y);
 					ImGui::NewLine();
 					ImGui::Text("====== Space Partition ======");
@@ -113,7 +128,7 @@ void GameScene::Update()
 			}
 	
 			if (ImGui::BeginTabItem("Objects")) {
-				for (const auto& pObj : m_pGameObjects) {
+				for (const auto& pObj : GetStaticObjectsInScene()) {
 					if (ImGui::TreeNode(pObj->GetName().c_str())) {
 						auto pTransform = pObj->GetTransform();
 						const Vector3 v3Position = pTransform->GetPosition();

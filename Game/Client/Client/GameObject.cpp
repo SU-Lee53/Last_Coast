@@ -5,7 +5,7 @@
 
 uint64 IGameObject::g_GameObjectIDBase = 0;
 
-IGameObject::IGameObject()
+IGameObject::IGameObject(OBJECT_MOBILITY_TYPE eType) : m_eObjectType{ eType }
 {
 	m_unGameObjectRuntimeID = g_GameObjectIDBase++;
 }

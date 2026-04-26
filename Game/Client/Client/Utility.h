@@ -1,10 +1,12 @@
 ﻿#pragma once
 
-template<typename KeyType, typename ElemType>
+template<typename KeyType, typename ElemType, typename Hasher = typename std::hash<KeyType>>
 class IndexMap {
 private:
-	std::unordered_map<KeyType, size_t> m_IndexMap;
+	std::unordered_map<KeyType, size_t, Hasher> m_IndexMap;
 	std::vector<ElemType> m_Elements;
+
+	std::vector<size_t> m_FreeIndices{};
 
 public:
 	void Reserve(size_t newSize) {
@@ -26,10 +28,32 @@ public:
 		m_Elements.clear();
 	}
 
-	size_t Size() { return m_Elements.size(); }
+	size_t Size() const { return m_Elements.size(); }
+
+	bool Contains(const KeyType& k) const {
+		return m_IndexMap.find(k) != m_IndexMap.end();
+	}
+
+	size_t GetIndex(const KeyType& k) const {
+		auto it = m_IndexMap.find(k);
+		return (it != m_IndexMap.end()) ? it->second : INVALID_ID;
+	}
+
+	ElemType* Find(const KeyType& k) {
+		auto it = m_IndexMap.find(k);
+		if (it == m_IndexMap.end())
+			return nullptr;
+		return &m_Elements[it->second];
+	}
+
+	const ElemType* Find(const KeyType& k) const {
+		auto it = m_IndexMap.find(k);
+		if (it == m_IndexMap.end())
+			return nullptr;
+		return &m_Elements[it->second];
+	}
 
 	//ElemType& operator[](KeyType key) { return m_Elements[m_IndexMap[key]]; }
-	size_t GetIndex(const KeyType& k) { return m_IndexMap[k]; }
 	ElemType& operator[](size_t idx) { return m_Elements[idx]; }
 
 	const std::vector<ElemType>& GetElements() { return m_Elements; }
@@ -138,6 +162,68 @@ inline void CreateAABBFromOBB(OUT BoundingBox& outxmAABB, IN const BoundingOrien
 
 	BoundingBox::CreateFromPoints(outxmAABB, BoundingOrientedBox::CORNER_COUNT, pxmf3Corners, sizeof(XMFLOAT3));
 }
+
+inline std::vector<uint8> ReadBinaryFile(const std::string& strPath)
+{
+	std::ifstream inFile(strPath, std::ios::binary | std::ios::ate);
+	if (!inFile) {
+		return {};
+	}
+
+	const size_t size = inFile.tellg();
+	if (size <= 0) {
+		return {};
+	}
+
+	std::vector<uint8> buf(size);
+	inFile.seekg(0, std::ios::beg);
+	inFile.read(reinterpret_cast<char*>(buf.data()), size);
+
+	if (!inFile) {
+		return {};
+	}
+
+	return buf;
+}
+
+inline Matrix ReadMatrixFromJson(const nlohmann::json& j)
+{
+	Matrix m;
+
+	m._11 = j[0].get<float>();  m._12 = j[1].get<float>();
+	m._13 = j[2].get<float>();  m._14 = j[3].get<float>();
+
+	m._21 = j[4].get<float>();  m._22 = j[5].get<float>();
+	m._23 = j[6].get<float>();  m._24 = j[7].get<float>();
+
+	m._31 = j[8].get<float>();  m._32 = j[9].get<float>();
+	m._33 = j[10].get<float>(); m._34 = j[11].get<float>();
+
+	m._41 = j[12].get<float>(); m._42 = j[13].get<float>();
+	m._43 = j[14].get<float>(); m._44 = j[15].get<float>();
+
+	return m;
+}
+
+inline Vector4 ReadVector4FromJson(const nlohmann::json& j)
+{
+	return Vector4{
+		j[0].get<float>(),
+		j[1].get<float>(),
+		j[2].get<float>(),
+		j[3].get<float>()
+	};
+}
+
+inline Vector3 ReadVector3FromJson(const nlohmann::json& j)
+{
+	return Vector3{
+		j[0].get<float>(),
+		j[1].get<float>(),
+		j[2].get<float>(),
+	};
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////
 // Unit Conversion + Literals

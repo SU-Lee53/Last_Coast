@@ -4,6 +4,7 @@
 #include "ConstantBufferPool.h"
 #include "StructuredBufferPool.h"
 
+#include "TextRenderer.h"
 #include "RenderGraph.h"
 
 enum class ROOT_PARAMETER : uint32 {
@@ -14,14 +15,15 @@ enum class ROOT_PARAMETER : uint32 {
 	HDR_RESULT								= 4,
 	TONE_MAPPING_DATA						= 5,
 	FOG_DATA								= 6,
-	PER_PASS_DATA							= 7,
-	PER_INSTANCE_DATA						= 8,
-	BONE_TRANSFORM_OFFSETS					= 9,
-	LIGHT_CAMERA_DATA						= 10,
-	TERRAIN_LAYER							= 11,
-	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 12,
-	TERRAIN_WORLD_TRANSFORM					= 13,
-	SPRITE_DATA								= 14,
+	PER_PASS_BUFFERS						= 7,
+	PER_PASS_TEXTURES						= 8,
+	PER_INSTANCE_DATA						= 9,
+	BONE_TRANSFORM_OFFSETS					= 10,
+	LIGHT_CAMERA_DATA						= 11,
+	TERRAIN_LAYER							= 12,
+	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 13,
+	TERRAIN_WORLD_TRANSFORM					= 14,
+	UI_DATA									= 15,
 };
 
 struct GBuffer {
@@ -43,7 +45,6 @@ class RenderManager {
 
 public:
 	constexpr static uint32 g_unMaxPendingFrames = 3;
-	constexpr static uint32 g_unMaxSpriteLayers = 3;
 
 public:
 	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
@@ -56,13 +57,8 @@ public:
 	void Add(std::shared_ptr<T> pObj);
 	void Reset();
 
-	// Sprites
-	void AddSprite(const TextureRef<Texture>& texHandle, const SpriteRect& rect, uint32 unLayer);
-	void AddSprite(const TextureRef<RenderTargetTexture>& texHandle, const SpriteRect& rect, uint32 unLayer);
-	void AddSprite(const TextureRef<DepthStencilTexture>& texHandle, const SpriteRect& rect, uint32 unLayer);
-	void AddSprite(const TextureRef<UnorderedAccessTexture>& texHandle, const SpriteRect& rect, uint32 unLayer);
-
 	const std::shared_ptr<IMesh> GetQuadMesh() const { return m_pQuadMesh; }
+	TextRenderer& GetTextRenderer() { return m_TextRenderer; }
 
 public:
 	DescriptorHeap& GetDescriptorHeap() { return m_DescriptorHeapForDraw[m_unCurrentContextIndex]; }
@@ -84,7 +80,6 @@ public:
 	// Renderable Items Getter
 	const auto& GetObjectsToRender() const { return m_pObjectsToRender; }
 	const auto& GetTransparentObjectsToRender() const { return m_pTransparentObjectsToRender; }
-	const auto& GetSprites() const { return m_pSpritesToRender; }
 
 private:
 	void BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle);
@@ -98,6 +93,11 @@ public:
 	
 	// Mesh
 	static ComPtr<ID3D12RootSignature> g_pd3dGlobalRootSignature;
+	
+	// TextRenderer
+	TextRenderer m_TextRenderer;
+
+
 
 private:
 	// Objects Ready-To-Draw
@@ -107,20 +107,6 @@ private:
 	std::shared_ptr<IMesh> m_pQuadMesh;
 
 private:
-	// Sprite
-	struct SpriteRenderParameter {
-		const TextureHandle& texHandle;
-		SpriteRect Rect;
-
-		SpriteRenderParameter(const TextureRef<Texture>& texHandle, const SpriteRect& r) : texHandle{ texHandle.srvHandle }, Rect{ r } {}
-		SpriteRenderParameter(const TextureRef<RenderTargetTexture>& texHandle, const SpriteRect& r) : texHandle{ texHandle.srvHandle }, Rect{ r } {}
-		SpriteRenderParameter(const TextureRef<DepthStencilTexture>& texHandle, const SpriteRect& r) : texHandle{ texHandle.srvHandle }, Rect{ r } {}
-		SpriteRenderParameter(const TextureRef<UnorderedAccessTexture>& texHandle, const SpriteRect& r) : texHandle{ texHandle.srvHandle }, Rect{ r } {}
-	};
-
-	std::array<std::vector<SpriteRenderParameter>, g_unMaxSpriteLayers> m_pSpritesToRender;
-
-private:
 	// Frame Resources
 	DescriptorHeap			m_DescriptorHeapForDraw[g_unMaxPendingFrames];
 	ConstantBufferPool		m_ConstantBufferPool[g_unMaxPendingFrames];
@@ -128,8 +114,6 @@ private:
 
 	GBuffer									m_GBuffers[g_unMaxPendingFrames];
 	TextureRef<RenderTargetTexture>			m_HDRRenderTargetIDs[2][g_unMaxPendingFrames];
-
-
 	TextureRef<RenderTargetTexture>			m_LDRRenderTargetIDs[g_unMaxPendingFrames];
 
 
@@ -151,9 +135,17 @@ public:
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentHDRBufferHandle(int nIndex) const;
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentLDRBufferHandle() const;
 
-	ComPtr<ID3D12GraphicsCommandList> GetCommandList() const { return m_ppd3dCommandList[m_unCurrentContextIndex]; }
+	const ComPtr<ID3D12GraphicsCommandList>& GetCommandList() const { return m_ppd3dCommandList[m_unCurrentContextIndex]; }
+	const ComPtr<ID3D12CommandQueue>& GetCommandQueue() const { return m_pd3dCommandQueue; }
 
 	void WaitForGPUComplete();
+
+	void ImmediateStateTransition(
+		const ComPtr<ID3D12Resource>& pResource,
+		OUT D3D12_RESOURCE_STATES& outd3dState,
+		D3D12_RESOURCE_STATES d3dTargetState
+	);
+
 
 private:
 	void OnPrepareRender();
@@ -179,9 +171,12 @@ private:
 	const DXGI_FORMAT m_dxgiRenderTargetFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 	uint32 m_unBackBufferIndex = 0;
 
-	ComPtr<ID3D12CommandQueue>			m_pd3dCommandQueue								= nullptr;
-	ComPtr<ID3D12CommandAllocator>		m_ppd3dCommandAllocator[g_unMaxPendingFrames]	= {};
-	ComPtr<ID3D12GraphicsCommandList>	m_ppd3dCommandList[g_unMaxPendingFrames]		= {};
+	ComPtr<ID3D12CommandQueue>			m_pd3dCommandQueue = nullptr;
+	ComPtr<ID3D12CommandAllocator>		m_ppd3dCommandAllocator[g_unMaxPendingFrames] = {};
+	ComPtr<ID3D12GraphicsCommandList>	m_ppd3dCommandList[g_unMaxPendingFrames] = {};
+
+	CommandListAllocator m_ImmediateTransitionCmdLists;
+
 
 	ComPtr<ID3D12Fence> m_pd3dFence							= nullptr;
 	HANDLE m_hFenceEvent									= nullptr;

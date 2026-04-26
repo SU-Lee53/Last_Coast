@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "TerrainComponent.h"
 
-void TerrainComponent::Initialize(const TERRAINCOMPONENTLOADINFO& componentLoadInfo, const Vector3& v3TerrainScale, const TerrainIndexRange& indexRange)
+void TerrainComponent::Initialize(const TERRAINCOMPONENTLOADINFO& componentLoadInfo, const Vector3& v3TerrainScale, const TerrainIndexRange& indexRange, const BoundingBox& xmBound)
 {
 	m_v2ComponentOriginXZ = componentLoadInfo.v2ComponentOriginXZ;
 	m_xmi2NumQuadsXZ = componentLoadInfo.xmi2NumQuadsXZ;
@@ -9,6 +9,8 @@ void TerrainComponent::Initialize(const TERRAINCOMPONENTLOADINFO& componentLoadI
 	m_WeightMapHandles = TEXTURE->LoadTexture(componentLoadInfo.strWeightMapName);
 	m_v3TerrainScale = v3TerrainScale;
 	m_IndexRange = indexRange;
+
+	m_xmAABBComponentBounds = xmBound;
 }
 
 CB_TERRAIN_COMPONENT_DATA TerrainComponent::MakeCBData() const
