@@ -1,37 +1,21 @@
-﻿//-----------------------------------------------------------------------------
-// 게임서버프로그래밍 강의 서버
+﻿#include "pch.h"
+#include "Session.h"
+#include "Room.h"
 
-#include <iostream>
-#include <WS2tcpip.h>
-#include <array>
-#include <MSWSock.h>
-#include "protocol.h"
+std::array<Session, MAX_PLAYERS> clients;
+std::array<Room, MAX_ROOMS> rooms;
 
-#pragma comment(lib, "MSWSock.lib")
-#pragma comment(lib, "WS2_32.lib")
-using namespace std;
+SOCKET g_server;
+HANDLE g_iocp;
 
-enum IOType { IO_SEND, IO_RECV, IO_ACCEPT };
-
-class EXP_OVER {
-public:
-	WSAOVERLAPPED m_over;
-	IOType  m_iotype;
-	WSABUF	m_wsa;
-	char  m_buff[BUF_SIZE];
-	EXP_OVER()
-	{
-		ZeroMemory(&m_over, sizeof(m_over));
-		m_wsa.buf = m_buff;
-		m_wsa.len = BUF_SIZE;
+Room* find_empty_room()
+{
+	for (auto& room : rooms) {
+		if (!room.is_full())
+			return &room;
 	}
-	EXP_OVER(IOType iot) : m_iotype(iot)
-	{
-		ZeroMemory(&m_over, sizeof(m_over));
-		m_wsa.buf = m_buff;
-		m_wsa.len = BUF_SIZE;
-	}
-};
+	return nullptr;
+}
 
 void error_display(const wchar_t* msg, int err_no)
 {
@@ -48,141 +32,6 @@ void error_display(const wchar_t* msg, int err_no)
 	LocalFree(lpMsgBuf);
 }
 
-class SESSION {
-public:
-	SESSION() {
-		m_is_connected = false;
-		m_id = 999;
-		m_client = INVALID_SOCKET;
-		m_recv_over.m_iotype = IO_RECV;
-		m_x = 0; 		m_y = 0;
-		m_prev_recv = 0;
-	}
-
-	~SESSION()
-	{
-		if (m_is_connected)
-			closesocket(m_client);
-	}
-
-public:
-	void		do_recv()
-	{
-		DWORD recv_flag = 0;
-		memset(&m_recv_over.m_over, 0, sizeof(m_recv_over.m_over));
-		WSARecv(m_client, &m_recv_over.m_wsa, 1, 0, &recv_flag, &m_recv_over.m_over, nullptr);
-	}
-	void		do_send(int num_bytes, char* mess)
-	{
-		EXP_OVER* o = new EXP_OVER(IO_SEND);
-		o->m_wsa.len = num_bytes;
-		memcpy(o->m_buff, mess, num_bytes);
-		WSASend(m_client, &o->m_wsa, 1, 0, 0, &o->m_over, nullptr);
-	}
-	void		send_avatar_info()
-	{
-		S2C_AvatarInfo packet;
-		packet.size = sizeof(S2C_AvatarInfo);
-		packet.type = S2C_AVATAR_INFO;
-		packet.playerId = m_id;
-		packet.x = m_x;
-		packet.y = m_y;
-		do_send(packet.size, reinterpret_cast<char*>(&packet));
-	}
-	void		send_move_packet(int mover);
-	void		send_add_player(int player_id);
-	void		send_login_success()
-	{
-		S2C_LoginResult packet;
-		packet.size = sizeof(S2C_LoginResult);
-		packet.type = S2C_LOGIN_RESULT;
-		packet.success = true;
-		strncpy_s(packet.message, "Login successful.", sizeof(packet.message));
-		do_send(packet.size, reinterpret_cast<char*>(&packet));
-	}
-	void		send_remove_player(int player_id)
-	{
-		S2C_RemovePlayer packet;
-		packet.size = sizeof(S2C_RemovePlayer);
-		packet.type = S2C_REMOVE_PLAYER;
-		packet.playerId = player_id;
-		do_send(packet.size, reinterpret_cast<char*>(&packet));
-	}
-	void		process_packet(unsigned char* p);
-
-public:
-	SOCKET		m_client;
-	EXP_OVER	m_recv_over;
-	int			m_id;
-	bool		m_is_connected;
-	int			m_prev_recv;
-	char		m_username[MAX_NAME_LEN];
-	short		m_x, m_y;
-};
-
-std::array<SESSION, MAX_PLAYERS> clients;
-
-void SESSION::send_add_player(int player_id)
-{
-	S2C_AddPlayer packet;
-	packet.size = sizeof(S2C_AddPlayer);
-	packet.type = S2C_ADD_PLAYER;
-	packet.playerId = player_id;
-	SESSION& pl = clients[player_id];
-	memcpy(packet.username, pl.m_username, sizeof(packet.username));
-	packet.x = pl.m_x;
-	packet.y = pl.m_y;
-	do_send(packet.size, reinterpret_cast<char*>(&packet));
-}
-
-void SESSION::process_packet(unsigned char* p)
-{
-	PACKET_TYPE type = *reinterpret_cast<PACKET_TYPE*>(&p[1]);
-	switch (type) {
-	case C2S_LOGIN: {
-		C2S_Login* packet = reinterpret_cast<C2S_Login*>(p);
-		strncpy_s(m_username, packet->username, MAX_NAME_LEN);
-		cout << "Player[" << m_id << "] logged in as " << m_username << endl;
-		send_avatar_info();
-	}
-				  break;
-	case C2S_MOVE: {
-		C2S_Move* packet = reinterpret_cast<C2S_Move*>(p);
-		DIRECTION dir = packet->dir;
-		// TODO : Move 로직
-		switch (dir) {
-		case UP: m_y++;
-			break;
-		case DOWN: m_y--;
-			break;
-		case LEFT: m_x--;
-			break;
-		case RIGHT: m_x++;
-			break;
-		}
-		cout << "Player[" << m_id << "] moved to (" << m_x << ", " << m_y << ")\n";
-		for (auto& cl : clients)
-			if (true == cl.m_is_connected)
-				cl.send_move_packet(m_id);
-	}
-				 break;
-	default:
-		cout << "Unknown packet type received from player[" << m_id << "].\n";
-		break;
-	}
-}
-
-void SESSION::send_move_packet(int mover)
-{
-	S2C_MovePlayer packet;
-	packet.size = sizeof(S2C_MovePlayer);
-	packet.type = S2C_MOVE_PLAYER;
-	packet.playerId = mover;
-	packet.x = clients[mover].m_x;
-	packet.y = clients[mover].m_y;
-	do_send(packet.size, reinterpret_cast<char*>(&packet));
-}
-
 void send_login_fail(SOCKET client, const char* message)
 {
 	S2C_LoginResult packet;
@@ -194,6 +43,138 @@ void send_login_fail(SOCKET client, const char* message)
 	wsa_buf.buf = reinterpret_cast<char*>(&packet);
 	wsa_buf.len = packet.size;
 	WSASend(client, &wsa_buf, 1, 0, 0, nullptr, nullptr);
+}
+
+void disconnect(int id)
+{
+	Session& cl = clients[id];
+
+	if (!cl.m_is_connected) return;
+
+	std::cout << "Client[" << id << "] disconnected.\n";
+
+	// Room에서 제거
+	if (cl.m_room != nullptr) {
+		Room* room = cl.m_room;
+
+		for (int other_id : room->players) {
+			if (other_id == -1 || other_id == id) continue;
+			clients[other_id].send_remove_player(id);
+		}
+
+		room->remove_player(id);
+		cl.m_room = nullptr;
+	}
+
+	closesocket(cl.m_client);
+	cl.m_client = INVALID_SOCKET;
+	cl.m_is_connected = false;
+}
+
+void worker_thread()
+{
+	while (true) {
+		DWORD num_bytes = 0;
+		ULONG_PTR long_key = 0;
+		LPOVERLAPPED over = nullptr;
+		BOOL ret = GetQueuedCompletionStatus(g_iocp, &num_bytes, &long_key, &over, INFINITE);
+		int key = static_cast<int>(long_key);
+		if (FALSE == ret) {
+			error_display(L"GQCS Error", WSAGetLastError());
+			continue;
+		}
+		EXP_OVER* exp_over = reinterpret_cast<EXP_OVER*>(over);
+
+		switch (exp_over->m_iotype) {
+		case IO_ACCEPT:
+		{
+			int player_index = -1;
+			// 빈 Session 슬롯 찾기
+			for (int i = 0; i < MAX_PLAYERS; ++i) {
+				if (!clients[i].m_is_connected) {
+					player_index = i;
+					break;
+				}
+			}
+			// 서버 인원 꽉 참
+			if (player_index == -1) {
+				send_login_fail(exp_over->m_client_socket, "Server Full");
+				closesocket(exp_over->m_client_socket);
+			}
+			// 접속 허용
+			else {
+				Room* room = find_empty_room();
+
+				if (room == nullptr) {
+					send_login_fail(exp_over->m_client_socket, "No Room Available");
+					closesocket(exp_over->m_client_socket);
+				}
+				else {
+					room->add_player(player_index);
+					CreateIoCompletionPort((HANDLE)exp_over->m_client_socket, g_iocp, player_index, 0);
+
+					clients[player_index].init(exp_over->m_client_socket, player_index, room);
+					clients[player_index].send_login_success();
+
+					Room* room = clients[player_index].m_room;
+
+					for (int other_id : room->players) {
+						if (other_id == -1 || other_id == player_index)
+							continue;
+
+						clients[other_id].send_add_player(player_index);
+						clients[player_index].send_add_player(other_id);
+					}
+
+					clients[player_index].do_recv();
+					std::cout << "Client[" << player_index << "] Connected. " << "Room assigned.\n";
+				}
+			}
+
+			// 다음 Accept 준비
+			exp_over->m_client_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+			ZeroMemory(&exp_over->m_over, sizeof(exp_over->m_over));
+			AcceptEx(g_server, exp_over->m_client_socket, exp_over->m_buff, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, NULL, &exp_over->m_over);
+		}
+		break;
+
+		case IO_RECV:
+		{
+			// cout << "Client[" << key << "] sent a message." << endl;
+			if (0 == num_bytes) {
+				disconnect(key);
+				break;
+			}
+			Session& cl = clients[key];
+			if (nullptr == cl) {
+				cout << "Session not found for client[" << player_index << "].\n";
+				break;
+			}
+			unsigned char* p = reinterpret_cast<unsigned char*>(exp_over->m_buff);
+			int data_size = num_bytes + cl->m_prev_recv;
+			while (data_size > 0) {
+				int packet_size = p[0];
+				if (packet_size > data_size) break;
+				if (false == cl->process_packet(p)) {
+					disconnect(key);
+					break;
+				}
+				p += packet_size;
+				data_size -= packet_size;
+			}
+			if (data_size > 0) memmove(cl->m_recv_over.m_buff, p, data_size);
+			cl->m_prev_recv = data_size;
+			cl->do_recv();
+		}
+		break;
+		case IO_SEND: {
+			// cout << "Message sent. to client[" << key << "]\n";
+			EXP_OVER* o = reinterpret_cast<EXP_OVER*>(over);
+			delete o;
+		}
+					break;
+		}
+	}
 }
 
 int main()
@@ -218,114 +199,14 @@ int main()
 		sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16,
 		NULL, &accept_over.m_over);
 
-	for (int player_index = 0;;) {
-		DWORD num_bytes;
-		ULONG_PTR key;
-		LPOVERLAPPED over;
+	std::vector <std::thread> worker_threads;
+	int num_threads = std::thread::hardware_concurrency();
 
-		GetQueuedCompletionStatus(h_iocp, &num_bytes, &key, &over, INFINITE);
+	for (int i = 0; i < num_threads; ++i)
+		worker_threads.emplace_back(worker_thread);
+	for (auto& th : worker_threads)
+		th.join();
 
-		if (over == nullptr) {
-			error_display(L"GQCS Errror: ", WSAGetLastError());
-			if (key == -1) {
-				exit(-1);
-			}
-			std::cout << "client[" << key << "] Disconnected.\n";
-			clients[key].m_is_connected = false;
-			for (auto& cl : clients)
-				if (true == cl.m_is_connected)
-					cl.send_remove_player(key);
-			closesocket(clients[key].m_client);
-			clients[key].m_client = INVALID_SOCKET;
-			continue;
-		}
-
-		EXP_OVER* exp_over = reinterpret_cast<EXP_OVER*>(over);
-
-		switch (exp_over->m_iotype) {
-
-		case IO_ACCEPT:
-		{
-			cout << "Client connected." << endl;
-			player_index = -1;
-			for (int i = 0; i < MAX_PLAYERS; ++i)
-				if (!clients[i].m_is_connected) {
-					player_index = i;
-					break;
-				}
-			if (-1 == player_index) {
-				cout << "No more player can be accepted." << endl;
-				send_login_fail(client_socket, "Server is full.");
-				closesocket(client_socket);
-			}
-			else {
-				CreateIoCompletionPort((HANDLE)client_socket, h_iocp, player_index, 0);
-				clients[player_index].m_is_connected = true;
-				clients[player_index].m_client = client_socket;
-				clients[player_index].m_x = 0;
-				clients[player_index].m_y = 0;
-				clients[player_index].m_id = player_index;
-				clients[player_index].send_login_success();
-				clients[player_index].m_prev_recv = 0;
-
-				// 다른 클라이언트들에게 player_index 플레이어가 접속했다고 알리고, player_index 플레이어에게 다른 클라이언트들의 정보를 알려준다.
-				for (auto& other : clients) {
-					if (false == other.m_is_connected)
-						continue;
-					if (other.m_id == player_index)
-						continue;
-					other.send_add_player(player_index);
-					clients[player_index].send_add_player(other.m_id);
-				}
-
-				clients[player_index].do_recv();
-			}
-
-			// 다음 클라이언트 접속을 위해 새로운 소켓과 AcceptEx 준비
-			client_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
-			AcceptEx(server, client_socket, &accept_over.m_buff, 0,
-				sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16,
-				NULL, &accept_over.m_over);
-		}
-		break;
-
-		case IO_RECV:
-		{
-			int player_index = static_cast<int>(key);
-			SESSION& cl = clients[player_index];
-			unsigned char* p = reinterpret_cast<unsigned char*>(exp_over->m_buff);
-
-			// 패킷 재조립
-			int data_size = num_bytes + cl.m_prev_recv;
-			while (data_size > 0) {
-				int packet_size = p[0];
-				if (packet_size > data_size) break;
-				cl.process_packet(p);
-				p += packet_size;
-				data_size -= packet_size;
-			}
-			if (data_size > 0) {
-				memmove(cl.m_recv_over.m_buff, p, data_size);
-				cl.m_prev_recv = data_size;
-			}
-			cl.do_recv();
-		}
-		break;
-
-		case IO_SEND:
-		{
-			cout << "Message sent. to client[" << key << "]\n";
-			EXP_OVER* o = reinterpret_cast<EXP_OVER*>(over);
-			delete o;
-		}
-		break;
-
-		default:
-			cout << "Unknown IO type." << endl;
-			exit(-1);
-			break;
-		}
-	}
 	closesocket(server);
 	WSACleanup();
 }
