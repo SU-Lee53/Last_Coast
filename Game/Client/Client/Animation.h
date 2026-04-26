@@ -3,6 +3,10 @@
 struct KeyFrame {
 	double fTime;
 	AnimationKey animationKeys;
+
+	KeyFrame() = default;
+	KeyFrame(double fTime, const Vector3& v3Translate, const Quaternion& v4Rotate, const Vector3& v3Scale)
+		: fTime{ fTime }, animationKeys{ v3Translate, v4Rotate, v3Scale } { }
 };
 
 class Animation {

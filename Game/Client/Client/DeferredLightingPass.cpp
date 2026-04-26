@@ -1,13 +1,13 @@
 ﻿#include "pch.h"
-#include "DefferedLightingPass.h"
+#include "DeferredLightingPass.h"
 #include "Mesh.h"
 
-void DefferedLightingPass::Initialize()
+void DeferredLightingPass::Initialize()
 {
 	CreatePipelineState();
 }
 
-void DefferedLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DeferredLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	// Set Render Targets
 	auto pHDRRenderTarget = std::static_pointer_cast<RenderTargetTexture>(RENDER->GetCurrentHDRBuffer(0).GetResource());
@@ -25,7 +25,7 @@ void DefferedLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCom
 	pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, nullptr);
 }
 
-void DefferedLightingPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DeferredLightingPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	pd3dCommandList->SetPipelineState(m_pd3dPipelineState.Get());
 
@@ -33,7 +33,7 @@ void DefferedLightingPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 	pQuadMesh->Render(pd3dCommandList, 1);
 }
 
-void DefferedLightingPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DeferredLightingPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	// Fog 를 위해 HDR Result 에 HDR0 을 Bind
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
@@ -54,7 +54,7 @@ void DefferedLightingPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCo
 	outDescHandle.gpuHandle.Offset(1, unDescriptorInc);
 }
 
-void DefferedLightingPass::CreatePipelineState()
+void DeferredLightingPass::CreatePipelineState()
 {
 	std::vector<D3D12_INPUT_ELEMENT_DESC> d3dInputElements = {
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},

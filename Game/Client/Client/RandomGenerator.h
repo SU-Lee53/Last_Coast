@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <random>
 
 class RandomGenerator {
@@ -11,13 +11,23 @@ public:
 		return std::uniform_real_distribution<float>{min, max}(g_dre);
 	}
 
-	static XMFLOAT4 GenerateRandomColor() {
+	static XMFLOAT4 GenerateRandomColor4() {
+		std::uniform_real_distribution<float> uid{ 0.f, 1.f };
+		float r = uid(g_dre);
+		float g = uid(g_dre);
+		float b = uid(g_dre);
+		float a = uid(g_dre);
+
+		return XMFLOAT4(r, g, b, a);
+	}
+
+	static XMFLOAT3 GenerateRandomColor3() {
 		std::uniform_real_distribution<float> uid{ 0.f, 1.f };
 		float r = uid(g_dre);
 		float g = uid(g_dre);
 		float b = uid(g_dre);
 
-		return XMFLOAT4(r, g, b, 1.0f);
+		return XMFLOAT3(r, g, b);
 	}
 
 	static XMVECTOR GenerateRandomUnitVectorOnSphere() {

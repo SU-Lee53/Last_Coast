@@ -44,20 +44,14 @@ std::shared_ptr<IGameObject> ModelManager::LoadOrGet(const std::string& strFileN
 
 std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& strFileName)
 {
-	std::string strFilePath = std::format("{}/{}.bin", g_strModelBasePath, strFileName);
-
 	if (auto pObj = Get(strFileName)) {
 		return pObj;
 	}
 
-	std::ifstream inFile{ strFilePath, std::ios::binary };
-	if (!inFile) {
-		__debugbreak();
-		return nullptr;
-	}
+	std::string strFilePath = std::format("{}/{}.bin", g_strModelBasePath, strFileName);
 
-	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {}); 
-	nlohmann::json j = nlohmann::json::from_bson(bson);;
+	auto buf = ::ReadBinaryFile(strFilePath);
+	nlohmann::json j = nlohmann::json::from_bson(buf);
 
 	std::shared_ptr<IGameObject> pGameObject;
 	pGameObject = LoadFrameHierarchyFromFile(nullptr, nullptr, j["Hierarchy"]);
@@ -117,8 +111,8 @@ std::shared_ptr<IGameObject> ModelManager::LoadFrameHierarchyFromFile(std::share
 
 	unsigned nMeshes = inJson["nMeshes"].get<unsigned>();
 	pGameObject->m_strFrameName = inJson["Name"].get<std::string>();
-	pGameObject->GetTransform()->SetFrameMatrix(XMFLOAT4X4(inJson["Transform"].get<std::vector<float>>().data()));
-
+	pGameObject->GetTransform()->SetFrameMatrix(::ReadMatrixFromJson(inJson["Transform"]));
+	
 
 	std::vector<MESHLOADINFO> meshLoadInfos;
 	std::vector<MATERIALLOADINFO> materialLoadInfos;
@@ -164,39 +158,54 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 	std::iota(loadIndices.begin(), loadIndices.end(), 0);
 
 	// Positions
-	std::vector<float> positions = inJson["Positions"].get<std::vector<float>>();
-	meshLoadInfo.v3Positions.reserve(nVertices);
-	std::transform(loadIndices.begin(), loadIndices.end(), std::back_inserter(meshLoadInfo.v3Positions), [&](size_t i) {
-		size_t base = i * 3;
-		return Vector3{ positions[base], positions[base + 1], positions[base + 2] };
-	});
+	const auto& positions = inJson["Positions"];
+	meshLoadInfo.v3Positions.resize(nVertices);
+	for (size_t i = 0; i < nVertices; ++i) {
+		const size_t base = i * 3;
+		meshLoadInfo.v3Positions[i] = Vector3{
+			positions[base + 0].get<float>(),
+			positions[base + 1].get<float>(),
+			positions[base + 2].get<float>()
+		};
+	}
 
 	// Normals
-	std::vector<float> normals = inJson["Normals"].get<std::vector<float>>();
-	meshLoadInfo.v3Normals.reserve(nVertices);
-	std::transform(loadIndices.begin(), loadIndices.end(), std::back_inserter(meshLoadInfo.v3Normals), [&](size_t i) {
-		size_t base = i * 3;
-		return Vector3{ normals[base], normals[base + 1], normals[base + 2] };
-	});
+	const auto& normals = inJson["Normals"];
+	meshLoadInfo.v3Normals.resize(nVertices);
+	for (size_t i = 0; i < nVertices; ++i) {
+		const size_t base = i * 3;
+		meshLoadInfo.v3Normals[i] = Vector3{
+			normals[base + 0].get<float>(),
+			normals[base + 1].get<float>(),
+			normals[base + 2].get<float>()
+		};
+	}
 
 	// Tangents
-	std::vector<float> tangents = inJson["Tangents"].get<std::vector<float>>();
-	meshLoadInfo.v3Tangents.reserve(nVertices);
-	std::transform(loadIndices.begin(), loadIndices.end(), std::back_inserter(meshLoadInfo.v3Tangents), [&](size_t i) {
-		size_t base = i * 3;
-		return Vector3{ tangents[base], tangents[base + 1], tangents[base + 2] };
-	});
+	const auto& tangents = inJson["Tangents"];
+	meshLoadInfo.v3Tangents.resize(nVertices);
+	for (size_t i = 0; i < nVertices; ++i) {
+		const size_t base = i * 3;
+		meshLoadInfo.v3Tangents[i] = Vector3{
+			tangents[base + 0].get<float>(),
+			tangents[base + 1].get<float>(),
+			tangents[base + 2].get<float>()
+		};
+	}
 
 	// TexCoord0
 	unsigned nUVChannels = inJson["nUVChannels"].get<unsigned>();
 	if (nUVChannels != 0) {
 		const nlohmann::json& texCoordData = inJson["TexCoord0"];
-		std::vector<float> texCoord = texCoordData["TexCoord"].get<std::vector<float>>();
-		meshLoadInfo.v2TexCoord0.reserve(nVertices);
-		std::transform(loadIndices.begin(), loadIndices.end(), std::back_inserter(meshLoadInfo.v2TexCoord0), [&](size_t i) {
-			size_t base = i * 2;
-			return Vector2{ texCoord[base], texCoord[base + 1] };
-			});
+		const auto& texCoord = texCoordData["TexCoord"];
+		meshLoadInfo.v2TexCoord0.resize(nVertices);
+		for (size_t i = 0; i < nVertices; ++i) {
+			const size_t base = i * 2;
+			meshLoadInfo.v2TexCoord0[i] = Vector2{
+				texCoord[base + 0].get<float>(),
+				texCoord[base + 1].get<float>(),
+			};
+		}
 	}
 	else {
 		meshLoadInfo.v2TexCoord0.resize(nVertices);
@@ -205,20 +214,30 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 	meshLoadInfo.bIsSkinned = inJson["Skinned?"].get<bool>();
 	if (meshLoadInfo.bIsSkinned) {
 		// BlendIndices
-		std::vector<int> blendIndices = inJson["BlendIndices"].get<std::vector<int>>();
-		meshLoadInfo.xmun4BlendIndices.reserve(nVertices);
-		std::transform(loadIndices.begin(), loadIndices.end(), std::back_inserter(meshLoadInfo.xmun4BlendIndices), [&](size_t i) {
-			size_t base = i * 4;
-			return XMUINT4{ (UINT)blendIndices[base], (UINT)blendIndices[base + 1], (UINT)blendIndices[base + 2], (UINT)blendIndices[base + 3] };
-		});
+		const auto& blendIndices = inJson["BlendIndices"];
+		meshLoadInfo.xmun4BlendIndices.resize(nVertices);
+		for (size_t i = 0; i < nVertices; ++i) {
+			const size_t base = i * 4;
+			meshLoadInfo.xmun4BlendIndices[i] = XMUINT4{
+				blendIndices[base + 0].get<uint32>(),
+				blendIndices[base + 1].get<uint32>(),
+				blendIndices[base + 2].get<uint32>(),
+				blendIndices[base + 3].get<uint32>()
+			};
+		}
 
 		// BlendWeights
-		std::vector<float> blendWeights = inJson["BlendWeights"].get<std::vector<float>>();
-		meshLoadInfo.v4BlendWeights.reserve(nVertices);
-		std::transform(loadIndices.begin(), loadIndices.end(), std::back_inserter(meshLoadInfo.v4BlendWeights), [&](size_t i) {
-			size_t base = i * 4;
-			return Vector4{ blendWeights[base], blendWeights[base + 1], blendWeights[base + 2], blendWeights[base + 3] };
-		});
+		const auto& blendWeights = inJson["BlendWeights"];
+		meshLoadInfo.v4BlendWeights.resize(nVertices);
+		for (size_t i = 0; i < nVertices; ++i) {
+			const size_t base = i * 4;
+			meshLoadInfo.v4BlendWeights[i] = Vector4{
+				blendWeights[base + 0].get<float>(),
+				blendWeights[base + 1].get<float>(),
+				blendWeights[base + 2].get<float>(),
+				blendWeights[base + 3].get<float>()
+			};
+		}
 
 		meshLoadInfo.eMeshType = MESH_TYPE::SKINNED;
 	}
@@ -234,15 +253,12 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 
 	// Bounds (AABB)
 	const nlohmann::json& aabbData = inJson["Bounds"];
-	std::vector<float> fAABBCenter = aabbData["Center"].get<std::vector<float>>();
-	meshLoadInfo.v3AABBCenter = Vector3(fAABBCenter[0], fAABBCenter[1], fAABBCenter[2]);
-	std::vector<float> fAABBExtents = aabbData["Extents"].get<std::vector<float>>();
-	meshLoadInfo.v3AABBExtents = Vector3(fAABBExtents[0], fAABBExtents[1], fAABBExtents[2]);
+	meshLoadInfo.v3AABBCenter = ::ReadVector3FromJson(aabbData["Center"]);
+	meshLoadInfo.v3AABBExtents = ::ReadVector3FromJson(aabbData["Extents"]); 
 
 	// Material
 	const nlohmann::json& materialData = inJson["Material"];
 	materialLoadInfo = LoadMaterialInfoFromFiles(materialData[0]);
-
 
 	return { meshLoadInfo, materialLoadInfo };
 }
@@ -251,10 +267,10 @@ MATERIALLOADINFO ModelManager::LoadMaterialInfoFromFiles(const nlohmann::json& i
 {
 	MATERIALLOADINFO materialLoadInfo;
 
-	materialLoadInfo.v4Diffuse = Vector4(inJson["AlbedoColor"].get<std::vector<float>>().data());
-	materialLoadInfo.v4Ambient = Vector4(inJson["AmbientColor"].get<std::vector<float>>().data());
-	materialLoadInfo.v4Specular = Vector4(inJson["SpecularColor"].get<std::vector<float>>().data());
-	materialLoadInfo.v4Emissive = Vector4(inJson["EmissiveColor"].get<std::vector<float>>().data());
+	materialLoadInfo.v4Diffuse = ::ReadVector4FromJson(inJson["AlbedoColor"]);
+	materialLoadInfo.v4Ambient = ::ReadVector4FromJson(inJson["AmbientColor"]);
+	materialLoadInfo.v4Specular = ::ReadVector4FromJson(inJson["SpecularColor"]);
+	materialLoadInfo.v4Emissive = ::ReadVector4FromJson(inJson["EmissiveColor"]);
 
 	materialLoadInfo.fGlossiness = inJson["fGlossiness"].get<float>();
 	materialLoadInfo.fSmoothness = inJson["fSmoothness"].get<float>();

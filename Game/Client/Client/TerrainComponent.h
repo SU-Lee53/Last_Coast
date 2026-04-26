@@ -17,12 +17,19 @@ struct TerrainIndexRange {
 
 class TerrainComponent {
 public:
-	void Initialize(const TERRAINCOMPONENTLOADINFO& componentLoadInfo, const Vector3& v3TerrainScale, const TerrainIndexRange& indexRange);
+	void Initialize(
+		const TERRAINCOMPONENTLOADINFO& componentLoadInfo, 
+		const Vector3& v3TerrainScale, 
+		const TerrainIndexRange& indexRange, 
+		const BoundingBox& xmBound);
+
 	CB_TERRAIN_COMPONENT_DATA MakeCBData() const;
 	const TerrainIndexRange& GetIndexRange() const { return m_IndexRange; };
 	TextureRef<Texture> GetWeightMapRefs() const { return m_WeightMapHandles; }
 
 	Vector2 GetComponentSize() const { return Vector2{ (m_xmi2NumQuadsXZ.x) * m_v3TerrainScale.x, (m_xmi2NumQuadsXZ.y) * m_v3TerrainScale.z }; }
+
+	const BoundingBox& GetBounds() const { return m_xmAABBComponentBounds; }
 
 private:
 	Vector2 m_v2ComponentOriginXZ = Vector2{ 0.f, 0.f };
@@ -32,6 +39,6 @@ private:
 	TextureRef<Texture> m_WeightMapHandles;
 	
 	TerrainIndexRange m_IndexRange{};
-
+	BoundingBox m_xmAABBComponentBounds;
 };
 

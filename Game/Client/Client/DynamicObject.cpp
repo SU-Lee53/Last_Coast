@@ -24,6 +24,8 @@ void DynamicObject::PostUpdate()
 
 void DynamicObject::ResolveTerrain(OUT Vector3& outv3Delta, OUT TerrainHit& outHitResult, bool bWasGrounded)
 {
+	if (bWasGrounded) return;
+
 	auto& pTerrain = CUR_SCENE->GetTerrain();
 	if (!pTerrain) {
 		return;
@@ -61,15 +63,6 @@ void DynamicObject::ResolveTerrain(OUT Vector3& outv3Delta, OUT TerrainHit& outH
 		v3Normal = -v3Normal;
 	}
 	v3Normal.Normalize();
-
-	/*const float fGroundDot = bWasGrounded ? fLeaveGroundDot : fEnterGroundDot;
-	if (v3Normal.y < fGroundDot) {
-		outHitResult.bGrounded = false;
-		outHitResult.v3Normal = v3Normal;
-		outHitResult.fHeight = fHeight;
-		outHitResult.fPenetrationDepth = 0.f;
-		return;
-	}*/
 
 	float fDrop = fHeightCur - fHeightNext;
 	fDrop = fDrop < 0.f ? 0.f : fDrop;

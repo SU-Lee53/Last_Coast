@@ -18,20 +18,20 @@ public:
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const RenderPassInput& input,
 		OUT RenderPassOutput& output,
-		OUT DescriptorHandle& outDescHandle) const override;
+		OUT DescriptorHandle& outDescHandle) override;
 
 	virtual void OnPreRender(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const RenderPassInput& input,
 		OUT RenderPassOutput& output, 
-		OUT DescriptorHandle& outDescHandle) const override;
+		OUT DescriptorHandle& outDescHandle) override;
 
 
 	virtual void OnPostRender(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const RenderPassInput& input, 
 		OUT RenderPassOutput& output, 
-		OUT DescriptorHandle& outDescHandle) const override;
+		OUT DescriptorHandle& outDescHandle) override;
 
 	virtual void ShowDebugInfo() override;
 
@@ -40,7 +40,6 @@ private:
 
 	void BindGeometryData(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-		const std::vector<std::shared_ptr<IGameObject>>& frustumCulled, 
 		OUT DescriptorHandle& outDescHandle) const;
 	
 	void BindTerrainData(
@@ -60,6 +59,9 @@ private:
 	mutable uint32 m_unFrustumCulled = 0;
 
 	mutable struct CachedData {
+		std::vector<std::shared_ptr<IGameObject>> pObjFrustumCulled;
+		std::vector<std::shared_ptr<TerrainComponent>> pTerrainComponentFrustumCulled;
+
 		IndexMap<MeshRenderer::ID, std::pair<const MeshRenderer*, std::vector<const IGameObject*>>> frustumCulledMap;
 		IndexMap<IMaterial::ID, MaterialData> materialMap;
 		IndexMap<Texture::ID, const TextureRef<Texture>*> textureMap;
@@ -82,6 +84,9 @@ private:
 			sbBoneTransformDatas.clear();
 
 			animationInstancingData.clear();
+
+			pObjFrustumCulled.clear();
+			pTerrainComponentFrustumCulled.clear();
 		}
 
 	} m_CachedData;

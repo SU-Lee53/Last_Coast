@@ -20,7 +20,7 @@ void DirectionalCascadeShadowMapPass::Initialize()
 	CreatePipelineState();
 }
 
-void DirectionalCascadeShadowMapPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DirectionalCascadeShadowMapPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
 
@@ -34,7 +34,7 @@ void DirectionalCascadeShadowMapPass::OnPreRender(ComPtr<ID3D12GraphicsCommandLi
 	ComputeCascade();
 }
 
-void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	constexpr uint32 rootParamLightCameraData = std::to_underlying(ROOT_PARAMETER::LIGHT_CAMERA_DATA);
 
@@ -68,7 +68,7 @@ void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> p
 			std::copy_if(AABBCulled.begin(), AABBCulled.end(), std::back_inserter(frustumCulled), [&xmFrsutum](const auto& pObj) {
 				const auto pCollider = pObj->GetComponentFromRoot<ICollider>();
 				return (pCollider) ? pCollider->IsInFrustum(xmFrsutum) : true;
-			});
+				});
 		}
 
 		BindGeometryData(pd3dCommandList, frustumCulled, outDescHandle);
@@ -81,12 +81,12 @@ void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> p
 		DrawGeometry(pd3dCommandList, outDescHandle);
 
 		if (CUR_SCENE->GetTerrain() != nullptr) {
-			DrawTerrain(pd3dCommandList, outDescHandle);
+			DrawTerrain(pd3dCommandList, i, outDescHandle);
 		}
 	}
 }
 
-void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
 
@@ -122,20 +122,6 @@ void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandL
 	auto pCamera = CUR_SCENE->GetCamera();
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 
-
-	if (m_bShowShadowMaps) {
-		constexpr float fSize = 0.2f;
-		for (const auto& [idx, texRef] : m_ShadowMapRef[unCurrentContext] | std::views::enumerate) {
-			SpriteRect r;
-			{
-				r.fLeft = 0.f;
-				r.fTop = (float)idx * fSize;
-				r.fRight = r.fLeft + fSize;
-				r.fBottom = r.fTop + fSize;
-			}
-			RENDER->AddSprite(texRef, r, 0);
-		}
-	}
 }
 
 void DirectionalCascadeShadowMapPass::CreatePipelineState()
@@ -154,11 +140,11 @@ void DirectionalCascadeShadowMapPass::CreatePipelineState()
 		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("ShadowStandardVS");
 		d3dPipelineDesc.PS = { nullptr, 0 };
 		d3dPipelineDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
 		d3dPipelineDesc.RasterizerState.FrontCounterClockwise = FALSE;
-		d3dPipelineDesc.RasterizerState.DepthBias = 100000;
+		d3dPipelineDesc.RasterizerState.DepthBias = 1000;
 		d3dPipelineDesc.RasterizerState.DepthBiasClamp = 0.0f;
-		d3dPipelineDesc.RasterizerState.SlopeScaledDepthBias = 1.0f;
+		d3dPipelineDesc.RasterizerState.SlopeScaledDepthBias = 2.0f;
 		d3dPipelineDesc.RasterizerState.DepthClipEnable = TRUE;
 		d3dPipelineDesc.RasterizerState.MultisampleEnable = FALSE;
 		d3dPipelineDesc.RasterizerState.AntialiasedLineEnable = FALSE;
@@ -311,7 +297,7 @@ void DirectionalCascadeShadowMapPass::BindGeometryData(ComPtr<ID3D12GraphicsComm
 
 	// Bind Per pass data
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
-	constexpr uint32 rootParamPerPass = std::to_underlying(ROOT_PARAMETER::PER_PASS_DATA);
+	constexpr uint32 rootParamPerPass = std::to_underlying(ROOT_PARAMETER::PER_PASS_BUFFERS);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE bindHandle = outDescHandle.cpuHandle;
 
 	// rootParam[11]
@@ -327,9 +313,9 @@ void DirectionalCascadeShadowMapPass::BindGeometryData(ComPtr<ID3D12GraphicsComm
 	DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, unDescriptorInc), boneTransformSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	// Set
-	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::PER_PASS_DATA), outDescHandle.gpuHandle);
-	outDescHandle.cpuHandle.Offset(4, unDescriptorInc);
-	outDescHandle.gpuHandle.Offset(4, unDescriptorInc);
+	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamPerPass, outDescHandle.gpuHandle);
+	outDescHandle.cpuHandle.Offset(3, unDescriptorInc);
+	outDescHandle.gpuHandle.Offset(3, unDescriptorInc);
 }
 
 void DirectionalCascadeShadowMapPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) const
@@ -357,7 +343,7 @@ void DirectionalCascadeShadowMapPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandL
 	}
 }
 
-void DirectionalCascadeShadowMapPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) const
+void DirectionalCascadeShadowMapPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, int nCascadeIndex, OUT DescriptorHandle& outDescHandle) const
 {
 	const auto& pTerrain = CUR_SCENE->GetTerrain();
 	const auto& pTerrainComponents = pTerrain->GetTerrainComponents();
@@ -373,9 +359,9 @@ void DirectionalCascadeShadowMapPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandLi
 	worldTransformCBuffer.WriteData(&mtxTerrainWorld);
 	pd3dCommandList->SetGraphicsRootConstantBufferView(rootParamWorldTransform, worldTransformCBuffer.GPUAddress);
 
-	for (const auto& pComponent : pTerrainComponents) {
+	for (const auto& pComponent : CUR_SCENE->GetSpacePartition().TerrainBroadPhaseFrustumCulling(m_CascadeCached[nCascadeIndex].xmFrustum)) {
 		const auto& terrainIndexRange = pComponent->GetIndexRange();
-		pTerrainMesh->Render(pd3dCommandList, 1, terrainIndexRange.unStartIndex, terrainIndexRange.unIndexCount);
+		pTerrainMesh->RenderPosition(pd3dCommandList, 1, terrainIndexRange.unStartIndex, terrainIndexRange.unIndexCount);
 	}
 }
 
@@ -383,8 +369,10 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 {
 	auto pCamera = CUR_SCENE->GetCamera();
 	auto xmFrustum = pCamera->GetFrustumWorld();
-	float fNearToFar = xmFrustum.Far - xmFrustum.Near;
-	float fDistancePerCascade = fNearToFar / static_cast<float>(g_unNumCascade);
+	//float fNearToFar = xmFrustum.Far - xmFrustum.Near;
+	//float fDistancePerCascade = fNearToFar / static_cast<float>(g_unNumCascade);
+	float fCascadeNearBase = xmFrustum.Near;
+	float fCascadeFarBase = std::min(xmFrustum.Far, g_fMaxShadowDistance);
 
 	float fFovY = pCamera->GetFovYInRadian();
 	float fAspectRatio = pCamera->GetAspectRatio();
@@ -393,8 +381,25 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 		// 1. Generate cascade camera frustum
 		BoundingFrustum xmCascadeFrustum;
 
-		float fCascadeNear = xmFrustum.Near + (i * fDistancePerCascade);
-		float fCascadeFar = xmFrustum.Near + ((i + 1) * fDistancePerCascade);
+		// uniform split
+		//float fCascadeNear = xmFrustum.Near + (i * fDistancePerCascade);
+		//float fCascadeFar = xmFrustum.Near + ((i + 1) * fDistancePerCascade);
+
+		// Practical split
+		float n = fCascadeNearBase, f = fCascadeFarBase;
+
+		float p0 = static_cast<float>(i) / static_cast<float>(g_unNumCascade);
+		float p1 = static_cast<float>(i + 1) / static_cast<float>(g_unNumCascade);
+
+		float fLogNear = n * std::powf(f / n, p0);
+		float fLogFar = n * std::powf(f / n, p1);
+
+		float fUniformNear = n + (f - n) * p0;
+		float fUniformFar = n + (f - n) * p1;
+
+		float fCascadeNear = std::lerp(fUniformNear, fLogNear, g_fLambda);
+		float fCascadeFar = std::lerp(fUniformFar, fLogFar, g_fLambda);
+
 		Matrix mtxCascadeCameraProj = XMMatrixPerspectiveFovLH(fFovY, fAspectRatio, fCascadeNear, fCascadeFar);
 		BoundingFrustum::CreateFromMatrix(xmCascadeFrustum, mtxCascadeCameraProj);
 		xmCascadeFrustum.Transform(xmCascadeFrustum, pCamera->GetCameraWorldTransfromMatrix());
@@ -425,7 +430,9 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 		float fBackoff = *std::ranges::max_element(r);
 		fBackoff = std::sqrt(fBackoff);
 
-		Vector3 v3LightPos = v3FrustumCenter - (v3LightDir * fBackoff * ((g_unNumCascade - i) * 2.f));
+		//Vector3 v3LightPos = v3FrustumCenter - (v3LightDir * fBackoff * ((g_unNumCascade - i) * 2.f));
+		Vector3 v3LightPos = v3FrustumCenter - (v3LightDir * (fBackoff + g_fLightDistanceMargin));
+		
 		Matrix mtxLightView = XMMatrixLookToLH(v3LightPos, v3LightDir, v3LightUpReal);
 
 		// 5. Calculate bounds using corners transformed into light space
@@ -439,9 +446,9 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 		float fMaxX = v3MaxX->x, fMaxY = v3MaxY->y, fMaxZ = v3MaxZ->z;
 
 		// 6. Add z-margin
-		//float fMargin = 50.0f;
-		//fMinZ -= fMargin;
-		//fMaxZ += fMargin;
+		float fMargin = 50.0f;
+		fMinZ -= fMargin;
+		fMaxZ += fMargin;
 
 		// 7. off-center orthographic project
 		const float fShadowMapSize = static_cast<float>(g_unCascadeShadowMapSize[i]);

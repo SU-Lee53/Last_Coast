@@ -3,7 +3,8 @@
 constexpr short PORT = 9000;
 //constexpr int WORLD_WIDTH = 8;
 //constexpr int WORLD_HEIGHT = 8;
-constexpr int MAX_PLAYERS = 4;
+constexpr int MAX_PLAYERS = 3;
+constexpr int MAX_ROOMS = 300;
 constexpr int MAX_NAME_LEN = 20;
 constexpr int BUF_SIZE = 512;
 
@@ -17,6 +18,9 @@ enum PACKET_TYPE {
 	S2C_ZOMBIE_STATE,                             // 서버 → 클라이언트: 매 틱 위치/방향/행동상태
 	S2C_ZOMBIE_ATTACK,                            // 서버 → 클라이언트: 좀비 공격 히트 이벤트
 };
+enum IOType { IO_SEND, IO_RECV, IO_ACCEPT };
+
+enum PACKET_TYPE { C2S_LOGIN, C2S_MOVE, S2C_LOGIN_RESULT, S2C_AVATAR_INFO, S2C_ADD_PLAYER, S2C_REMOVE_PLAYER, S2C_MOVE_PLAYER };
 enum DIRECTION { UP, DOWN, LEFT, RIGHT };
 
 #pragma pack(push, 1) // Ensure no padding between struct members

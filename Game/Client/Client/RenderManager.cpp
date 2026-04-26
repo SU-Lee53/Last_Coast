@@ -17,9 +17,6 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 	CreateDepthStencil();
 
 	CreateGlobalRootSignature(pd3dDevice);
-
-	//m_pForwardPass = std::make_shared<ForwardPass>(pd3dDevice, pd3dCommandList);
-
 	// DescriptorHandle Heap For Draw
 	D3D12_DESCRIPTOR_HEAP_DESC d3dHeapDesc;
 	{
@@ -64,6 +61,8 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 	}
 
 	m_pQuadMesh = std::make_shared<QuadMesh>(-1, 1);
+
+	m_TextRenderer.Initialize(m_pd3dCommandQueue);
 }
 
 void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
@@ -107,7 +106,7 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	d3dDescriptorRanges[18].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbTerrainComponentData 
 	d3dDescriptorRanges[19].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 11, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainWeightMap
 
-	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[15];
+	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[16];
 	// Per Scene
 	d3dRootParameters[0].InitAsDescriptorTable(2, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);	// Per Draw
 	d3dRootParameters[1].InitAsDescriptorTable(2, &d3dDescriptorRanges[2], D3D12_SHADER_VISIBILITY_ALL);	// Cascade Shadow maps
@@ -118,19 +117,20 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	d3dRootParameters[6].InitAsConstantBufferView(3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// Fog parameters
 	
 	// Per Pass
-	d3dRootParameters[7].InitAsDescriptorTable(4, &d3dDescriptorRanges[11], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass
+	d3dRootParameters[7].InitAsDescriptorTable(3, &d3dDescriptorRanges[11], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass
+	d3dRootParameters[8].InitAsDescriptorTable(1, &d3dDescriptorRanges[14], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass textures
 
 	// Per Instance(Draw)
-	d3dRootParameters[8]. InitAsConstantBufferView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE,			D3D12_SHADER_VISIBILITY_ALL);		// cbInstanceData
-	d3dRootParameters[9]. InitAsShaderResourceView(2, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE,	D3D12_SHADER_VISIBILITY_ALL);		// gBoneTransformOffsets
-	d3dRootParameters[10].InitAsConstantBufferView(3, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE,			D3D12_SHADER_VISIBILITY_ALL);		// cbLightCameraData
+	d3dRootParameters[9]. InitAsConstantBufferView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE,			D3D12_SHADER_VISIBILITY_ALL);		// cbInstanceData
+	d3dRootParameters[10]. InitAsShaderResourceView(2, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE,	D3D12_SHADER_VISIBILITY_ALL);		// gBoneTransformOffsets
+	d3dRootParameters[11].InitAsConstantBufferView(3, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE,			D3D12_SHADER_VISIBILITY_ALL);		// cbLightCameraData
 
-	d3dRootParameters[11].InitAsDescriptorTable(3, &d3dDescriptorRanges[15], D3D12_SHADER_VISIBILITY_ALL);								// TerrainLayer
-	d3dRootParameters[12].InitAsDescriptorTable(2, &d3dDescriptorRanges[18], D3D12_SHADER_VISIBILITY_ALL);								// TerrainComponent
-	d3dRootParameters[13].InitAsConstantBufferView(4, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_ALL);		// gnWorldTransformIndex
-	d3dRootParameters[14].InitAsShaderResourceView(12, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_ALL);		// gSpriteData
+	d3dRootParameters[12].InitAsDescriptorTable(3, &d3dDescriptorRanges[15], D3D12_SHADER_VISIBILITY_ALL);								// TerrainLayer
+	d3dRootParameters[13].InitAsDescriptorTable(2, &d3dDescriptorRanges[18], D3D12_SHADER_VISIBILITY_ALL);								// TerrainComponent
+	d3dRootParameters[14].InitAsConstantBufferView(4, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_ALL);		// gnWorldTransformIndex
+	d3dRootParameters[15].InitAsShaderResourceView(12, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_ALL);		// gUIData
 
-	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[4];
+	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[5];
 	// s0 : SkyboxSampler
 	d3dSamplerDesc[0].Init(0);
 	d3dSamplerDesc[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -158,21 +158,28 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	d3dSamplerDesc[2].MaxLOD = D3D12_FLOAT32_MAX;
 	d3dSamplerDesc[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	// s3 : ComparisonSampler
+	// s3 : Anistropic
 	d3dSamplerDesc[3].Init(3);
-	d3dSamplerDesc[3].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-	d3dSamplerDesc[3].AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	d3dSamplerDesc[3].AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	d3dSamplerDesc[3].AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	d3dSamplerDesc[3].MipLODBias = 0.0f;
-	d3dSamplerDesc[3].MaxAnisotropy = 1;
-	d3dSamplerDesc[3].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-	d3dSamplerDesc[3].BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
+	d3dSamplerDesc[3].Filter = D3D12_FILTER_ANISOTROPIC;
 	d3dSamplerDesc[3].MinLOD = 0;
 	d3dSamplerDesc[3].MaxLOD = D3D12_FLOAT32_MAX;
-	d3dSamplerDesc[3].ShaderRegister = 3;
-	d3dSamplerDesc[3].RegisterSpace = 0;
 	d3dSamplerDesc[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	// s4 : ComparisonSampler
+	d3dSamplerDesc[4].Init(4);
+	d3dSamplerDesc[4].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+	d3dSamplerDesc[4].AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	d3dSamplerDesc[4].AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	d3dSamplerDesc[4].AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	d3dSamplerDesc[4].MipLODBias = 0.0f;
+	d3dSamplerDesc[4].MaxAnisotropy = 1;
+	d3dSamplerDesc[4].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	d3dSamplerDesc[4].BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
+	d3dSamplerDesc[4].MinLOD = 0;
+	d3dSamplerDesc[4].MaxLOD = D3D12_FLOAT32_MAX;
+	d3dSamplerDesc[4].ShaderRegister = 4;
+	d3dSamplerDesc[4].RegisterSpace = 0;
+	d3dSamplerDesc[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 		| D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS
@@ -241,12 +248,15 @@ void RenderManager::ShowDebugOptions()
 
 	ImGui::Text("Current Context : %d", m_unCurrentContextIndex);
 
+	ImGui::Text("IGameObject in current scene : %d", CUR_SCENE->GetStaticObjectsInScene().size() + CUR_SCENE->GetDynamicObjectsInScene().size());
+	ImGui::Text("IGameObject Render Candidates : %d", m_pObjectsToRender.size());
+
 	ImGui::SeparatorText("Render Queue");
 	ImGui::Text("Opaque : %d", m_pObjectsToRender.size());
 	ImGui::Text("Transparent: %d", m_pTransparentObjectsToRender.size());
-	for (uint32 i = 0; i < g_unMaxSpriteLayers; ++i) {
-		ImGui::Text("Sprite Layer[%d] : %d", i, m_pSpritesToRender[i].size());
-	}
+	//for (uint32 i = 0; i < g_unMaxSpriteLayers; ++i) {
+	//	ImGui::Text("Sprite Layer[%d] : %d", i, m_pSpritesToRender[i].size());
+	//}
 
 	ImGui::SeparatorText("Render Graph");
 	m_RenderGraph.ShowDebugInfo();
@@ -325,35 +335,10 @@ void RenderManager::ShowDebugOptions()
 	ImGui::End();
 }
 
-void RenderManager::AddSprite(const TextureRef<Texture>& texHandle, const SpriteRect& rect, uint32 unLayer)
-{
-	m_pSpritesToRender[unLayer].emplace_back(texHandle, rect);
-}
-
-void RenderManager::AddSprite(const TextureRef<RenderTargetTexture>& texHandle, const SpriteRect& rect, uint32 unLayer)
-{
-	m_pSpritesToRender[unLayer].emplace_back(texHandle, rect);
-}
-
-void RenderManager::AddSprite(const TextureRef<DepthStencilTexture>& texHandle, const SpriteRect& rect, uint32 unLayer)
-{
-	m_pSpritesToRender[unLayer].emplace_back(texHandle, rect);
-}
-
-void RenderManager::AddSprite(const TextureRef<UnorderedAccessTexture>& texHandle, const SpriteRect& rect, uint32 unLayer)
-{
-	m_pSpritesToRender[unLayer].emplace_back(texHandle, rect);
-}
-
 void RenderManager::Reset()
 {
 	m_pObjectsToRender.clear();
 	m_pTransparentObjectsToRender.clear();
-
-	for (uint32 i = 0; i < g_unMaxSpriteLayers; ++i) {
-		m_pSpritesToRender[i].clear();
-	}
-
 
 	m_ConstantBufferPool[m_unCurrentContextIndex].Reset();
 	m_StructuredBufferPool[m_unCurrentContextIndex].Reset();
@@ -363,8 +348,6 @@ void RenderManager::BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dComma
 {
 	// descRange[0]  :  cbSceneData					1
 	// descRange[1]  :  gLightData					1
-
-
 	uint32 unDescIncrementSize = D3DCore::g_nCBVSRVDescriptorIncrementSize;
 
 	// Cache
@@ -473,7 +456,10 @@ void RenderManager::OnPrepareRender()
 	GetDepthStencilBuffer().GetResource()->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = GetCurrentBackBufferHandle();
-	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dDSVDescriptorHandle = GetDepthStencilBufferHandle();
+
+	const auto& dsvRef = RENDER->GetDepthStencilBuffer();
+	auto pDSV = dsvRef.GetResource();
+	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dDSVDescriptorHandle = pDSV->GetDSVHandle();
 
 	float pfClearColor[4] = { 0.f, 0.0f, 0.0f, 1.0f };
 	pd3dCommandList->ClearRenderTargetView(d3dRTVCPUDescriptorHandle, pfClearColor, 0, NULL);
@@ -517,8 +503,8 @@ void RenderManager::CreateCommandQueueAndList()
 		SHOW_ERROR("Failed to create CommandQueue");
 	}
 
-	// Create Command Allocator
 	for (uint32 i = 0; i < g_unMaxPendingFrames; ++i) {
+		// Create Command Allocator
 		hr = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_ppd3dCommandAllocator[i].GetAddressOf()));
 		if (FAILED(hr)) {
 			SHOW_ERROR("Failed to create CommandAllocator");
@@ -531,8 +517,10 @@ void RenderManager::CreateCommandQueueAndList()
 		}
 		// Close Command List(default is opened)
 		hr = m_ppd3dCommandList[i]->Close();
+
 	}
 
+	m_ImmediateTransitionCmdLists.Initialize(30);
 }
 
 void RenderManager::CreateSwapChain()
@@ -663,6 +651,36 @@ void RenderManager::WaitForGPUComplete()
 	for (uint32 i = 0; i < g_unMaxPendingFrames; ++i) {
 		WaitForFenceValue(m_un64LastFenceValues[i]);
 	}
+}
+
+void RenderManager::ImmediateStateTransition(const ComPtr<ID3D12Resource>& pResource, OUT D3D12_RESOURCE_STATES& outd3dState, D3D12_RESOURCE_STATES d3dTargetState)
+{
+	if (!pResource) return;
+	if (outd3dState == d3dTargetState) return;
+
+	const uint64 un64CompleteFenceValue = m_pd3dFence->GetCompletedValue();
+	
+	auto* pCmdPair = m_ImmediateTransitionCmdLists.AllocateSafe(un64CompleteFenceValue);
+	if (!pCmdPair) {
+		//__debugbreak();
+		return ImmediateStateTransition(pResource, outd3dState, d3dTargetState);	// Recursive Retry
+	}
+
+	auto cmdList = pCmdPair->pd3dCommandList;
+
+	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(pResource.Get(), outd3dState, d3dTargetState);
+
+	cmdList->ResourceBarrier(1, &barrier);
+	cmdList->Close();
+
+	ID3D12CommandList* ppLists[] = { cmdList.Get() };
+	m_pd3dCommandQueue->ExecuteCommandLists(1, ppLists);
+
+	const uint64 un64FenceValue = Fence();
+	m_ImmediateTransitionCmdLists.MarkSubmitted(pCmdPair->id, un64FenceValue);
+
+
+	outd3dState = d3dTargetState;
 }
 
 void RenderManager::ChangeSwapChainState()

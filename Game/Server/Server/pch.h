@@ -1,6 +1,8 @@
 ﻿#pragma once
 
-#define WIN32_LEAN_AND_MEAN
+#include <iostream>
+#include <WS2tcpip.h>
+#include <MSWSock.h>
 
 #ifdef _DEBUG
 #pragma comment(lib, "Debug\\ServerCore.lib")
@@ -31,3 +33,15 @@ using namespace DirectX;
 // AI DLL 인터페이스
 #include "AI.h"
 using namespace AIDLL;
+#include <array>
+#include <vector>
+
+#include <thread>
+#include <atomic>
+#include <mutex>
+
+#include "protocol.h"
+
+#pragma comment(lib, "MSWSock.lib")
+#pragma comment(lib, "WS2_32.lib")
+

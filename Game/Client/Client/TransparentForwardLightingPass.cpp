@@ -6,7 +6,7 @@ void TransparentForwardLightingPass::Initialize()
 	CreatePipelineState();
 }
 
-void TransparentForwardLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void TransparentForwardLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	m_RenderQueueCached.clear();
 	std::vector<TransparentForwardLightingPass::RenderParameter> renderParameters;
@@ -52,7 +52,7 @@ void TransparentForwardLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandLis
 	pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, &DSVHandle);
 }
 
-void TransparentForwardLightingPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void TransparentForwardLightingPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	constexpr uint32 rootParamInstanceData = std::to_underlying(ROOT_PARAMETER::PER_INSTANCE_DATA);
 	constexpr uint32 rootParamBoneOffset = std::to_underlying(ROOT_PARAMETER::BONE_TRANSFORM_OFFSETS);
@@ -78,7 +78,7 @@ void TransparentForwardLightingPass::Render(ComPtr<ID3D12GraphicsCommandList> pd
 	}
 }
 
-void TransparentForwardLightingPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void TransparentForwardLightingPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 }
 
@@ -144,7 +144,7 @@ void TransparentForwardLightingPass::BindGeometryData(ComPtr<ID3D12GraphicsComma
 
 	// Bind Per pass data
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
-	constexpr uint32 rootParamPerPass = std::to_underlying(ROOT_PARAMETER::PER_PASS_DATA);
+	//constexpr uint32 rootParamPerPass = std::to_underlying(ROOT_PARAMETER::PER_PASS_DATA);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE bindHandle = outDescHandle.cpuHandle;
 
 	// rootParam[11]
@@ -166,6 +166,11 @@ void TransparentForwardLightingPass::BindGeometryData(ComPtr<ID3D12GraphicsComma
 
 	DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, unDescriptorInc), materialSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
+	// Set
+	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::PER_PASS_BUFFERS), outDescHandle.gpuHandle);
+	outDescHandle.cpuHandle.Offset(1 + 1 + 1, unDescriptorInc);
+	outDescHandle.gpuHandle.Offset(1 + 1 + 1, unDescriptorInc);
+
 	// Bind Texture : rootParam[14]
 	const auto& texDatas = m_CachedData.textureMap.GetElements();
 	const uint32 unNumTextures = texDatas.size();
@@ -175,9 +180,9 @@ void TransparentForwardLightingPass::BindGeometryData(ComPtr<ID3D12GraphicsComma
 	}
 
 	// Set
-	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::PER_PASS_DATA), outDescHandle.gpuHandle);
-	outDescHandle.cpuHandle.Offset(1 + 1 + 1 + unNumTextures, unDescriptorInc);
-	outDescHandle.gpuHandle.Offset(1 + 1 + 1 + unNumTextures, unDescriptorInc);
+	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::PER_PASS_TEXTURES), outDescHandle.gpuHandle);
+	outDescHandle.cpuHandle.Offset(unNumTextures, unDescriptorInc);
+	outDescHandle.gpuHandle.Offset(unNumTextures, unDescriptorInc);
 }
 
 void TransparentForwardLightingPass::CreatePipelineState()

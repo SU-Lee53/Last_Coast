@@ -27,7 +27,15 @@ public:
 	virtual void OnWhileCollision(const CollisionResult& collisionResult) override;
 	virtual void OnEndCollision(const CollisionResult& collisionResult) override;
 
+
 private:
+	void ToggleMouseLook();
+	void OnBeginMouseLook();
+	void OnEndMouseLook();
+	void UpdateMouseLookData();
+
+private:
+	void HandleCollision();
 	void ApplyGravity();
 	void ResolveCollision(OUT Vector3& outv3Delta);
 	bool CheckGround(float fMaxDistance, OUT Vector3& outv3Normal);
@@ -49,9 +57,12 @@ private:
 	uint32			m_unGroundGraceFrames = 0;
 	const uint32	m_unMaxGroundGraceFrames = 4;
 	const float		m_fGroundDeadZoneY = 0.02_cm;
-	const float		m_fStepHeight = 30_cm;
+	const float		m_fStepHeight = 50_cm;
 	
 	const float	m_fMouseSensitivity = 0.1f;
+	POINT m_ptMouseCenterClientPos = {};
+	POINT m_ptMouseCenterScreenPos = {};
+	RECT  m_MouseClipScreenRect = {};
 
 	std::vector<BoundingOrientedBox>			m_xmOBBCollided;
 	std::vector<std::pair<Vector3, float>>	m_MeshContacts;	// MeshCollider 삼각형 contact {normal, depth}
@@ -59,8 +70,12 @@ private:
 	bool m_bMoved = false;
 	bool m_bAiming = false;
 	bool m_bRunning = false;
-	bool m_bMouseInUse = false;
 	bool m_bFiredThisFrame = false;
+
+	bool m_bMouseInUse = false;
+	bool m_bSkipMouseDeltaThisFrame = false;	// To prevent twitch when mouse look enabled
+
+	std::shared_ptr<class Crosshair> m_pCrosshair = nullptr;
 
 };
 

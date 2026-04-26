@@ -1,13 +1,13 @@
 ﻿#include "pch.h"
-#include "DefferedFogPass.h"
+#include "DeferredFogPass.h"
 
-void DefferedFogPass::Initialize()
+void DeferredFogPass::Initialize()
 {
 	m_cbFogData = g_DefaultParameters;
 	CreatePipelineState();
 }
 
-void DefferedFogPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DeferredFogPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	// Update Height Fog base height
 
@@ -27,7 +27,7 @@ void DefferedFogPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 	pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, nullptr);
 }
 
-void DefferedFogPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DeferredFogPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	constexpr auto rootParamFog = std::to_underlying(ROOT_PARAMETER::FOG_DATA);
 	
@@ -41,11 +41,11 @@ void DefferedFogPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
 	pQuadMesh->Render(pd3dCommandList, 1);
 }
 
-void DefferedFogPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle) const
+void DeferredFogPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 }
 
-void DefferedFogPass::ShowDebugInfo()
+void DeferredFogPass::ShowDebugInfo()
 {
 	if (ImGui::Button("Reset Parameters")) {
 		m_cbFogData = g_DefaultParameters;
@@ -81,7 +81,7 @@ void DefferedFogPass::ShowDebugInfo()
 	m_cbFogData.gfFogBaseHeight = fHeightBase + fHeightOffset;
 }
 
-void DefferedFogPass::CreatePipelineState()
+void DeferredFogPass::CreatePipelineState()
 {
 	std::vector<D3D12_INPUT_ELEMENT_DESC> d3dInputElements = {
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -119,7 +119,7 @@ void DefferedFogPass::CreatePipelineState()
 	}
 }
 
-void DefferedFogPass::SaveParametersToJson() const
+void DeferredFogPass::SaveParametersToJson() const
 {
 	using namespace nlohmann;
 
@@ -142,7 +142,7 @@ void DefferedFogPass::SaveParametersToJson() const
 	out.write(reinterpret_cast<const char*>(bson.data()), bson.size());
 }
 
-void DefferedFogPass::LoadParametersFromJson()
+void DeferredFogPass::LoadParametersFromJson()
 {
 	std::string strParametersPath = std::format("{}/fog_{}.bin", g_strSavePath, m_strSaveName);
 	std::ifstream inFile{ strParametersPath, std::ios::binary };

@@ -10,13 +10,14 @@ struct MESHLOADINFO;
 struct MATERIALLOADINFO;
 struct CollisionResult;
 
+enum class OBJECT_MOBILITY_TYPE { STATIC, DYNAMIC, UNKNOWN };
+
 interface IGameObject abstract : public std::enable_shared_from_this<IGameObject> {
 	friend class ModelManager;
 public:
-	enum class GAMEOBJECT_TYPE { STATIC, DYNAMIC, TERRAIN, UNKNOWN };
 
 public:
-	IGameObject();
+	IGameObject(OBJECT_MOBILITY_TYPE eType);
 	~IGameObject();
 
 public:
@@ -58,7 +59,7 @@ public:
 	std::shared_ptr<IGameObject> GetParent() const { return m_pParent.lock(); }
 	const std::vector<std::shared_ptr<IGameObject>>& GetChildren() { return m_pChildren; }
 
-	const GAMEOBJECT_TYPE GetObjectType() const { return m_eObjectType; }
+	const OBJECT_MOBILITY_TYPE GetObjectType() const { return m_eObjectType; }
 
 public:
 	virtual void OnBeginCollision(const CollisionResult& collisionResult) {};
@@ -95,7 +96,7 @@ protected:
 
 	uint64 m_unGameObjectRuntimeID;
 
-	GAMEOBJECT_TYPE m_eObjectType;
+	OBJECT_MOBILITY_TYPE m_eObjectType;
 
 public:
 	static uint64 g_GameObjectIDBase;

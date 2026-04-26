@@ -11,8 +11,10 @@
 
 void TestScene::BuildObjects()
 {
+	m_pUIBoard = std::make_unique<UIBoard>();
+
 	m_pSkybox = std::make_shared<Skybox>();
-	m_pSkybox->Initialize("Day_HDRI.dds", "Night_HDRI.dds");
+	m_pSkybox->Initialize();
 
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
 
@@ -20,7 +22,7 @@ void TestScene::BuildObjects()
 	// 오프라인 시: 기존처럼 active로 시작해 로컬 AI가 동작한다.
 	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
 	for (auto& pZombie : m_ZombiePool.Initialize(100, bOnline))
-		m_pGameObjects.push_back(pZombie);
+		AddObject(pZombie);
 
 	LoadFromFiles("TEST1");
 
@@ -80,7 +82,7 @@ void TestScene::Update()
 			ImGui::NewLine();
 			ImGui::Text("====== Zombie ======");
 			int zombieIdx = 0;
-			for (const auto& obj : m_pGameObjects) {
+			for (const auto& obj : GetDynamicObjectsInScene()) {
 				if (auto pZombie = std::dynamic_pointer_cast<Zombie>(obj)) {
 					Vector3 v3AIPos = pZombie->GetPosition(); // AIAgent 기준 위치
 					ImGui::Text("[%d] AI Agent Pos  : (%.1f, %.1f, %.1f)", zombieIdx, v3AIPos.x, v3AIPos.y, v3AIPos.z);
@@ -140,8 +142,8 @@ void TestScene::Update()
 			}
 			if (zombieIdx == 0) ImGui::Text("No Zombies");
 
-			const auto& spaceDesc = GetSpacePartitionDesc();
-			SpacePartitionDesc::CellCoord cdPlayer = spaceDesc.WorldToCellXZ(v3PlayerPos);
+			const auto& spaceDesc = GetSpacePartition();
+			ScenePartition::CellCoord cdPlayer = spaceDesc.WorldToCellXZ(v3PlayerPos);
 			int32 cellIndex = spaceDesc.CellToIndex(cdPlayer.x, cdPlayer.y);
 			ImGui::NewLine();
 			ImGui::Text("====== Space Partition ======");
@@ -186,7 +188,7 @@ void TestScene::ProcessPlayerShoot()
 	float fMinDist = std::numeric_limits<float>::max();
 	std::shared_ptr<Zombie> pHitZombie;
 
-	for (const auto& obj : m_pGameObjects) {
+	for (const auto& obj : GetDynamicObjectsInScene()) {
 		auto pZombie = std::dynamic_pointer_cast<Zombie>(obj);
 		if (!pZombie || pZombie->IsDead()) continue;
 
