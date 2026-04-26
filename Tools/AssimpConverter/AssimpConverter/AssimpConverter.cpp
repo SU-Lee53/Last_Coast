@@ -177,6 +177,45 @@ XMFLOAT4X4 AssimpConverter::BuildSourceToEngineMatrix(const SceneAxis& metaData,
 	return xmf4x4SrcToEngine;
 }
 
+static bool IsCollisionMesh(const std::string& strName)
+{
+	return strName.rfind("UCX_", 0) == 0 ||
+		strName.rfind("UBX_", 0) == 0 ||
+		strName.rfind("USP_", 0) == 0 ||
+		strName.rfind("UCP_", 0) == 0;
+}
+
+static std::string GetCollisionType(const std::string& strName)
+{
+	if (strName.rfind("UCX_", 0) == 0) return "UCX";
+	if (strName.rfind("UBX_", 0) == 0) return "UBX";
+	if (strName.rfind("USP_", 0) == 0) return "USP";
+	if (strName.rfind("UCP_", 0) == 0) return "UCP";
+	return "";
+}
+
+static std::string StripCollisionPrefix(const std::string& strName)
+{
+	// UCX_SM_Rock_0 → SM_Rock  (strip prefix and optional trailing _N)
+	size_t nUnderscore = strName.find('_');
+	if (nUnderscore == std::string::npos)
+		return strName;
+
+	std::string strLinked = strName.substr(nUnderscore + 1);
+
+	// Strip trailing _N suffix if the last segment is purely numeric
+	size_t nLast = strLinked.rfind('_');
+	if (nLast != std::string::npos) {
+		std::string strSuffix = strLinked.substr(nLast + 1);
+		bool bNumeric = !strSuffix.empty() &&
+			std::all_of(strSuffix.begin(), strSuffix.end(), ::isdigit);
+		if (bNumeric)
+			strLinked = strLinked.substr(0, nLast);
+	}
+
+	return strLinked;
+}
+
 std::string NormalizeBoneName(const std::string& name)
 {
 	auto pos = name.find(':');
@@ -259,6 +298,63 @@ void AssimpConverter::BuildBoneHierarchy(aiNode* node, int parentBoneIndex)
 	}
 }
 
+void AssimpConverter::GatherCollisionNodes(const aiNode* pNode, nlohmann::ordered_json& outCollisions) const
+{
+	std::string strNodeName = pNode->mName.C_Str();
+	if (IsCollisionMesh(strNodeName)) {
+		for (int i = 0; i < pNode->mNumMeshes; ++i) {
+			const aiMesh* pMesh = m_pScene->mMeshes[pNode->mMeshes[i]];
+			outCollisions.push_back(StoreCollisionMeshToJson(pMesh, strNodeName));
+		}
+	}
+
+	for (int i = 0; i < pNode->mNumChildren; ++i) {
+		GatherCollisionNodes(pNode->mChildren[i], outCollisions);
+	}
+}
+
+nlohmann::ordered_json AssimpConverter::StoreCollisionMeshToJson(const aiMesh* pMesh, const std::string& strNodeName) const
+{
+	XMMATRIX xmmtxSceneToEngine = XMLoadFloat4x4(&m_xmf4x4SourceToEngine);
+	float fScale = GetFinalScale();
+
+	nlohmann::ordered_json collision;
+	collision["Type"] = GetCollisionType(strNodeName);
+	collision["LinkedMesh"] = StripCollisionPrefix(strNodeName);
+	collision["NodeName"] = strNodeName;
+
+	// Positions only (no UVs / normals needed for collision)
+	collision["nVertices"] = pMesh->mNumVertices;
+	collision["Positions"] = nlohmann::ordered_json::array();
+	for (int i = 0; i < pMesh->mNumVertices; ++i) {
+		XMFLOAT3 xmf3Position = aiVector3DToXMVector(pMesh->mVertices[i]);
+		XMStoreFloat3(&xmf3Position, XMVectorScale(XMLoadFloat3(&xmf3Position), fScale));
+		XMVECTOR xmvPosition = XMVector3TransformCoord(XMLoadFloat3(&xmf3Position), xmmtxSceneToEngine);
+		XMStoreFloat3(&xmf3Position, xmvPosition);
+
+		collision["Positions"].push_back(xmf3Position.x);
+		collision["Positions"].push_back(xmf3Position.y);
+		collision["Positions"].push_back(xmf3Position.z);
+	}
+
+	// Indices
+	collision["nIndices"] = pMesh->mNumFaces * 3;
+	collision["Indices"] = nlohmann::ordered_json::array();
+	for (int i = 0; i < pMesh->mNumFaces; ++i) {
+		const aiFace& face = pMesh->mFaces[i];
+		UINT idx0 = face.mIndices[0];
+		UINT idx1 = face.mIndices[1];
+		UINT idx2 = face.mIndices[2];
+		if (m_bSourceWasRH)
+			std::swap(idx1, idx2);
+		collision["Indices"].push_back(idx0);
+		collision["Indices"].push_back(idx1);
+		collision["Indices"].push_back(idx2);
+	}
+
+	return collision;
+}
+
 void AssimpConverter::SerializeModel(const std::string& strPath, const std::string& strName)
 {
 	namespace fs = std::filesystem;
@@ -312,6 +408,16 @@ void AssimpConverter::SerializeModel(const std::string& strPath, const std::stri
 		hierarchyJson["Bones"].push_back(bone);
 	}
 
+	// Collision meshes (UCX_ / UBX_ / USP_ / UCP_)
+	nlohmann::ordered_json collisionArray = nlohmann::ordered_json::array();
+	GatherCollisionNodes(m_pRootNode, collisionArray);
+	hierarchyJson["nCollisions"] = collisionArray.size();
+	hierarchyJson["Collisions"] = collisionArray;
+
+	if (!collisionArray.empty()) {
+		DisplayText("Found %d collision mesh(es)\r\n", (int)collisionArray.size());
+	}
+
 	strSave = std::format("{}\\Models\\{}.bin", m_strSavePath, strName);
 
 	//std::ofstream out{ strSave };
@@ -329,6 +435,10 @@ nlohmann::ordered_json AssimpConverter::StoreNodeToJson(const aiNode* pNode) con
 {
 	nlohmann::ordered_json node;
 	std::string strFrameName = pNode->mName.C_Str();
+
+	// Skip collision nodes — serialized separately in SerializeModel
+	if (IsCollisionMesh(strFrameName))
+		return nlohmann::ordered_json{};
 	XMFLOAT4X4 xmf4x4Transform = aiMatrixToXMMatrix(pNode->mTransformation);
 	XMFLOAT4X4 m = ConvertMatrixToEngine(xmf4x4Transform);
 
@@ -351,13 +461,15 @@ nlohmann::ordered_json AssimpConverter::StoreNodeToJson(const aiNode* pNode) con
 		}
 	}
 
-	// Children
-	node["nChildren"] = pNode->mNumChildren;
+	// Children (collision nodes are skipped)
 	node["Children"] = nlohmann::ordered_json::array();
 	for (int i = 0; i < pNode->mNumChildren; ++i) {
+		if (IsCollisionMesh(pNode->mChildren[i]->mName.C_Str()))
+			continue;
 		nlohmann::ordered_json child = StoreNodeToJson(pNode->mChildren[i]);
 		node["Children"].push_back(child);
 	}
+	node["nChildren"] = node["Children"].size();
 
 	return node;
 }

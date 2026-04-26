@@ -21,6 +21,14 @@ enum class MESH_TYPE {
 	UNDEFINED
 };
 
+struct COLLISIONMESHINFO {
+	std::string				strType;		// "UCX", "UBX", "USP", "UCP"
+	std::string				strLinkedMesh;
+
+	std::vector<Vector3>	v3Positions;
+	std::vector<uint32>		unIndices;
+};
+
 struct MESHLOADINFO {
 	std::string				strMeshName;
 

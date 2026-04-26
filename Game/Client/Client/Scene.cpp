@@ -245,8 +245,10 @@ void Scene::CheckCollision()
 
 	// Player vs StaticObject
 	for (const auto& pObj : pBroadPhaseResult->pObjectsInCell) {
-		const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
-		bool bResult = playerCollider->CheckCollision(pCollider);
+		const std::shared_ptr<ICollider> pCollider = pObj->GetComponent<ICollider>();
+		if (!pCollider)
+			continue;
+		bool bResult = pCollider->CheckCollision(playerCollider);
 		if (bResult) {
 			CollisionResult result1(m_pPlayer , pObj);
 			CollisionResult result2(pObj, m_pPlayer);
@@ -294,13 +296,12 @@ void Scene::CheckCollision()
 		if (!pZombieBroadPhase)
 			continue;
 
-		const PlayerCollider& zombieCollider = *pZombieCollider;
 		for (const auto& pObj : pZombieBroadPhase->pObjectsInCell) {
-			const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
+			const std::shared_ptr<ICollider> pCollider = pObj->GetComponent<ICollider>();
 			if (!pCollider)
 				continue;
 
-			bool bResult = zombieCollider.CheckCollision(pCollider);
+			bool bResult = pCollider->CheckCollision(pZombieCollider);
 			if (bResult) {
 				CollisionResult result1(pZombie, pObj);
 				CollisionResult result2(pObj, pZombie);
@@ -439,6 +440,14 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 			std::string strMeshName = jObject["MeshName"].get<std::string>();
 			auto pMeshObject = MODEL->LoadOrGet(strMeshName)->CopyObject<NodeObject>();
 			pObj->SetChild(pMeshObject);
+
+			// 콜리전 메시를 자식이 아닌 루트 StaticObject에 직접 추가
+			const auto* pCollisionInfos = MODEL->GetCollisionInfos(strMeshName);
+			if (pCollisionInfos) {
+				for (const auto& info : *pCollisionInfos) {
+					pObj->AddComponent<MeshCollider>(info);
+				}
+			}
 
 			m_pGameObjects.push_back(pObj);
 		}

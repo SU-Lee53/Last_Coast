@@ -2,6 +2,7 @@
 #include "ThirdPersonPlayer.h"
 #include "ThirdPersonCamera.h"
 #include "NodeObject.h"
+#include "Collider.h"
 
 ThirdPersonPlayer::ThirdPersonPlayer()
 {
@@ -155,13 +156,24 @@ void ThirdPersonPlayer::Update()
 
 void ThirdPersonPlayer::OnBeginCollision(const CollisionResult& collisionResult)
 {
-	// 여기서는 충돌이 일어난 객체들을 모아놓고 나중에 PostUpdate에서 한번에 이동 블락 처리를 한다
-	m_xmOBBCollided.push_back(collisionResult.DecomposeRef().second.GetOBBWorld());
+	const ICollider& otherCollider = collisionResult.DecomposeRef().second;
+	if (const auto* pMeshCollider = dynamic_cast<const MeshCollider*>(&otherCollider)) {
+		m_MeshContacts.emplace_back(pMeshCollider->GetContactNormal(), pMeshCollider->GetContactDepth());
+	}
+	else {
+		m_xmOBBCollided.push_back(otherCollider.GetOBBWorld());
+	}
 }
 
 void ThirdPersonPlayer::OnWhileCollision(const CollisionResult& collisionResult)
 {
-	m_xmOBBCollided.push_back(collisionResult.DecomposeRef().second.GetOBBWorld());
+	const ICollider& otherCollider = collisionResult.DecomposeRef().second;
+	if (const auto* pMeshCollider = dynamic_cast<const MeshCollider*>(&otherCollider)) {
+		m_MeshContacts.emplace_back(pMeshCollider->GetContactNormal(), pMeshCollider->GetContactDepth());
+	}
+	else {
+		m_xmOBBCollided.push_back(otherCollider.GetOBBWorld());
+	}
 }
 
 void ThirdPersonPlayer::OnEndCollision(const CollisionResult& collisionResult)
@@ -239,6 +251,7 @@ void ThirdPersonPlayer::PostUpdate()
 	IPlayer::PostUpdate();
 
 	m_xmOBBCollided.clear();
+	m_MeshContacts.clear();
 }
 
 float ThirdPersonPlayer::GetMoveSpeedXZ() const
@@ -302,13 +315,13 @@ void ThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 					float fPush = std::min(fDepth + fSkin, 5.f);
 					outv3Delta += v3Normal * fPush;
 				}
-				
+
 				// Slope Projection
 				float fProjected = outv3Delta.Dot(v3Normal);
 				if (fProjected < 0.f) {
 					outv3Delta -= v3Normal * fProjected;
 				}
-			
+
 				continue;
 			}
 
@@ -328,6 +341,33 @@ void ThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 
 		if (!bAnyHit) {
 			break;
+		}
+	}
+
+	// MeshCollider: 삼각형 face normal 기반 contact 처리 (flat OBB 재검사 없음)
+	for (auto& [v3Normal, fDepth] : m_MeshContacts) {
+		if (v3Normal.y > fGround && outv3Delta.y <= 0.f) {
+			// 바닥: depth=0(살짝 닿음)이어도 grounding 확정 → 중력 누적 차단
+			m_bGrounded = true;
+			m_unGroundGraceFrames = m_unMaxGroundGraceFrames;
+			if (m_fVerticalVelocity < 0.f)
+				m_fVerticalVelocity = 0.f;
+
+			// 실제 관통이 있을 때만 위치 보정
+			if (fDepth > 0.01f) {
+				if (fDepth > fSnapDistance) {
+					outv3Delta += v3Normal * std::min(fDepth, 5.f);
+				}
+				float fProjected = outv3Delta.Dot(v3Normal);
+				if (fProjected < 0.f)
+					outv3Delta -= v3Normal * fProjected;
+			}
+		}
+		else if (fDepth > fSkin) {
+			// 벽/경사: 슬라이드 처리
+			float fProjectedAmount = outv3Delta.Dot(v3Normal);
+			if (fProjectedAmount < 0.f)
+				outv3Delta -= v3Normal * fProjectedAmount;
 		}
 	}
 }

@@ -10,8 +10,9 @@ void StaticObject::Initialize()
 			AddComponent<Transform>();
 		}
 
+		// Collider는 계층 변환 전파 후 초기화해야 하므로 루프에서 제외
 		for (auto& component : m_pComponents) {
-			if (component) {
+			if (component && !std::dynamic_pointer_cast<ICollider>(component)) {
 				component->Initialize();
 			}
 		}
@@ -25,10 +26,14 @@ void StaticObject::Initialize()
 		pChild->Initialize();
 	}
 
-	if (m_pParent.expired() && !GetComponent<ICollider>()) {
-		// Collider 의 경우 계층 변환의 자식 전파가 우선 필요하므로 마지막에 추가하고 Initialize
-		AddComponent<StaticCollider>();
-		GetComponent<StaticCollider>()->Initialize();
+	if (m_pParent.expired()) {
+		// Collider 의 경우 계층 변환의 자식 전파가 우선 필요하므로 마지막에 Initialize
+		auto pCollider = GetComponent<ICollider>();
+		if (!pCollider) {
+			AddComponent<StaticCollider>();
+			pCollider = GetComponent<ICollider>();
+		}
+		pCollider->Initialize();
 	}
 }
 

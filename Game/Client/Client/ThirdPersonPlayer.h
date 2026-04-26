@@ -53,7 +53,8 @@ private:
 	
 	const float	m_fMouseSensitivity = 0.1f;
 
-	std::vector<BoundingOrientedBox> m_xmOBBCollided;
+	std::vector<BoundingOrientedBox>			m_xmOBBCollided;
+	std::vector<std::pair<Vector3, float>>	m_MeshContacts;	// MeshCollider 삼각형 contact {normal, depth}
 
 	bool m_bMoved = false;
 	bool m_bAiming = false;
