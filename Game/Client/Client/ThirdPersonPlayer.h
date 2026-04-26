@@ -21,6 +21,7 @@ public:
 	bool IsAiming() const { return m_bAiming; }
 	bool IsRunning() const { return m_bRunning; }
 	bool IsMouseOn() const { return m_bMouseInUse; }
+	bool ConsumeFire() { bool b = m_bFiredThisFrame; m_bFiredThisFrame = false; return b; }
 
 	virtual void OnBeginCollision(const CollisionResult& collisionResult) override;
 	virtual void OnWhileCollision(const CollisionResult& collisionResult) override;
@@ -58,6 +59,7 @@ private:
 	bool m_bAiming = false;
 	bool m_bRunning = false;
 	bool m_bMouseInUse = false;
+	bool m_bFiredThisFrame = false;
 
 };
 

@@ -67,6 +67,23 @@ void Zombie::Shutdown()
 
 void Zombie::PostUpdate()
 {
+	// ── 사망 처리 ────────────────────────────────────────────────────────────
+	if (m_bDying) {
+		auto pAC = GetComponent<ZombieAnimationController>();
+		if (pAC && pAC->GetMontage() && pAC->GetMontage()->IsFreezed())
+			m_bReadyToRemove = true;
+		DynamicObject::PostUpdate();
+		return;
+	}
+	if (IsDead()) {
+		m_bDying = true;
+		auto pAC = GetComponent<ZombieAnimationController>();
+		if (pAC && pAC->GetMontage())
+			pAC->GetMontage()->PlayMontage("Zombie Death");
+		DynamicObject::PostUpdate();
+		return;
+	}
+
 	auto Target = m_wpTarget.lock();
 	if (!m_pAIAgent || !Target)
 	{
@@ -94,11 +111,20 @@ void Zombie::PostUpdate()
 	bool bHeard = (fDist <= m_fHearingRange);
 
 	m_pAIAgent->UpdateSensoryStimulus(0, v3PlayerPos, bVisible, bHeard);
-	m_pAIAgent->Think(0, DT);
 
-	// 공격 히트: GoalAttack 쿨다운 완료 시 데미지 적용
-	if (m_pAIAgent->ConsumeAttackHit())
-		Target->TakeDamage(10.f);
+	// 공격 애니메이션 재생 중엔 AI 상태 전환 차단
+	auto pAC = GetComponent<ZombieAnimationController>();
+	bool bAttackMontageActive = pAC && pAC->GetMontage() && pAC->GetMontage()->GetBlendWeight() > 0.f;
+
+	if (!bAttackMontageActive) {
+		m_pAIAgent->Think(0, DT, fDist);
+
+		// GoalAttack 쿨다운 완료 시 공격 애니메이션 재생 (실제 데미지는 Notify에서)
+		if (m_pAIAgent->ConsumeAttackHit()) {
+			if (pAC && pAC->GetMontage())
+				pAC->GetMontage()->PlayMontage("Zombie Attack");
+		}
+	}
 
 	// 최초 발견 순간(rising edge)에만 주변 좀비들에게 경보 전파
 	if (bVisible && !m_bWasVisible)
@@ -211,4 +237,18 @@ void Zombie::OnWhileCollision(const CollisionResult& collisionResult)
 
 void Zombie::OnEndCollision(const CollisionResult& collisionResult)
 {
+}
+
+void Zombie::TriggerAttackHit()
+{
+	auto pTarget = m_wpTarget.lock();
+	if (!pTarget)
+		return;
+
+	// Notify 시점에 여전히 공격 사거리 이내일 때만 데미지 적용
+	Matrix worldMatrix = pTarget->GetWorldMatrix();
+	Vector3 v3TargetPos(worldMatrix._41, worldMatrix._42, worldMatrix._43);
+	float fDist = Vector3::Distance(m_pAIAgent->GetPosition(), v3TargetPos);
+	if (fDist <= m_fCloseRange)
+		pTarget->TakeDamage(10.f);
 }

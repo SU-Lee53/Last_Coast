@@ -12,14 +12,16 @@ enum class ROOT_PARAMETER : uint32 {
 	SHADOW_MAPS								= 2,
 	G_BUFFER								= 3,
 	HDR_RESULT								= 4,
-	PER_PASS_DATA							= 5,
-	PER_INSTANCE_DATA						= 6,
-	LIGHT_CAMERA_DATA						= 7,
-	WORLD_TRANSFORM_DATA					= 8,
-	BONE_TRANSFORM							= 9,
-	TERRAIN_LAYER							= 10,
-	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 11,
-	WORLE_TRANSFORM_INDEX					= 12,
+	TONE_MAPPING_DATA						= 5,
+	FOG_DATA								= 6,
+	PER_PASS_DATA							= 7,
+	PER_INSTANCE_DATA						= 8,
+	BONE_TRANSFORM_OFFSETS					= 9,
+	LIGHT_CAMERA_DATA						= 10,
+	TERRAIN_LAYER							= 11,
+	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 12,
+	TERRAIN_WORLD_TRANSFORM					= 13,
+	SPRITE_DATA								= 14,
 };
 
 struct GBuffer {
@@ -52,8 +54,13 @@ public:
 
 	template<typename T> requires std::derived_from<T, IGameObject>
 	void Add(std::shared_ptr<T> pObj);
-	void AddSprite(std::shared_ptr<Sprite> pSprite, RECT rect, uint32 unLayer);
 	void Reset();
+
+	// Sprites
+	void AddSprite(const TextureRef<Texture>& texHandle, const SpriteRect& rect, uint32 unLayer);
+	void AddSprite(const TextureRef<RenderTargetTexture>& texHandle, const SpriteRect& rect, uint32 unLayer);
+	void AddSprite(const TextureRef<DepthStencilTexture>& texHandle, const SpriteRect& rect, uint32 unLayer);
+	void AddSprite(const TextureRef<UnorderedAccessTexture>& texHandle, const SpriteRect& rect, uint32 unLayer);
 
 	const std::shared_ptr<IMesh> GetQuadMesh() const { return m_pQuadMesh; }
 
@@ -102,12 +109,16 @@ private:
 private:
 	// Sprite
 	struct SpriteRenderParameter {
-		std::shared_ptr<Sprite> pSprite;
-		RECT Rect;
+		const TextureHandle& texHandle;
+		SpriteRect Rect;
 
-		SpriteRenderParameter(std::shared_ptr<Sprite> p, RECT r) : pSprite{ p }, Rect{ r } {}
+		SpriteRenderParameter(const TextureRef<Texture>& texHandle, const SpriteRect& r) : texHandle{ texHandle.srvHandle }, Rect{ r } {}
+		SpriteRenderParameter(const TextureRef<RenderTargetTexture>& texHandle, const SpriteRect& r) : texHandle{ texHandle.srvHandle }, Rect{ r } {}
+		SpriteRenderParameter(const TextureRef<DepthStencilTexture>& texHandle, const SpriteRect& r) : texHandle{ texHandle.srvHandle }, Rect{ r } {}
+		SpriteRenderParameter(const TextureRef<UnorderedAccessTexture>& texHandle, const SpriteRect& r) : texHandle{ texHandle.srvHandle }, Rect{ r } {}
 	};
-	std::array<std::vector<std::shared_ptr<Sprite>>, g_unMaxSpriteLayers> m_pSpritesToRender;
+
+	std::array<std::vector<SpriteRenderParameter>, g_unMaxSpriteLayers> m_pSpritesToRender;
 
 private:
 	// Frame Resources
@@ -116,9 +127,10 @@ private:
 	StructuredBufferPool	m_StructuredBufferPool[g_unMaxPendingFrames];
 
 	GBuffer									m_GBuffers[g_unMaxPendingFrames];
-	TextureRef<RenderTargetTexture>			m_HDRRenderTargetIDs[g_unMaxPendingFrames];
-	TextureRef<RenderTargetTexture>			m_LDRRenderTargetIDs[g_unMaxPendingFrames];
+	TextureRef<RenderTargetTexture>			m_HDRRenderTargetIDs[2][g_unMaxPendingFrames];
 
+
+	TextureRef<RenderTargetTexture>			m_LDRRenderTargetIDs[g_unMaxPendingFrames];
 
 
 #pragma region D3D
@@ -133,10 +145,10 @@ public:
 
 	const GBuffer& GetCurrentGBuffer() const;
 
-	const TextureRef<RenderTargetTexture>& GetCurrentHDRBuffer() const;
+	const TextureRef<RenderTargetTexture>& GetCurrentHDRBuffer(int nIndex) const;
 	const TextureRef<RenderTargetTexture>& GetCurrentLDRBuffer() const;
 
-	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentHDRBufferHandle() const;
+	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentHDRBufferHandle(int nIndex) const;
 	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentLDRBufferHandle() const;
 
 	ComPtr<ID3D12GraphicsCommandList> GetCommandList() const { return m_ppd3dCommandList[m_unCurrentContextIndex]; }
@@ -191,7 +203,11 @@ inline void RenderManager::Add(std::shared_ptr<T> pObj)
 	auto pMeshRenderer = pObj->GetComponent<MeshRenderer>();
 	auto pBaseColorTex = pMeshRenderer->GetMaterialHandle(0).GetResource()->GetTexture(0);
 
-
+	if (!pBaseColorTex) {
+		std::string strErr = std::format("{} - {} : No BaseColor", __FILE__, __LINE__);
+		//OutputDebugStringA(strErr.c_str());
+		return;
+	}
 	(pBaseColorTex->GetAlphaMode() == Texture::ALPHA_MODE::Transparent)
 		? m_pTransparentObjectsToRender.push_back(pObj)
 	    : m_pObjectsToRender.push_back(pObj);

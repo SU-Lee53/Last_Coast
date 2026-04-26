@@ -586,6 +586,25 @@ nlohmann::ordered_json AssimpConverter::StoreMeshToJson(const aiMesh* pMesh) con
 	return mesh;
 }
 
+std::string ExtractFileNameOnly(const std::string& pathStr)
+{
+	if (pathStr.empty())
+		return {};
+
+	size_t pos1 = pathStr.find_last_of('/');
+	size_t pos2 = pathStr.find_last_of('\\');
+	size_t pos = std::string::npos;
+
+	if (pos1 == std::string::npos) pos = pos2;
+	else if (pos2 == std::string::npos) pos = pos1;
+	else pos = (pos1 > pos2) ? pos1 : pos2;
+
+	if (pos == std::string::npos)
+		return pathStr;
+
+	return pathStr.substr(pos + 1);
+}
+
 nlohmann::ordered_json AssimpConverter::StoreMaterialToJson(const aiMaterial* pMaterial) const
 {
 	nlohmann::ordered_json material;
@@ -704,6 +723,7 @@ nlohmann::ordered_json AssimpConverter::StoreMaterialToJson(const aiMaterial* pM
 				}
 				else {
 					// External texture
+					aistrTexturePath = ExtractFileNameOnly(std::string(aistrTexturePath.C_Str()));
 					ExportExternalTexture(aistrTexturePath, eType);
 					strTextureName = aistrTexturePath.C_Str();
 					strTextureName = std::filesystem::path{ strTextureName }.stem().string();

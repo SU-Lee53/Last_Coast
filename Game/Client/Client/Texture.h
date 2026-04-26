@@ -187,7 +187,7 @@ private:
 	
 	bool Initialize(ComPtr<ID3D12Resource> pd3dRTVResource);
 
-private:
+protected:
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_d3dRTVHandle;
 	D3D12_RENDER_TARGET_VIEW_DESC m_d3dRTVDesc;
 
@@ -274,6 +274,12 @@ private:
 		UINT nWidth,
 		UINT nHeight,
 		DXGI_FORMAT dxgiSRVUAVFormat = DXGI_FORMAT_UNKNOWN);
+	
+	bool Initialize3D(
+		UINT nWidth,
+		UINT nHeight,
+		UINT nDepth,
+		DXGI_FORMAT dxgiSRVUAVFormat = DXGI_FORMAT_UNKNOWN);
 
 	bool InitializeArray(
 		UINT nArraySize,
@@ -281,7 +287,7 @@ private:
 		UINT nHeight,
 		DXGI_FORMAT dxgiSRVUAVFormat = DXGI_FORMAT_UNKNOWN);
 
-private:
+protected:
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_d3dUAVHandle;
 	D3D12_UNORDERED_ACCESS_VIEW_DESC m_d3dUAVDesc;
 
@@ -303,5 +309,48 @@ struct TextureRef<UnorderedAccessTexture> {
 
 	std::shared_ptr<UnorderedAccessTexture> GetResource() const {
 		return std::static_pointer_cast<UnorderedAccessTexture>(uavHandle.GetResource());
+	}
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+// RWRenderTargetTexture
+
+class RWRenderTargetTexture : public Texture {
+public:
+	virtual void ShowDebugInfo() const;
+
+private:
+	bool Initialize(
+		UINT nWidth,
+		UINT nHeight,
+		DXGI_FORMAT dxgiSRVUAVFormat = DXGI_FORMAT_UNKNOWN);
+
+private:
+	CD3DX12_CPU_DESCRIPTOR_HANDLE m_d3dUAVHandle;
+	D3D12_UNORDERED_ACCESS_VIEW_DESC m_d3dUAVDesc;
+	uint64 m_un64RuntimeUAVID;
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE m_d3dRTVHandle;
+	D3D12_RENDER_TARGET_VIEW_DESC m_d3dRTVDesc;
+	uint64 m_un64RuntimeRTVID;
+
+};
+
+template<>
+struct TextureRef<RWRenderTargetTexture> {
+	TextureHandle srvHandle;
+	TextureHandle rtvHandle;
+	TextureHandle uavHandle;
+
+	bool IsValid() const {
+		return srvHandle.IsValid() && uavHandle.IsValid();
+	}
+
+	uint64_t GetID() const {
+		return srvHandle.GetID();
+	}
+
+	std::shared_ptr<RWRenderTargetTexture> GetResource() const {
+		return std::static_pointer_cast<RWRenderTargetTexture>(uavHandle.GetResource());
 	}
 };

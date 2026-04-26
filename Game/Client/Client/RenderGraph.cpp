@@ -6,6 +6,8 @@
 #include "DirectionalCascadeShadowMapPass.h"
 #include "ToneMappingPass.h"
 #include "SkyboxPass.h"
+#include "SpritePass.h"
+#include "DefferedFogPass.h"
 #include <queue>
 
 void RenderGraph::BuildGraph()
@@ -21,6 +23,14 @@ void RenderGraph::BuildGraph()
 	//	m_pAdjLists.push_back(pTerrainPass);
 	//}
 	
+	// Ping-Pong 구조
+	// HDR[0] : GBufferPass -> DefferedLightingPass
+	// DefferedLightingPass 를 지나면 HDR0 이 gtxtHDRResult(Root Param 4) 에 바인딩
+	// 
+	// HDR[1] : DefferedForPass -> TransparentForwardPass -> SkyboxPass
+	// SkyBoxPass 를 지나면 HDR1 이 gtxtHDRResult(Root Param 4) 에 바인딩
+
+
 	std::shared_ptr<IRenderPass> pDirectionalCascadeShadowMapPass = std::make_shared<DirectionalCascadeShadowMapPass>();
 	pDirectionalCascadeShadowMapPass->Initialize();
 	m_pAdjLists.push_back(pDirectionalCascadeShadowMapPass);
@@ -33,6 +43,10 @@ void RenderGraph::BuildGraph()
 	pDefferedLightingPass->Initialize();
 	m_pAdjLists.push_back(pDefferedLightingPass);
 	
+	std::shared_ptr<IRenderPass> pDefferedFogPass = std::make_shared<DefferedFogPass>();
+	pDefferedFogPass->Initialize();
+	m_pAdjLists.push_back(pDefferedFogPass);
+	
 	std::shared_ptr<IRenderPass> pTransparentForwardPass = std::make_shared<TransparentForwardLightingPass>();
 	pTransparentForwardPass->Initialize();
 	m_pAdjLists.push_back(pTransparentForwardPass);
@@ -44,13 +58,18 @@ void RenderGraph::BuildGraph()
 	std::shared_ptr<IRenderPass> pToneMappingPass = std::make_shared<ToneMappingPass>();
 	pToneMappingPass->Initialize();
 	m_pAdjLists.push_back(pToneMappingPass);
+
+	std::shared_ptr<IRenderPass> pSpritePass = std::make_shared<SpritePass>();
+	pSpritePass->Initialize();
+	m_pAdjLists.push_back(pSpritePass);
 	
 	pDirectionalCascadeShadowMapPass->Connect(pGBufferPass);
 	pGBufferPass->Connect(pDefferedLightingPass);
-	pDefferedLightingPass->Connect(pTransparentForwardPass);
-	//pDefferedLightingPass->Connect(pSkyboxPass);
+	pDefferedLightingPass->Connect(pDefferedFogPass);
+	pDefferedFogPass->Connect(pTransparentForwardPass);
 	pTransparentForwardPass->Connect(pSkyboxPass);
 	pSkyboxPass->Connect(pToneMappingPass);
+	pToneMappingPass->Connect(pSpritePass);
 
 	m_unEntryNodeIndex = 0;
 }

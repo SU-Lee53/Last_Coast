@@ -29,5 +29,7 @@ private:
 private:
 	ComPtr<ID3D12PipelineState> m_pd3dPipelineState;
 
+	std::shared_ptr<IMesh> m_pSpriteQuadMesh;
+
 };
 

@@ -90,14 +90,8 @@ void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandL
 {
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
 
-	std::vector<std::shared_ptr<Texture>> pDSVTextures;
-	std::vector<CD3DX12_RESOURCE_BARRIER> d3dResourceBarriers;
-	pDSVTextures.reserve(g_unNumCascade);
-	d3dResourceBarriers.reserve(g_unNumCascade);
-	for (int i = 0; i < g_unNumCascade; ++i) {
-		auto pTex = m_ShadowMapRef[unCurrentContext][i].GetResource();
-		pTex->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-		pDSVTextures.push_back(pTex);
+	for (const auto& texRef : m_ShadowMapRef[unCurrentContext]) {
+		texRef.GetResource()->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 	}
 
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
@@ -114,9 +108,8 @@ void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandL
 	DEVICE->CopyDescriptorsSimple(1, bindHandle, toShadowCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	bindHandle.Offset(1, unDescriptorInc);
 
-
-	for (const auto& shadowMap : pDSVTextures) {
-		CD3DX12_CPU_DESCRIPTOR_HANDLE dsSRVHandle = shadowMap->GetSRVHandle();
+	for (const auto& texRef : m_ShadowMapRef[unCurrentContext]) {
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsSRVHandle = texRef.GetResource()->GetSRVHandle();
 		DEVICE->CopyDescriptorsSimple(1, bindHandle, dsSRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		bindHandle.Offset(1, unDescriptorInc);
 	}
@@ -128,6 +121,21 @@ void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandL
 	// Viewport & Scissor rect 복구
 	auto pCamera = CUR_SCENE->GetCamera();
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+
+
+	if (m_bShowShadowMaps) {
+		constexpr float fSize = 0.2f;
+		for (const auto& [idx, texRef] : m_ShadowMapRef[unCurrentContext] | std::views::enumerate) {
+			SpriteRect r;
+			{
+				r.fLeft = 0.f;
+				r.fTop = (float)idx * fSize;
+				r.fRight = r.fLeft + fSize;
+				r.fBottom = r.fTop + fSize;
+			}
+			RENDER->AddSprite(texRef, r, 0);
+		}
+	}
 }
 
 void DirectionalCascadeShadowMapPass::CreatePipelineState()
@@ -148,7 +156,7 @@ void DirectionalCascadeShadowMapPass::CreatePipelineState()
 		d3dPipelineDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
 		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 		d3dPipelineDesc.RasterizerState.FrontCounterClockwise = FALSE;
-		d3dPipelineDesc.RasterizerState.DepthBias = 8000;
+		d3dPipelineDesc.RasterizerState.DepthBias = 100000;
 		d3dPipelineDesc.RasterizerState.DepthBiasClamp = 0.0f;
 		d3dPipelineDesc.RasterizerState.SlopeScaledDepthBias = 1.0f;
 		d3dPipelineDesc.RasterizerState.DepthClipEnable = TRUE;
@@ -168,6 +176,15 @@ void DirectionalCascadeShadowMapPass::CreatePipelineState()
 	}
 
 	HRESULT hr = DEVICE->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dStandardPipelineState.GetAddressOf()));
+	if (FAILED(hr)) {
+		__debugbreak();
+	}
+
+	{
+		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("ShadowTerrainVS");
+	}
+
+	hr = DEVICE->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dTerrainPipelineState.GetAddressOf()));
 	if (FAILED(hr)) {
 		__debugbreak();
 	}
@@ -221,36 +238,34 @@ void DirectionalCascadeShadowMapPass::SetRenderTargets(ComPtr<ID3D12GraphicsComm
 
 	pd3dCommandList->RSSetViewports(1, &d3dViewport);
 	pd3dCommandList->RSSetScissorRects(1, &d3dScissorRect);
+
 }
 
 void DirectionalCascadeShadowMapPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<std::shared_ptr<IGameObject>>& frustumCulled, OUT DescriptorHandle& outDescHandle) const
 {
-	std::unordered_map<MeshRenderer::ID, size_t> renderItemIndex;
-	renderItemIndex.reserve(frustumCulled.size());
-	std::vector<std::pair<MeshRenderer*, std::vector<const IGameObject*>>> renderItems;
-	renderItems.reserve(frustumCulled.size());
+	m_CachedData.Clear();
+
+	m_CachedData.frustumCulledMap.Reserve(frustumCulled.size());
+
 	for (const auto& pObj : frustumCulled) {
 		const auto& pMeshRenderer = pObj->GetComponent<MeshRenderer>();
-		auto it = renderItemIndex.find(pMeshRenderer->GetID());
-		if (it == renderItemIndex.end()) {
-			size_t idx = renderItems.size();
-			renderItemIndex.emplace(pMeshRenderer->GetID(), idx);
-			renderItems.emplace_back(pMeshRenderer.get(), std::vector<const IGameObject*>{pObj.get()});
-		}
-		else {
-			size_t idx = it->second;
-			renderItems[idx].second.push_back(pObj.get());
+		auto [idx, bInserted] = m_CachedData.frustumCulledMap.Insert(pMeshRenderer->GetID(), { pMeshRenderer.get(), std::vector<const IGameObject*>{pObj.get()} });
+		if (!bInserted) {
+			m_CachedData.frustumCulledMap[idx].second.push_back(pObj.get());
 		}
 	}
 
 	// World Transforms
 	m_RenderQueueCached.clear();
 	size_t estimatedRenderQueueSize = 0;
-	for (const auto& [k, v] : renderItems) {
+	for (const auto& [k, v] : m_CachedData.frustumCulledMap.GetElements()) {
 		estimatedRenderQueueSize += k->GetMeshes().size();
 	}
 	m_RenderQueueCached.reserve(estimatedRenderQueueSize);
-	for (auto& [k, v] : renderItems) {
+
+	m_CachedData.sbWorldTransformDatas.reserve(estimatedRenderQueueSize);
+
+	for (auto& [k, v] : m_CachedData.frustumCulledMap.GetElements()) {
 
 		// Prepare
 		const auto& pMeshes = k->GetMeshes();
@@ -261,61 +276,84 @@ void DirectionalCascadeShadowMapPass::BindGeometryData(ComPtr<ID3D12GraphicsComm
 			RenderParameter renderParameter;
 
 			// Set
+			renderParameter.cbInstanceData.gnWorldTransformOffset = m_CachedData.sbWorldTransformDatas.size();
+			renderParameter.nInstances = v.size();
 			for (const auto pObj : v) {
 				Matrix mtxWorld = pObj->GetWorldMatrix();
-				//Matrix mtxInvWorld = mtxWorld.Invert();
 
 				WorldTransformData data{
 					mtxWorld.Transpose(),
 					Matrix::Identity,
 				};
 
-				renderParameter.sbWorldTransformData.push_back(data);
-				if (auto pAnim = pObj->GetComponentFromRoot<AnimationController>().get()) {
-					renderParameter.pAnimationControllers.push_back(pAnim);
+				m_CachedData.sbWorldTransformDatas.emplace_back(
+					mtxWorld.Transpose(),
+					Matrix::Identity
+				);
+				
+				const auto pAnim = pObj->GetComponentFromRoot<AnimationController>().get();
+				if (!pAnim) continue;
+
+				auto [it, bInserted] = m_CachedData.animationInstancingData.emplace(pAnim, m_CachedData.sbBoneTransformDatas.size());
+				if (bInserted) {
+					renderParameter.nBoneOffsets.emplace_back(m_CachedData.sbBoneTransformDatas.size());
+					const auto& boneTransforms = pAnim->GetFinalOutput();
+					m_CachedData.sbBoneTransformDatas.insert(m_CachedData.sbBoneTransformDatas.end(), boneTransforms.begin(), boneTransforms.end());
+				}
+				else {
+					renderParameter.nBoneOffsets.emplace_back(it->second.unOffset);
 				}
 			}
 
-			m_RenderQueueCached.push_back(std::make_pair(pMeshes[meshIdx].get(), renderParameter));
+			m_RenderQueueCached.emplace_back(pMeshes[meshIdx].get(), renderParameter);
 		}
 	}
 
+	// Bind Per pass data
+	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
+	constexpr uint32 rootParamPerPass = std::to_underlying(ROOT_PARAMETER::PER_PASS_DATA);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE bindHandle = outDescHandle.cpuHandle;
+
+	// rootParam[11]
+	const auto& worldTransformDatas = m_CachedData.sbWorldTransformDatas;
+	auto worldTransformSBuffer = RENDER->AllocSBuffer<WorldTransformData>(worldTransformDatas.size());
+	worldTransformSBuffer.WriteData(worldTransformDatas);
+	DEVICE->CopyDescriptorsSimple(1, bindHandle, worldTransformSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	// rootParam[12]
+	const auto& boneTransformDatas = m_CachedData.sbBoneTransformDatas;
+	auto boneTransformSBuffer = RENDER->AllocSBuffer<Matrix>(boneTransformDatas.size());
+	boneTransformSBuffer.WriteData(boneTransformDatas);
+	DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, unDescriptorInc), boneTransformSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	// Set
+	pd3dCommandList->SetGraphicsRootDescriptorTable(std::to_underlying(ROOT_PARAMETER::PER_PASS_DATA), outDescHandle.gpuHandle);
+	outDescHandle.cpuHandle.Offset(4, unDescriptorInc);
+	outDescHandle.gpuHandle.Offset(4, unDescriptorInc);
 }
 
 void DirectionalCascadeShadowMapPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) const
 {
-	constexpr uint32 rootParamWorldTransform = std::to_underlying(ROOT_PARAMETER::WORLD_TRANSFORM_DATA);
-	constexpr uint32 rootParamBoneTransform = std::to_underlying(ROOT_PARAMETER::BONE_TRANSFORM);
+	constexpr uint32 rootParamInstanceData = std::to_underlying(ROOT_PARAMETER::PER_INSTANCE_DATA);
+	constexpr uint32 rootParamBoneOffset = std::to_underlying(ROOT_PARAMETER::BONE_TRANSFORM_OFFSETS);
 
 	for (auto& [k, v] : m_RenderQueueCached) {
-		if (v.pAnimationControllers.size() != 0) {
-			// Animated
+		ConstantBuffer instanceCBuffer = RENDER->AllocCBuffer<CB_INSTANCE_DATA>();
+		instanceCBuffer.WriteData(&v.cbInstanceData);
+		pd3dCommandList->SetGraphicsRootConstantBufferView(rootParamInstanceData, instanceCBuffer.GPUAddress);
+
+		if (v.nBoneOffsets.size() != 0) {
+			auto boneOffsetSBuffer = RENDER->AllocSBuffer<int32>(v.nBoneOffsets.size());
+			boneOffsetSBuffer.WriteData(v.nBoneOffsets);
+			pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamBoneOffset, boneOffsetSBuffer.GPUAddress);
+
 			pd3dCommandList->SetPipelineState(m_pd3dAnimatedPipelineState.Get());
-
-			for (size_t i = 0; i < v.pAnimationControllers.size(); ++i) {
-				StructuredBuffer sbWorldTransforms = RENDER->AllocSBuffer<WorldTransformData>(1);
-				sbWorldTransforms.WriteData(v.sbWorldTransformData[i], 0);
-				pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamWorldTransform, sbWorldTransforms.GPUAddress);
-
-				auto pAnimationCtrl = v.pAnimationControllers[i];
-				const std::vector<Matrix>& mtxBoneTransforms = pAnimationCtrl->GetFinalOutput();
-				StructuredBuffer sbBoneTransforms = RENDER->AllocSBuffer<Matrix>(mtxBoneTransforms.size());
-				sbBoneTransforms.WriteData(mtxBoneTransforms);
-				pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamBoneTransform, sbBoneTransforms.GPUAddress);
-
-				k->RenderPosition(pd3dCommandList, 1);
-			}
 		}
 		else {
-			// Static
 			pd3dCommandList->SetPipelineState(m_pd3dStandardPipelineState.Get());
-
-			StructuredBuffer sbWorldTransforms = RENDER->AllocSBuffer<WorldTransformData>(v.sbWorldTransformData.size());
-			sbWorldTransforms.WriteData(v.sbWorldTransformData);
-			pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamWorldTransform, sbWorldTransforms.GPUAddress);
-
-			k->Render(pd3dCommandList, v.sbWorldTransformData.size());
 		}
+
+		k->RenderPosition(pd3dCommandList, v.nInstances);
 	}
 }
 
@@ -325,14 +363,15 @@ void DirectionalCascadeShadowMapPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandLi
 	const auto& pTerrainComponents = pTerrain->GetTerrainComponents();
 	const auto& pTerrainMesh = pTerrain->GetComponent<MeshRenderer>()->GetMeshes()[0];
 
-	constexpr uint32 rootParamWorldTransform = std::to_underlying(ROOT_PARAMETER::WORLD_TRANSFORM_DATA);
+	constexpr uint32 rootParamWorldTransform = std::to_underlying(ROOT_PARAMETER::TERRAIN_WORLD_TRANSFORM);
 	const uint32 unDescriptorInc = D3DCore::g_nCBVSRVDescriptorIncrementSize;
 
-	pd3dCommandList->SetPipelineState(m_pd3dStandardPipelineState.Get());
+	pd3dCommandList->SetPipelineState(m_pd3dTerrainPipelineState.Get());
 
-	StructuredBuffer sbWorldTransforms = RENDER->AllocSBuffer<Matrix>(1);
-	sbWorldTransforms.WriteData(pTerrain->GetWorldMatrix().Transpose(), 0);
-	pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamWorldTransform, sbWorldTransforms.GPUAddress);
+	Matrix mtxTerrainWorld = pTerrain->GetWorldMatrix().Transpose();
+	auto worldTransformCBuffer = RENDER->AllocCBuffer<Matrix>();
+	worldTransformCBuffer.WriteData(&mtxTerrainWorld);
+	pd3dCommandList->SetGraphicsRootConstantBufferView(rootParamWorldTransform, worldTransformCBuffer.GPUAddress);
 
 	for (const auto& pComponent : pTerrainComponents) {
 		const auto& terrainIndexRange = pComponent->GetIndexRange();
@@ -457,5 +496,12 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 		};
 
 		m_CascadeCached[i] = data;
+	}
+}
+
+void DirectionalCascadeShadowMapPass::ShowDebugInfo()
+{
+	if (ImGui::Button(std::format("Show Shadow Maps : {}", m_bShowShadowMaps ? "TRUE" : "FALSE").c_str())) {
+		m_bShowShadowMaps = !m_bShowShadowMaps;
 	}
 }

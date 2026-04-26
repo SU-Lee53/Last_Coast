@@ -50,10 +50,13 @@ private:
 
 	void ComputeCascade() const;
 
+	virtual void ShowDebugInfo() override;
+
 private:
 	struct RenderParameter {
-		std::vector<WorldTransformData> sbWorldTransformData;
-		std::vector<AnimationController*> pAnimationControllers;
+		CB_INSTANCE_DATA cbInstanceData{};
+		int32 nInstances = 0;
+		std::vector<int32> nBoneOffsets;
 	};
 
 	using RenderQueue = std::vector<std::pair<IMesh*, DirectionalCascadeShadowMapPass::RenderParameter>>;
@@ -69,7 +72,35 @@ private:
 
 	ComPtr<ID3D12PipelineState> m_pd3dStandardPipelineState;
 	ComPtr<ID3D12PipelineState> m_pd3dAnimatedPipelineState;
+	ComPtr<ID3D12PipelineState> m_pd3dTerrainPipelineState;
 
 	TextureRef<DepthStencilTexture> m_ShadowMapRef[RenderManager::g_unMaxPendingFrames][g_unNumCascade];
+
+	mutable bool m_bShowShadowMaps;
+
+	mutable struct CachedData {
+		IndexMap<MeshRenderer::ID, std::pair<const MeshRenderer*, std::vector<const IGameObject*>>> frustumCulledMap;
+
+		std::vector<WorldTransformData> sbWorldTransformDatas;
+		std::vector<Matrix> sbBoneTransformDatas;
+
+		struct AnimationInstancingData {
+			int32 unOffset = 0;
+		};
+
+		std::unordered_map<const AnimationController*, AnimationInstancingData> animationInstancingData;
+
+		void Clear() {
+			frustumCulledMap.Clear();
+
+			sbWorldTransformDatas.clear();
+			sbBoneTransformDatas.clear();
+
+			animationInstancingData.clear();
+		}
+
+	} m_CachedData;
+
+
 };
 

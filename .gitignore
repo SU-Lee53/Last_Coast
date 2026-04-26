@@ -12,5 +12,5 @@ Intermediates/
 *.lastbuildstate 
 *.suo 
 *.db
-
+*.md
 !/**/Dependencies/**/x64/

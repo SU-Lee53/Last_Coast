@@ -216,10 +216,21 @@ void ShaderManager::CompileShaders()
 	Compile("ForwardLightingPS", L"ForwardShader.hlsl", L"PSForwardLighting", SHADER_TYPE::PS);
 
 	Compile("ShadowStandardVS", L"ShadowMapShader.hlsl", L"VSShadowStandard", SHADER_TYPE::VS);
+	Compile("ShadowTerrainVS", L"ShadowMapShader.hlsl", L"VSShadowTerrain", SHADER_TYPE::VS);
 	Compile("ShadowAnimatedVS", L"ShadowMapShader.hlsl", L"VSShadowAnimated", SHADER_TYPE::VS);
+
+	Compile("SpriteVS", L"Sprite.hlsl", L"VSSprite", SHADER_TYPE::VS);
+	Compile("SpritePS", L"Sprite.hlsl", L"PSSprite", SHADER_TYPE::PS);
+
+	// PostProcess
+	Compile("DefferedFogVS", L"HDRPostProcessing.hlsl", L"VSDefferedFog", SHADER_TYPE::VS);
+	Compile("DefferedFogPS", L"HDRPostProcessing.hlsl", L"PSDefferedFog", SHADER_TYPE::PS);
 
 	// Compute
 	Compile("HDRIToCubeMapCS", L"HDRIToCubeMap.hlsl", L"CSHDRIToCubeMap", SHADER_TYPE::CS);
+
+	Compile("ToneMapLUTCS", L"LUTBaking.hlsl", L"CSToneMapLUT", SHADER_TYPE::CS);
+	Compile("GradingLUTCS", L"LUTBaking.hlsl", L"CSGradingLUT", SHADER_TYPE::CS);
 
 
 

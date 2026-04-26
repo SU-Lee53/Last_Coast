@@ -29,6 +29,8 @@ public:
 
 	void SetTexture(const TextureRef<Texture>& texHandle, UINT nMaterialIndex, TEXTURE_TYPE eTextureType);
 
+	virtual void ShowControlImGui() override;
+
 protected:
 	std::vector<std::shared_ptr<IMesh>> m_pMeshes;
 	std::vector<MaterialHandle> m_MaterialIDs;

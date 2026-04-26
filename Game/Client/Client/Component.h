@@ -35,6 +35,8 @@ public:
 
 	virtual std::shared_ptr<IComponent> Copy(std::shared_ptr<IGameObject> pNewOwner) const = 0;
 
+	virtual void ShowControlImGui();
+
 protected:
 	std::weak_ptr<IGameObject> m_wpOwner;
 	bool m_bInitialized = false;

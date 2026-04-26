@@ -5,6 +5,7 @@
 #include "TerrainObject.h"
 #include "TerrainTestScene.h"
 #include "Skybox.h"
+#include "GameScene.h"
 
 void MapTestScene::BuildObjects()
 {
@@ -12,6 +13,11 @@ void MapTestScene::BuildObjects()
 	m_pSkybox->Initialize("Day_HDRI.dds", "Night_HDRI.dds");
 
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	m_pPlayer->Initialize();
+
+	//m_pPlayer = std::make_shared<DebugPlayer>();
+	//m_pPlayer->Initialize();
+
 	LoadFromFiles("LightTest");
 }
 
@@ -32,7 +38,7 @@ void MapTestScene::Update()
 	ImGui::Begin("Test");
 	{
 		if (ImGui::Button("Change Scene")) {
-			SCENE->ChangeScene<TerrainTestScene>();
+			SCENE->ChangeScene<GameScene>();
 			ImGui::End();
 			return;
 		}

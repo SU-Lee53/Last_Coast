@@ -162,6 +162,7 @@ cbuffer cbSceneData : register(b0, space0)
 	SceneGlobalData gSceneGlobal;
 	SkyboxData gSkybox;
 	int2 gnScreenSize;
+	uint gnToneMappingMode;
 };
 
 #define NUM_CASCADES 4
@@ -175,6 +176,36 @@ cbuffer cbShadowMatrix : register(b2, space0)
 	float4x4 gmtxShadows[4];
 }
 
+cbuffer cbFogData : register(b3, space0)
+{
+	float4 gfogColor;
+	
+	float gfFogStartDistance;
+	float gfFogCutOffDistance;
+	float gfFogDistanceDensity;
+	float gFogDistancePower;
+
+	float gfFogHeightDensity;
+	float gfFogHeightFalloff;
+	float gfFogBaseHeight;
+	float gfFogHeightStartDistance;
+
+	float gfFogMaxOpacity;
+	float3 pad0;
+};
+
+cbuffer cbToneMappingData : register(b4, space0)
+{
+	float gfExposure;
+	float gfGamma;
+	float gfSaturation;
+	float gfInputScale;
+	
+	float gfOutputScale;
+	float gfLookStrength;
+	float3 pad1;
+};
+
 // ============ StructuredBuffers ============
 
 StructuredBuffer<LightData> gLightData : register(t0, space0);
@@ -186,6 +217,10 @@ Texture2D gtxtShadowss[4] : register(t5, space0);						// t5, t6, t7, t8
 Texture2D gtxtGBuffer[3] : register(t9, space0);	// t9, t10, t11
 Texture2D gtxtGBufferDepth : register(t12, space0);
 Texture2D gtxtHDRResult : register(t13, space0);
+
+// Tone mapping LUT
+Texture3D gtxtToneMapLUT : register(t14, space0);
+Texture3D gtxtGradingLUT : register(t15, space0);
 
 // ============ Samplers ============
 SamplerState gSkyboxSamplerState : register(s0, space0);
@@ -224,13 +259,21 @@ struct MaterialData
 	float2 pad0; // c5.zw
 };
 
+struct WorldTransformData
+{
+	float4x4 mtxWorld;
+	float4x4 mtxInvWorld;
+};
+
 // ============ StructuredBuffers ============
 
-StructuredBuffer<MaterialData> gMaterialData : register(t0, space1);
+StructuredBuffer<WorldTransformData> gWorldTransforms : register(t0, space1);
+StructuredBuffer<matrix> gBoneTransforms : register(t1, space1);
+StructuredBuffer<MaterialData> gMaterialDatas : register(t2, space1);
 
 // ============ Textures ============
 
-Texture2D gtxtTextures[] : register(t1, space1); // Unbounded
+Texture2D gtxtTextures[] : register(t3, space1); // Unbounded
 
 
 
@@ -249,10 +292,12 @@ struct TerrainComponentData
 	int2 pad0;
 };
 
-struct InstanceData
+struct SpriteData
 {
-	float4x4 mtxWorld;
-	float4x4 mtxInvWorld;
+	float fLeft;
+	float fTop;
+	float fRight;
+	float fBottom;
 };
 
 #define MAX_BONES 100
@@ -271,6 +316,7 @@ cbuffer cbInstanceData : register(b0, space2)
 {
 	int4 gnTextureIndex;	// Diffuse, Normal, Metallic, Emission
 	int gnMaterialIndex;
+	int gnWorldTransformOffset;	// gWorldTransforms[gnWorldTransformOffset + nInstanceID]
 };
 
 #define MAX_LAYER 4
@@ -279,7 +325,7 @@ cbuffer cbTerrainLayerData : register(b1, space2)
 {
 	float4 gv4LayerTiling;
 	int gnTerrainLayers;
-	float3 pad0;
+	float3 pad2;
 };
 
 cbuffer cbTerrainComponentData : register(b2, space2)
@@ -288,30 +334,26 @@ cbuffer cbTerrainComponentData : register(b2, space2)
 	float2 gv2ComponentSizeXZ;
 	int4 gi4LayerIndex;
 	int2 gv2NumQuadsXZ;
-	int2 pad1;
+	int2 pad3;
 };
 
-cbuffer cbWorldTransformIndexData : register(b3, space2)
-{
-	int gnWorldTransformIndex;
-};
-
-cbuffer cbLightCameraData : register(b4, space2)
+cbuffer cbLightCameraData : register(b3, space2)
 {
 	matrix gmtxLightViewProj;
 }
 
+cbuffer cbTerrainWorldTransform : register(b4, space2)
+{
+	matrix gmtxTerrainWorld;
+};
+
 // ============ StructuredBuffers ============
 
-StructuredBuffer<InstanceData> gWorldTransforms : register(t0, space2);
-StructuredBuffer<matrix> gBoneTransforms : register(t1, space2);
-
-
-Texture2D gtxtTerrainAlbedo[4] : register(t2, space2); // t2, t3, t4, t5
-Texture2D gtxtTerrainNormal[4] : register(t6, space2); // t6, t7, t8, t9
-
-Texture2D gtxtTerrainWeightMap : register(t10, space2);
-
+StructuredBuffer<int> gBoneTransformOffsets : register(t2, space2);
+Texture2D gtxtTerrainAlbedo[4] : register(t3, space2); // t3, t4, t5, t6
+Texture2D gtxtTerrainNormal[4] : register(t7, space2); // t7, t8, t9, t10
+Texture2D gtxtTerrainWeightMap : register(t11, space2);
+StructuredBuffer<SpriteData> gSpriteData : register(t12, space2);
 
 
 // ================================================================================
@@ -432,7 +474,7 @@ float3 DecodeNormalOcta(float2 enc)
 
 void GetMaterialParams(out float fMetallic, out float fRoughness, out float fAO)
 {
-	MaterialData m = gMaterialData[gnMaterialIndex];
+	MaterialData m = gMaterialDatas[gnMaterialIndex];
 	
 	fMetallic = m.fMetallic;
 	fRoughness = 1.0f - saturate(m.fSmoothness);
@@ -515,6 +557,78 @@ float3 ReconstructWorldPos(float2 uv, float depth)
 
 	float4 world = mul(view, gCamera.mtxInvView);
 	return world.xyz;
+}
+
+float ComputeViewDepth(float3 worldPos)
+{
+	float3 viewPos = mul(float4(worldPos, 1.f), gCamera.mtxView).xyz;
+	return max(0.f, viewPos.z);
+}
+
+float ComputeHeightFogOpticalDepth(float3 worldPos)
+{
+	float3 ray = worldPos - gCamera.v3CameraPosition;
+	float fDistToPixel = length(ray);
+	
+	if(fDistToPixel <= 1e-4f)
+	{
+		return 0.f;
+	}
+	
+	float3 rayDir = ray / fDistToPixel;
+	float fRayLength = max(0.f, fDistToPixel - gfFogHeightStartDistance);
+	
+	if(gfFogCutOffDistance > 0.f)
+	{
+		fRayLength = min(fRayLength, gfFogCutOffDistance);
+	}
+	
+	if(fRayLength <= 1e-4f)
+	{
+		return 0.f;
+	}
+	
+	float3 startPos = gCamera.v3CameraPosition + rayDir * gfFogHeightStartDistance;
+	
+	float fFallOff = max(1e-4f, gfFogHeightFalloff);
+	
+	float fStartTerm = exp(-fFallOff * (startPos.y - gfFogBaseHeight));
+	float fEndTerm = exp(-fFallOff * (startPos.y + rayDir.y * fRayLength - gfFogBaseHeight));
+	
+	float fIntegral = (abs(rayDir.y) > 1e-4f) ? (fStartTerm - fEndTerm) / (fFallOff * rayDir.y)
+                                              : (fStartTerm * fRayLength);
+	
+	return gfFogHeightDensity * max(0.f, fIntegral);
+}
+
+float ComputeDistanceFogFactor(float3 worldPos)
+{
+	float fViewDepth = ComputeViewDepth(worldPos);
+	float t = saturate((fViewDepth - gfFogStartDistance) / max(1e-4f, gfFogCutOffDistance - gfFogStartDistance));
+	t = t * t * (3.0f - 2.0f * t);
+	return t;
+}
+
+float ComputeHeightFogFactor(float3 worldPos)
+{
+	float odHeight = ComputeHeightFogOpticalDepth(worldPos);
+	return 1.0f - exp(-odHeight);
+
+}
+
+float ComputeFogAlpha(float3 worldPos)
+{
+	float fDistanceFog = ComputeDistanceFogFactor(worldPos);
+	float fHeightFog = ComputeHeightFogFactor(worldPos);
+	
+	float fFogAlpha = 1.0f - (1.0f - fDistanceFog) * (1.0f - fHeightFog);
+	return min(fFogAlpha, gfFogMaxOpacity);
+}
+
+float3 ApplyFog(float3 sceneColor, float3 worldPos)
+{
+	float fFogAlpha = ComputeFogAlpha(worldPos);
+	return lerp(sceneColor, gfogColor.rgb, fFogAlpha);
 }
 
 #endif 

@@ -1,5 +1,5 @@
 #include "NewCommon.hlsl"
-//#include "Light.hlsl"
+#include "ToneMappingCommon.hlsl"
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tone Mapping
@@ -16,6 +16,10 @@ struct VS_QUAD_OUTPUT
 	float2 uv : TEXCOORD0;
 };
 
+const static uint gnLUTSize = 32;
+const static float gfLUTMinEV = -10.0f;
+const static float gfLUTMaxEV = 6.0f;
+
 VS_QUAD_OUTPUT VSToneMapping(VS_QUAD_INPUT input)
 {
 	VS_QUAD_OUTPUT output = (VS_QUAD_OUTPUT) 0;
@@ -26,36 +30,55 @@ VS_QUAD_OUTPUT VSToneMapping(VS_QUAD_INPUT input)
 	return output;
 }
 
-float3 ReinhardToneMap(float3 color)
+float GetLuminance(float3 color)
 {
-	return color / (1.0 + color);
+	return dot(color, float3(0.2126f, 0.7152f, 0.0722f));
 }
 
-float3 GammaCorrect(float3 color)
+float3 ApplySaturation(float3 color, float fSaturation)
 {
-	return pow(color, 1.0 / 2.2);
+	float luma = GetLuminance(color);
+	return lerp(luma.xxx, color, fSaturation);
 }
 
-float3 ACESFilm(float3 x)
+float3 GammaCorrect(float3 color, float fGamma)
 {
-	float a = 2.51;
-	float b = 0.03;
-	float c = 2.43;
-	float d = 0.59;
-	float e = 0.14;
-	return saturate((x * (a * x + b)) / (x * (c * x + d) + e));
+	return pow(saturate(color), 1.0 / max(fGamma, 1e-6));
 }
 
-//ACES Tone mapping
+float3 HDRToLUTUVW(float3 hdrColor)
+{
+	float3 c = max(hdrColor, 1e-6f.xxx);
+	float3 ev = log2(c);
+	return saturate((ev - gfLUTMinEV.xxx) / (gfLUTMaxEV - gfLUTMinEV));
+}
+
+float3 ApplyLUTCoordScaleBias(float3 uvw)
+{
+	float fScale = (float(gnLUTSize) - 1.0f) / float(gnLUTSize);
+	float fBias = 0.5f / float(gnLUTSize);
+	return uvw * fScale + fBias;
+}
+
 float4 PSToneMapping(VS_QUAD_OUTPUT input) : SV_Target0
 {
-	int2 pixelPos = int2(input.uv * gnScreenSize);
-	pixelPos = clamp(pixelPos, int2(0, 0), gnScreenSize - 1);
+	float3 hdrColor = gtxtHDRResult.Sample(gSamplerState, input.uv).rgb;
+	hdrColor *= gfExposure;
+	hdrColor *= gfInputScale;
 	
-	float3 hdr = gtxtHDRResult.Sample(gSamplerState, input.uv).rgb;
-
-	float3 mapped = ACESFilm(hdr);
-	mapped = pow(mapped, 1.0 / 2.2);
-
-	return float4(mapped, 1.0);
+	float3 uvw = HDRToLUTUVW(hdrColor);
+	uvw = ApplyLUTCoordScaleBias(uvw);
+	float3 mapped = gtxtToneMapLUT.SampleLevel(gSamplerState, uvw, 0.0f).rgb;
+	
+	float3 lookUVW = saturate(mapped);
+	lookUVW = ApplyLUTCoordScaleBias(lookUVW);
+	float3 looked = gtxtGradingLUT.SampleLevel(gSamplerState, lookUVW, 0.0f).rgb;
+	
+	float3 finalColor = lerp(mapped, looked, saturate(gfLookStrength));
+	
+	///finalColor = ApplySaturation(finalColor, gfSaturation);
+	finalColor *= gfOutputScale;
+	finalColor = GammaCorrect(finalColor, gfGamma);
+	
+	return float4(finalColor, 1.0f);
 }

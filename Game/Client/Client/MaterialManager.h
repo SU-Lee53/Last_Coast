@@ -18,7 +18,7 @@ public:
 private:
 	MaterialTable m_MaterialTable;
 
-	constexpr static size_t g_unMaxMaterialCount = 300;
+	constexpr static size_t g_unMaxMaterialCount = 500;
 };
  
 template<typename T> requires std::derived_from<T, IMaterial>

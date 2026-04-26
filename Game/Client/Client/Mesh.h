@@ -70,6 +70,8 @@ public:
 		uint32 unStartIndex = 0, 
 		int32 nIndexCount = -1) const = 0;
 
+	virtual void ShowControlImGui();
+
 protected:
 	VertexBuffer					m_Positions;
 	IndexBuffer						m_IndexBuffer;
@@ -113,6 +115,9 @@ public:
 		uint32 unStartIndex = 0, 
 		int32 nIndexCount = -1) const override;
 
+
+	virtual void ShowControlImGui() override;
+
 protected:
 	VertexBuffer m_Normals;
 	VertexBuffer m_Tangents;
@@ -138,6 +143,8 @@ public:
 		uint32 unStartIndex = 0, 
 		int32 nIndexCount = -1) const override;
 
+	virtual void ShowControlImGui() override;
+
 protected:
 	VertexBuffer m_BlendIndices;
 	VertexBuffer m_BlendWeights;
@@ -155,6 +162,8 @@ public:
 		uint32 nInstanceCount = 1, 
 		uint32 unStartIndex = 0, 
 		int32 nIndexCount = -1) const override;
+
+	virtual void ShowControlImGui() override;
 
 protected:
 	VertexBuffer m_Normals;

@@ -118,6 +118,7 @@ struct MaterialData
 
 	uint32 eAlphaMode;						// c5.y
 	Vector2 pad0;							// c5.zw
+
 };
 
 struct WorldTransformData
@@ -137,6 +138,7 @@ struct CB_INSTANCE_DATA
 {
 	int gnTextureIndex[4] = {-1, -1, -1, -1};	// Diffuse, Normal, Metallic, Emission
 	int gnMaterialIndex;
+	int gnWorldTransformOffset;
 };
 
 struct CB_WORLD_BASE_DATA

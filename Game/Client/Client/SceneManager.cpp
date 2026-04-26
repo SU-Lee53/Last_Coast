@@ -5,10 +5,11 @@
 #include "TerrainTestScene.h"
 #include "MapTestScene.h"
 #include "TestScene.h"
+#include "GameScene.h"
 
 void SceneManager::Initialize()
 {
-	m_upCurrentScene = std::make_unique<NetworkTestScene>();
+	m_upCurrentScene = std::make_unique<TestScene>();
 	m_upCurrentScene->BuildLights();
 	m_upCurrentScene->BuildObjects();
 	m_upCurrentScene->PostInitialize();

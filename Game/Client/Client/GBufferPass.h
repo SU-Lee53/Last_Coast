@@ -3,9 +3,10 @@
 
 class GBufferPass : public IRenderPass {
 	struct RenderParameter {
-		CB_INSTANCE_DATA cbInstanceData;
-		std::vector<WorldTransformData> sbWorldTransformData;
-		std::vector<AnimationController*> pAnimationControllers;
+		CB_INSTANCE_DATA cbInstanceData{};
+		int32 nInstances = 0;
+		std::vector<int32> nBoneOffsets;
+		ComPtr<ID3D12PipelineState> pd3dPipelineState = nullptr;
 	};
 
 	using RenderQueue = std::vector<std::pair<IMesh*, GBufferPass::RenderParameter>>;
@@ -32,7 +33,7 @@ public:
 		OUT RenderPassOutput& output, 
 		OUT DescriptorHandle& outDescHandle) const override;
 
-	virtual void ShowDebugInfo() const;
+	virtual void ShowDebugInfo() override;
 
 private:
 	void SetRenderTargets(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList) const;
@@ -57,5 +58,33 @@ private:
 private:
 	mutable RenderQueue m_RenderQueueCached;
 	mutable uint32 m_unFrustumCulled = 0;
+
+	mutable struct CachedData {
+		IndexMap<MeshRenderer::ID, std::pair<const MeshRenderer*, std::vector<const IGameObject*>>> frustumCulledMap;
+		IndexMap<IMaterial::ID, MaterialData> materialMap;
+		IndexMap<Texture::ID, const TextureRef<Texture>*> textureMap;
+
+		std::vector<WorldTransformData> sbWorldTransformDatas;
+		std::vector<Matrix> sbBoneTransformDatas;
+
+		struct AnimationInstancingData {
+			int32 unOffset = 0;
+		};
+
+		std::unordered_map<const AnimationController*, AnimationInstancingData> animationInstancingData;
+
+		void Clear() {
+			frustumCulledMap.Clear();
+			materialMap.Clear();
+			textureMap.Clear();
+
+			sbWorldTransformDatas.clear();
+			sbBoneTransformDatas.clear();
+
+			animationInstancingData.clear();
+		}
+
+	} m_CachedData;
+
 
 };

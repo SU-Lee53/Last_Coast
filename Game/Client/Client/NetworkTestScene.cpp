@@ -29,9 +29,9 @@ void NetworkTestScene::Update()
 {
 	NETWORK->ConnectToServer();
 
-	//if (ImGui::Button("Change To Scene")) {
-	//	SCENE->ChangeScene<TerrainTestScene>();
-	//}
+	if (ImGui::Button("Change To Scene")) {
+		SCENE->ChangeScene<TerrainTestScene>();
+	}
 
 	if (NETWORK->IsConnected()) {
 		ImGui::Begin("Change Scene");

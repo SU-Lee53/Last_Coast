@@ -50,7 +50,11 @@ public:
 		uint32 unArraySize,
 		uint32 unWidth,
 		uint32 unHeight,
+		uint32 unDepth = 0,
 		DXGI_FORMAT dxgiSRVUAVFormat = DXGI_FORMAT_UNKNOWN);
+	
+	// TODO : 아래를 구현
+
 
 	std::shared_ptr<Texture> GetTextureByName(const std::string& strTextureName, TEXTURE_RESOURCE_TYPE eResourceType) const;
 	std::shared_ptr<Texture> GetTextureByHandle(const TextureHandle& handle, TEXTURE_RESOURCE_TYPE eResourceType) const;
@@ -82,6 +86,9 @@ private:
 
 	static uint32 g_unRTVFromCoreCount;
 	static uint32 g_unDSVFromCoreCount;
+
+	TextureRef<Texture> m_DebugAlbedo{};
+	TextureRef<Texture> m_DebugNormal{};
 
 #pragma region D3D
 private:

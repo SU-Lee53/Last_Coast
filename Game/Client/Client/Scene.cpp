@@ -140,6 +140,7 @@ void Scene::PostInitialize()
 		auto pZombie = std::dynamic_pointer_cast<Zombie>(obj);
 		if (pZombie) {
 			pZombie->SetPosition(AI->GetNavMesh()->GetRandomPoint()); // Transform + AIAgent 동시에
+			//pZombie->SetPosition(m_xmSceneBound.Center); // Transform + AIAgent 동시에
 			pZombie->SetTarget(m_pPlayer);  // shared_ptr 전달
 		}
 	}
@@ -228,7 +229,7 @@ void Scene::PrepareRender()
 
 void Scene::CheckCollision()
 {
-	// ── 플레이어 vs 정적 오브젝트 ──────────────────────────────────────────
+	// Broad Phase
 	Vector3 v3PlayerPos = m_pPlayer->GetTransform()->GetPosition();
 	SpacePartitionDesc::CellCoord cdPlayer = m_SpacePartition.WorldToCellXZ(v3PlayerPos);
 	const GridCell* pBroadPhaseResult = m_SpacePartition.GetCellData(cdPlayer);
@@ -241,6 +242,8 @@ void Scene::CheckCollision()
 		return;
 	}
 
+
+	// Player vs StaticObject
 	for (const auto& pObj : pBroadPhaseResult->pObjectsInCell) {
 		const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
 		bool bResult = playerCollider->CheckCollision(pCollider);
@@ -256,14 +259,21 @@ void Scene::CheckCollision()
 				m_pCollisionPairs.insert(result2);
 			}
 			else {
-				CollisionResult result1(m_pPlayer, pObj);
-				CollisionResult result2(pObj, m_pPlayer);
-				if (m_pCollisionPairs.contains(result1) || m_pCollisionPairs.contains(result2)) {
-					m_pPlayer->OnEndCollision(result1);
-					pObj->OnEndCollision(result2);
-					m_pCollisionPairs.erase(result1);
-					m_pCollisionPairs.erase(result2);
-				}
+				// While Overlap
+				m_pPlayer->OnWhileCollision(CollisionResult(m_pPlayer, pObj));
+				pObj->OnWhileCollision(CollisionResult(pObj, m_pPlayer));
+			}
+		}
+		else {
+			// End Overlap
+			CollisionResult result1(m_pPlayer, pObj);
+			CollisionResult result2(pObj, m_pPlayer);
+			if (m_pCollisionPairs.contains(result1) || m_pCollisionPairs.contains(result2)) {
+				m_pPlayer->OnEndCollision(result1);
+				pObj->OnEndCollision(result2);
+
+				m_pCollisionPairs.erase(result1);
+				m_pCollisionPairs.erase(result2);
 			}
 		}
 	}

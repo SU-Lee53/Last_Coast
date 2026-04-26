@@ -312,7 +312,8 @@ public:
 
 	struct ResourceDesc {
 		enum class TYPE { SRV, UAV, RTV, DSV };
-		enum class DIMENSION { TEXTURE2D, TEXTURE2DARRAY, TEXTURECUBE };
+		enum class DIMENSION { TEXTURE2D, TEXTURE3D, TEXTURE2DARRAY, TEXTURECUBE };
+
 
 		TYPE eType;
 		DIMENSION eDimension;
@@ -322,6 +323,8 @@ public:
 			D3D12_RENDER_TARGET_VIEW_DESC rtv;
 			D3D12_DEPTH_STENCIL_VIEW_DESC dsv;
 		};
+
+		void* pAdditionalData;
 	};
 
 public:
@@ -601,7 +604,14 @@ inline void ResourceTable<KeyType, Texture>::RegisterView(ComPtr<ID3D12Resource>
 					srvDesc.TextureCube.ResourceMinLODClamp = 0.f;
 					break;
 				}
-
+				case ResourceDesc::DIMENSION::TEXTURE3D:
+				{
+					srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+					srvDesc.Texture3D.MipLevels = d3dResourceDesc.MipLevels;
+					srvDesc.Texture3D.MostDetailedMip = 0;
+					srvDesc.Texture3D.ResourceMinLODClamp = 0.f;
+					break;
+				}
 				default:
 					break;
 				}
@@ -617,19 +627,35 @@ inline void ResourceTable<KeyType, Texture>::RegisterView(ComPtr<ID3D12Resource>
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
 			{
 				uavDesc.Format = pContext ? (*(DXGI_FORMAT*)pContext) : d3dResourceDesc.Format;
-				if (pResourceDesc->eDimension == ResourceDesc::DIMENSION::TEXTURE2D) {
+				switch (pResourceDesc->eDimension)
+				{
+				case ResourceDesc::DIMENSION::TEXTURE2D:
+				{
 					uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
 					uavDesc.Texture2D.MipSlice = 0;
 					uavDesc.Texture2D.PlaneSlice = 0;
+					break;
 				}
-				else {
+				case ResourceDesc::DIMENSION::TEXTURE2DARRAY:
+				{
 					uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
 					uavDesc.Texture2DArray.MipSlice = 0;
 					uavDesc.Texture2DArray.PlaneSlice = 0;
 					uavDesc.Texture2DArray.ArraySize = d3dResourceDesc.DepthOrArraySize;
 					uavDesc.Texture2DArray.FirstArraySlice = 0;
+					break;
 				}
-
+				case ResourceDesc::DIMENSION::TEXTURE3D:
+				{
+					uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
+					uavDesc.Texture3D.FirstWSlice = 0;
+					uavDesc.Texture3D.MipSlice = 0;
+					uavDesc.Texture3D.WSize = *(int*)(pResourceDesc->pAdditionalData);
+					break;
+				}
+				default:
+					break;
+				}
 			}
 			memcpy(&pResourceDesc->uav, &uavDesc, sizeof(D3D12_UNORDERED_ACCESS_VIEW_DESC));
 

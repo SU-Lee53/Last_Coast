@@ -15,16 +15,17 @@ struct PS_GBUFFER_OUTPUT
 VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input, uint nInstanceID : SV_InstanceID)
 {
 	VS_STANDARD_OUTPUT output = (VS_STANDARD_OUTPUT) 0;
+	int nWorldTransformBase = gnWorldTransformOffset + nInstanceID;
 
 	matrix mtxViewProjection = mul(gCamera.mtxView, gCamera.mtxProjection);
 	
-	matrix mtxWorld = gWorldTransforms[nInstanceID].mtxWorld;
+	matrix mtxWorld = gWorldTransforms[nWorldTransformBase].mtxWorld;
     
 	float3 positionW = mul(float4(input.position, 1.f), mtxWorld).xyz;
 	output.positionW = positionW;
 	output.position = mul(float4(output.positionW, 1.f), mtxViewProjection);
 	
-	float3x3 mtxNormal = (float3x3)transpose(gWorldTransforms[nInstanceID].mtxInvWorld);
+	float3x3 mtxNormal = (float3x3) transpose(gWorldTransforms[nWorldTransformBase].mtxInvWorld);
 	output.normalW = normalize(mul(input.normal, mtxNormal));
 	output.tangentW = normalize(mul(input.tangent, mtxNormal));
 	output.uv = input.uv;
@@ -38,7 +39,7 @@ PS_GBUFFER_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
 	
 	// Albedo
 	float4 cAlbedo = gtxtTextures[gnTextureIndex.x].Sample(gSamplerState, input.uv);
-	if (gMaterialData[gnMaterialIndex].eAlphaMode == ALPHA_MODE_MASKED)
+	if (gMaterialDatas[gnMaterialIndex].eAlphaMode == ALPHA_MODE_MASKED)
 	{
 		clip(cAlbedo.a - gfAlphaMaskCutoff);
 	}
@@ -49,7 +50,7 @@ PS_GBUFFER_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
 	float2 vNormalEnc = EncodeNormalOcta(vNormal);
 	
 	// Materials
-	MaterialData m = gMaterialData[gnMaterialIndex];
+	MaterialData m = gMaterialDatas[gnMaterialIndex];
 	float4 cEmissive = (gnTextureIndex.w != -1) ? gtxtTextures[gnTextureIndex.w].Sample(gSamplerState, input.uv)
 	                                            : m.cEmissive;
 	
@@ -75,7 +76,9 @@ PS_GBUFFER_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
 VS_STANDARD_OUTPUT VSAnimated(VS_SKINNED_INPUT input, uint nInstanceID : SV_InstanceID)
 {
 	VS_STANDARD_OUTPUT output = (VS_STANDARD_OUTPUT) 0;
-
+	int nBoneTransformBase = gBoneTransformOffsets[nInstanceID];
+	int nWorldTransformBase = gnWorldTransformOffset + nInstanceID;
+	
 	float fWeights[4] = { 0.f, 0.f, 0.f, 0.f };
 	fWeights[0] = input.blendWeights.x;
 	fWeights[1] = input.blendWeights.y;
@@ -89,19 +92,19 @@ VS_STANDARD_OUTPUT VSAnimated(VS_SKINNED_INPUT input, uint nInstanceID : SV_Inst
 	[unroll(4)]
 	for (int i = 0; i < 4; ++i)
 	{
-		position += fWeights[i] * mul(float4(input.position, 1.f), gBoneTransforms[input.blendInices[i]]).xyz;
-		normal += fWeights[i] * mul(input.normal, (float3x3) gBoneTransforms[input.blendInices[i]]);
-		tangent += fWeights[i] * mul(input.tangent, (float3x3) gBoneTransforms[input.blendInices[i]]);
+		position += fWeights[i] * mul(float4(input.position, 1.f), gBoneTransforms[nBoneTransformBase + input.blendInices[i]]).xyz;
+		normal += fWeights[i] * mul(input.normal, (float3x3) gBoneTransforms[nBoneTransformBase + input.blendInices[i]]);
+		tangent += fWeights[i] * mul(input.tangent, (float3x3) gBoneTransforms[nBoneTransformBase + input.blendInices[i]]);
 	}
 	
 	matrix mtxViewProjection = mul(gCamera.mtxView, gCamera.mtxProjection);
-	matrix mtxWorld = gWorldTransforms[nInstanceID].mtxWorld;
+	matrix mtxWorld = gWorldTransforms[nWorldTransformBase].mtxWorld;
 	
 	float3 positionW = mul(float4(position, 1.f), mtxWorld).xyz;
 	output.positionW = positionW;
 	output.position = mul(float4(positionW, 1.f), mtxViewProjection);
 	
-	float3x3 mtxNormal = (float3x3) transpose(gWorldTransforms[nInstanceID].mtxInvWorld);
+	float3x3 mtxNormal = (float3x3) transpose(gWorldTransforms[nWorldTransformBase].mtxInvWorld);
 	output.normalW = normalize(mul(normal, mtxNormal));
 	output.tangentW = normalize(mul(tangent, mtxNormal));
 	output.uv = input.uv;
@@ -115,7 +118,7 @@ PS_GBUFFER_OUTPUT PSAnimated(VS_STANDARD_OUTPUT input)
 	
 	// Albedo
 	float4 cAlbedo = gtxtTextures[gnTextureIndex.x].Sample(gSamplerState, input.uv);
-	if (gMaterialData[gnMaterialIndex].eAlphaMode == ALPHA_MODE_MASKED)
+	if (gMaterialDatas[gnMaterialIndex].eAlphaMode == ALPHA_MODE_MASKED)
 	{
 		clip(cAlbedo.a - gfAlphaMaskCutoff);
 	}
@@ -126,7 +129,7 @@ PS_GBUFFER_OUTPUT PSAnimated(VS_STANDARD_OUTPUT input)
 	float2 vNormalEnc = EncodeNormalOcta(vNormal);
 	
 	// Materials
-	MaterialData m = gMaterialData[gnMaterialIndex];
+	MaterialData m = gMaterialDatas[gnMaterialIndex];
 	
 	float3 cEmissive = (gnTextureIndex.w != -1) ? gtxtTextures[gnTextureIndex.w].Sample(gSamplerState, input.uv).rgb
 	                                            : m.cEmissive.rgb;
@@ -155,7 +158,7 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 	VS_TERRAIN_OUTPUT output = (VS_TERRAIN_OUTPUT) 0;
 	
 	matrix mtxViewProjection = mul(gCamera.mtxView, gCamera.mtxProjection);
-	matrix mtxWorld = gWorldTransforms[0].mtxWorld;
+	matrix mtxWorld = gmtxTerrainWorld;
 	
 	float3 positionW = mul(float4(input.position, 1.f), mtxWorld).xyz;
 	output.positionW = positionW;
@@ -168,6 +171,7 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 	return output;
 }
 
+[earlydepthstencil]
 PS_GBUFFER_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
 {
 	PS_GBUFFER_OUTPUT output = (PS_GBUFFER_OUTPUT) 0;
@@ -258,10 +262,6 @@ float4 PSDefferedLighting(VS_QUAD_OUTPUT input) : SV_Target0
 	float2 uv = (input.position.xy) / float2(gnScreenSize);
 	
 	GBufferData g = LoadGBuffer(pixelPos);
-	if (g.depth >= 0.9999f)
-	{
-		return float4(0, 0, 0, 1);
-	}
 	
 	float3 worldPos = ReconstructWorldPos(uv, g.depth);
 	float3 viewDir = normalize(gCamera.v3CameraPosition - worldPos);

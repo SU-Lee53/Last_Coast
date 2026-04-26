@@ -38,6 +38,11 @@ void IMesh::RenderPosition(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, ui
 	}
 }
 
+void IMesh::ShowControlImGui()
+{
+	ImGui::Text("numPositions : %d", m_Positions.nVertices);
+	ImGui::Text("numIndices : %d", m_IndexBuffer.nIndices);
+}
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FullScreenMesh
 
@@ -92,6 +97,14 @@ void StaticMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint3
 	else {
 		pd3dCommandList->DrawInstanced(m_Positions.nVertices, nInstanceCount, 0, 0);
 	}
+}
+
+void StaticMesh::ShowControlImGui() 
+{
+	IMesh::ShowControlImGui();
+	ImGui::Text("numNormals : %d", m_Normals.nVertices);
+	ImGui::Text("numTangents : %d", m_Tangents.nVertices);
+	ImGui::Text("numTexCoords : %d", m_TexCoords.nVertices);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -149,6 +162,16 @@ void SkinnedMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint
 	}
 }
 
+void SkinnedMesh::ShowControlImGui()
+{
+	StaticMesh::ShowControlImGui();
+	ImGui::Text("numTangents : %d", m_BlendIndices.nVertices);
+	ImGui::Text("numTexCoords : %d", m_BlendWeights.nVertices);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// TerrainMesh
+
 TerrainMesh::TerrainMesh(const MESHLOADINFO& meshLoadInfo, D3D12_PRIMITIVE_TOPOLOGY d3dTopology)
 	: IMesh(meshLoadInfo, d3dTopology)
 {
@@ -172,6 +195,16 @@ void TerrainMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint
 		pd3dCommandList->DrawIndexedInstanced(nIndexCount, nInstanceCount, unStartIndex, 0, 0);
 	}
 }
+
+void TerrainMesh::ShowControlImGui()
+{
+	IMesh::ShowControlImGui();
+	ImGui::Text("numNormals : %d", m_Normals.nVertices);
+	ImGui::Text("numTangents : %d", m_Tangents.nVertices);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// QuadMesh
 
 QuadMesh::QuadMesh(float fMin, float fMax)
 {
@@ -215,6 +248,9 @@ void QuadMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 
 	pd3dCommandList->IASetVertexBuffers(0, _countof(vertexBufferViews), vertexBufferViews);
 	pd3dCommandList->DrawInstanced(m_Positions.nVertices, nInstanceCount, 0, 0);
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// CubeMesh
 
 CubeMesh::CubeMesh(Vector3 v3Extents)
 {

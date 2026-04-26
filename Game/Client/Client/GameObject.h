@@ -78,6 +78,9 @@ protected:
 
 	void PropagateRoot(std::shared_ptr<IGameObject> pRoot);
 
+public:
+	void ShowControlImGui();
+
 protected:
 	std::string m_strFrameName;
 	std::array<std::shared_ptr<IComponent>, std::to_underlying(COMPONENT_TYPE::COUNT)> m_pComponents = {};

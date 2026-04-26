@@ -1,5 +1,41 @@
 ﻿#pragma once
 
+template<typename KeyType, typename ElemType>
+class IndexMap {
+private:
+	std::unordered_map<KeyType, size_t> m_IndexMap;
+	std::vector<ElemType> m_Elements;
+
+public:
+	void Reserve(size_t newSize) {
+		m_IndexMap.reserve(newSize);
+		m_Elements.reserve(newSize);
+	}
+
+	std::pair<size_t, bool> Insert(const KeyType& k, const ElemType& v) {
+		auto [idx, bResult] = m_IndexMap.emplace(k, m_Elements.size());
+		if (bResult) {
+			m_Elements.push_back(v);
+		}
+
+		return { idx->second, bResult };
+	}
+
+	void Clear() {
+		m_IndexMap.clear();
+		m_Elements.clear();
+	}
+
+	size_t Size() { return m_Elements.size(); }
+
+	//ElemType& operator[](KeyType key) { return m_Elements[m_IndexMap[key]]; }
+	size_t GetIndex(const KeyType& k) { return m_IndexMap[k]; }
+	ElemType& operator[](size_t idx) { return m_Elements[idx]; }
+
+	const std::vector<ElemType>& GetElements() { return m_Elements; }
+};
+
+
 extern void ShowErrorMessage(std::string_view file, int line, std::string_view message);
 #define SHOW_ERROR(strMsg)		ShowErrorMessage(__FILE__, __LINE__, strMsg);
 
