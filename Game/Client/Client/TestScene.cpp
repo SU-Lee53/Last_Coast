@@ -6,6 +6,7 @@
 #include "Skybox.h"
 #include "ThirdPersonCamera.h"
 #include "Collider.h"
+#include "MapTestScene.h"
 
 void TestScene::BuildObjects()
 {
@@ -48,6 +49,12 @@ void TestScene::Update()
 {
 	ImGui::Begin("Test");
 	{
+		if (ImGui::Button("Change Scene")) {
+			SCENE->ChangeScene<MapTestScene>();
+			ImGui::End();
+			return;
+		}
+
 		if (auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
 			ImGui::Text("Press `(~) to use mouse control");
 			ImGui::Text("Mouse : %s", pPlayer->IsMouseOn() ? "ON" : "OFF");

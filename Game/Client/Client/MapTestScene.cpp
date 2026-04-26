@@ -5,6 +5,7 @@
 #include "TerrainObject.h"
 #include "TerrainTestScene.h"
 #include "Skybox.h"
+#include "GameScene.h"
 
 void MapTestScene::BuildObjects()
 {
@@ -37,7 +38,7 @@ void MapTestScene::Update()
 	ImGui::Begin("Test");
 	{
 		if (ImGui::Button("Change Scene")) {
-			SCENE->ChangeScene<TerrainTestScene>();
+			SCENE->ChangeScene<GameScene>();
 			ImGui::End();
 			return;
 		}
