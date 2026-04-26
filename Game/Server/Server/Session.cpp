@@ -22,6 +22,7 @@ void Session::do_recv()
 
 	WSARecv(m_client, &m_recv_over.m_wsa, 1, 0, &recv_flag, &m_recv_over.m_over, nullptr);
 }
+
 void Session::send_add_player(int player_id)
 {
 	S2C_AddPlayer packet;

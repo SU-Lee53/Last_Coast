@@ -7,9 +7,6 @@
     <Filter Include="Network">
       <UniqueIdentifier>{3e949fcf-322f-416d-be33-02a9da4a78d4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Game">
-      <UniqueIdentifier>{fda6111b-b94f-44a0-81eb-817a016cf2ca}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Pch">
       <UniqueIdentifier>{ae9856fb-6daa-441f-a3fe-ca23b6d756a7}</UniqueIdentifier>
     </Filter>
@@ -19,6 +16,9 @@
     <Filter Include="Server">
       <UniqueIdentifier>{7682c945-3240-40b0-845e-963283c5fb8c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Room">
+      <UniqueIdentifier>{fda6111b-b94f-44a0-81eb-817a016cf2ca}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -27,6 +27,12 @@
     <ClCompile Include="main.cpp">
       <Filter>Main</Filter>
     </ClCompile>
+    <ClCompile Include="Session.cpp">
+      <Filter>Session</Filter>
+    </ClCompile>
+    <ClCompile Include="Room.cpp">
+      <Filter>Room</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -34,6 +40,12 @@
     </ClInclude>
     <ClInclude Include="protocol.h">
       <Filter>Server</Filter>
+    </ClInclude>
+    <ClInclude Include="Session.h">
+      <Filter>Session</Filter>
+    </ClInclude>
+    <ClInclude Include="Room.h">
+      <Filter>Room</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
