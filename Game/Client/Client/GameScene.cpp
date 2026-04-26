@@ -27,9 +27,7 @@ void GameScene::BuildObjects()
 	auto begin = high_resolution_clock::now();
 	LoadFromFiles("Game");
 	auto end = high_resolution_clock::now();
-
 	long long llLoadTime = duration_cast<milliseconds>(end - begin).count();
-
 
 	std::shared_ptr<TextBox> pText = std::make_shared<TextBox>(L"Malgun Gothic");
 	pText->SetText(std::format(L"로딩 시간 : {}ms", llLoadTime));
