@@ -8,20 +8,20 @@ public:
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const RenderPassInput& input,
 		OUT RenderPassOutput& output,
-		OUT DescriptorHandle& outDescHandle) const override;
+		OUT DescriptorHandle& outDescHandle) override;
 
 	virtual void OnPreRender(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const RenderPassInput& input,
 		OUT RenderPassOutput& output,
-		OUT DescriptorHandle& outDescHandle) const override;
+		OUT DescriptorHandle& outDescHandle) override;
 
 
 	virtual void OnPostRender(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const RenderPassInput& input,
 		OUT RenderPassOutput& output,
-		OUT DescriptorHandle& outDescHandle) const override;
+		OUT DescriptorHandle& outDescHandle) override;
 
 private:
 	void CreatePipelineState();

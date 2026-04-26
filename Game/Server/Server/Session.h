@@ -1,13 +1,14 @@
 ﻿#pragma once
 #include "pch.h"
 #include "Room.h"
+#include "protocol.h"
 
 class Session;
 
 extern std::array<Session, MAX_PLAYERS> clients;
 
 class EXP_OVER {
-
+public:
 	EXP_OVER()
 	{
 		ZeroMemory(&m_over, sizeof(m_over));
@@ -84,7 +85,7 @@ public:
 		packet.playerId = player_id;
 		do_send(packet.size, reinterpret_cast<char*>(&packet));
 	}
-	void		process_packet(unsigned char* p);
+	bool		process_packet(unsigned char* p);
 
 public:
 	SOCKET		m_client;

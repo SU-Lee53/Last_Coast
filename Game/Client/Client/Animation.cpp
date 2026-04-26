@@ -82,7 +82,7 @@ AnimationKey Animation::GetKeyFrameSRT(const std::string& strChannelName, float 
 		XMMatrixDecompose(&xmvScale, &xmvRotation, &xmvTranslation, mtxTransformation);
 
 		Vector3 v3Translation = xmvTranslation;
-		Vector3 v4Rotation = xmvRotation;
+		Quaternion v4Rotation = xmvRotation;
 		Vector3 v3Scale = xmvScale;
 
 		return { v3Translation, v4Rotation, v3Scale };
@@ -97,7 +97,7 @@ AnimationKey Animation::GetKeyFrameSRT(const std::string& strChannelName, float 
 		XMMatrixDecompose(&xmvScale, &xmvRotation, &xmvTranslation, mtxTransformation);
 
 		Vector3 v3Translation = xmvTranslation;
-		Vector3 v4Rotation = xmvRotation;
+		Quaternion v4Rotation = xmvRotation;
 		Vector3 v3Scale = xmvScale;
 
 		return { v3Translation, v4Rotation, v3Scale };

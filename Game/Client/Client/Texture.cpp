@@ -508,7 +508,7 @@ CD3DX12_RESOURCE_BARRIER Texture::GetResourceBarrier(D3D12_RESOURCE_STATES d3dAf
 	return d3dResourceBarrier;
 }
 
-bool RenderTargetTexture::Initialize(uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat)
+bool RenderTargetTexture::Initialize(uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat, D3D12_RESOURCE_STATES d3dInitialState)
 {
 	D3D12_RESOURCE_DESC d3dRTTextureDesc;
 	{
@@ -534,13 +534,13 @@ bool RenderTargetTexture::Initialize(uint32 unWidth, uint32 unHeight, DXGI_FORMA
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&d3dRTTextureDesc,
-		D3D12_RESOURCE_STATE_PRESENT,
+		d3dInitialState,
 		&clearValue,
 		IID_PPV_ARGS(m_pd3dResource.GetAddressOf())
 	);
 
 
-	m_d3dCurrentState = D3D12_RESOURCE_STATE_PRESENT;
+	m_d3dCurrentState = d3dInitialState;
 	return true;
 }
 

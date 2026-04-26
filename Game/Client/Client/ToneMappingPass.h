@@ -194,20 +194,20 @@ public:
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const RenderPassInput& input,
 		OUT RenderPassOutput& output,
-		OUT DescriptorHandle& outDescHandle) const override;
+		OUT DescriptorHandle& outDescHandle) override;
 
 	virtual void OnPreRender(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const RenderPassInput& input, 
 		OUT RenderPassOutput& output, 
-		OUT DescriptorHandle& outDescHandle) const override;
+		OUT DescriptorHandle& outDescHandle) override;
 
 
 	virtual void OnPostRender(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const RenderPassInput& input, 
 		OUT RenderPassOutput& output, 
-		OUT DescriptorHandle& outDescHandle) const override;
+		OUT DescriptorHandle& outDescHandle) override;
 
 	virtual void ShowDebugInfo() override;
 
@@ -269,7 +269,7 @@ private:
 	TextureRef<UnorderedAccessTexture> m_GradingLUT;
 	mutable bool m_bGradingLUTDirtyFlag = true;		// Dirty
 
-	TONE_MAPPING_MODE m_eMode = TONE_MAPPING_MODE::ACES;
+	TONE_MAPPING_MODE m_eMode = TONE_MAPPING_MODE::AGX;
 
 	// Parameters
 	ToneMappingParameter m_Parameters;

@@ -85,6 +85,8 @@ float4 PSForwardLighting(VS_STANDARD_OUTPUT input) : SV_Target0
 	
 	float3 viewDir = normalize(gCamera.v3CameraPosition - input.positionW);
 	
+	float fShadow = ComputeCascadeShadow(input.positionW);
+	
 	float3 finalColor = 0;
 	[unroll(MAX_LIGHTS)]
 	for (int i = 0; i < gSceneGlobal.nNumLights; ++i)
@@ -106,7 +108,7 @@ float4 PSForwardLighting(VS_STANDARD_OUTPUT input) : SV_Target0
 				break;
 			
 			case DIRECTIONAL_LIGHT:
-				finalColor += DirectionalLight(input.positionW, input.normalW, viewDir, albedoColor, fSpecularPower, fSpecularIntensity, i);
+				finalColor += DirectionalLight(input.positionW, input.normalW, viewDir, albedoColor, fSpecularPower, fSpecularIntensity, i) * fShadow;
 				break;
 		}
 	}

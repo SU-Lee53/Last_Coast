@@ -39,6 +39,7 @@ public:										\
 #define AI				GET_SINGLE(AIManagerWrapper)
 #define MATERIAL		GET_SINGLE(MaterialManager)
 #define COMPUTE			GET_SINGLE(ComputeManager)
+//#define TEXT			GET_SINGLE(TextManager)
 
 #define CUR_SCENE		SCENE->GetCurrentScene()
 #define DT				TIME->GetTimeElapsed()
@@ -121,13 +122,6 @@ struct EffectParameter {
 	float		fAdditionalData = 0.f;
 };
 
-struct SpriteRect {
-	float fLeft;
-	float fTop;
-	float fRight;
-	float fBottom;
-};
-
 struct Bone {
 	std::string strBoneName;
 	int nIndex;
@@ -182,6 +176,10 @@ struct AnimationKey {
 	Vector3 v3Translation{ 0.f, 0.f, 0.f };
 	Quaternion v4RotationQuat{ 0.f, 0.f, 0.f, 1.f };
 	Vector3 v3Scale{ 1.f, 1.f, 1.f };
+
+	AnimationKey() = default;
+	AnimationKey(const Vector3& t, const Quaternion& r, const Vector3& s) : v3Translation{ t }, v4RotationQuat{ r }, v3Scale{ s } {}
+	//AnimationKey(const Vector3& t, const Vector3& r, const Vector3& s) : v3Translation{ t }, v4RotationQuat{ r }, v3Scale{ s } {}
 
 	Matrix CreateSRT() const {
 		Matrix mtxScale = Matrix::CreateScale(v3Scale);
