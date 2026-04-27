@@ -1,22 +1,16 @@
 ﻿#pragma once
 #include "UIComponent.h"
 
-class TextBox : public IUIComponent {
-
+interface IText abstract {
 public:
-	TextBox(Font::ID font);
-	TextBox(const std::wstring& wstrFontname);
+	IText(Font::ID font);
+	IText(const std::wstring& wstrFontname);
 
 	void SetFontID(Font::ID fontID);
 	void SetText(const std::wstring& wstrText);
-	void SetTextColor(const Vector3& v3Color) { m_v4Color = Vector4(v3Color.x, v3Color.y, v3Color.z, 1.f); }
 
 	const std::wstring& GetText() const { return m_wstrText; }
 	Font::ID GetFontID() const { return m_fontID; }
-
-	virtual void Update() override;
-
-	virtual UIRectData MakeSBData() const override;
 
 protected:
 	void RefreshTextHandle();
@@ -28,5 +22,22 @@ protected:
 	TextHandle m_TextHandle{};
 
 	bool m_bDirty = true;
+};
 
+class TextBox : public IUIComponent, public IText {
+public:
+	TextBox(Font::ID font) : IText{ font } {}
+	TextBox(const std::wstring& wstrFontname) : IText{ wstrFontname } {}
+
+	virtual void Update() override;
+	virtual UIRectData MakeSBData() const override;
+};
+
+class TextButton : public IUIButtonComponent, public IText {
+public:
+	TextButton(Font::ID font) : IText{ font } {}
+	TextButton(const std::wstring& wstrFontname) : IText{ wstrFontname } {}
+
+	virtual void Update() override;
+	virtual UIRectData MakeSBData() const override;
 };

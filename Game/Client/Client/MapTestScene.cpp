@@ -35,7 +35,7 @@ void MapTestScene::BuildObjects()
 	m_pTimeText->SetPosition(Vector2{ 200,50 });
 	m_pTimeText->SetSize(Vector2{ 100,50 });
 
-	m_pKoreanText = std::make_shared<TextBox>(L"Malgun Gothic");
+	m_pKoreanText = std::make_shared<TextButton>(L"Malgun Gothic");
 	m_pKoreanText->SetText(L"클릭하면 글자색이 바뀜");
 	m_pKoreanText->SetLayer(0);
 	m_pKoreanText->SetAnchor(Vector2{ 0,0 });
@@ -43,12 +43,26 @@ void MapTestScene::BuildObjects()
 	m_pKoreanText->SetPosition(Vector2{ 350,50 });
 	m_pKoreanText->SetSize(Vector2{ 250,50 });
 	
-	auto fnCallback = [](IUIComponent* pComp) {
-		auto pText = static_cast<TextBox*>(pComp);
-		pText->SetTextColor(RandomGenerator::GenerateRandomColor3());
-	};
+	m_pKoreanText->SetBeginHoverCallback(
+		[](IUIComponent* pComp) {
+			auto pText = static_cast<TextBox*>(pComp);
+			pText->SetColor(Vector3(1,0,0));
+		}
+	);
 
-	m_pKoreanText->SetButtonCallback(fnCallback);
+	m_pKoreanText->SetEndHoverCallback(
+		[](IUIComponent* pComp) {
+			auto pText = static_cast<TextBox*>(pComp);
+			pText->SetColor(Vector3(1,1,1));
+		}
+	);
+
+	m_pKoreanText->SetButtonCallback(
+		[](IUIComponent* pComp) {
+			auto pText = static_cast<TextBox*>(pComp);
+			pText->SetColor(RandomGenerator::GenerateRandomColor3());
+		}
+	);
 
 	m_pUIBoard->InsertUI(m_pFPSText);
 	m_pUIBoard->InsertUI(m_pTimeText);

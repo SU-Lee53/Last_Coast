@@ -13,8 +13,7 @@ public:
 	virtual ~IUIComponent() = default;
 
 	virtual void Update() {};
-	bool CheckClicked(POINT ptClicked);
-	void OnClicked() { if (m_fnCallback) m_fnCallback(this); }
+	virtual bool IsClickable() const { return false; }
 
 public:
 	void SetVisible(bool bVisible) { m_bVisible = bVisible; }
@@ -24,14 +23,9 @@ public:
 	void SetPosition(const Vector2& v2Pos) { m_v2Position = v2Pos; }
 	void SetSize(const Vector2& v2Size) { m_v2Size = v2Size; }
 	void SetColor(const Vector4& v4Color) { m_v4Color = v4Color; }
+	void SetColor(const Vector3& v3Color) { m_v4Color = Vector4(v3Color.x, v3Color.y, v3Color.z, 1.f); }
 	
-	void SetButtonCallback(std::function<void(IUIComponent*)> fnCallback) {
-		m_bClickable = true;
-		m_fnCallback = fnCallback;
-	}
-
 	bool IsVisible() const { return m_bVisible; }
-	bool IsClickable() const { return m_bClickable && m_bVisible; }
 	uint32 GetLayer() const { return m_unLayer; }
 	const Vector2& GetAnchor() const { return m_v2Anchor; }
 	const Vector2& GetPivot() const { return m_v2Pivot; }
@@ -56,9 +50,56 @@ protected:
 
 	bool m_bVisible = true;
 
+};
+
+interface IUIButtonComponent abstract : public IUIComponent {
+public:
+	virtual bool IsClickable() const override { return m_bVisible; }
+	bool WasHovered() { return m_bHovered; }
+
+	void SetButtonCallback(std::function<void(IUIComponent*)> fnCallback) {
+		m_fnClickCallback = fnCallback;
+	}
+
+	void SetBeginHoverCallback(std::function<void(IUIComponent*)> fnCallback) {
+		m_fnBeginHoverCallback = fnCallback;
+	}
+
+	void SetEndHoverCallback(std::function<void(IUIComponent*)> fnCallback) {
+		m_fnEndHoverCallback = fnCallback;
+	}
+
+	bool CheckPointInComponent(POINT ptClicked) const {
+		RECT r = GetScreenRect();
+		return (ptClicked.x >= r.left && ptClicked.x <= r.right) &&
+			(ptClicked.y >= r.top && ptClicked.y <= r.bottom);
+	}
+
+	void OnClicked() {
+		//m_bHovered = false;
+		if (m_fnClickCallback) m_fnClickCallback(this);
+	}
+
+	void OnBeginHovered() {
+		m_bHovered = true;
+		if (m_fnBeginHoverCallback) m_fnBeginHoverCallback(this);
+	}
+
+	void OnEndHovered() {
+		m_bHovered = false;
+		if (m_fnEndHoverCallback) m_fnEndHoverCallback(this);
+	}
+
+protected:
 	// Button
-	bool m_bClickable = false;
-	std::function<void(IUIComponent*)> m_fnCallback;
+	std::function<void(IUIComponent*)> m_fnClickCallback;
+	std::function<void(IUIComponent*)> m_fnBeginHoverCallback;
+	std::function<void(IUIComponent*)> m_fnEndHoverCallback;
+	bool m_bHovered = false;
 
 };
 
+template<typename C>
+concept Clickable = requires(C comp) {
+	comp->IsClickable();
+};

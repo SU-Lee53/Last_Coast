@@ -2,6 +2,7 @@
 #include "Scene.h"
 
 class TextBox;
+class TextButton;
 
 class MapTestScene : public Scene {
 public:
@@ -17,7 +18,8 @@ private:
 
 	std::shared_ptr<TextBox> m_pFPSText;
 	std::shared_ptr<TextBox> m_pTimeText;
-	std::shared_ptr<TextBox> m_pKoreanText;
+	std::shared_ptr<TextButton> m_pKoreanText;
+
 	std::shared_ptr<TextBox> m_pLoadTimeText;
 
 };

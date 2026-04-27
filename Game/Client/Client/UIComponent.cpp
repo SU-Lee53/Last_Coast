@@ -1,13 +1,6 @@
 ﻿#include "pch.h"
 #include "UIComponent.h"
 
-bool IUIComponent::CheckClicked(POINT ptClicked)
-{
-	RECT r = GetScreenRect();
-	return (ptClicked.x >= r.left && ptClicked.x <= r.right) &&
-		(ptClicked.y >= r.top && ptClicked.y <= r.bottom);
-}
-
 RECT IUIComponent::GetScreenRect() const
 {
 	const float fScreenWidth = static_cast<float>(WinCore::g_dwClientWidth);
