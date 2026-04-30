@@ -14,6 +14,7 @@ public:
 
 public:
 	const std::vector<Matrix>& GetFinalOutput() const;
+	const std::vector<Matrix>& GetFinalModelLocalTransforms() const;
 	double GetElapsedTime() const { return m_fTotalTimeElapsed; }
 	double GetCurrentAnimationDuration() const;
 
@@ -38,6 +39,8 @@ protected:
 	std::vector<AnimationKey> m_mtxCachedPose;
 	std::vector<Matrix> m_mtxCachedLocalBoneTransforms;
 	std::vector<Matrix> m_mtxFinalBoneTransforms;
+
+	std::vector<Matrix> m_mtxFinalModelLocalTransforms;
 
 	// Bone Ref
 	std::weak_ptr<Skeleton> m_wpOwnerSkeleton;

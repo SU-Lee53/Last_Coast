@@ -26,7 +26,8 @@ public:
 	virtual void OnBeginCollision(const CollisionResult& collisionResult) override;
 	virtual void OnWhileCollision(const CollisionResult& collisionResult) override;
 	virtual void OnEndCollision(const CollisionResult& collisionResult) override;
-
+	
+	void GiveWeapon(WEAPON_TYPE eWeaponType);
 
 private:
 	void ToggleMouseLook();
@@ -75,6 +76,7 @@ private:
 	bool m_bSkipMouseDeltaThisFrame = false;	// To prevent twitch when mouse look enabled
 
 	std::shared_ptr<class Crosshair> m_pCrosshair = nullptr;
+	std::shared_ptr<WeaponSocket> m_pWeaponSocket = nullptr;
 
 };
 

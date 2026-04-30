@@ -3,6 +3,7 @@
 #include "Scene.h"
 
 std::unique_ptr<D3DCore> GameFramework::g_pD3DCore = nullptr;
+std::unique_ptr<GameContext> GameFramework::g_GameContext = nullptr;
 
 GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnableVSync)
 {
@@ -23,6 +24,9 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 
 	MODEL->Initialize();
 	ANIMATION->Initialize();
+
+	g_GameContext = std::make_unique<GameContext>();
+	GCTX->Initialize();
 
 	SCENE->Initialize();
 

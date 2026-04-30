@@ -134,6 +134,9 @@
     <Filter Include="02.Game\UI\UIComponent\Components">
       <UniqueIdentifier>{dd161558-19d2-43cc-ab43-2a2b63200a9e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02.Game\GameObject\Weapons">
+      <UniqueIdentifier>{37e57477-68bc-4529-92f5-1c9ae9080c9f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h">
@@ -459,6 +462,8 @@
     <ClInclude Include="UIPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
+    <ClInclude Include="WeaponObject.h" />
+    <ClInclude Include="GameContext.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -779,6 +784,8 @@
     <ClCompile Include="UIPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
+    <ClCompile Include="WeaponObject.cpp" />
+    <ClCompile Include="GameContext.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">

@@ -12,7 +12,8 @@ AnimationController::AnimationController(std::shared_ptr<IGameObject> pOwner)
 
 void AnimationController::Initialize()
 {
-	m_mtxFinalBoneTransforms.reserve(m_wpOwnerSkeleton.lock()->GetBones().size());
+	m_mtxFinalBoneTransforms.resize(m_wpOwnerSkeleton.lock()->GetBones().size(), Matrix::Identity);
+	m_mtxFinalModelLocalTransforms.resize(m_wpOwnerSkeleton.lock()->GetBones().size(), Matrix::Identity);
 }
 
 void AnimationController::Update()
@@ -37,6 +38,11 @@ const std::vector<Matrix>& AnimationController::GetFinalOutput() const
 	return m_mtxFinalBoneTransforms;
 }
 
+const std::vector<Matrix>& AnimationController::GetFinalModelLocalTransforms() const
+{
+	return m_mtxFinalModelLocalTransforms;
+}
+
 double AnimationController::GetCurrentAnimationDuration() const
 {
 	return m_pStateMachine->GetCurrentAnimationState()->pAnimationToPlay->GetDuration();
@@ -46,17 +52,16 @@ void AnimationController::ComputeFinalMatrix()
 {
 	const auto& ownerBones = GetOwnerBones();
 	int nBones = ownerBones.size();
-	std::vector<Matrix> mtxToRootTransforms(nBones);
+	//std::vector<Matrix> mtxToRootTransforms(nBones);
 	for (int i = 0; i < nBones; ++i) {
 		int nParentIndex = ownerBones[i].nParentIndex;
-		Matrix mtxToRoot = nParentIndex >= 0 ? m_mtxCachedLocalBoneTransforms[i] * mtxToRootTransforms[nParentIndex] : m_mtxCachedLocalBoneTransforms[i];
-		mtxToRootTransforms[i] = mtxToRoot;
+		Matrix mtxToRoot = nParentIndex >= 0 ? m_mtxCachedLocalBoneTransforms[i] * m_mtxFinalModelLocalTransforms[nParentIndex] : m_mtxCachedLocalBoneTransforms[i];
+		m_mtxFinalModelLocalTransforms[i] = mtxToRoot;
 	}
 
-	m_mtxFinalBoneTransforms.resize(nBones);
+	//m_mtxFinalBoneTransforms.resize(nBones);
 	for (int i = 0; i < nBones; ++i) {
-		m_mtxFinalBoneTransforms[i] = ownerBones[i].mtxOffset * mtxToRootTransforms[i];
-		m_mtxFinalBoneTransforms[i] = m_mtxFinalBoneTransforms[i].Transpose();
+		m_mtxFinalBoneTransforms[i] = (ownerBones[i].mtxOffset * m_mtxFinalModelLocalTransforms[i]).Transpose();
 	}
 }
 
@@ -93,6 +98,7 @@ void PlayerAnimationController::Initialize()
 	int nBones = GetOwnerBones().size();
 	m_mtxCachedLocalBoneTransforms.resize(nBones);
 	m_mtxFinalBoneTransforms.resize(nBones);
+	m_mtxFinalModelLocalTransforms.resize(nBones);
 
 	m_pBlendMachine = std::make_unique<LayeredBlendMachine>(m_wpOwner.lock(), "Spine", 3);
 	m_nSpineIndex = m_wpOwnerSkeleton.lock()->FindBoneIndex("Spine");

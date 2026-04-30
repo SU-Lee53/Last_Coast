@@ -16,7 +16,11 @@ IGameObject::~IGameObject()
 
 void IGameObject::Render()
 {
-	// TODO : PrepareRender Logic Here
+	// TODO : Prepare Render Logic Here
+	if (auto p = GetComponent<Skeleton>(); p) {
+		p->PrepareRenderAttached();
+	}
+
 	if (auto p = GetComponent<MeshRenderer>()) {
 		RENDER->Add(shared_from_this());
 	}
@@ -63,6 +67,20 @@ void IGameObject::SetChild(std::shared_ptr<IGameObject> pChild)
 	}
 }
 
+void IGameObject::SwapChild(size_t nIndex, std::shared_ptr<IGameObject> pNewChild)
+{
+	if (nIndex >= m_pChildren.size()) return;
+
+	if (pNewChild) {
+		pNewChild->m_pParent = shared_from_this();
+		m_pChildren[nIndex] = pNewChild;
+	}
+
+	if (m_pParent.expired()) {	// Root 에 자식추가 -> 자식들에게 새로운 Root 를 전달 
+		pNewChild->PropagateRoot(shared_from_this());
+	}
+}
+
 void IGameObject::PropagateRoot(std::shared_ptr<IGameObject> pRoot)
 {
 	m_pRoot = pRoot;
@@ -101,6 +119,22 @@ std::shared_ptr<IGameObject> IGameObject::FindFrame(const std::string& strFrameN
 	return nullptr;
 }
 
+std::shared_ptr<IGameObject> IGameObject::FindFrameEndsWith(const std::string& strFrameName)
+{
+	std::shared_ptr<IGameObject> pFrameObject;
+	if (m_strFrameName.ends_with(strFrameName)) {
+		return shared_from_this();
+	}
+
+	for (auto& pChild : m_pChildren) {
+		if (pFrameObject = pChild->FindFrameEndsWith(strFrameName)) {
+			return pFrameObject;
+		}
+	}
+
+	return nullptr;
+}
+
 std::shared_ptr<IGameObject> IGameObject::FindMeshedFrame(const std::string& strFrameName)
 {
 	std::shared_ptr<IGameObject> pFrameObject;
@@ -122,14 +156,26 @@ void IGameObject::ShowControlImGui()
 {
 	std::string& strTreeNodeName = m_strFrameName;
 
+	std::string strComponentName[] = {
+		"TRANSFORM",
+		"MESH_RENDERER",
+		"ANIMATION_CONTROLLER",
+		"SKELETON",
+		"COLLIDER",
+	};
+
 	if (ImGui::TreeNode(strTreeNodeName.c_str())) {
 		constexpr auto nComponents = std::to_underlying(COMPONENT_TYPE::COUNT);
 		for (int i = 0; i < nComponents; ++i) {
 			if (m_pComponents[i]) {
-				m_pComponents[i]->ShowControlImGui();
+				if (ImGui::TreeNode(strComponentName[i].c_str())) {
+					m_pComponents[i]->ShowControlImGui();
+					ImGui::TreePop();
+				}
 			}
 		}
 
+		ImGui::Text("Children");
 		for (const auto& pChild : m_pChildren) {
 			pChild->ShowControlImGui();
 		}

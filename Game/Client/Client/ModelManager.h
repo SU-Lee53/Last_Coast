@@ -13,11 +13,16 @@ public:
 	void Add(const std::string& strModelName, std::shared_ptr<IGameObject> pObj);
 	std::shared_ptr<IGameObject> Get(const std::string& strObjName);
 
-	std::shared_ptr<IGameObject> LoadOrGet(const std::string& strFileName);
+	std::shared_ptr<IGameObject> LoadOrGet(const std::string& strFileName, bool bUseNameFilenameOnRoot = false);
 
 private:
-	std::shared_ptr<IGameObject> LoadFrameHierarchyFromFile(std::shared_ptr<IGameObject> pParent, std::shared_ptr<IGameObject> pRoot, const nlohmann::json& inJson);
-	std::shared_ptr<IGameObject> LoadModelFromFile(const std::string& strFilePath);
+	std::shared_ptr<IGameObject> LoadModelFromFile(const std::string& strFilePath, bool bUseNamePrefixInKeyOnRoot = false);
+	std::shared_ptr<IGameObject> LoadFrameHierarchyFromFile(
+		const std::string& strFilename,
+		std::shared_ptr<IGameObject> pParent, 
+		std::shared_ptr<IGameObject> pRoot, 
+		const nlohmann::json& inJson, 
+		bool bUseNamePrefixInKeyOnRoot = false);
 
 	std::pair<MESHLOADINFO, MATERIALLOADINFO> LoadMeshInfoFromFiles(const nlohmann::json& inJson);
 	MATERIALLOADINFO LoadMaterialInfoFromFiles(const nlohmann::json& inJson);

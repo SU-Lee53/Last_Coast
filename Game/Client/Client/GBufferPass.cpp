@@ -144,7 +144,7 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 			// Set
 			RenderParameter renderParameter;
 			const auto& pPSOs = pMaterial->GetShader()->GetPipelineStates();
-			renderParameter.pd3dPipelineState = pPSOs[0];
+			renderParameter.pd3dPipelineState = (pMaterial->HasAlphaMask()) ? pPSOs[1] : pPSOs[0];
 			renderParameter.cbInstanceData = instanceData;
 			renderParameter.nInstances = v.size();
 			renderParameter.cbInstanceData.gnWorldTransformOffset = m_CachedData.sbWorldTransformDatas.size();

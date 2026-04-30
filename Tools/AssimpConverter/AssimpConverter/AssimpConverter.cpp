@@ -817,9 +817,12 @@ void AssimpConverter::ExportEmbeddedTexture(const aiTexture* pTexture, aiTexture
 			}
 
 			if (FAILED(hr)) {
-				DisplayText("Failed to load texutre");
-				return;
+				DisplayText("%d : Failed to load texuture : %s\n", __LINE__, strTextureName.c_str());
 			}
+			else {
+				DisplayText("%d : Texture load successful: % s\n", __LINE__, strTextureName.c_str());
+			}
+
 		}
 	}
 	else {
@@ -838,8 +841,10 @@ void AssimpConverter::ExportEmbeddedTexture(const aiTexture* pTexture, aiTexture
 		}
 
 		if (FAILED(hr)) {
-			DisplayText("Failed to load texutre");
-			return;
+			DisplayText("%d : Failed to load texuture : %s\n", __LINE__, strTextureName.c_str());
+		}
+		else {
+			DisplayText("%d : Texture load successful: % s\n", __LINE__, strTextureName.c_str());
 		}
 
 		::memcpy(img.GetImage(0, 0, 0)->pixels, pTexture->pcData, (pTexture->mWidth * pTexture->mHeight * 4));
@@ -867,7 +872,10 @@ void AssimpConverter::ExportEmbeddedTexture(const aiTexture* pTexture, aiTexture
 	);
 
 	if (FAILED(hr)) {
-		DisplayText("Failed to save texutre");
+		DisplayText("%d : Failed to save texuture : %s\n", __LINE__, strTextureName.c_str());
+	}
+	else {
+		DisplayText("%d : Texture save successful: % s\n", __LINE__, strTextureName.c_str());
 	}
 
 	return;
@@ -904,7 +912,10 @@ void AssimpConverter::ExportExternalTexture(const aiString& aistrTexturePath, ai
 	);
 
 	if (FAILED(hr)) {
-		DisplayText("Failed to load texutre");
+		DisplayText("%d : Failed to load texuture : %s\n", __LINE__, strTextureName.c_str());
+	}
+	else {
+		DisplayText("%d : Texture load successful: % s\n", __LINE__, strTextureName.c_str());
 	}
 
 	// Filp Y if its normal map
@@ -934,7 +945,10 @@ void AssimpConverter::ExportExternalTexture(const aiString& aistrTexturePath, ai
 	);
 
 	if (FAILED(hr)) {
-		DisplayText("Failed to save texutre");
+		DisplayText("%d : Failed to save texuture : %s\n", __LINE__, strTextureName.c_str());
+	}
+	else {
+		DisplayText("%d : Texture save successful: % s\n", __LINE__, strTextureName.c_str());
 	}
 
 	return;

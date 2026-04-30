@@ -112,6 +112,18 @@ enum class DESCRIPTOR_TYPE {
 	SAMPLER 
 };
 
+enum class WEAPON_TYPE : uint8 {
+	M4 = 0,
+	AK,
+	RIFLE,
+	PISTOL,
+	MELEE,
+
+	COUNT,
+
+	UNDEFINED = 99
+};
+
 //////////////////////////////////////////////////////////////////////////////////
 // Structs
 
@@ -132,6 +144,8 @@ struct Bone {
 	int nChildren = 0;
 	int nDepth = 0;
 	std::vector<int> nChilerenIndex;
+
+	std::shared_ptr<IGameObject> pNode;
 };
 
 struct PendingUploadBuffer {

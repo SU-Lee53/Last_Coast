@@ -5,6 +5,7 @@
 #include "Skybox.h"
 #include "GameScene.h"
 #include "TextBox.h"
+#include "WeaponObject.h"
 
 void MapTestScene::BuildObjects()
 {
@@ -68,6 +69,10 @@ void MapTestScene::BuildObjects()
 	m_pUIBoard->InsertUI(m_pTimeText);
 	m_pUIBoard->InsertUI(m_pKoreanText);
 
+	if (auto pThirdPerson = std::dynamic_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
+		pThirdPerson->GiveWeapon(static_cast<WEAPON_TYPE>(m_nWeaponSelected));
+	}
+
 	LoadFromFiles("LightTest");
 }
 
@@ -85,6 +90,7 @@ void MapTestScene::ProcessInput()
 
 void MapTestScene::Update()
 {
+
 	// Update text test
 	std::wstring wstrFrameRate;
 	wstrFrameRate = std::format(L"FPS : {}", TIME->GetCurrentFrameRate());
@@ -106,6 +112,8 @@ void MapTestScene::Update()
 		if (ImGui::BeginTabBar("Debug")) {
 			if (ImGui::BeginTabItem("Player")) {
 				if (auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
+					m_pPlayer->ShowControlImGui();
+
 					ImGui::Text("Press `(~) to use mouse control");
 					ImGui::Text("Mouse : %s", pPlayer->IsMouseOn() ? "ON" : "OFF");
 
@@ -130,6 +138,31 @@ void MapTestScene::Update()
 						ImGui::Text("Collision {%s : %s}", pair.pSelf->GetName().c_str(), pair.pOther->GetName().c_str());
 					}
 
+					ImGui::Text("====== Weapon Test ======");
+					const auto& strWeaponNames = GameContext::g_cstrWeaponName;
+					if(ImGui::BeginCombo("Weapons", strWeaponNames[m_nWeaponSelected])) {
+						for (int i = 0; i < _countof(strWeaponNames); ++i) {
+							bool bSelected = (m_nWeaponSelected == i);
+							if (ImGui::Selectable(strWeaponNames[i], bSelected)) {
+								m_nWeaponSelected = i;
+								if (auto pThirdPerson = std::dynamic_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
+									pThirdPerson->GiveWeapon(static_cast<WEAPON_TYPE>(m_nWeaponSelected));
+								}
+							}
+
+							if (bSelected) {
+								ImGui::SetItemDefaultFocus();
+							}
+
+						}
+
+
+
+						ImGui::EndCombo();
+					}
+
+
+					//m_pGun->ShowControlImGui();
 				}
 				else {
 					ImGui::Text("No Animation");

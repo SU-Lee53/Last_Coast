@@ -103,34 +103,5 @@ std::shared_ptr<Animation> AnimationManager::LoadFromFile(const std::string& str
 		std::string boneName = jChannels[i]["Name"].get<std::string>();
 		pAnimation->m_keyFrameMap.emplace(boneName, keyFrames);
 	}
-
-
-	//for (int i = 0; i < nChannels; ++i) {
-	//	std::vector<KeyFrame> keyFrames;
-	//	size_t nKeyFrames = jChannels[i]["nKeyFrames"].get<size_t>();
-	//	keyFrames.reserve(nKeyFrames);
-
-	//	const nlohmann::json& jKeyFrames = jChannels[i]["KeyFrames"];
-	//	for (int keyIndex = 0; keyIndex < nKeyFrames; ++keyIndex) {
-	//		KeyFrame k;
-	//		//k.dTime = jChannels["KeyFrames"];
-	//		k.fTime = jKeyFrames[keyIndex][0].get<double>();
-
-	//		std::vector<float> keyData = jKeyFrames[keyIndex][1].get<std::vector<float>>();
-	//		k.animationKeys.v3Translation = Vector3(keyData.data());
-	//		
-	//		keyData = jKeyFrames[keyIndex][2].get<std::vector<float>>();
-	//		k.animationKeys.v4RotationQuat = Vector4(keyData.data());
-	//		
-	//		keyData = jKeyFrames[keyIndex][3].get<std::vector<float>>();
-	//		k.animationKeys.v3Scale = Vector3(keyData.data());
-
-	//		keyFrames.push_back(k);
-	//	}
-
-	//	std::string boneName = jChannels[i]["Name"].get<std::string>();
-	//	pAnimation->m_keyFrameMap.insert({ boneName, keyFrames });
-	//}
-
 	return pAnimation;
 }

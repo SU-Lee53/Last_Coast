@@ -36,6 +36,8 @@ void ThirdPersonPlayer::Initialize()
 			m_pCrosshair = std::make_shared<Crosshair>();
 			pUIBoard->InsertUI(m_pCrosshair);
 		}
+
+		m_pWeaponSocket = GetComponent<Skeleton>()->CreateAttachSocket<WeaponSocket>("RightHand"s);
 	}
 
 	for (auto& component : m_pComponents) {
@@ -191,6 +193,11 @@ void ThirdPersonPlayer::OnWhileCollision(const CollisionResult& collisionResult)
 
 void ThirdPersonPlayer::OnEndCollision(const CollisionResult& collisionResult)
 {
+}
+
+void ThirdPersonPlayer::GiveWeapon(WEAPON_TYPE eWeaponType)
+{
+	m_pWeaponSocket->SetWeapon(eWeaponType);
 }
 
 void ThirdPersonPlayer::PostUpdate()

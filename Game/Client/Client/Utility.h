@@ -224,6 +224,19 @@ inline Vector3 ReadVector3FromJson(const nlohmann::json& j)
 	};
 }
 
+/////////////////////////////////////////////////////////////////////////////////
+// ImGui Helpers
+
+namespace ImGuiHelper {
+
+	extern void PrintVector2(const char* label, const Vector2& v);
+	extern void PrintVector3(const char* label, const Vector3& v);
+	extern void PrintVector4(const char* label, const Vector4& v);
+	extern void PrintQuaternion(const char* label, const Quaternion& q);
+	extern void PrintMatrix(const char* label, const Matrix& m);
+	extern void PrintTransformMatrix(const char* label, const Matrix& m);
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////
 // Unit Conversion + Literals

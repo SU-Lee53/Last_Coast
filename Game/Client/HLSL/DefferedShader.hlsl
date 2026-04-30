@@ -10,7 +10,7 @@ struct PS_GBUFFER_OUTPUT
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// StandardShader
+// Standard VS
 
 VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input, uint nInstanceID : SV_InstanceID)
 {
@@ -33,45 +33,8 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input, uint nInstanceID : SV_Ins
 	return output;
 }
 
-PS_GBUFFER_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
-{
-	PS_GBUFFER_OUTPUT output = (PS_GBUFFER_OUTPUT) 0;
-	
-	// Albedo
-	float4 cAlbedo = gtxtTextures[gnTextureIndex.x].Sample(gSamplerState, input.uv);
-	if (gMaterialDatas[gnMaterialIndex].eAlphaMode == ALPHA_MODE_MASKED)
-	{
-		clip(cAlbedo.a - gfAlphaMaskCutoff);
-	}
-	
-	// Normal
-	float3 vNormal = (gnTextureIndex.y != -1) ? ComputeNormal(input.normalW, input.tangentW, input.uv) : input.normalW;
-	//float3 vNormal = normalize(input.normalW);
-	float2 vNormalEnc = EncodeNormalOcta(vNormal);
-	
-	// Materials
-	MaterialData m = gMaterialDatas[gnMaterialIndex];
-	float4 cEmissive = (gnTextureIndex.w != -1) ? gtxtTextures[gnTextureIndex.w].Sample(gSamplerState, input.uv)
-	                                            : m.cEmissive;
-	
-	float fMetallic = (gnTextureIndex.z != -1) ? gtxtTextures[gnTextureIndex.z].Sample(gSamplerState, input.uv).r
-	                                           : m.fMetallic;
-	
-	//float fRoughness = 1.0f - saturate(m.fSmoothness);
-	float fRoughness = 1.0f - saturate(m.fSmoothness);
-	float fAO = 1.0f;
-	float fSpecularPower = saturate(m.cSpecular.a);
-	
-	output.RT0 = float4(cAlbedo.rgb, fMetallic);
-	output.RT1 = float4(vNormalEnc, fRoughness, fAO);
-	output.RT2 = float4(cEmissive.rgb, cEmissive.a);
-	//output.RT2 = float4(input.positionW, 1.0f);
-	
-	return output;
-}
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// AnimatedShader
+// Animated VS
 
 VS_STANDARD_OUTPUT VSAnimated(VS_SKINNED_INPUT input, uint nInstanceID : SV_InstanceID)
 {
@@ -112,7 +75,44 @@ VS_STANDARD_OUTPUT VSAnimated(VS_SKINNED_INPUT input, uint nInstanceID : SV_Inst
 	return output;
 }
 
-PS_GBUFFER_OUTPUT PSAnimated(VS_STANDARD_OUTPUT input)
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Common GBuffer PS
+
+[earlydepthstencil]
+PS_GBUFFER_OUTPUT PSGBufferOpaque(VS_STANDARD_OUTPUT input)
+{
+	PS_GBUFFER_OUTPUT output = (PS_GBUFFER_OUTPUT) 0;
+	
+	// Albedo
+	float4 cAlbedo = gtxtTextures[gnTextureIndex.x].Sample(gSamplerState, input.uv);
+	
+	// Normal
+	float3 vNormal = (gnTextureIndex.y != -1) ? ComputeNormal(input.normalW, input.tangentW, input.uv) : input.normalW;
+	//float3 vNormal = normalize(input.normalW);
+	float2 vNormalEnc = EncodeNormalOcta(vNormal);
+	
+	// Materials
+	MaterialData m = gMaterialDatas[gnMaterialIndex];
+	
+	float3 cEmissive = (gnTextureIndex.w != -1) ? gtxtTextures[gnTextureIndex.w].Sample(gSamplerState, input.uv).rgb
+	                                            : m.cEmissive.rgb;
+	
+	float fMetallic = (gnTextureIndex.z != -1) ? gtxtTextures[gnTextureIndex.z].Sample(gSamplerState, input.uv).r
+	                                           : m.fMetallic;
+	
+	//float fRoughness = 1.0f - saturate(m.fSmoothness);
+	float fRoughness = saturate(m.fSmoothness);
+	float fAO = 1.0f;
+	float fSpecularPower = saturate(m.cSpecular.a);
+	
+	output.RT0 = float4(cAlbedo.rgb, fMetallic);
+	output.RT1 = float4(vNormalEnc, fRoughness, fAO);
+	output.RT2 = float4(cEmissive, fSpecularPower);
+	
+	return output;
+}
+
+PS_GBUFFER_OUTPUT PSGBufferAlphaMask(VS_STANDARD_OUTPUT input)
 {
 	PS_GBUFFER_OUTPUT output = (PS_GBUFFER_OUTPUT) 0;
 	
@@ -145,7 +145,6 @@ PS_GBUFFER_OUTPUT PSAnimated(VS_STANDARD_OUTPUT input)
 	output.RT0 = float4(cAlbedo.rgb, fMetallic);
 	output.RT1 = float4(vNormalEnc, fRoughness, fAO);
 	output.RT2 = float4(cEmissive, fSpecularPower);
-	//output.RT2 = float4(input.positionW, 1.0f);
 	
 	return output;
 }

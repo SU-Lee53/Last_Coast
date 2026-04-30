@@ -193,10 +193,12 @@ void ShaderManager::CompileShaders()
 
 	// Shaders.hlsl
 	Compile("StandardVS", L"DefferedShader.hlsl", L"VSStandard", SHADER_TYPE::VS);
-	Compile("StandardPS", L"DefferedShader.hlsl", L"PSStandard", SHADER_TYPE::PS);
-	
 	Compile("AnimatedVS", L"DefferedShader.hlsl", L"VSAnimated", SHADER_TYPE::VS);
-	Compile("AnimatedPS", L"DefferedShader.hlsl", L"PSAnimated", SHADER_TYPE::PS);
+	Compile("GBufferOpaquePS", L"DefferedShader.hlsl", L"PSGBufferOpaque", SHADER_TYPE::PS);
+	Compile("GBufferAlphaMaskPS", L"DefferedShader.hlsl", L"PSGBufferAlphaMask", SHADER_TYPE::PS);
+	
+	//Compile("StandardPS", L"DefferedShader.hlsl", L"PSStandard", SHADER_TYPE::PS);
+	//Compile("AnimatedPS", L"DefferedShader.hlsl", L"PSAnimated", SHADER_TYPE::PS);
 	
 	Compile("TerrainVS", L"DefferedShader.hlsl", L"VSTerrain", SHADER_TYPE::VS);
 	Compile("TerrainPS", L"DefferedShader.hlsl", L"PSTerrain", SHADER_TYPE::PS);

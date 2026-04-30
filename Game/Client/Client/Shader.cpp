@@ -55,14 +55,14 @@ D3D12_SHADER_BYTECODE Shader::ReadCompiledShaderFromFile(const std::wstring& wst
 
 void StandardShader::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12RootSignature> pd3dRootSignature)
 {
-	m_pd3dPipelineStates.resize(1);
+	m_pd3dPipelineStates.resize(2);
 
-	// Pipeline #0 : Instancing
+	// Pipeline #0 : Opaque
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC d3dPipelineDesc{};
 	{
 		d3dPipelineDesc.pRootSignature = (pd3dRootSignature) ? pd3dRootSignature.Get() : RenderManager::g_pd3dGlobalRootSignature.Get();
 		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("StandardVS");
-		d3dPipelineDesc.PS = SHADER->GetShaderByteCode("StandardPS");
+		d3dPipelineDesc.PS = SHADER->GetShaderByteCode("GBufferOpaquePS");
 		d3dPipelineDesc.RasterizerState = CreateRasterizerState();
 		d3dPipelineDesc.BlendState = CreateBlendState();
 		d3dPipelineDesc.DepthStencilState = CreateDepthStencilState();
@@ -82,6 +82,17 @@ void StandardShader::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Ro
 	if (FAILED(hr)) {
 		__debugbreak();
 	}
+
+	// Pipeline #1 : With alpha mask
+	{
+		d3dPipelineDesc.PS = SHADER->GetShaderByteCode("GBufferAlphaMaskPS");
+	}
+
+	hr = pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dPipelineStates[1].GetAddressOf()));
+	if (FAILED(hr)) {
+		__debugbreak();
+	}
+
 }
 
 D3D12_INPUT_LAYOUT_DESC StandardShader::CreateInputLayout()
@@ -114,14 +125,14 @@ D3D12_INPUT_LAYOUT_DESC StandardShader::CreateInputLayout()
 
 void AnimatedShader::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12RootSignature> pd3dRootSignature)
 {
-	m_pd3dPipelineStates.resize(1);
+	m_pd3dPipelineStates.resize(2);
 
-	// Pipeline #0 : Instancing
+	// Pipeline #0 : Opaque
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC d3dPipelineDesc{};
 	{
 		d3dPipelineDesc.pRootSignature = (pd3dRootSignature) ? pd3dRootSignature.Get() : RenderManager::g_pd3dGlobalRootSignature.Get();
 		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("AnimatedVS");
-		d3dPipelineDesc.PS = SHADER->GetShaderByteCode("AnimatedPS");
+		d3dPipelineDesc.PS = SHADER->GetShaderByteCode("GBufferOpaquePS");
 		d3dPipelineDesc.RasterizerState = CreateRasterizerState();
 		d3dPipelineDesc.BlendState = CreateBlendState();
 		d3dPipelineDesc.DepthStencilState = CreateDepthStencilState();
@@ -141,6 +152,17 @@ void AnimatedShader::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Ro
 	if (FAILED(hr)) {
 		__debugbreak();
 	}
+
+	// Pipeline #1 : With alpha mask
+	{
+		d3dPipelineDesc.PS = SHADER->GetShaderByteCode("GBufferAlphaMaskPS");
+	}
+
+	hr = pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dPipelineStates[1].GetAddressOf()));
+	if (FAILED(hr)) {
+		__debugbreak();
+	}
+
 }
 
 D3D12_INPUT_LAYOUT_DESC AnimatedShader::CreateInputLayout()

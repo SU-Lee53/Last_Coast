@@ -185,6 +185,7 @@
     <ClInclude Include="Effect.h" />
     <ClInclude Include="EffectManager.h" />
     <ClInclude Include="FirstPersonCamera.h" />
+    <ClInclude Include="GameContext.h" />
     <ClInclude Include="TextRenderer.h" />
     <ClInclude Include="GameFramework.h" />
     <ClInclude Include="GameObject.h" />
@@ -250,6 +251,7 @@
     <ClInclude Include="UIComponent.h" />
     <ClInclude Include="UIPass.h" />
     <ClInclude Include="Utility.h" />
+    <ClInclude Include="WeaponObject.h" />
     <ClInclude Include="WinCore.h" />
     <ClInclude Include="WInSockCommon.h" />
     <ClInclude Include="Zombie.h" />
@@ -333,6 +335,7 @@
     <ClCompile Include="EffectManager.cpp" />
     <ClCompile Include="entry.cpp" />
     <ClCompile Include="FirstPersonCamera.cpp" />
+    <ClCompile Include="GameContext.cpp" />
     <ClCompile Include="TextAtlas.cpp" />
     <ClCompile Include="TextRenderer.cpp" />
     <ClCompile Include="GameFramework.cpp" />
@@ -398,6 +401,7 @@
     <ClCompile Include="UIComponent.cpp" />
     <ClCompile Include="UIPass.cpp" />
     <ClCompile Include="Utility.cpp" />
+    <ClCompile Include="WeaponObject.cpp" />
     <ClCompile Include="WinCore.cpp" />
     <ClCompile Include="Zombie.cpp" />
     <ClCompile Include="ZombieAnimationController.cpp" />
