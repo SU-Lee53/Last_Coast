@@ -49,6 +49,7 @@ void GameContext::Initialize()
 					m_WeaponStats[i].fDamage = v["Damage"].get<float>();
 					m_WeaponStats[i].fFirePerSecond = v["FirePerSecond"].get<float>();
 					m_WeaponStats[i].fRecoil = v["Recoil"].get<float>();
+					m_WeaponStats[i].fRecoilRecovery = v["RecoilRecovery"].get<float>();
 					m_WeaponStats[i].fReloadTime = v["ReloadTime"].get<float>();
 					m_WeaponStats[i].v3OffsetPosition = ::ReadVector3FromJson(v["OffsetPosition"]);
 					m_WeaponStats[i].v3OffsetRotation = ::ReadVector3FromJson(v["OffsetRotation"]);
@@ -69,6 +70,7 @@ std::shared_ptr<WeaponObject> GameContext::GetWeaponCopy(WEAPON_TYPE eWeaponType
 	pWeapon->SetDamage(weaponStat.fDamage);
 	pWeapon->SetFirePerSecond(weaponStat.fFirePerSecond);
 	pWeapon->SetRecoil(weaponStat.fRecoil);
+	pWeapon->SetRecoilRecovery(weaponStat.fRecoilRecovery);
 	pWeapon->SetReloadTime(weaponStat.fReloadTime);
 	pWeapon->SetOffsetPosition(weaponStat.v3OffsetPosition);
 	pWeapon->SetOffsetRotation(weaponStat.v3OffsetRotation);

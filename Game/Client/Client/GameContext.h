@@ -36,6 +36,7 @@ private:
 		float fDamage;
 		float fFirePerSecond;
 		float fRecoil;
+		float fRecoilRecovery;
 		float fReloadTime;
 	};
 

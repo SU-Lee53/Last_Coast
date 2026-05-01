@@ -41,4 +41,29 @@ public:
 		m_unLayer = 0;
 		m_bVisible = false;
 	}
+
+	void AddRecoil(float fRecoil) {
+		Vector2 v2NewSize = m_v2Size + Vector2(fRecoil);
+		if (v2NewSize.x < m_fMaxSize) {
+			m_v2Size = v2NewSize;
+		}
+		else {
+			m_v2Size = Vector2(m_fMaxSize);
+		}
+	}
+	void RemoveRecoil(float fRecoil) {
+		Vector2 v2NewSize = m_v2Size - Vector2(fRecoil * 10 * DT);
+		if (v2NewSize.x > m_fDefaultSize) {
+			m_v2Size = v2NewSize;
+		}
+		else {
+			m_v2Size = Vector2(m_fDefaultSize);
+		}
+	}
+
+private:
+	const float m_fDefaultSize = 100.f;
+	const float m_fMaxSize = 200.f;
+
+
 };

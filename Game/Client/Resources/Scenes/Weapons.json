@@ -12,7 +12,8 @@
             -90.0,
             -90.0
         ],
-        "Recoil": 15.0,
+        "Recoil": 50.0,
+        "RecoilRecovery": 30.0,
         "ReloadTime": 2.5
     },
     "M4": {
@@ -28,7 +29,8 @@
             -90.0,
             -90.0
         ],
-        "Recoil": 10.0,
+        "Recoil": 30.0,
+        "RecoilRecovery": 25.0,
         "ReloadTime": 2.0
     },
     "MELEE": {
@@ -45,11 +47,12 @@
             -90.0
         ],
         "Recoil": 0.0,
+        "RecoilRecovery": 0.0,
         "ReloadTime": 0.0
     },
     "PISTOL": {
         "Damage": 10.0,
-        "FirePerSecond": 400.0,
+        "FirePerSecond": 100.0,
         "OffsetPosition": [
             2.0999999046325684,
             9.399999618530273,
@@ -60,12 +63,13 @@
             -90.0,
             -90.0
         ],
-        "Recoil": 5.0,
+        "Recoil": 20.0,
+        "RecoilRecovery": 10.0,
         "ReloadTime": 1.0
     },
     "RIFLE": {
         "Damage": 100.0,
-        "FirePerSecond": 300.0,
+        "FirePerSecond": 200.0,
         "OffsetPosition": [
             1.7000000476837158,
             22.5,
@@ -76,7 +80,8 @@
             -90.0,
             -90.0
         ],
-        "Recoil": 30.0,
+        "Recoil": 80.0,
+        "RecoilRecovery": 0.0,
         "ReloadTime": 4.0
     }
 }

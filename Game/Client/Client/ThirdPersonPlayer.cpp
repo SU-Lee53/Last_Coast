@@ -2,6 +2,7 @@
 #include "ThirdPersonPlayer.h"
 #include "ThirdPersonCamera.h"
 #include "NodeObject.h"
+#include "WeaponObject.h"
 #include "Sprite.h"
 
 ThirdPersonPlayer::ThirdPersonPlayer()
@@ -125,7 +126,14 @@ void ThirdPersonPlayer::ProcessInput()
 					pAnimationCtrl->GetMontage()->JumpToSection("Pistol Fire");
 				}
 				m_bFiredThisFrame = true;
+				m_pCrosshair->AddRecoil(m_pWeaponSocket->GetWeaponModel()->GetRecoil());
 			}
+			else {
+				m_pCrosshair->RemoveRecoil(m_pWeaponSocket->GetWeaponModel()->GetRecoilRecovery());
+			}
+		}
+		else {
+			m_pCrosshair->RemoveRecoil(m_pWeaponSocket->GetWeaponModel()->GetRecoilRecovery());
 		}
 	}
 
@@ -217,6 +225,7 @@ void ThirdPersonPlayer::OnMeleeEnd()
 
 void ThirdPersonPlayer::Update()
 {
+	m_pCrosshair->Update();
 	for (const auto& pChild : m_pChildren) {
 		pChild->Update();
 	}

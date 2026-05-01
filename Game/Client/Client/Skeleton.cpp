@@ -49,6 +49,7 @@ bool WeaponSocket::TryFire()
 void WeaponSocket::SetWeapon(WEAPON_TYPE eWeaponType)
 {
 	m_pWeaponModel = static_pointer_cast<WeaponObject>(GCTX->GetWeaponCopy(eWeaponType));
+	m_eCurrentWeapon = eWeaponType;
 }
 
 Skeleton::Skeleton(std::shared_ptr<IGameObject> pOwner)
@@ -155,39 +156,7 @@ void Skeleton::ShowControlImGui()
 				
 				// Save offset
 				if (ImGui::Button("Save")) {
-					std::string strSavePath = "../Resources/Scenes/Weapons.json";
-					if (!std::filesystem::exists(strSavePath)) {
-						std::filesystem::create_directories(strSavePath);
-					}
-					std::ifstream in;
-					in.open(strSavePath, std::ios::ate);
-
-					nlohmann::json j;
-					if (in.tellg() > 0) {
-						in.seekg(0, std::ios::beg);
-						j = nlohmann::json::parse(in);
-					}
-
-					std::string strWeaponName = GameContext::g_strWeaponName[std::to_underlying(pModel->GetWeaponType())];
-					
-					j[strWeaponName]["Damage"] = pModel->GetDamage();
-					j[strWeaponName]["FirePerSecond"] = pModel->GetFirePerSecond();
-					j[strWeaponName]["Recoil"] = pModel->GetRecoil();
-					j[strWeaponName]["ReloadTime"] = pModel->GetReloadTime();
-
-					const Vector3& v3OffsetPos = pModel->GetOffsetPosition();
-					const Vector3& v3OffsetRotation = pModel->GetOffsetRotation();
-					j[strWeaponName]["OffsetPosition"] = { v3OffsetPos.x, v3OffsetPos.y, v3OffsetPos.z };
-					j[strWeaponName]["OffsetRotation"] = { v3OffsetRotation.x, v3OffsetRotation.y, v3OffsetRotation.z };
-
-					// Save json for readability 
-					std::ofstream out(strSavePath, std::ios::trunc);
-					if (!out) {
-						__debugbreak();
-						return;
-					}
-
-					out << j.dump(4) << '\n';
+					pModel->SaveStat();
 				}
 				
 				// Show model info
