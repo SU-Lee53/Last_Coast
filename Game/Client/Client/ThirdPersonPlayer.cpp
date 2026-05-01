@@ -90,8 +90,13 @@ void ThirdPersonPlayer::ProcessInput()
 		if (INPUT->GetButtonDown(VK_RBUTTON)) {
 			m_bAiming = true;
 			pThirdPersonCamera->EnterAimMode();
-			pAnimationCtrl->GetMontage()->PlayMontage("Rifle Aiming Idle");
-
+			if (m_pWeaponSocket->GetCurrentWeaponType() != WEAPON_TYPE::PISTOL) {
+				pAnimationCtrl->GetMontage()->PlayMontage("Rifle Aiming Idle");
+			}
+			else {
+				pAnimationCtrl->GetMontage()->PlayMontage("Pistol Aiming Idle");
+			}
+			
 			if (m_pCrosshair) {
 				m_pCrosshair->SetVisible(true);
 			}
@@ -109,8 +114,16 @@ void ThirdPersonPlayer::ProcessInput()
 
 		// Fire
 		if (INPUT->GetButtonPressed(VK_LBUTTON) && m_bAiming) {
+			if (m_bInMeleeAttack) {
+				goto lb_breakMouseInput;
+			}
 			if (m_pWeaponSocket->TryFire()) {
-				pAnimationCtrl->GetMontage()->JumpToSection("Rifle Fire");
+				if (m_pWeaponSocket->GetCurrentWeaponType() != WEAPON_TYPE::PISTOL) {
+					pAnimationCtrl->GetMontage()->JumpToSection("Rifle Fire");
+				}
+				else {
+					pAnimationCtrl->GetMontage()->JumpToSection("Pistol Fire");
+				}
 				m_bFiredThisFrame = true;
 			}
 		}
@@ -173,7 +186,33 @@ lb_breakMouseInput:
 		m_bRunning = false;
 	}
 
+	// Melee attack
+	if (INPUT->GetButtonDown('V') && !m_bInMeleeAttack) {
+		m_eWeaponTypeBeforeMelee = m_pWeaponSocket->GetCurrentWeaponType();
+		m_bWasAimBeforeMelee = m_bAiming;
+		m_bInMeleeAttack = true;
+		GiveWeapon(WEAPON_TYPE::MELEE);
+		pAnimationCtrl->GetMontage()->PlayMontage("Melee Attack");
+	}
+
 	m_v3MoveDirection.Normalize();
+}
+
+void ThirdPersonPlayer::OnMeleeEnd()
+{
+	auto pAnimationCtrl = static_pointer_cast<PlayerAnimationController>(GetComponent<AnimationController>());
+	GiveWeapon(m_eWeaponTypeBeforeMelee);
+	pAnimationCtrl->GetMontage()->StopMontage();
+	m_bInMeleeAttack = false;
+
+	if (m_bWasAimBeforeMelee) {
+		if (m_pWeaponSocket->GetCurrentWeaponType() != WEAPON_TYPE::PISTOL) {
+			pAnimationCtrl->GetMontage()->PlayMontage("Rifle Aiming Idle");
+		}
+		else {
+			pAnimationCtrl->GetMontage()->PlayMontage("Pistol Aiming Idle");
+		}
+	}
 }
 
 void ThirdPersonPlayer::Update()

@@ -33,7 +33,11 @@ public:
 	void SetWeapon(WEAPON_TYPE eWeaponType);
 	const std::shared_ptr<WeaponObject>& GetWeaponModel() const { return m_pWeaponModel; };
 
+	WEAPON_TYPE GetCurrentWeaponType() const { return m_eCurrentWeapon; }
+
 private:
+	WEAPON_TYPE m_eCurrentWeapon;
+
 	Vector3 m_v3OffsetPosition = Vector3::Zero;
 	Vector3 m_v3OffsetRotation = Vector3(180.f, -90.f, -90.f);
 

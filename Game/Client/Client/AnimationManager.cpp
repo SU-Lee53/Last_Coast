@@ -12,7 +12,10 @@ void AnimationManager::LoadGameAnimations()
 	LoadAndAdd("Walking");
 	LoadAndAdd("Jog Forward");
 	LoadAndAdd("Rifle Aiming Idle");
+	LoadAndAdd("Pistol Idle");
 	LoadAndAdd("Firing Rifle");
+	LoadAndAdd("Standing Melee Attack Horizontal");
+
 	LoadAndAdd("Zombie Attack");
 	LoadAndAdd("Zombie Death");
 }

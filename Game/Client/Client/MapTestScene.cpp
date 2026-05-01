@@ -141,7 +141,7 @@ void MapTestScene::Update()
 					ImGui::Text("====== Weapon Test ======");
 					const auto& strWeaponNames = GameContext::g_strWeaponName;
 					if(ImGui::BeginCombo("Weapons", strWeaponNames[m_nWeaponSelected].c_str())) {
-						for (int i = 0; i < _countof(strWeaponNames); ++i) {
+						for (int i = 0; i < strWeaponNames.size(); ++i) {
 							bool bSelected = (m_nWeaponSelected == i);
 							if (ImGui::Selectable(strWeaponNames[i].c_str(), bSelected)) {
 								m_nWeaponSelected = i;

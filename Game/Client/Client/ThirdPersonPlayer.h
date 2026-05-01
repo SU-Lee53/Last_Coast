@@ -28,6 +28,10 @@ public:
 	virtual void OnEndCollision(const CollisionResult& collisionResult) override;
 	
 	void GiveWeapon(WEAPON_TYPE eWeaponType);
+	
+public:
+	// Callbacks
+	void OnMeleeEnd();
 
 private:
 	void ToggleMouseLook();
@@ -77,6 +81,10 @@ private:
 
 	std::shared_ptr<class Crosshair> m_pCrosshair = nullptr;
 	std::shared_ptr<WeaponSocket> m_pWeaponSocket = nullptr;
+	
+	WEAPON_TYPE m_eWeaponTypeBeforeMelee = WEAPON_TYPE::UNDEFINED;
+	bool m_bInMeleeAttack = false;
+	bool m_bWasAimBeforeMelee = false;
 
 };
 

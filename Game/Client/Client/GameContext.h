@@ -11,7 +11,7 @@ class GameContext {
 public:
 	// Constants, Enums
 	constexpr static uint32 g_unWeapons = std::to_underlying(WEAPON_TYPE::COUNT);
-	const static std::string g_strWeaponName[g_unWeapons];
+	const static  std::vector<std::string> g_strWeaponName;
 
 public:
 	void Initialize();
@@ -20,7 +20,6 @@ public:
 	std::shared_ptr<WeaponObject> GetWeaponCopy(WEAPON_TYPE eWeaponType);
 	std::shared_ptr<IGameObject> GeModel(const std::string& strName);
 	TextureRef<Texture> GetImage(const std::string& strName);
-
 
 	const Vector3& GetWeaponOffsetPosition(WEAPON_TYPE eWeaponType) const { return m_WeaponStats[std::to_underlying(eWeaponType)].v3OffsetPosition; }
 	const Vector3& GetWeaponOffsetRotation(WEAPON_TYPE eWeaponType) const { return m_WeaponStats[std::to_underlying(eWeaponType)].v3OffsetRotation; }
