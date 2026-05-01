@@ -400,29 +400,28 @@ bool MeshCollider::CheckCollision(std::shared_ptr<ICollider> pOther) const
 		if (!m_xmOBBWorld.Intersects(xmCapsuleAABB))
 			return false;
 
-		Vector3 v3Normal;
-		float fDepth;
-		bool bHit = CheckCapsuleVsTriangles(pPlayerCollider->GetCapsuleWorld(), v3Normal, fDepth);
-		if (bHit) {
-			m_v3LastContactNormal = v3Normal;
-			m_fLastContactDepth = fDepth;
-		}
-		return bHit;
+		m_LastContacts.clear();
+		return CheckCapsuleVsTriangles(pPlayerCollider->GetCapsuleWorld(), m_LastContacts);
 	}
 
 	// 그 외 OBB 기반 콜라이더: OBB broad-phase만
 	return m_xmOBBWorld.Intersects(pOther->GetOBBWorld());
 }
 
-bool MeshCollider::CheckCapsuleVsTriangles(const BoundingCapsule& capsule, Vector3& outNormal, float& outDepth) const
+bool MeshCollider::CheckCapsuleVsTriangles(const BoundingCapsule& capsule,
+	std::vector<std::pair<Vector3, float>>& outContacts) const
 {
 	const Vector3 v3SegTop = capsule.v3Center + Vector3(0.f, capsule.fHalfHeight, 0.f);
 	const Vector3 v3SegBot = capsule.v3Center - Vector3(0.f, capsule.fHalfHeight, 0.f);
 	const float fRadius = capsule.fRadius;
+	const float fFloorDot = 0.7f;	// ResolveCollision의 fGround와 동일 기준
 
-	bool bAnyHit = false;
-	float fBestDepth = -FLT_MAX;
-	Vector3 v3BestNormal = Vector3{ 0.f, 1.f, 0.f };
+	// 바닥(normal.y > fFloorDot)과 벽/경사 카테고리 각각 최대 depth contact 추적
+	bool bFloor = false, bWall = false;
+	float fBestFloorDepth = 0.f;
+	Vector3 v3BestFloorNormal = Vector3{ 0.f, 1.f, 0.f };
+	float fBestWallDepth = 0.f;
+	Vector3 v3BestWallNormal = Vector3{ 1.f, 0.f, 0.f };
 
 	const uint32 nTriCount = static_cast<uint32>(m_unIndices.size()) / 3;
 	for (uint32 i = 0; i < nTriCount; ++i) {
@@ -432,8 +431,6 @@ bool MeshCollider::CheckCapsuleVsTriangles(const BoundingCapsule& capsule, Vecto
 
 		if (!CapsuleIntersectsTriangle(v3SegTop, v3SegBot, fRadius, a, b, c))
 			continue;
-
-		bAnyHit = true;
 
 		// 삼각형 face normal 계산
 		Vector3 v3FaceNormal = (b - a).Cross(c - a);
@@ -446,20 +443,35 @@ bool MeshCollider::CheckCapsuleVsTriangles(const BoundingCapsule& capsule, Vecto
 			v3FaceNormal = -v3FaceNormal;
 
 		// 삼각형 평면과 캡슐 세그먼트 양 끝점의 부호 있는 거리 중 최솟값
+		// (max(0, ...) 제거: spine이 지오메트리 내부로 들어간 경우에도 depth를 정확히 계산)
 		float fDistTop = (v3SegTop - a).Dot(v3FaceNormal);
 		float fDistBot = (v3SegBot - a).Dot(v3FaceNormal);
-		float fMinDist = std::max(0.f, std::min(fDistTop, fDistBot));
+		float fMinDist = std::min(fDistTop, fDistBot);
 		float fDepth = fRadius - fMinDist;
 
-		if (fDepth > fBestDepth) {
-			fBestDepth = fDepth;
-			v3BestNormal = v3FaceNormal;
+		if (fDepth <= 0.f) continue;	// 실제 관통 없음 (엣지 스침 등), 스킵
+
+		// 바닥/벽 분류하여 각 카테고리의 최대 depth contact 갱신
+		if (v3FaceNormal.y > fFloorDot) {
+			if (fDepth > fBestFloorDepth) {
+				fBestFloorDepth = fDepth;
+				v3BestFloorNormal = v3FaceNormal;
+				bFloor = true;
+			}
+		}
+		else {
+			if (fDepth > fBestWallDepth) {
+				fBestWallDepth = fDepth;
+				v3BestWallNormal = v3FaceNormal;
+				bWall = true;
+			}
 		}
 	}
 
-	if (bAnyHit) {
-		outNormal = v3BestNormal;
-		outDepth = fBestDepth;
-	}
-	return bAnyHit;
+	if (bFloor)
+		outContacts.emplace_back(v3BestFloorNormal, fBestFloorDepth);
+	if (bWall)
+		outContacts.emplace_back(v3BestWallNormal, fBestWallDepth);
+
+	return bFloor || bWall;
 }

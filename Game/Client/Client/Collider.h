@@ -89,20 +89,20 @@ public:
 
 	virtual bool CheckCollision(std::shared_ptr<ICollider> pOther) const override;
 
-	// 마지막 CheckCollision에서 계산된 contact 정보 (삼각형 face normal 기반)
-	Vector3 GetContactNormal() const { return m_v3LastContactNormal; }
-	float   GetContactDepth()  const { return m_fLastContactDepth; }
+	// 마지막 CheckCollision에서 계산된 contact 목록 (바닥·벽 카테고리별 최대 depth)
+	const std::vector<std::pair<Vector3, float>>& GetContacts() const { return m_LastContacts; }
 
 private:
-	bool CheckCapsuleVsTriangles(const BoundingCapsule& capsule, Vector3& outNormal, float& outDepth) const;
+	// 바닥(normal.y > 0.7)과 벽/경사 카테고리를 분리해 각 최대 depth contact를 outContacts에 추가
+	bool CheckCapsuleVsTriangles(const BoundingCapsule& capsule,
+		std::vector<std::pair<Vector3, float>>& outContacts) const;
 
 private:
 	std::vector<Vector3>	m_v3BakedVertices;	// world space, baked in Initialize()
 	std::vector<uint32>		m_unIndices;
 	std::string				m_strType;
 
-	mutable Vector3	m_v3LastContactNormal = Vector3{ 0.f, 1.f, 0.f };
-	mutable float	m_fLastContactDepth = 0.f;
+	mutable std::vector<std::pair<Vector3, float>> m_LastContacts;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////

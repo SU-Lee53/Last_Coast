@@ -2,6 +2,7 @@
 #include "ThirdPersonPlayer.h"
 #include "ThirdPersonCamera.h"
 #include "NodeObject.h"
+#include "Sprite.h"
 #include "Collider.h"
 
 ThirdPersonPlayer::ThirdPersonPlayer()
@@ -182,7 +183,8 @@ void ThirdPersonPlayer::OnBeginCollision(const CollisionResult& collisionResult)
 {
 	const ICollider& otherCollider = collisionResult.DecomposeRef().second;
 	if (const auto* pMeshCollider = dynamic_cast<const MeshCollider*>(&otherCollider)) {
-		m_MeshContacts.emplace_back(pMeshCollider->GetContactNormal(), pMeshCollider->GetContactDepth());
+		for (const auto& contact : pMeshCollider->GetContacts())
+			m_MeshContacts.push_back(contact);
 	}
 	else {
 		m_xmOBBCollided.push_back(otherCollider.GetOBBWorld());
@@ -193,7 +195,8 @@ void ThirdPersonPlayer::OnWhileCollision(const CollisionResult& collisionResult)
 {
 	const ICollider& otherCollider = collisionResult.DecomposeRef().second;
 	if (const auto* pMeshCollider = dynamic_cast<const MeshCollider*>(&otherCollider)) {
-		m_MeshContacts.emplace_back(pMeshCollider->GetContactNormal(), pMeshCollider->GetContactDepth());
+		for (const auto& contact : pMeshCollider->GetContacts())
+			m_MeshContacts.push_back(contact);
 	}
 	else {
 		m_xmOBBCollided.push_back(otherCollider.GetOBBWorld());
@@ -227,6 +230,7 @@ void ThirdPersonPlayer::PostUpdate()
 	IPlayer::PostUpdate();
 
 	m_xmOBBCollided.clear();
+	m_MeshContacts.clear();
 }
 
 void ThirdPersonPlayer::ToggleMouseLook()
@@ -326,18 +330,6 @@ void ThirdPersonPlayer::HandleCollision()
 	}
 
 	pTransform->Move(v3Delta, 1.f);
-
-	if (m_bAiming) {
-		auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
-		Vector3 v3LookDirection = pThirdPersonCamera->GetForwardXZ();
-		float fYaw = std::atan2f(v3LookDirection.x, v3LookDirection.z);
-		GetTransform()->SetRotation(0.f, fYaw, 0.f);
-	}
-
-	IPlayer::PostUpdate();
-
-	m_xmOBBCollided.clear();
-	m_MeshContacts.clear();
 }
 
 float ThirdPersonPlayer::GetMoveSpeedXZ() const
@@ -383,12 +375,8 @@ void ThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 				continue;
 			}
 
-			if (fDepth < fSkin) {
-				continue;
-			}
-
 			if (v3Normal.y > fGround && outv3Delta.y <= 0.f) {
-				// 바닥 접촉 확정
+				// 바닥 접촉: depth=0(살짝 닿음)이어도 grounding 확정
 				m_bGrounded = true;
 				m_unGroundGraceFrames = m_unMaxGroundGraceFrames;
 
@@ -396,18 +384,22 @@ void ThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 					m_fVerticalVelocity = 0.f;
 				}
 
-				// Penetration Correction
-				if (fDepth > fSnapDistance) {
-					float fPush = std::min(fDepth + fSkin, 5.f);
-					outv3Delta += v3Normal * fPush;
-				}
-
-				// Slope Projection
+				// 경사 투영: 밀어내기 전에 먼저 하강 성분을 제거해야 반발이 없음
 				float fProjected = outv3Delta.Dot(v3Normal);
 				if (fProjected < 0.f) {
 					outv3Delta -= v3Normal * fProjected;
 				}
 
+				// 관통 보정: fPushSkin(0.1cm)만큼 여유를 남겨서 표면 위로 튀어오르는 것을 방지
+				if (fDepth > fSnapDistance) {
+					const float fPushSkin = 0.1f;
+					outv3Delta += v3Normal * std::min(fDepth - fPushSkin, 5.f);
+				}
+
+				continue;
+			}
+
+			if (fDepth < fSkin) {
 				continue;
 			}
 
@@ -439,14 +431,15 @@ void ThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 			if (m_fVerticalVelocity < 0.f)
 				m_fVerticalVelocity = 0.f;
 
-			// 실제 관통이 있을 때만 위치 보정
-			if (fDepth > 0.01f) {
-				if (fDepth > fSnapDistance) {
-					outv3Delta += v3Normal * std::min(fDepth, 5.f);
-				}
-				float fProjected = outv3Delta.Dot(v3Normal);
-				if (fProjected < 0.f)
-					outv3Delta -= v3Normal * fProjected;
+			// 경사 투영: 관통 깊이와 무관하게 항상 하강 성분 제거
+			float fProjected = outv3Delta.Dot(v3Normal);
+			if (fProjected < 0.f)
+				outv3Delta -= v3Normal * fProjected;
+
+			// 관통 보정: fPushSkin(0.1cm)만큼 여유를 남겨서 표면 위로 튀어오르는 것을 방지
+			if (fDepth > fSnapDistance) {
+				const float fPushSkin = 0.1f;
+				outv3Delta += v3Normal * std::min(fDepth - fPushSkin, 5.f);
 			}
 		}
 		else if (fDepth > fSkin) {

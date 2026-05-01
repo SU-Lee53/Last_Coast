@@ -54,7 +54,7 @@ void BoundingCapsule::CreateAABBFromCapsule(OUT BoundingBox& out) const
 	out.Center = v3Center;
 	out.Extents = Vector3{
 		fRadius,
-		fHalfHeight,
+		fHalfHeight + fRadius,
 		fRadius
 	};
 }
