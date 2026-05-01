@@ -27,18 +27,11 @@ public:
 	virtual void Initialize() override;
 	virtual void Update() override;
 	virtual void Render() override;
+
+	bool TryFire();
+
 	void SetWeapon(WEAPON_TYPE eWeaponType);
 	const std::shared_ptr<WeaponObject>& GetWeaponModel() const { return m_pWeaponModel; };
-
-
-	void SetOffsetPosition(const Vector3& v3Pos) { m_v3OffsetPosition = v3Pos; }
-	void SetOffsetRotation(const Vector3& v3Rotation) { m_v3OffsetRotation = v3Rotation; }
-
-	const Vector3& GetOffsetPosition() const { return m_v3OffsetPosition; }
-	const Vector3& GetOffsetRotation() const { return m_v3OffsetRotation; }
-
-public:
-	void EditOffset();
 
 private:
 	Vector3 m_v3OffsetPosition = Vector3::Zero;

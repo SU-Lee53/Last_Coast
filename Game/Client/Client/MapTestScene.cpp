@@ -139,11 +139,11 @@ void MapTestScene::Update()
 					}
 
 					ImGui::Text("====== Weapon Test ======");
-					const auto& strWeaponNames = GameContext::g_cstrWeaponName;
-					if(ImGui::BeginCombo("Weapons", strWeaponNames[m_nWeaponSelected])) {
+					const auto& strWeaponNames = GameContext::g_strWeaponName;
+					if(ImGui::BeginCombo("Weapons", strWeaponNames[m_nWeaponSelected].c_str())) {
 						for (int i = 0; i < _countof(strWeaponNames); ++i) {
 							bool bSelected = (m_nWeaponSelected == i);
-							if (ImGui::Selectable(strWeaponNames[i], bSelected)) {
+							if (ImGui::Selectable(strWeaponNames[i].c_str(), bSelected)) {
 								m_nWeaponSelected = i;
 								if (auto pThirdPerson = std::dynamic_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
 									pThirdPerson->GiveWeapon(static_cast<WEAPON_TYPE>(m_nWeaponSelected));

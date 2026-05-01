@@ -15,6 +15,8 @@ void WeaponSocket::Initialize()
 
 void WeaponSocket::Update()
 {
+	m_pWeaponModel->Update();
+
 	if (m_pWeaponModel) {
 		auto pSkeleton = m_wpOwner.lock();
 
@@ -24,15 +26,9 @@ void WeaponSocket::Update()
 			mtxAnimation = mtxAnimation * Matrix::CreateRotationY(XMConvertToRadians(-90.f));
 		}
 
-		float fYaw = XMConvertToRadians(m_v3OffsetRotation.y);
-		float fPitch = XMConvertToRadians(m_v3OffsetRotation.x);
-		float fRoll = XMConvertToRadians(m_v3OffsetRotation.z);
-		Matrix mtxOffset = Matrix::CreateFromYawPitchRoll(fYaw, fPitch, fRoll);
-		mtxOffset.Translation(m_v3OffsetPosition);
-
 		auto pPlayer = pSkeleton->GetOwner();
 		const auto& mtxPlayerWorld = pPlayer->GetWorldMatrix();
-		m_mtxTransform = mtxOffset * mtxAnimation * mtxPlayerWorld;
+		m_mtxTransform = m_pWeaponModel->GetOffsetTransform() * mtxAnimation * mtxPlayerWorld;
 
 		m_pWeaponModel->GetTransform()->SetWorldMatrix(m_mtxTransform);
 		m_pWeaponModel->PostUpdate();
@@ -44,18 +40,15 @@ void WeaponSocket::Render()
 	m_pWeaponModel->Render();
 }
 
-void WeaponSocket::SetWeapon(WEAPON_TYPE eWeaponType)
+bool WeaponSocket::TryFire()
 {
-	m_pWeaponModel->SetWeapon(eWeaponType);
-
-	m_v3OffsetPosition = GCTX->GetWeaponOffsetPosition(eWeaponType);
-	m_v3OffsetRotation = GCTX->GetWeaponOffsetRotation(eWeaponType);
+	if (!m_pWeaponModel) return false;
+	return m_pWeaponModel->TryFire();
 }
 
-void WeaponSocket::EditOffset() 
+void WeaponSocket::SetWeapon(WEAPON_TYPE eWeaponType)
 {
-	ImGui::DragFloat3("Offset Position", reinterpret_cast<float*>(&m_v3OffsetPosition), 0.1f);
-	ImGui::DragFloat3("Offset Rotation", reinterpret_cast<float*>(&m_v3OffsetRotation), 0.1f);
+	m_pWeaponModel = static_pointer_cast<WeaponObject>(GCTX->GetWeaponCopy(eWeaponType));
 }
 
 Skeleton::Skeleton(std::shared_ptr<IGameObject> pOwner)
@@ -157,7 +150,8 @@ void Skeleton::ShowControlImGui()
 		if (auto p = std::dynamic_pointer_cast<WeaponSocket>(pSocket)) {
 			if (auto& pModel = p->GetWeaponModel()) {
 				// Edit offset
-				p->EditOffset();
+				pModel->EditStat();
+
 				
 				// Save offset
 				if (ImGui::Button("Save")) {
@@ -174,10 +168,15 @@ void Skeleton::ShowControlImGui()
 						j = nlohmann::json::parse(in);
 					}
 
-					std::string strWeaponName{ GameContext::g_cstrWeaponName[static_cast<size_t>(pModel->GetWeaponType())] };
+					std::string strWeaponName = GameContext::g_strWeaponName[std::to_underlying(pModel->GetWeaponType())];
 					
-					const Vector3& v3OffsetPos = p->GetOffsetPosition();
-					const Vector3& v3OffsetRotation = p->GetOffsetRotation();
+					j[strWeaponName]["Damage"] = pModel->GetDamage();
+					j[strWeaponName]["FirePerSecond"] = pModel->GetFirePerSecond();
+					j[strWeaponName]["Recoil"] = pModel->GetRecoil();
+					j[strWeaponName]["ReloadTime"] = pModel->GetReloadTime();
+
+					const Vector3& v3OffsetPos = pModel->GetOffsetPosition();
+					const Vector3& v3OffsetRotation = pModel->GetOffsetRotation();
 					j[strWeaponName]["OffsetPosition"] = { v3OffsetPos.x, v3OffsetPos.y, v3OffsetPos.z };
 					j[strWeaponName]["OffsetRotation"] = { v3OffsetRotation.x, v3OffsetRotation.y, v3OffsetRotation.z };
 

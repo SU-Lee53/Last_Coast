@@ -25,18 +25,39 @@ void WeaponObject::Initialize()
 	m_bInitialized = true;
 };
 
-void WeaponObject::SetWeapon(WEAPON_TYPE eWeaponType)
+void WeaponObject::Update()
 {
-	m_eWeaponType = eWeaponType;
+	m_fTimeAfterFire += DT;
 
-	// Add child if children is empty
-	if (m_pChildren.size() == 0) {
-		auto pWeapon = GCTX->GetWeaponCopy(eWeaponType);
-		SetChild(pWeapon);
-		return;
+	float fYaw = XMConvertToRadians(m_v3OffsetRotation.y);
+	float fPitch = XMConvertToRadians(m_v3OffsetRotation.x);
+	float fRoll = XMConvertToRadians(m_v3OffsetRotation.z);
+	Matrix mtxOffset = Matrix::CreateFromYawPitchRoll(fYaw, fPitch, fRoll);
+	mtxOffset.Translation(m_v3OffsetPosition);
+	m_mtxOffsetTransform = mtxOffset;
+}
+
+bool WeaponObject::TryFire()
+{
+	if (m_fTimeAfterFire >= m_fFireInterval) {
+		m_fTimeAfterFire = 0.f;
+		return true;
 	}
 
-	// Swap if children is not empty
-	auto pWeapon = GCTX->GetWeaponCopy(eWeaponType);
-	SwapChild(0, pWeapon);
+	return false;
+}
+
+const DirectX::SimpleMath::Matrix& WeaponObject::GetOffsetTransform()
+{
+	return m_mtxOffsetTransform;
+}
+
+void WeaponObject::EditStat()
+{
+	ImGui::InputFloat("Damage", &m_fDamage);
+	ImGui::InputFloat("FirePerSecond", &m_fFirePerSecond);
+	ImGui::InputFloat("Recoil", &m_fRecoil);
+	ImGui::InputFloat("ReloadTime", &m_fReloadTime);
+	ImGui::DragFloat3("Offset Position", reinterpret_cast<float*>(&m_v3OffsetPosition), 0.1f);
+	ImGui::DragFloat3("Offset Rotation", reinterpret_cast<float*>(&m_v3OffsetRotation), 0.1f);
 }

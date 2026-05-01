@@ -16,11 +16,16 @@ void TestScene::BuildObjects()
 	m_pSkybox->Initialize();
 
 	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	m_pPlayer->Initialize();
 
 	for (int i = 0; i < 100; ++i) {
 		std::shared_ptr<IGameObject> pObj = std::make_shared<Zombie>();
 		//m_pGameObjects.push_back(pObj);
 		AddObject(pObj);
+	}
+
+	if (auto pThirdPerson = std::dynamic_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
+		pThirdPerson->GiveWeapon(WEAPON_TYPE::M4);
 	}
 
 	LoadFromFiles("TEST1");

@@ -11,26 +11,19 @@ class GameContext {
 public:
 	// Constants, Enums
 	constexpr static uint32 g_unWeapons = std::to_underlying(WEAPON_TYPE::COUNT);
-
-	constexpr static const char* g_cstrWeaponName[] = {
-		"M4",
-		"AK",
-		"RIFLE",
-		"PISTOL",
-		"MELEE",
-	};
+	const static std::string g_strWeaponName[g_unWeapons];
 
 public:
 	void Initialize();
 
 	// Getters
-	std::shared_ptr<IGameObject> GetWeaponCopy(WEAPON_TYPE eWeaponType);
+	std::shared_ptr<WeaponObject> GetWeaponCopy(WEAPON_TYPE eWeaponType);
 	std::shared_ptr<IGameObject> GeModel(const std::string& strName);
 	TextureRef<Texture> GetImage(const std::string& strName);
 
 
-	const Vector3& GetWeaponOffsetPosition(WEAPON_TYPE eWeaponType) const { return m_pWeaponOffsets[std::to_underlying(eWeaponType)].v3OffsetPosition; }
-	const Vector3& GetWeaponOffsetRotation(WEAPON_TYPE eWeaponType) const { return m_pWeaponOffsets[std::to_underlying(eWeaponType)].v3OffsetRotation; }
+	const Vector3& GetWeaponOffsetPosition(WEAPON_TYPE eWeaponType) const { return m_WeaponStats[std::to_underlying(eWeaponType)].v3OffsetPosition; }
+	const Vector3& GetWeaponOffsetRotation(WEAPON_TYPE eWeaponType) const { return m_WeaponStats[std::to_underlying(eWeaponType)].v3OffsetRotation; }
 
 private:
 	// Containers
@@ -38,12 +31,16 @@ private:
 	std::unordered_map<std::string, std::shared_ptr<IGameObject>> m_pGameModels;
 	std::unordered_map<std::string, TextureRef<Texture>> m_pUIImages;
 
-	struct WeaponOffset {
+	struct WeaponStats {
 		Vector3 v3OffsetPosition;
 		Vector3 v3OffsetRotation;
+		float fDamage;
+		float fFirePerSecond;
+		float fRecoil;
+		float fReloadTime;
 	};
 
-	std::array<WeaponOffset, g_unWeapons> m_pWeaponOffsets;
+	std::array<WeaponStats, g_unWeapons> m_WeaponStats;
 
 };
 

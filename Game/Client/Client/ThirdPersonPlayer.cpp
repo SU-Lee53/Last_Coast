@@ -96,6 +96,7 @@ void ThirdPersonPlayer::ProcessInput()
 				m_pCrosshair->SetVisible(true);
 			}
 		}
+
 		if (INPUT->GetButtonUp(VK_RBUTTON)) {
 			m_bAiming = false;
 			pThirdPersonCamera->LeaveAimMode();
@@ -107,9 +108,11 @@ void ThirdPersonPlayer::ProcessInput()
 		}
 
 		// Fire
-		if (INPUT->GetButtonDown(VK_LBUTTON) && m_bAiming) {
-			pAnimationCtrl->GetMontage()->JumpToSection("Rifle Fire");
-			m_bFiredThisFrame = true;
+		if (INPUT->GetButtonPressed(VK_LBUTTON) && m_bAiming) {
+			if (m_pWeaponSocket->TryFire()) {
+				pAnimationCtrl->GetMontage()->JumpToSection("Rifle Fire");
+				m_bFiredThisFrame = true;
+			}
 		}
 	}
 

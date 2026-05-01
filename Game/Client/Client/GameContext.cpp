@@ -3,6 +3,14 @@
 #include "WeaponObject.h"
 #include "NodeObject.h"
 
+const std::string GameContext::g_strWeaponName[GameContext::g_unWeapons] = {
+	"M4",
+	"AK",
+	"RIFLE",
+	"PISTOL",
+	"MELEE"
+};
+
 void GameContext::Initialize()
 {
 	// Load weapon models
@@ -16,8 +24,12 @@ void GameContext::Initialize()
 		};
 
 		for (int i = 0; i < g_unWeapons; ++i) {
-			m_pWeaponModels[i] = MODEL->LoadOrGet(strWeaponFilename[i], true);
-			m_pWeaponModels[i]->SetName(g_cstrWeaponName[i]);
+			//m_pWeaponModels[i] = MODEL->LoadOrGet(strWeaponFilename[i], true);
+			auto p = std::make_shared<WeaponObject>();
+			p->SetChild(MODEL->LoadOrGet(strWeaponFilename[i], true));
+			p->SetName(g_strWeaponName[i]);
+			p->SetWeaponType(static_cast<WEAPON_TYPE>(i));
+			m_pWeaponModels[i] = p;
 		}
 	}
 
@@ -27,15 +39,19 @@ void GameContext::Initialize()
 		ifstream in{ strSavePath };
 		nlohmann::json jWeaponData = nlohmann::json::parse(in);
 
-		bool checked[_countof(g_cstrWeaponName)] = { false, };
+		bool checked[_countof(g_strWeaponName)] = { false, };
 
 		for (const auto& [k, v] : jWeaponData.items()) {
-			for (int i = 0; i < _countof(g_cstrWeaponName); ++i) {
+			for (int i = 0; i < _countof(g_strWeaponName); ++i) {
 				if (checked[i]) continue;
 
-				if (k == g_cstrWeaponName[i]) {
-					m_pWeaponOffsets[i].v3OffsetPosition = ::ReadVector3FromJson(v["OffsetPosition"]);
-					m_pWeaponOffsets[i].v3OffsetRotation = ::ReadVector3FromJson(v["OffsetRotation"]);
+				if (k == g_strWeaponName[i]) {
+					m_WeaponStats[i].fDamage = v["Damage"].get<float>();
+					m_WeaponStats[i].fFirePerSecond = v["FirePerSecond"].get<float>();
+					m_WeaponStats[i].fRecoil = v["Recoil"].get<float>();
+					m_WeaponStats[i].fReloadTime = v["ReloadTime"].get<float>();
+					m_WeaponStats[i].v3OffsetPosition = ::ReadVector3FromJson(v["OffsetPosition"]);
+					m_WeaponStats[i].v3OffsetRotation = ::ReadVector3FromJson(v["OffsetRotation"]);
 					checked[i] = true;
 					break;
 				}
@@ -45,9 +61,20 @@ void GameContext::Initialize()
 
 }
 
-std::shared_ptr<IGameObject> GameContext::GetWeaponCopy(WEAPON_TYPE eWeaponType)
+std::shared_ptr<WeaponObject> GameContext::GetWeaponCopy(WEAPON_TYPE eWeaponType)
 {
-	return m_pWeaponModels[std::to_underlying(eWeaponType)]->CopyObject<NodeObject>();
+	auto pWeapon = m_pWeaponModels[std::to_underlying(eWeaponType)]->CopyObject<WeaponObject>();
+
+	const auto& weaponStat = m_WeaponStats[std::to_underlying(eWeaponType)];
+	pWeapon->SetDamage(weaponStat.fDamage);
+	pWeapon->SetFirePerSecond(weaponStat.fFirePerSecond);
+	pWeapon->SetRecoil(weaponStat.fRecoil);
+	pWeapon->SetReloadTime(weaponStat.fReloadTime);
+	pWeapon->SetOffsetPosition(weaponStat.v3OffsetPosition);
+	pWeapon->SetOffsetRotation(weaponStat.v3OffsetRotation);
+	pWeapon->SetWeaponType(eWeaponType);
+
+	return pWeapon;
 }
 
 std::shared_ptr<IGameObject> GameContext::GeModel(const std::string& strName)
