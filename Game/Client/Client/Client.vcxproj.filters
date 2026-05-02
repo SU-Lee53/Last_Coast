@@ -137,6 +137,9 @@
     <Filter Include="02.Game\GameObject\Weapons">
       <UniqueIdentifier>{37e57477-68bc-4529-92f5-1c9ae9080c9f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02.Game\World">
+      <UniqueIdentifier>{797f8f39-2e7a-4dba-865c-788ca86b7314}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h">
@@ -462,12 +465,18 @@
     <ClInclude Include="UIPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
-    <ClInclude Include="WeaponObject.h" />
-    <ClInclude Include="GameContext.h" />
+    <ClInclude Include="WeaponObject.h">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="TypedObjectPool.h">
+      <Filter>02.Game\World</Filter>
+    </ClInclude>
     <ClInclude Include="World.h">
+      <Filter>02.Game\World</Filter>
+    </ClInclude>
+    <ClInclude Include="GameContext.h">
       <Filter>02.Game</Filter>
     </ClInclude>
-    <ClInclude Include="TypedObjectPool.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -788,12 +797,18 @@
     <ClCompile Include="UIPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
-    <ClCompile Include="WeaponObject.cpp" />
-    <ClCompile Include="GameContext.cpp" />
+    <ClCompile Include="WeaponObject.cpp">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="TypedObjectPool.cpp">
+      <Filter>02.Game\World</Filter>
+    </ClCompile>
     <ClCompile Include="World.cpp">
+      <Filter>02.Game\World</Filter>
+    </ClCompile>
+    <ClCompile Include="GameContext.cpp">
       <Filter>02.Game</Filter>
     </ClCompile>
-    <ClCompile Include="TypedObjectPool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">

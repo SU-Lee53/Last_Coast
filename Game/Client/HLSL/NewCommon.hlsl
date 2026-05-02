@@ -198,7 +198,7 @@ cbuffer cbToneMappingData : register(b4, space0)
 {
 	float gfExposure;
 	float gfGamma;
-	float gfSaturation;
+	float gfPostSaturation;
 	float gfInputScale;
 	
 	float gfOutputScale;

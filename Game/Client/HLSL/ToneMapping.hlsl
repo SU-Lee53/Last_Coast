@@ -76,7 +76,7 @@ float4 PSToneMapping(VS_QUAD_OUTPUT input) : SV_Target0
 	
 	float3 finalColor = lerp(mapped, looked, saturate(gfLookStrength));
 	
-	///finalColor = ApplySaturation(finalColor, gfSaturation);
+	finalColor = ApplySaturation(finalColor, gfPostSaturation);
 	finalColor *= gfOutputScale;
 	finalColor = GammaCorrect(finalColor, gfGamma);
 	

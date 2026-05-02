@@ -5,7 +5,7 @@ struct ToneMappingCommonParameters {
 	float fExposure = 1.f;
 	float fGamma = 2.2f;
 
-	float fSaturation = 1.0f;
+	float fPostSaturation = 1.0f;
 	float fInputScale = 1.0f;	
 	float fOutputScale = 1.0f;
 	float fGradingStrength = 0.f;
@@ -96,7 +96,7 @@ struct ToneMappingParameter {
 	constexpr static ToneMappingCommonParameters g_DefaultCommonParameters{
 		.fExposure = 1.f,
 		.fGamma = 2.2f,
-		.fSaturation = 1.0f,
+		.fPostSaturation = 1.0f,
 		.fInputScale = 1.0f,
 		.fOutputScale = 1.0f,
 	};
