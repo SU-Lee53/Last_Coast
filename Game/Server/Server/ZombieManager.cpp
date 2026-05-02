@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "ZombieManager.h"
 
 bool ZombieManager::Initialize(const std::string& strNavMeshPath)
@@ -58,61 +58,61 @@ void ZombieManager::DespawnZombie(int nId)
 	std::cout << "[ZombieManager] 좀비 디스폰 id=" << nId << "\n";
 }
 
-void ZombieManager::Tick(float fDeltaTime,
-                         const std::unordered_map<int, Vector3>& playerPositions,
-                         std::vector<std::pair<int,int>>& outAttacks)
-{
-	if (!m_pAIManager) return;
-
-	auto pNavMesh = m_pAIManager->GetNavMesh();
-
-	for (auto& [nId, zombie] : m_Zombies)
-	{
-		if (!zombie.bAlive || !zombie.pAgent) continue;
-
-		Vector3 v3ZombiePos = zombie.pAgent->GetPosition();
-
-		// 가장 가까운 플레이어를 타겟으로 선택
-		int    nTargetId    = -1;
-		float  fMinDistSq   = FLT_MAX;
-		Vector3 v3TargetPos = {};
-
-		for (auto& [nPlayerId, v3PlayerPos] : playerPositions)
-		{
-			float fDistSq = Vector3::DistanceSquared(v3ZombiePos, v3PlayerPos);
-			if (fDistSq < fMinDistSq)
-			{
-				fMinDistSq  = fDistSq;
-				nTargetId   = nPlayerId;
-				v3TargetPos = v3PlayerPos;
-			}
-		}
-
-		if (nTargetId >= 0)
-		{
-			float fDist    = std::sqrtf(fMinDistSq);
-			bool  bVisible = IsVisible(v3ZombiePos, v3TargetPos, m_fSightRange);
-			bool  bHeard   = (fDist <= m_fHearingRange);
-
-			zombie.pAgent->UpdateSensoryStimulus(nTargetId, v3TargetPos, bVisible, bHeard);
-			zombie.pAgent->Think(nTargetId, fDeltaTime, fDist);
-
-			// 공격 히트 이벤트 수집
-			if (zombie.pAgent->ConsumeAttackHit())
-				outAttacks.emplace_back(nId, nTargetId);
-		}
-
-		// yaw 갱신 — 이동 방향 기반
-		Vector3 v3NewPos = zombie.pAgent->GetPosition();
-		Vector3 v3XZDelta(v3NewPos.x - zombie.v3PrevPos.x, 0.f, v3NewPos.z - zombie.v3PrevPos.z);
-		if (v3XZDelta.LengthSquared() > 0.0001f)
-			zombie.fYaw = std::atan2f(v3XZDelta.x, v3XZDelta.z);
-		zombie.v3PrevPos = v3NewPos;
-	}
-
-	// AIManager 전체 업데이트 (flocking, path search, agent update)
-	m_pAIManager->UpdateAll(fDeltaTime);
-}
+//void ZombieManager::Tick(float fDeltaTime,
+//                         const std::unordered_map<int, Vector3>& playerPositions,
+//                         std::vector<std::pair<int,int>>& outAttacks)
+//{
+//	if (!m_pAIManager) return;
+//
+//	auto pNavMesh = m_pAIManager->GetNavMesh();
+//
+//	for (auto& [nId, zombie] : m_Zombies)
+//	{
+//		if (!zombie.bAlive || !zombie.pAgent) continue;
+//
+//		Vector3 v3ZombiePos = zombie.pAgent->GetPosition();
+//
+//		// 가장 가까운 플레이어를 타겟으로 선택
+//		int    nTargetId    = -1;
+//		float  fMinDistSq   = FLT_MAX;
+//		Vector3 v3TargetPos = {};
+//
+//		for (auto& [nPlayerId, v3PlayerPos] : playerPositions)
+//		{
+//			float fDistSq = Vector3::DistanceSquared(v3ZombiePos, v3PlayerPos);
+//			if (fDistSq < fMinDistSq)
+//			{
+//				fMinDistSq  = fDistSq;
+//				nTargetId   = nPlayerId;
+//				v3TargetPos = v3PlayerPos;
+//			}
+//		}
+//
+//		if (nTargetId >= 0)
+//		{
+//			float fDist    = std::sqrtf(fMinDistSq);
+//			bool  bVisible = IsVisible(v3ZombiePos, v3TargetPos, m_fSightRange);
+//			bool  bHeard   = (fDist <= m_fHearingRange);
+//
+//			zombie.pAgent->UpdateSensoryStimulus(nTargetId, v3TargetPos, bVisible, bHeard);
+//			zombie.pAgent->Think(nTargetId, fDeltaTime, fDist);
+//
+//			// 공격 히트 이벤트 수집
+//			if (zombie.pAgent->ConsumeAttackHit())
+//				outAttacks.emplace_back(nId, nTargetId);
+//		}
+//
+//		// yaw 갱신 — 이동 방향 기반
+//		Vector3 v3NewPos = zombie.pAgent->GetPosition();
+//		Vector3 v3XZDelta(v3NewPos.x - zombie.v3PrevPos.x, 0.f, v3NewPos.z - zombie.v3PrevPos.z);
+//		if (v3XZDelta.LengthSquared() > 0.0001f)
+//			zombie.fYaw = std::atan2f(v3XZDelta.x, v3XZDelta.z);
+//		zombie.v3PrevPos = v3NewPos;
+//	}
+//
+//	// AIManager 전체 업데이트 (flocking, path search, agent update)
+//	m_pAIManager->UpdateAll(fDeltaTime);
+//}
 
 bool ZombieManager::IsVisible(const Vector3& v3From, const Vector3& v3To, float fSightRange) const
 {
