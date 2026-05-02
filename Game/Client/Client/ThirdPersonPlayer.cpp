@@ -403,18 +403,30 @@ void ThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 				continue;
 			}
 
-			float fProjectedAmount = outv3Delta.Dot(v3Normal);
-			if (fProjectedAmount < 0.f) {
-				// Step
-				if (TryStepUp(capsuleWorld, xmOBB, outv3Delta)) {
-					bAnyHit = true;
-					continue;
+			// Wall: y 성분 제거한 수평 법선으로 슬라이드 (OBB 모서리 접촉 시 y 누설 방지)
+			{
+				Vector3 v3HorizNormal(v3Normal.x, 0.f, v3Normal.z);
+				float fHorizLen = v3HorizNormal.Length();
+				if (fHorizLen < 1e-4f) continue;
+				v3HorizNormal /= fHorizLen;
+
+				float fHorizProjected = outv3Delta.Dot(v3HorizNormal);
+				if (fHorizProjected < 0.f) {
+					// Step: grounded 상태이고 벽 방향으로 이동 중일 때만 허용
+					if (m_bGrounded && TryStepUp(capsuleWorld, xmOBB, outv3Delta)) {
+						bAnyHit = true;
+						continue;
+					}
+					outv3Delta -= v3HorizNormal * fHorizProjected;
 				}
 
-				// Wall
-				outv3Delta -= v3Normal * fProjectedAmount;
-				bAnyHit = true;
+				// 관통 보정: 벽 안에 이미 들어가 있으면 수평으로 밀어내기 (통과 방지)
+				if (fDepth > fSnapDistance) {
+					const float fPushSkin = 0.1f;
+					outv3Delta += v3HorizNormal * std::min(fDepth - fPushSkin, 5.f);
+				}
 			}
+			bAnyHit = true;
 		}
 
 		if (!bAnyHit) {
@@ -443,10 +455,21 @@ void ThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 			}
 		}
 		else if (fDepth > fSkin) {
-			// 벽/경사: 슬라이드 처리
-			float fProjectedAmount = outv3Delta.Dot(v3Normal);
+			// 벽/경사: y 성분 제거한 수평 법선으로 슬라이드 (face normal y 누설로 위로 밀리는 것 방지)
+			Vector3 v3HorizNormal(v3Normal.x, 0.f, v3Normal.z);
+			float fHorizLen = v3HorizNormal.Length();
+			if (fHorizLen < 1e-4f) continue;
+			v3HorizNormal /= fHorizLen;
+
+			float fProjectedAmount = outv3Delta.Dot(v3HorizNormal);
 			if (fProjectedAmount < 0.f)
-				outv3Delta -= v3Normal * fProjectedAmount;
+				outv3Delta -= v3HorizNormal * fProjectedAmount;
+
+			// 관통 보정: 벽 안에 이미 들어가 있으면 수평으로 밀어내기 (통과 방지)
+			if (fDepth > fSnapDistance) {
+				const float fPushSkin = 0.1f;
+				outv3Delta += v3HorizNormal * std::min(fDepth - fPushSkin, 5.f);
+			}
 		}
 	}
 }
