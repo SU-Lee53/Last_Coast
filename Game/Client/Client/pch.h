@@ -34,6 +34,7 @@
 #include <filesystem>
 #include <typeindex>
 #include <functional>
+#include <queue>
 
 using namespace std::string_literals;
 

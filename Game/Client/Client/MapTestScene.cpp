@@ -156,8 +156,6 @@ void MapTestScene::Update()
 
 						}
 
-
-
 						ImGui::EndCombo();
 					}
 

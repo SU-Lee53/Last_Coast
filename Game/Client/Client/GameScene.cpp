@@ -128,7 +128,7 @@ void GameScene::Update()
 			}
 	
 			if (ImGui::BeginTabItem("Objects")) {
-				for (const auto& pObj : GetStaticObjectsInScene()) {
+				for (const auto& pObj : m_World.GetObjects<StaticObject>()) {
 					if (ImGui::TreeNode(pObj->GetName().c_str())) {
 						auto pTransform = pObj->GetTransform();
 						const Vector3 v3Position = pTransform->GetPosition();
@@ -138,8 +138,6 @@ void GameScene::Update()
 
 						ImGui::TreePop();
 					}
-
-
 				}
 
 				ImGui::EndTabItem();

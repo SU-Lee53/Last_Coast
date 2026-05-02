@@ -464,6 +464,10 @@
     </ClInclude>
     <ClInclude Include="WeaponObject.h" />
     <ClInclude Include="GameContext.h" />
+    <ClInclude Include="World.h">
+      <Filter>02.Game</Filter>
+    </ClInclude>
+    <ClInclude Include="TypedObjectPool.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -786,6 +790,10 @@
     </ClCompile>
     <ClCompile Include="WeaponObject.cpp" />
     <ClCompile Include="GameContext.cpp" />
+    <ClCompile Include="World.cpp">
+      <Filter>02.Game</Filter>
+    </ClCompile>
+    <ClCompile Include="TypedObjectPool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">

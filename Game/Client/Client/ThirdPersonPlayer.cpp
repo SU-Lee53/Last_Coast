@@ -114,7 +114,7 @@ void ThirdPersonPlayer::ProcessInput()
 		}
 
 		// Fire
-		if (INPUT->GetButtonPressed(VK_LBUTTON) && m_bAiming) {
+		if ((INPUT->GetButtonDown(VK_LBUTTON) || INPUT->GetButtonPressed(VK_LBUTTON)) && m_bAiming) {
 			if (m_bInMeleeAttack) {
 				goto lb_breakMouseInput;
 			}
@@ -248,6 +248,17 @@ void ThirdPersonPlayer::OnEndCollision(const CollisionResult& collisionResult)
 
 void ThirdPersonPlayer::GiveWeapon(WEAPON_TYPE eWeaponType)
 {
+	auto eBefore = m_pWeaponSocket->GetCurrentWeaponType();
+	if (eBefore != eWeaponType && m_bAiming) {
+		auto pAnimationCtrl = static_pointer_cast<PlayerAnimationController>(GetComponent<AnimationController>());
+		if (eWeaponType == WEAPON_TYPE::PISTOL) {
+			pAnimationCtrl->GetMontage()->JumpToSection("Pistol Aiming Idle");
+		}
+		else if (eBefore == WEAPON_TYPE::PISTOL) {
+			pAnimationCtrl->GetMontage()->JumpToSection("Rifle Aiming Idle");
+		}
+	}
+
 	m_pWeaponSocket->SetWeapon(eWeaponType);
 }
 

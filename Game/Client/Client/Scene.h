@@ -1,5 +1,11 @@
 ﻿#pragma once
+#include "World.h"
 #include "GameObject.h"
+
+#include "StaticObject.h"
+#include "Zombie.h"
+#include "WeaponObject.h"
+
 #include "Player.h"	// Includes GameObject
 #include "Camera.h"
 #include "Light.h"
@@ -76,10 +82,12 @@ public:
 	virtual void BuildLights();
 
 public:
-	void AddObject(std::shared_ptr<IGameObject> pObj) {
+	template<typename T> requires std::derived_from<T, IGameObject>
+	void AddObject(std::shared_ptr<T> pObj) {
+		m_World.Add<T>(pObj);
 		//m_pGameObjects.push_back(pObj);
-		(pObj->GetObjectType() == OBJECT_MOBILITY_TYPE::STATIC) ? m_pStaticObjects.push_back(pObj) 
-			                                                    : m_pDynamicObjects.push_back(pObj);
+		//(pObj->GetObjectType() == OBJECT_MOBILITY_TYPE::STATIC) ? m_pStaticObjects.push_back(pObj) 
+		//	                                                    : m_pDynamicObjects.push_back(pObj);
 	}
 
 	template<typename... Objs, 
@@ -118,9 +126,10 @@ public:
 	virtual void SyncSceneWithServer() {}
 
 public:
-	const std::vector<std::shared_ptr<IGameObject>>& GetStaticObjectsInScene() const { return m_pStaticObjects; }
-	const std::vector<std::shared_ptr<IGameObject>>& GetDynamicObjectsInScene() const { return m_pDynamicObjects; }
+	//const std::vector<std::shared_ptr<IGameObject>>& GetStaticObjectsInScene() const { return m_pStaticObjects; }
+	//const std::vector<std::shared_ptr<IGameObject>>& GetDynamicObjectsInScene() const { return m_pDynamicObjects; }
 
+	const World<StaticObject, WeaponObject, Zombie>& GetWorld() const { return m_World; }
 	const std::shared_ptr<IPlayer>& GetPlayer() const { return m_pPlayer; }
 	const std::shared_ptr<TerrainObject>& GetTerrain() const { return m_pTerrain; }
 	const std::shared_ptr<Skybox>& GetSkybox() const { return m_pSkybox; }
@@ -140,8 +149,10 @@ private:
 
 
 protected:
-	std::vector<std::shared_ptr<IGameObject>>	m_pStaticObjects = {};
-	std::vector<std::shared_ptr<IGameObject>>	m_pDynamicObjects = {};
+	World<StaticObject, WeaponObject, Zombie> m_World;
+
+	//std::vector<std::shared_ptr<IGameObject>>	m_pStaticObjects = {};
+	//std::vector<std::shared_ptr<IGameObject>>	m_pDynamicObjects = {};
 
 	std::vector<std::shared_ptr<Light>>			m_pLights = {};
 	
@@ -172,6 +183,7 @@ public:
 
 private:
 	inline static std::string g_strSceneBasePath = "../Resources/Scenes";
+
 
 };
 

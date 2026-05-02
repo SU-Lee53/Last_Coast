@@ -247,6 +247,7 @@
     <ClInclude Include="Transform.h" />
     <ClInclude Include="TransparentForwardLightingPass.h" />
     <ClInclude Include="Typedef.h" />
+    <ClInclude Include="TypedObjectPool.h" />
     <ClInclude Include="UIBoard.h" />
     <ClInclude Include="UIComponent.h" />
     <ClInclude Include="UIPass.h" />
@@ -254,6 +255,7 @@
     <ClInclude Include="WeaponObject.h" />
     <ClInclude Include="WinCore.h" />
     <ClInclude Include="WInSockCommon.h" />
+    <ClInclude Include="World.h" />
     <ClInclude Include="Zombie.h" />
     <ClInclude Include="ZombieAnimationController.h" />
   </ItemGroup>
@@ -397,12 +399,14 @@
     <ClCompile Include="ToneMappingPass.cpp" />
     <ClCompile Include="Transform.cpp" />
     <ClCompile Include="TransparentForwardLightingPass.cpp" />
+    <ClCompile Include="TypedObjectPool.cpp" />
     <ClCompile Include="UIBoard.cpp" />
     <ClCompile Include="UIComponent.cpp" />
     <ClCompile Include="UIPass.cpp" />
     <ClCompile Include="Utility.cpp" />
     <ClCompile Include="WeaponObject.cpp" />
     <ClCompile Include="WinCore.cpp" />
+    <ClCompile Include="World.cpp" />
     <ClCompile Include="Zombie.cpp" />
     <ClCompile Include="ZombieAnimationController.cpp" />
   </ItemGroup>
