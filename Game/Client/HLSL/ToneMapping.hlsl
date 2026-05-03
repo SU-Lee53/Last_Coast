@@ -60,11 +60,19 @@ float3 ApplyLUTCoordScaleBias(float3 uvw)
 	return uvw * fScale + fBias;
 }
 
+
 float4 PSToneMapping(VS_QUAD_OUTPUT input) : SV_Target0
 {
 	float3 hdrColor = gtxtHDRResult.Sample(gSamplerState, input.uv).rgb;
 	hdrColor *= gfExposure;
 	hdrColor *= gfInputScale;
+	
+	if (gnDebugView == 1)
+	{
+		float3 finalColor = saturate(hdrColor);
+		finalColor = GammaCorrect(finalColor, gfGamma);
+		return float4(finalColor, 1.0f);
+	}
 	
 	float3 uvw = HDRToLUTUVW(hdrColor);
 	uvw = ApplyLUTCoordScaleBias(uvw);

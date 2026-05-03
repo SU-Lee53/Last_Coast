@@ -4,11 +4,12 @@
 struct ToneMappingCommonParameters {
 	float fExposure = 1.f;
 	float fGamma = 2.2f;
-
 	float fPostSaturation = 1.0f;
-	float fInputScale = 1.0f;	
+	float fInputScale = 1.0f;
+
 	float fOutputScale = 1.0f;
 	float fGradingStrength = 0.f;
+	int32 nDebugView = 0;
 };
 
 struct AgXParameters {
@@ -178,7 +179,8 @@ struct CB_TONE_MAPPING_DATA {
 
 	float fOutputScale;
 	float fGradingStrength;
-	Vector2 pad;
+	int32 nDebugView;
+	float pad;
 };
 
 class ToneMappingPass : public IRenderPass {

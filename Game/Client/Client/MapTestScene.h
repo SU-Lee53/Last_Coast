@@ -27,5 +27,6 @@ private:
 
 	nlohmann::json jWeaponData;
 
+	bool m_bShowConfig = true;
 };
 

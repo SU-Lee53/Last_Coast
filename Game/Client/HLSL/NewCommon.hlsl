@@ -203,7 +203,8 @@ cbuffer cbToneMappingData : register(b4, space0)
 	
 	float gfOutputScale;
 	float gfLookStrength;
-	float3 pad1;
+	int gnDebugView;
+	float pad1;
 };
 
 // ============ StructuredBuffers ============

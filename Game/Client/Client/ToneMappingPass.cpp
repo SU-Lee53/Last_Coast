@@ -292,7 +292,8 @@ CB_TONE_MAPPING_DATA ToneMappingPass::MakeCBData() const
 		.fInputScale = m_Parameters.Common.fInputScale,
 		.fOutputScale = m_Parameters.Common.fOutputScale,
 		.fGradingStrength = m_Parameters.Common.fGradingStrength,
-		.pad = Vector2(0.f),
+		.nDebugView = m_Parameters.Common.nDebugView,
+		.pad = 0.f,
 	};
 }
 
@@ -391,6 +392,11 @@ void ToneMappingPass::ShowDebugInfo()
 	ShowDragFloat(cnt++, "fInputScale", reinterpret_cast<float*>(&m_Parameters.Common.fInputScale), 0.01f, 0.25f, 4.f, true, 0.5f, 2.0f, 1.f);
 	ShowDragFloat(cnt++, "fOutputScale", reinterpret_cast<float*>(&m_Parameters.Common.fOutputScale), 0.01f, 0.5f, 2.f, true, 0.8, 1.2, 1.f);
 	ShowDragFloat(cnt++, "fGradingStrength", reinterpret_cast<float*>(&m_Parameters.Common.fGradingStrength), 0.01f, 0.0f, 1.0f, true, 0.0f, 1.0f, 1.0f);
+
+	std::string strClampOn = (m_Parameters.Common.nDebugView == 1) ? "ON" : "OFF";
+	if (ImGui::Button(std::format("CLAMP : {}", strClampOn).c_str())) {
+		m_Parameters.Common.nDebugView = (m_Parameters.Common.nDebugView == 1) ? 0 : 1;
+	}
 
 	bool bToneLUTDirty = false;
 
