@@ -38,6 +38,7 @@ private:
 	void HandleCollision();
 	void ApplyGravity();
 	void ResolveCollision(OUT Vector3& outv3Delta);
+	void ResolveMeshContacts(OUT Vector3& outv3Delta);
 	bool CheckGround(float fMaxDistance, OUT Vector3& outv3Normal);
 	bool TryStepUp(
 		const BoundingCapsule& capsule, 

@@ -319,6 +319,7 @@ void ThirdPersonPlayer::HandleCollision()
 	v3Delta.y += m_fVerticalVelocity * DT;
 
 	ResolveCollision(v3Delta);
+	ResolveMeshContacts(v3Delta);
 
 	TerrainHit hit{};
 	ResolveTerrain(v3Delta, hit, bWasGrounded);
@@ -375,8 +376,12 @@ void ThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 				continue;
 			}
 
+			if (fDepth < fSkin) {
+				continue;
+			}
+
 			if (v3Normal.y > fGround && outv3Delta.y <= 0.f) {
-				// 바닥 접촉: depth=0(살짝 닿음)이어도 grounding 확정
+				// 바닥 접촉 확정
 				m_bGrounded = true;
 				m_unGroundGraceFrames = m_unMaxGroundGraceFrames;
 
@@ -384,78 +389,64 @@ void ThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 					m_fVerticalVelocity = 0.f;
 				}
 
-				// 경사 투영: 밀어내기 전에 먼저 하강 성분을 제거해야 반발이 없음
+				// Penetration Correction
+				if (fDepth > fSnapDistance) {
+					float fPush = std::min(fDepth + fSkin, 5.f);
+					outv3Delta += v3Normal * fPush;
+				}
+
+				// Slope Projection
 				float fProjected = outv3Delta.Dot(v3Normal);
 				if (fProjected < 0.f) {
 					outv3Delta -= v3Normal * fProjected;
 				}
 
-				// 관통 보정: fPushSkin(0.1cm)만큼 여유를 남겨서 표면 위로 튀어오르는 것을 방지
-				if (fDepth > fSnapDistance) {
-					const float fPushSkin = 0.1f;
-					outv3Delta += v3Normal * std::min(fDepth - fPushSkin, 5.f);
-				}
-
 				continue;
 			}
 
-			if (fDepth < fSkin) {
-				continue;
-			}
-
-			// Wall: y 성분 제거한 수평 법선으로 슬라이드 (OBB 모서리 접촉 시 y 누설 방지)
-			{
-				Vector3 v3HorizNormal(v3Normal.x, 0.f, v3Normal.z);
-				float fHorizLen = v3HorizNormal.Length();
-				if (fHorizLen < 1e-4f) continue;
-				v3HorizNormal /= fHorizLen;
-
-				float fHorizProjected = outv3Delta.Dot(v3HorizNormal);
-				if (fHorizProjected < 0.f) {
-					// Step: grounded 상태이고 벽 방향으로 이동 중일 때만 허용
-					if (m_bGrounded && TryStepUp(capsuleWorld, xmOBB, outv3Delta)) {
-						bAnyHit = true;
-						continue;
-					}
-					outv3Delta -= v3HorizNormal * fHorizProjected;
+			float fProjectedAmount = outv3Delta.Dot(v3Normal);
+			if (fProjectedAmount < 0.f) {
+				// Step
+				if (TryStepUp(capsuleWorld, xmOBB, outv3Delta)) {
+					bAnyHit = true;
+					continue;
 				}
 
-				// 관통 보정: 벽 안에 이미 들어가 있으면 수평으로 밀어내기 (통과 방지)
-				if (fDepth > fSnapDistance) {
-					const float fPushSkin = 0.1f;
-					outv3Delta += v3HorizNormal * std::min(fDepth - fPushSkin, 5.f);
-				}
+				// Wall
+				outv3Delta -= v3Normal * fProjectedAmount;
+				bAnyHit = true;
 			}
-			bAnyHit = true;
 		}
 
 		if (!bAnyHit) {
 			break;
 		}
 	}
+}
 
-	// MeshCollider: 삼각형 face normal 기반 contact 처리 (flat OBB 재검사 없음)
+void ThirdPersonPlayer::ResolveMeshContacts(OUT Vector3& outv3Delta)
+{
+	const float fSkin = 0.5f;
+	const float fGround = 0.7f;
+	const float fSnapDistance = 1.0f;
+
 	for (auto& [v3Normal, fDepth] : m_MeshContacts) {
 		if (v3Normal.y > fGround && outv3Delta.y <= 0.f) {
-			// 바닥: depth=0(살짝 닿음)이어도 grounding 확정 → 중력 누적 차단
 			m_bGrounded = true;
 			m_unGroundGraceFrames = m_unMaxGroundGraceFrames;
 			if (m_fVerticalVelocity < 0.f)
 				m_fVerticalVelocity = 0.f;
 
-			// 경사 투영: 관통 깊이와 무관하게 항상 하강 성분 제거
 			float fProjected = outv3Delta.Dot(v3Normal);
 			if (fProjected < 0.f)
 				outv3Delta -= v3Normal * fProjected;
 
-			// 관통 보정: fPushSkin(0.1cm)만큼 여유를 남겨서 표면 위로 튀어오르는 것을 방지
 			if (fDepth > fSnapDistance) {
 				const float fPushSkin = 0.1f;
 				outv3Delta += v3Normal * std::min(fDepth - fPushSkin, 5.f);
 			}
 		}
 		else if (fDepth > fSkin) {
-			// 벽/경사: y 성분 제거한 수평 법선으로 슬라이드 (face normal y 누설로 위로 밀리는 것 방지)
 			Vector3 v3HorizNormal(v3Normal.x, 0.f, v3Normal.z);
 			float fHorizLen = v3HorizNormal.Length();
 			if (fHorizLen < 1e-4f) continue;
@@ -465,7 +456,6 @@ void ThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 			if (fProjectedAmount < 0.f)
 				outv3Delta -= v3HorizNormal * fProjectedAmount;
 
-			// 관통 보정: 벽 안에 이미 들어가 있으면 수평으로 밀어내기 (통과 방지)
 			if (fDepth > fSnapDistance) {
 				const float fPushSkin = 0.1f;
 				outv3Delta += v3HorizNormal * std::min(fDepth - fPushSkin, 5.f);
