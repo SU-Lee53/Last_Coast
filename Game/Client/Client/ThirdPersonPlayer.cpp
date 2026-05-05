@@ -841,7 +841,6 @@ void LocalThirdPersonPlayer::ProcessInput()
 		ToggleMouseLook();
 	}
 
-
 	ProcessLocalCameraInput();
 	ProcessLocalMovementInput();
 	ProcessLocalActionInput();
@@ -859,6 +858,8 @@ void NetworkOwnerThirdPersonPlayer::ProcessInput()
 
 	// 카메라는 클라가 돌림
 	ProcessLocalCameraInput();
+	ProcessLocalMovementInput();
+	ProcessLocalActionInput();
 
 	// 서버로 이동 패킷 전송
 	//SendLocalCommandToServer();
@@ -872,7 +873,7 @@ void NetworkOwnerThirdPersonPlayer::SendLocalCommandToServer()
 	// TODO : 서버로 이동 관련 입력을 전송
 	// - 필요한 것 (용도별)
 	//		- 이동처리:
-	//			- W/A/S/D 이동 입력
+	//			- W/A/S/D 이동 입력 -> 행렬로 변경
 	//			- 달리기 입력 여부
 	//		- 애니메이션 + 기타 처리
 	//			- 달리기 입력 여부

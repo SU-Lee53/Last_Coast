@@ -519,6 +519,9 @@
     <ClInclude Include="BulletImpactEffect.h">
       <Filter>02.Game\Particle\Particles</Filter>
     </ClInclude>
+    <ClInclude Include="NetworkGameTestScene.h">
+      <Filter>02.Game\Scene\Test</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -877,6 +880,9 @@
     </ClCompile>
     <ClCompile Include="BulletImpactEffect.cpp">
       <Filter>02.Game\Particle\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkGameTestScene.cpp">
+      <Filter>02.Game\Scene\Test</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

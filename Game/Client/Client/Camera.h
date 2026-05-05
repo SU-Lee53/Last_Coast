@@ -39,6 +39,8 @@ public:
 	const Vector4& GetCascadeSplits() const { return m_v4CascadeSplits; }
 
 public:
+	void SetWorldMatrix(const Matrix& mtxWorld);
+
 	void SetPosition(float x, float y, float z);
 	void SetPosition(const Vector3& v3Position);
 	void SetRotation(float fPitch, float fYaw, float fRoll);

@@ -77,6 +77,8 @@ struct ScenePartition {
 class Scene {
 	friend class SceneManager;
 
+	using WorldType = World<NetworkRemoteThirdPersonPlayer, StaticObject, WeaponObject, Zombie>;
+
 public:
 	virtual void BuildObjects() = 0;
 	virtual void BuildLights();
@@ -85,9 +87,6 @@ public:
 	template<typename T> requires std::derived_from<T, IGameObject>
 	void AddObject(std::shared_ptr<T> pObj) {
 		m_World.Add<T>(pObj);
-		//m_pGameObjects.push_back(pObj);
-		//(pObj->GetObjectType() == OBJECT_MOBILITY_TYPE::STATIC) ? m_pStaticObjects.push_back(pObj) 
-		//	                                                    : m_pDynamicObjects.push_back(pObj);
 	}
 
 	template<typename... Objs, 
@@ -129,7 +128,7 @@ public:
 	//const std::vector<std::shared_ptr<IGameObject>>& GetStaticObjectsInScene() const { return m_pStaticObjects; }
 	//const std::vector<std::shared_ptr<IGameObject>>& GetDynamicObjectsInScene() const { return m_pDynamicObjects; }
 
-	const World<StaticObject, WeaponObject, Zombie>& GetWorld() const { return m_World; }
+	const WorldType& GetWorld() const { return m_World; }
 	const std::shared_ptr<IPlayer>& GetPlayer() const { return m_pPlayer; }
 	const std::shared_ptr<TerrainObject>& GetTerrain() const { return m_pTerrain; }
 	const std::shared_ptr<Skybox>& GetSkybox() const { return m_pSkybox; }
@@ -149,7 +148,7 @@ private:
 
 
 protected:
-	World<IThirdPersonPlayer, StaticObject, WeaponObject, Zombie> m_World;
+	WorldType m_World;
 
 	//std::vector<std::shared_ptr<IGameObject>>	m_pStaticObjects = {};
 	//std::vector<std::shared_ptr<IGameObject>>	m_pDynamicObjects = {};
