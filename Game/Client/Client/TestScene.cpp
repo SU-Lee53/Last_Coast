@@ -24,7 +24,7 @@ void TestScene::BuildObjects()
 		AddObject<Zombie>(pObj);
 	}
 
-	if (auto pThirdPerson = std::dynamic_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
+	if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 		pThirdPerson->GiveWeapon(WEAPON_TYPE::M4);
 	}
 
@@ -63,7 +63,7 @@ void TestScene::Update()
 			return;
 		}
 
-		if (auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
+		if (auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 			ImGui::Text("Press `(~) to use mouse control");
 			ImGui::Text("Mouse : %s", pPlayer->IsMouseOn() ? "ON" : "OFF");
 			ImGui::Text("Move Speed : %f\n", pPlayer->GetMoveSpeed());
@@ -178,7 +178,7 @@ void TestScene::Update()
 
 void TestScene::ProcessPlayerShoot()
 {
-	auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(m_pPlayer);
+	auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer);
 	if (!pPlayer || !pPlayer->ConsumeFire())
 		return;
 

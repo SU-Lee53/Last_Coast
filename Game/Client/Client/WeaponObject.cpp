@@ -50,11 +50,12 @@ bool WeaponObject::TryFire()
 		const auto& pCamera = CUR_SCENE->GetCamera();
 		const auto& pPlayer = CUR_SCENE->GetPlayer();
 
+		// 네크워크 플레이어의 경우 다른 조치가 필요해보임
 		RayTraceDesc rayDesc{};
 		rayDesc.v3Origin = pCamera->GetPosition();
 		rayDesc.v3Direction = pCamera->GetLook();
 		rayDesc.fMaxDistance = 5000.f;
-		rayDesc.fDamage = 25.f;
+		rayDesc.fDamage = m_fDamage;
 		rayDesc.pInstigator = pPlayer;
 		rayDesc.pSourceObject = shared_from_this();
 

@@ -69,7 +69,7 @@ void MapTestScene::BuildObjects()
 	m_pUIBoard->InsertUI(m_pTimeText);
 	m_pUIBoard->InsertUI(m_pKoreanText);
 
-	if (auto pThirdPerson = std::dynamic_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
+	if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 		pThirdPerson->GiveWeapon(static_cast<WEAPON_TYPE>(m_nWeaponSelected));
 	}
 
@@ -111,7 +111,7 @@ void MapTestScene::Update()
 
 		if (ImGui::BeginTabBar("Debug")) {
 			if (ImGui::BeginTabItem("Player")) {
-				if (auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
+				if (auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 					m_pPlayer->ShowControlImGui();
 
 					ImGui::Text("Press `(~) to use mouse control");
@@ -145,7 +145,7 @@ void MapTestScene::Update()
 							bool bSelected = (m_nWeaponSelected == i);
 							if (ImGui::Selectable(strWeaponNames[i].c_str(), bSelected)) {
 								m_nWeaponSelected = i;
-								if (auto pThirdPerson = std::dynamic_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
+								if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 									pThirdPerson->GiveWeapon(static_cast<WEAPON_TYPE>(m_nWeaponSelected));
 								}
 							}

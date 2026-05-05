@@ -304,7 +304,7 @@ void PlayerAnimationMontage::BuildMontage()
 		meleeEndNotify.nSectionIndex = m_MontageSections.size() - 1;
 		meleeEndNotify.fTime = ANIMATION->Get("Standing Melee Attack Horizontal")->GetDuration() - 0.1f;
 		meleeEndNotify.pCallback = [](std::shared_ptr<IGameObject> pObj) {
-			std::static_pointer_cast<ThirdPersonPlayer>(pObj)->OnMeleeEnd();
+			std::static_pointer_cast<IThirdPersonPlayer>(pObj)->OnMeleeEnd();
 		};
 		m_Notifies.push_back(meleeEndNotify);
 	}

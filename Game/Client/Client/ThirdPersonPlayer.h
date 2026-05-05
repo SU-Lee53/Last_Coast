@@ -18,10 +18,10 @@
 	NetworkRemoteThirdPersonPlayer	    X			X			 O				O			서버 상태/이벤트로 재생	   X		X
 */
 
-class ThirdPersonPlayer : public IPlayer {
+class IThirdPersonPlayer : public IPlayer {
 public:
-	ThirdPersonPlayer();
-	virtual ~ThirdPersonPlayer();
+	IThirdPersonPlayer();
+	virtual ~IThirdPersonPlayer();
 
 public:
 	void Initialize() override;
@@ -178,7 +178,7 @@ protected:
 
 };
 
-class LocalThirdPersonPlayer final : public ThirdPersonPlayer {
+class LocalThirdPersonPlayer final : public IThirdPersonPlayer {
 public:
 	void ProcessInput() override;
 
@@ -189,7 +189,7 @@ protected:
 	bool UsesServerStateMovement() const override { return false; }
 };
 
-class NetworkOwnerThirdPersonPlayer final : public ThirdPersonPlayer {
+class NetworkOwnerThirdPersonPlayer final : public IThirdPersonPlayer {
 public:
 	void ProcessInput() override;
 
@@ -203,7 +203,7 @@ private:
 	void SendLocalCommandToServer();
 };
 
-class NetworkRemoteThirdPersonPlayer final : public ThirdPersonPlayer {
+class NetworkRemoteThirdPersonPlayer final : public IThirdPersonPlayer {
 public:
 	void ProcessInput() override {}	// 입력 처리 받지 않음
 

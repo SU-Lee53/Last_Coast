@@ -51,6 +51,7 @@ bool WeaponSocket::TryFire()
 void WeaponSocket::SetWeapon(WEAPON_TYPE eWeaponType)
 {
 	m_pWeaponModel = static_pointer_cast<WeaponObject>(GCTX->GetWeaponCopy(eWeaponType));
+	m_pWeaponModel->SetOwner(static_pointer_cast<IThirdPersonPlayer>(m_wpOwner.lock()->GetOwner()));
 	m_eCurrentWeapon = eWeaponType;
 }
 

@@ -507,10 +507,17 @@
     <ClInclude Include="ParticleTextureCache.h">
       <Filter>02.Game\Particle\Composites</Filter>
     </ClInclude>
-    <ClInclude Include="ParticlePass.h" />
-    <ClInclude Include="BloodEffect.h" />
     <ClInclude Include="RayTraceUtils.h">
       <Filter>99.Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="BloodEffect.h">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="ParticlePass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="BulletImpactEffect.h">
+      <Filter>02.Game\Particle\Particles</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -862,8 +869,15 @@
     <ClCompile Include="ParticleTextureCache.cpp">
       <Filter>02.Game\Particle\Composites</Filter>
     </ClCompile>
-    <ClCompile Include="ParticlePass.cpp" />
-    <ClCompile Include="BloodEffect.cpp" />
+    <ClCompile Include="BloodEffect.cpp">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="ParticlePass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="BulletImpactEffect.cpp">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">

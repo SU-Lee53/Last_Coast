@@ -165,6 +165,7 @@
     <ClInclude Include="AnimationStateMachine.h" />
     <ClInclude Include="BloodEffect.h" />
     <ClInclude Include="BoundingCapsule.h" />
+    <ClInclude Include="BulletImpactEffect.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="CB_Types.h" />
     <ClInclude Include="Collider.h" />
@@ -328,6 +329,7 @@
     <ClCompile Include="AnimationStateMachine.cpp" />
     <ClCompile Include="BloodEffect.cpp" />
     <ClCompile Include="BoundingCapsule.cpp" />
+    <ClCompile Include="BulletImpactEffect.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Collider.cpp" />
     <ClCompile Include="CommandListAllocator.cpp" />

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "DynamicObject.h"
+#include "ThirdPersonPlayer.h"
 
 class WeaponObject : public DynamicObject {
 public:
@@ -24,6 +25,7 @@ public:
 	void SetOffsetPosition(const Vector3& v3Pos) { m_v3OffsetPosition = v3Pos; }
 	void SetOffsetRotation(const Vector3& v3Rotation) { m_v3OffsetRotation = v3Rotation; }
 	void SetMuzzlePositionLocal(const Vector3& v3Pos) { m_v3MuzzlePositionLocal = v3Pos; }
+	void SetOwner(const std::shared_ptr<IThirdPersonPlayer>& pOwnerPlayer) { m_wpOwner = pOwnerPlayer; }
 
 	float GetDamage() const { return m_fDamage; }
 	float GetFirePerSecond() const { return m_fFirePerSecond; }
@@ -34,8 +36,11 @@ public:
 	const Vector3& GetOffsetRotation() const { return m_v3OffsetRotation; }
 	const Vector3& GetMuzzlePositionLocal(const Matrix& mtxWorld) const { return m_v3MuzzlePositionLocal; }
 	const Vector3& GetMuzzlePositionWorld(const Matrix& mtxWorld) const { return m_v3MuzzlePositionWorld; }
+	std::shared_ptr<IThirdPersonPlayer> GetOwner() { return m_wpOwner.lock(); }
 
 	const Matrix& GetOffsetTransform();
+
+	RayTraceDesc GenerateRayTraceDesc();
 
 public:
 	void EditStat();
@@ -59,5 +64,7 @@ private:
 	Matrix m_mtxOffsetTransform = Matrix::Identity;
 
 	WEAPON_TYPE m_eWeaponType = WEAPON_TYPE::UNDEFINED;
+
+	std::weak_ptr<IThirdPersonPlayer> m_wpOwner;
 };
 

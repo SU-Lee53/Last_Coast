@@ -103,7 +103,7 @@ void PlayerAnimationController::Initialize()
 	m_pBlendMachine = std::make_unique<LayeredBlendMachine>(m_wpOwner.lock(), "Spine", 3);
 	m_nSpineIndex = m_wpOwnerSkeleton.lock()->FindBoneIndex("Spine");
 
-	const auto& pCamera = std::static_pointer_cast<ThirdPersonPlayer>(m_wpOwner.lock())->GetCamera();
+	const auto& pCamera = std::static_pointer_cast<IThirdPersonPlayer>(m_wpOwner.lock())->GetCamera();
 	m_wpPlayerCamera = std::static_pointer_cast<ThirdPersonCamera>(pCamera);
 }
 

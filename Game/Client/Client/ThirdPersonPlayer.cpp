@@ -8,15 +8,15 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Base ThirdPersonPlayer 
 
-ThirdPersonPlayer::ThirdPersonPlayer()
+IThirdPersonPlayer::IThirdPersonPlayer()
 {
 }
 
-ThirdPersonPlayer::~ThirdPersonPlayer()
+IThirdPersonPlayer::~IThirdPersonPlayer()
 {
 }
 
-void ThirdPersonPlayer::Initialize()
+void IThirdPersonPlayer::Initialize()
 {
 	if (!m_bInitialized) {
 		InitializeCommonPlayer();
@@ -46,16 +46,16 @@ void ThirdPersonPlayer::Initialize()
 	m_bInitialized = true;
 }
 
-void ThirdPersonPlayer::ProcessInput()
+void IThirdPersonPlayer::ProcessInput()
 {
 }
 
-void ThirdPersonPlayer::OnMeleeEnd()
+void IThirdPersonPlayer::OnMeleeEnd()
 {
 	PlayMeleeEndAction();
 }
 
-void ThirdPersonPlayer::Update()
+void IThirdPersonPlayer::Update()
 {
 	if (m_pCrosshair) {
 		m_pCrosshair->Update();
@@ -66,27 +66,27 @@ void ThirdPersonPlayer::Update()
 	}
 }
 
-void ThirdPersonPlayer::OnBeginCollision(const CollisionResult& collisionResult)
+void IThirdPersonPlayer::OnBeginCollision(const CollisionResult& collisionResult)
 {
 	// 여기서는 충돌이 일어난 객체들을 모아놓고 나중에 PostUpdate에서 한번에 이동 블락 처리를 한다
 	m_xmOBBCollided.push_back(collisionResult.DecomposeRef().second.GetOBBWorld());
 }
 
-void ThirdPersonPlayer::OnWhileCollision(const CollisionResult& collisionResult)
+void IThirdPersonPlayer::OnWhileCollision(const CollisionResult& collisionResult)
 {
 	m_xmOBBCollided.push_back(collisionResult.DecomposeRef().second.GetOBBWorld());
 }
 
-void ThirdPersonPlayer::OnEndCollision(const CollisionResult& collisionResult)
+void IThirdPersonPlayer::OnEndCollision(const CollisionResult& collisionResult)
 {
 }
 
-void ThirdPersonPlayer::GiveWeapon(WEAPON_TYPE eWeaponType)
+void IThirdPersonPlayer::GiveWeapon(WEAPON_TYPE eWeaponType)
 {
 	ApplyWeaponChanged(eWeaponType);
 }
 
-void ThirdPersonPlayer::PostUpdate()
+void IThirdPersonPlayer::PostUpdate()
 {
 	if (UsesInputMovement()) {
 		ApplyInputMovement();
@@ -109,12 +109,15 @@ void ThirdPersonPlayer::PostUpdate()
 	m_xmOBBCollided.clear();
 }
 
-void ThirdPersonPlayer::ApplyReplicatedState(/* const ServerSidePlayerState& state */)
+void IThirdPersonPlayer::ApplyReplicatedState(/* const ServerSidePlayerState& state */)
 {
 	/*
 		TODO :
 		1.
-		서버에서 받은 패킷에서 XZ 좌표를 이용해 SetServerTargetXZ(x,z) 를 호출
+		서버에서 받은 패킷에서 XZ 좌표를 이용해 플레이어 위치 반영
+		좌표 보간이 필요하다면 보간이후 SetTargetXZ 호출이 필요
+		보간함수는 자유롭게 구현
+
 		Y 는 클라이언트가 Terrain/Collision 여부를 보고 결정
 
 		2.
@@ -138,7 +141,7 @@ void ThirdPersonPlayer::ApplyReplicatedState(/* const ServerSidePlayerState& sta
 	*/
 }
 
-void ThirdPersonPlayer::ApplyReplicatedEvent(/* const ServerSidePlayerEvent& event */)
+void IThirdPersonPlayer::ApplyReplicatedEvent(/* const ServerSidePlayerEvent& event */)
 {/*
 		TODO :
 		서버 이벤트 타입에 따라 액션 함수를 호출
@@ -154,7 +157,7 @@ void ThirdPersonPlayer::ApplyReplicatedEvent(/* const ServerSidePlayerEvent& eve
 	*/
 }
 
-void ThirdPersonPlayer::ToggleMouseLook()
+void IThirdPersonPlayer::ToggleMouseLook()
 {
 	m_bMouseInUse = !m_bMouseInUse;
 
@@ -166,7 +169,7 @@ void ThirdPersonPlayer::ToggleMouseLook()
 	}
 }
 
-void ThirdPersonPlayer::OnBeginMouseLook()
+void IThirdPersonPlayer::OnBeginMouseLook()
 {
 	UpdateMouseLookData();
 	INPUT->HideCursor();
@@ -176,13 +179,13 @@ void ThirdPersonPlayer::OnBeginMouseLook()
 	m_bSkipMouseDeltaThisFrame = true;
 }
 
-void ThirdPersonPlayer::OnEndMouseLook()
+void IThirdPersonPlayer::OnEndMouseLook()
 {
 	::ClipCursor(nullptr);
 	INPUT->ShowCursor();
 }
 
-void ThirdPersonPlayer::UpdateMouseLookData()
+void IThirdPersonPlayer::UpdateMouseLookData()
 {
 	RECT rtClientRect{};
 	::GetClientRect(WinCore::g_hWnd, &rtClientRect);
@@ -212,7 +215,7 @@ void ThirdPersonPlayer::UpdateMouseLookData()
 	m_MouseClipScreenRect.bottom = ptRightBottom.y;
 }
 
-void ThirdPersonPlayer::HandleCollision()
+void IThirdPersonPlayer::HandleCollision()
 {
 	// 문제점
 	// 1. TryUp 이 ResolveCollision 에서만 호출되면서, Terrain -> Box 위로 올라설 수 없음
@@ -253,21 +256,21 @@ void ThirdPersonPlayer::HandleCollision()
 	pTransform->Move(v3Delta, 1.f);
 }
 
-float ThirdPersonPlayer::GetMoveSpeedXZ() const
+float IThirdPersonPlayer::GetMoveSpeedXZ() const
 {
 	Vector3 v3Delta = m_v3MoveDirection * (m_fMoveSpeed * DT);
 	v3Delta.y = 0.f;
 	return v3Delta.Length();
 }
 
-float ThirdPersonPlayer::GetMoveSpeedSqXZ() const
+float IThirdPersonPlayer::GetMoveSpeedSqXZ() const
 {
 	Vector3 v3Delta = m_v3MoveDirection * (m_fMoveSpeed * DT);
 	v3Delta.y = 0.f;
 	return v3Delta.LengthSquared();
 }
 
-void ThirdPersonPlayer::InitializeCommonPlayer()
+void IThirdPersonPlayer::InitializeCommonPlayer()
 {
 	auto pModel = MODEL->LoadOrGet("Ch33_nonPBR")->CopyObject<NodeObject>();
 	pModel->GetTransform()->Rotate(Vector3::Up, -90.f);
@@ -278,7 +281,7 @@ void ThirdPersonPlayer::InitializeCommonPlayer()
 	m_pWeaponSocket = GetComponent<Skeleton>()->CreateAttachSocket<WeaponSocket>("RightHand"s);
 }
 
-void ThirdPersonPlayer::InitializeLocalCamera()
+void IThirdPersonPlayer::InitializeLocalCamera()
 {
 	m_pCamera = std::make_shared<ThirdPersonCamera>();
 	m_pCamera->SetViewport(0, 0, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight, 0.f, 1.f);
@@ -295,7 +298,7 @@ void ThirdPersonPlayer::InitializeLocalCamera()
 	m_pCamera->SetOwner(shared_from_this());
 }
 
-void ThirdPersonPlayer::InitializeCrosshair()
+void IThirdPersonPlayer::InitializeCrosshair()
 {
 	if (auto& pUIBoard = CUR_SCENE->GetUIBoard(); pUIBoard) {
 		m_pCrosshair = std::make_shared<Crosshair>();
@@ -303,7 +306,7 @@ void ThirdPersonPlayer::InitializeCrosshair()
 	}
 }
 
-void ThirdPersonPlayer::ProcessLocalCameraInput()
+void IThirdPersonPlayer::ProcessLocalCameraInput()
 {
 	auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
 
@@ -345,7 +348,7 @@ lb_breakMouseInput:
 	}
 }
 
-void ThirdPersonPlayer::ProcessLocalMovementInput()
+void IThirdPersonPlayer::ProcessLocalMovementInput()
 {
 	auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
 	auto pAnimationCtrl = static_pointer_cast<PlayerAnimationController>(GetComponent<AnimationController>());
@@ -400,7 +403,7 @@ void ThirdPersonPlayer::ProcessLocalMovementInput()
 	}
 }
 
-void  ThirdPersonPlayer::ProcessLocalActionInput()
+void  IThirdPersonPlayer::ProcessLocalActionInput()
 {
 	auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
 	auto pAnimationCtrl = static_pointer_cast<PlayerAnimationController>(GetComponent<AnimationController>());
@@ -451,7 +454,7 @@ void  ThirdPersonPlayer::ProcessLocalActionInput()
 
 }
 
-void ThirdPersonPlayer::ApplyInputMovement()
+void IThirdPersonPlayer::ApplyInputMovement()
 {
 	auto& pTransform = GetTransform();
 
@@ -500,7 +503,7 @@ void ThirdPersonPlayer::ApplyInputMovement()
 	}
 }
 
-void ThirdPersonPlayer::ApplyServerMovementXZ()
+void IThirdPersonPlayer::ApplyServerMovementXZ()
 {
 	if (!m_bHasServerTargetXZ) {
 		m_bMoved = false;
@@ -539,13 +542,13 @@ void ThirdPersonPlayer::ApplyServerMovementXZ()
 	}
 }
 
-void ThirdPersonPlayer::SetServerTargetXZ(float x, float z)
+void IThirdPersonPlayer::SetServerTargetXZ(float x, float z)
 {
 	m_v2ServerTargetXZ = Vector2(x, z);
 	m_bHasServerTargetXZ = true;
 }
 
-void ThirdPersonPlayer::ResolveGroundYOnly(Vector3& delta)
+void IThirdPersonPlayer::ResolveGroundYOnly(Vector3& delta)
 {
 	TerrainHit hit{};
 
@@ -563,7 +566,7 @@ void ThirdPersonPlayer::ResolveGroundYOnly(Vector3& delta)
 	}
 }
 
-void ThirdPersonPlayer::EnterAim()
+void IThirdPersonPlayer::EnterAim()
 {
 	if (m_bAiming) {
 		return;
@@ -592,7 +595,7 @@ void ThirdPersonPlayer::EnterAim()
 	}
 }
 
-void ThirdPersonPlayer::LeaveAim()
+void IThirdPersonPlayer::LeaveAim()
 {
 	if (!m_bAiming) {
 		return;
@@ -619,7 +622,7 @@ void ThirdPersonPlayer::LeaveAim()
 	}
 }
 
-void ThirdPersonPlayer::PlayFireAction()
+void IThirdPersonPlayer::PlayFireAction()
 {
 	if (!m_pWeaponSocket) {
 		return;
@@ -645,7 +648,7 @@ void ThirdPersonPlayer::PlayFireAction()
 	// TODO : Add muzzle flash, etc...
 }
 
-void ThirdPersonPlayer::PlayMeleeStartAction()
+void IThirdPersonPlayer::PlayMeleeStartAction()
 {
 	if (m_bInMeleeAttack) {
 		return;
@@ -663,7 +666,7 @@ void ThirdPersonPlayer::PlayMeleeStartAction()
 	pAnimationCtrl->GetMontage()->PlayMontage("Melee Attack");
 }
 
-void ThirdPersonPlayer::PlayMeleeEndAction()
+void IThirdPersonPlayer::PlayMeleeEndAction()
 {
 	auto pAnimationCtrl =
 		std::static_pointer_cast<PlayerAnimationController>(
@@ -679,7 +682,7 @@ void ThirdPersonPlayer::PlayMeleeEndAction()
 	}
 }
 
-void ThirdPersonPlayer::ApplyWeaponChanged(WEAPON_TYPE eWeaponType)
+void IThirdPersonPlayer::ApplyWeaponChanged(WEAPON_TYPE eWeaponType)
 {
 	auto eBefore = m_pWeaponSocket->GetCurrentWeaponType();
 	if (eBefore != eWeaponType && m_bAiming) {
@@ -695,17 +698,17 @@ void ThirdPersonPlayer::ApplyWeaponChanged(WEAPON_TYPE eWeaponType)
 	m_pWeaponSocket->SetWeapon(eWeaponType);
 }
 
-void ThirdPersonPlayer::ApplyHitReact(float damage)
+void IThirdPersonPlayer::ApplyHitReact(float damage)
 {
 
 }
 
-void ThirdPersonPlayer::ApplyDead()
+void IThirdPersonPlayer::ApplyDead()
 {
 
 }
 
-void ThirdPersonPlayer::ApplyGravity()
+void IThirdPersonPlayer::ApplyGravity()
 {
 	if (!m_bGrounded) {
 		m_fVerticalVelocity += m_fGravity * DT; 
@@ -715,7 +718,7 @@ void ThirdPersonPlayer::ApplyGravity()
 	}
 }
 
-void ThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
+void IThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 {
 	const BoundingCapsule& capsuleWorld = GetComponent<PlayerCollider>()->GetCapsuleWorld();
 
@@ -782,7 +785,7 @@ void ThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 	}
 }
 
-bool ThirdPersonPlayer::CheckGround(float fMaxDistance, OUT Vector3& outv3Normal)
+bool IThirdPersonPlayer::CheckGround(float fMaxDistance, OUT Vector3& outv3Normal)
 {
 	const BoundingCapsule& capsuleWorld = GetComponent<PlayerCollider>()->GetCapsuleWorld();
 	const float fProbe = fMaxDistance;
@@ -803,7 +806,7 @@ bool ThirdPersonPlayer::CheckGround(float fMaxDistance, OUT Vector3& outv3Normal
 	return false;
 }
 
-bool ThirdPersonPlayer::TryStepUp(const BoundingCapsule& capsule, const BoundingOrientedBox& box, OUT Vector3& outv3Delta)
+bool IThirdPersonPlayer::TryStepUp(const BoundingCapsule& capsule, const BoundingOrientedBox& box, OUT Vector3& outv3Delta)
 {
 	// Try move up
 	Vector3 v3Up = Vector3(0.f, m_fStepHeight, 0.f);

@@ -113,7 +113,7 @@ bool PlayerAnimationStateMachine::IdleCallback(std::shared_ptr<IGameObject> pObj
 	// TODO : 구현
 	//return !INPUT->GetButtonPressed(VK_UP) && !INPUT->GetButtonPressed(VK_LSHIFT);
 	
-	auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(pObj);
+	auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(pObj);
 	return pPlayer->GetMoveSpeedSqXZ() < std::numeric_limits<float>::epsilon();
 }
 
@@ -122,7 +122,7 @@ bool PlayerAnimationStateMachine::WalkCallback(std::shared_ptr<IGameObject> pObj
 	// TODO : 구현
 	//return INPUT->GetButtonPressed(VK_UP) && !INPUT->GetButtonPressed(VK_LSHIFT);
 	
-	auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(pObj);
+	auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(pObj);
 	return pPlayer->GetMoveSpeedSqXZ() > std::numeric_limits<float>::epsilon() && !pPlayer->IsRunning();
 }
 
@@ -131,6 +131,6 @@ bool PlayerAnimationStateMachine::RunCallback(std::shared_ptr<IGameObject> pObj)
 	// TODO : 구현
 	// return INPUT->GetButtonPressed(VK_UP) && INPUT->GetButtonPressed(VK_LSHIFT);
 	
-	auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(pObj);
+	auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(pObj);
 	return pPlayer->GetMoveSpeedSqXZ() > std::numeric_limits<float>::epsilon() && pPlayer->IsRunning();
 }
