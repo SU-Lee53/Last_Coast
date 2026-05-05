@@ -33,6 +33,7 @@ private:
 	struct WeaponStats {
 		Vector3 v3OffsetPosition;
 		Vector3 v3OffsetRotation;
+		Vector3 v3MuzzlePosition;
 		float fDamage;
 		float fFirePerSecond;
 		float fRecoil;

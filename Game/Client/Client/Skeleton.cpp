@@ -31,6 +31,8 @@ void WeaponSocket::Update()
 		m_mtxTransform = m_pWeaponModel->GetOffsetTransform() * mtxAnimation * mtxPlayerWorld;
 
 		m_pWeaponModel->GetTransform()->SetWorldMatrix(m_mtxTransform);
+		m_pWeaponModel->UpdateMuzzlePositionWorld(m_mtxTransform);
+
 		m_pWeaponModel->PostUpdate();
 	}
 }

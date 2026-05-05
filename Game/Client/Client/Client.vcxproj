@@ -163,6 +163,7 @@
     <ClInclude Include="AnimationManager.h" />
     <ClInclude Include="AnimationMontage.h" />
     <ClInclude Include="AnimationStateMachine.h" />
+    <ClInclude Include="BloodEffect.h" />
     <ClInclude Include="BoundingCapsule.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="CB_Types.h" />
@@ -182,10 +183,18 @@
     <ClInclude Include="DescriptorHeap.h" />
     <ClInclude Include="DirectionalCascadeShadowMapPass.h" />
     <ClInclude Include="DynamicObject.h" />
-    <ClInclude Include="Effect.h" />
-    <ClInclude Include="EffectManager.h" />
+    <ClInclude Include="MuzzleFlashEffect.h" />
+    <ClInclude Include="ParticleEffect.h" />
+    <ClInclude Include="ParticleEmitter.h" />
+    <ClInclude Include="ParticleManager.h" />
     <ClInclude Include="FirstPersonCamera.h" />
     <ClInclude Include="GameContext.h" />
+    <ClInclude Include="ParticleModule.h" />
+    <ClInclude Include="ParticleModules.h" />
+    <ClInclude Include="ParticlePass.h" />
+    <ClInclude Include="ParticleRenderBatch.h" />
+    <ClInclude Include="ParticleTextureCache.h" />
+    <ClInclude Include="ParticleTypes.h" />
     <ClInclude Include="TextRenderer.h" />
     <ClInclude Include="GameFramework.h" />
     <ClInclude Include="GameObject.h" />
@@ -316,6 +325,7 @@
     <ClCompile Include="AnimationManager.cpp" />
     <ClCompile Include="AnimationMontage.cpp" />
     <ClCompile Include="AnimationStateMachine.cpp" />
+    <ClCompile Include="BloodEffect.cpp" />
     <ClCompile Include="BoundingCapsule.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Collider.cpp" />
@@ -333,11 +343,18 @@
     <ClCompile Include="DescriptorHeap.cpp" />
     <ClCompile Include="DirectionalCascadeShadowMapPass.cpp" />
     <ClCompile Include="DynamicObject.cpp" />
-    <ClCompile Include="Effect.cpp" />
-    <ClCompile Include="EffectManager.cpp" />
+    <ClCompile Include="MuzzleFlashEffect.cpp" />
+    <ClCompile Include="ParticleEffect.cpp" />
+    <ClCompile Include="ParticleEmitter.cpp" />
+    <ClCompile Include="ParticleManager.cpp" />
     <ClCompile Include="entry.cpp" />
     <ClCompile Include="FirstPersonCamera.cpp" />
     <ClCompile Include="GameContext.cpp" />
+    <ClCompile Include="ParticleModule.cpp" />
+    <ClCompile Include="ParticleModules.cpp" />
+    <ClCompile Include="ParticlePass.cpp" />
+    <ClCompile Include="ParticleRenderBatch.cpp" />
+    <ClCompile Include="ParticleTextureCache.cpp" />
     <ClCompile Include="TextAtlas.cpp" />
     <ClCompile Include="TextRenderer.cpp" />
     <ClCompile Include="GameFramework.cpp" />
@@ -416,31 +433,15 @@
     <None Include="TextAtlas.h" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="..\HLSL\Common.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </FxCompile>
     <FxCompile Include="..\HLSL\DefferedShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="..\HLSL\EffectCommon.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\EffectShader.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </FxCompile>
     <FxCompile Include="..\HLSL\ForwardShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\FullScreenShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
@@ -464,7 +465,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="..\HLSL\RayShader.hlsl">
+    <FxCompile Include="..\HLSL\Particle.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
@@ -479,10 +480,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="..\HLSL\Sprite.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\SpriteShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>

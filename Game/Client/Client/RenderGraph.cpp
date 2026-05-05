@@ -6,6 +6,7 @@
 #include "DirectionalCascadeShadowMapPass.h"
 #include "ToneMappingPass.h"
 #include "SkyboxPass.h"
+#include "ParticlePass.h"
 #include "DeferredFogPass.h"
 #include "UIPass.h"
 #include <queue>
@@ -51,9 +52,15 @@ void RenderGraph::BuildGraph()
 	pTransparentForwardPass->Initialize();
 	m_pAdjLists.push_back(pTransparentForwardPass);
 
+	std::shared_ptr<IRenderPass> pParticlePass = std::make_shared<ParticlePass>();
+	pParticlePass->Initialize();
+	m_pAdjLists.push_back(pParticlePass);
+
 	std::shared_ptr<IRenderPass> pSkyboxPass = std::make_shared<SkyboxPass>();
 	pSkyboxPass->Initialize();
 	m_pAdjLists.push_back(pSkyboxPass);
+
+
 
 	std::shared_ptr<IRenderPass> pToneMappingPass = std::make_shared<ToneMappingPass>();
 	pToneMappingPass->Initialize();
@@ -63,16 +70,25 @@ void RenderGraph::BuildGraph()
 	pUIPass->Initialize();
 	m_pAdjLists.push_back(pUIPass);
 
-	//std::shared_ptr<IRenderPass> pSpritePass = std::make_shared<SpritePass>();
-	//pSpritePass->Initialize();
-	//m_pAdjLists.push_back(pSpritePass);
-	
+	/*
+		1. Dirctional CSM pass
+		2. GBuffer pass
+		3. Deffered Lighting pass
+		4. Deffered Fog pass
+		5. Forward Lighting pass
+		6. Skybox pass
+		7. Particle pass
+		8. Tone Mapping & Grading pass
+		9. UI pass
+	*/
+
 	pDirectionalCascadeShadowMapPass->Connect(pGBufferPass);
 	pGBufferPass->Connect(pDefferedLightingPass);
 	pDefferedLightingPass->Connect(pDefferedFogPass);
 	pDefferedFogPass->Connect(pTransparentForwardPass);
 	pTransparentForwardPass->Connect(pSkyboxPass);
-	pSkyboxPass->Connect(pToneMappingPass);
+	pSkyboxPass->Connect(pParticlePass);
+	pParticlePass->Connect(pToneMappingPass);
 	pToneMappingPass->Connect(pUIPass);
 
 	m_unEntryNodeIndex = 0;

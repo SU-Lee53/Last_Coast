@@ -56,7 +56,7 @@ public:
 	//ElemType& operator[](KeyType key) { return m_Elements[m_IndexMap[key]]; }
 	ElemType& operator[](size_t idx) { return m_Elements[idx]; }
 
-	const std::vector<ElemType>& GetElements() { return m_Elements; }
+	const std::vector<ElemType>& GetElements() const { return m_Elements; }
 };
 
 

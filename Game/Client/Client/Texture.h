@@ -48,6 +48,10 @@ public:
 
 	D3D12_RESOURCE_STATES& GetCurrentStateRef() { return m_d3dCurrentState; }
 
+	static std::string MakeTexturePath(const std::string& strFilename) {
+		return g_strTextureBasePath + strFilename;
+	}
+
 private:
 	bool CreateTextureFromFile(const std::wstring& wstrTexturePath, bool bCheckTransparent);
 	bool CreateTextureArrayFromFile(const std::wstring& wstrTexturePath);
@@ -83,6 +87,7 @@ protected:
 
 private:
 	inline static std::wstring g_wstrTextureBasePath = L"../Resources/Textures";
+	inline static std::string g_strTextureBasePath = "../Resources/Textures";
 	const static float g_fAlphaThreshold;
 
 	struct AlphaAnalysisResult

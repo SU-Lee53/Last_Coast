@@ -163,7 +163,7 @@ using namespace AIDLL;
 #include "ModelManager.h"
 #include "GuiManager.h"
 #include "NetworkManager.h"
-#include "EffectManager.h"
+#include "ParticleManager.h"
 #include "SoundManager.h"
 #include "AnimationManager.h"
 #include "AIManagerWrapper.h"

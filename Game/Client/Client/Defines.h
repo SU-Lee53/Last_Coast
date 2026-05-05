@@ -32,7 +32,7 @@ public:										\
 #define GUI				GET_SINGLE(GuiManager)
 #define NETWORK			GET_SINGLE(NetworkManager)
 //#define SESSION			GET_SINGLE(ServerSession)
-#define EFFECT			GET_SINGLE(EffectManager)
+#define PARTICLE		GET_SINGLE(ParticleManager)
 #define SOUND			GET_SINGLE(SoundManager)
 #define UI				GET_SINGLE(UIManager)
 #define ANIMATION		GET_SINGLE(AnimationManager)

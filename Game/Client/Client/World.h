@@ -151,8 +151,8 @@ public:
 	}
 
 	template<typename T, typename Func, typename... Args> requires OneOf<T, ObjTypes...>
-	auto EraseIfAlive(Func&& func, Args&&... args) {
-		return GetObjects<T>().EraseIfAlive(std::forward<Func>(func), std::forward<Args>(args)...);
+	auto RemoveIfAlive(Func&& func, Args&&... args) {
+		return GetObjects<T>().RemoveIfAlive(std::forward<Func>(func), std::forward<Args>(args)...);
 	}
 
 private:

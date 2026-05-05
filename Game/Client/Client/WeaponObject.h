@@ -11,7 +11,7 @@ public:
 	void Update() override;
 
 	bool TryFire();
-
+	void UpdateMuzzlePositionWorld(const Matrix& mtxWorld);
 	
 	void SetWeaponType(WEAPON_TYPE eWeaponType) { m_eWeaponType = eWeaponType; }
 	WEAPON_TYPE GetWeaponType() const { return m_eWeaponType; }
@@ -23,6 +23,7 @@ public:
 	void SetReloadTime(float fValue) { m_fReloadTime = fValue; }
 	void SetOffsetPosition(const Vector3& v3Pos) { m_v3OffsetPosition = v3Pos; }
 	void SetOffsetRotation(const Vector3& v3Rotation) { m_v3OffsetRotation = v3Rotation; }
+	void SetMuzzlePositionLocal(const Vector3& v3Pos) { m_v3MuzzlePositionLocal = v3Pos; }
 
 	float GetDamage() const { return m_fDamage; }
 	float GetFirePerSecond() const { return m_fFirePerSecond; }
@@ -31,6 +32,8 @@ public:
 	float GetReloadTime() const { return m_fReloadTime; }
 	const Vector3& GetOffsetPosition() const { return m_v3OffsetPosition; }
 	const Vector3& GetOffsetRotation() const { return m_v3OffsetRotation; }
+	const Vector3& GetMuzzlePositionLocal(const Matrix& mtxWorld) const { return m_v3MuzzlePositionLocal; }
+	const Vector3& GetMuzzlePositionWorld(const Matrix& mtxWorld) const { return m_v3MuzzlePositionWorld; }
 
 	const Matrix& GetOffsetTransform();
 
@@ -48,7 +51,8 @@ private:
 	float m_fFireInterval = 0.f;
 	float m_fTimeAfterFire = 0.f;
 
-	Vector3 m_v3LocalMuzzlePosition = Vector3::Zero;
+	Vector3 m_v3MuzzlePositionLocal = Vector3::Zero;
+	Vector3 m_v3MuzzlePositionWorld = Vector3::Zero;
 
 	Vector3 m_v3OffsetPosition = Vector3::Zero;
 	Vector3 m_v3OffsetRotation = Vector3::Zero;

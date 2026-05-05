@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-template<typename T> requires std::derived_from<T, IGameObject>
+template<typename T>
 class TypedObjectPool {
 private:
 	struct Slot {
@@ -151,6 +151,17 @@ public:
 		}
 	}
 
+	void RemoveAndReset(const std::shared_ptr<T>& pObj) {
+		auto it = std::find_if(m_Pool.begin(), m_Pool.end(), [&pObj](const auto& slot) { return (slot.bAlive) && (slot.pObj == pObj); });
+		if (it != m_Pool.end()) {
+			--m_nSize;
+			it->pObj.reset();
+			it->bAlive = false;
+			size_t idx = static_cast<size_t>(std::distance(m_Pool.begin(), it));
+			m_freeIndex.push(idx);
+		}
+	}
+
 	bool Contains(const std::shared_ptr<T>& pObj) const {
 		auto it = std::find_if(m_Pool.begin(), m_Pool.end(), [&pObj](const auto& slot) { return (slot.bAlive) && (slot.pObj == pObj); });
 		return it != m_Pool.end();
@@ -278,7 +289,7 @@ public:
 
 
 	template<typename Pred, typename... Args>
-	size_t EraseIfAlive(Pred&& pred, Args&&... args) {
+	size_t RemoveIfAlive(Pred&& pred, Args&&... args) {
 		size_t removed = 0;
 
 		for (size_t i = 0; i < m_Pool.size(); ++i) {
@@ -287,6 +298,28 @@ public:
 			if (slot.bAlive && slot.pObj) {
 				if (std::invoke(pred, slot.pObj, args...)) {
 					slot.bAlive = false;
+					m_freeIndex.push(i);
+
+					--m_nSize;
+					++removed;
+				}
+			}
+		}
+
+		return removed;
+	}
+
+	template<typename Pred, typename... Args>
+	size_t RemoveAndResetIfAlive(Pred&& pred, Args&&... args) {
+		size_t removed = 0;
+
+		for (size_t i = 0; i < m_Pool.size(); ++i) {
+			Slot& slot = m_Pool[i];
+
+			if (slot.bAlive && slot.pObj) {
+				if (std::invoke(pred, slot.pObj, args...)) {
+					slot.bAlive = false;
+					slot.pObj.reset();
 					m_freeIndex.push(i);
 
 					--m_nSize;

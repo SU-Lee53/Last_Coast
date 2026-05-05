@@ -53,6 +53,7 @@ void GameContext::Initialize()
 					m_WeaponStats[i].fReloadTime = v["ReloadTime"].get<float>();
 					m_WeaponStats[i].v3OffsetPosition = ::ReadVector3FromJson(v["OffsetPosition"]);
 					m_WeaponStats[i].v3OffsetRotation = ::ReadVector3FromJson(v["OffsetRotation"]);
+					m_WeaponStats[i].v3MuzzlePosition = ::ReadVector3FromJson(v["MuzzlePosition"]);
 					checked[i] = true;
 					break;
 				}
@@ -74,6 +75,7 @@ std::shared_ptr<WeaponObject> GameContext::GetWeaponCopy(WEAPON_TYPE eWeaponType
 	pWeapon->SetReloadTime(weaponStat.fReloadTime);
 	pWeapon->SetOffsetPosition(weaponStat.v3OffsetPosition);
 	pWeapon->SetOffsetRotation(weaponStat.v3OffsetRotation);
+	pWeapon->SetMuzzlePositionLocal(weaponStat.v3MuzzlePosition);
 	pWeapon->SetWeaponType(eWeaponType);
 
 	return pWeapon;

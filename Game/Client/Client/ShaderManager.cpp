@@ -222,13 +222,18 @@ void ShaderManager::CompileShaders()
 	Compile("ShadowAnimatedVS", L"ShadowMapShader.hlsl", L"VSShadowAnimated", SHADER_TYPE::VS);
 
 	Compile("UIRectVS", L"Sprite.hlsl", L"VSUIRect", SHADER_TYPE::VS);
-
-	//Compile("UITextPS", L"Sprite.hlsl", L"PSUIText", SHADER_TYPE::PS);
 	Compile("UISpritePS", L"Sprite.hlsl", L"PSUISprite", SHADER_TYPE::PS);
+
+	// Particle
+	Compile("ParticleVS", L"Particle.hlsl", L"VSParticle", SHADER_TYPE::VS);
+	Compile("ParticlePS", L"Particle.hlsl", L"PSParticle", SHADER_TYPE::PS);
 
 	// PostProcess
 	Compile("DefferedFogVS", L"HDRPostProcessing.hlsl", L"VSDefferedFog", SHADER_TYPE::VS);
 	Compile("DefferedFogPS", L"HDRPostProcessing.hlsl", L"PSDefferedFog", SHADER_TYPE::PS);
+
+
+
 
 	// Compute
 	Compile("HDRIToCubeMapCS", L"HDRIToCubeMap.hlsl", L"CSHDRIToCubeMap", SHADER_TYPE::CS);
