@@ -475,3 +475,14 @@ bool MeshCollider::CheckCapsuleVsTriangles(const BoundingCapsule& capsule,
 
 	return bFloor || bWall;
 }
+
+bool MeshCollider::TestCapsule(const BoundingCapsule& capsule) const
+{
+	BoundingBox xmCapsuleAABB;
+	capsule.CreateAABBFromCapsule(xmCapsuleAABB);
+	if (!m_xmOBBWorld.Intersects(xmCapsuleAABB))
+		return false;
+
+	std::vector<std::pair<Vector3, float>> contacts;
+	return CheckCapsuleVsTriangles(capsule, contacts);
+}

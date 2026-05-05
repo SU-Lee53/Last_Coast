@@ -443,7 +443,10 @@ void ThirdPersonPlayer::ResolveMeshContacts(OUT Vector3& outv3Delta)
 
 			if (fDepth > fSnapDistance) {
 				const float fPushSkin = 0.1f;
-				outv3Delta += v3Normal * std::min(fDepth - fPushSkin, 5.f);
+				// 수직 방향으로만 밀어냄: 기울어진 face normal 방향으로 밀면
+				// 수평 성분이 벽 쪽으로 플레이어를 밀고, 벽 슬라이드가 수평만 제거하면
+				// 수직 성분이 남아 벽을 타고 올라가는 버그 발생
+				outv3Delta.y += std::min(fDepth - fPushSkin, 5.f);
 			}
 		}
 		else if (fDepth > fSkin) {

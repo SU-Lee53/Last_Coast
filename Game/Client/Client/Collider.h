@@ -92,6 +92,9 @@ public:
 	// 마지막 CheckCollision에서 계산된 contact 목록 (바닥·벽 카테고리별 최대 depth)
 	const std::vector<std::pair<Vector3, float>>& GetContacts() const { return m_LastContacts; }
 
+	// 캡슐이 이 메시와 교차하는지 여부만 반환 (step-up 테스트용)
+	bool TestCapsule(const BoundingCapsule& capsule) const;
+
 private:
 	// 바닥(normal.y > 0.7)과 벽/경사 카테고리를 분리해 각 최대 depth contact를 outContacts에 추가
 	bool CheckCapsuleVsTriangles(const BoundingCapsule& capsule,
