@@ -23,7 +23,7 @@ void AnimationTestScene::BuildObjects()
 	m_pLights.reserve(1);
 	m_pLights.push_back(pLight);
 
-	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	m_pPlayer = std::make_shared<LocalThirdPersonPlayer>();
 	//m_pPlayer = std::make_shared<DebugPlayer>();
 	//LoadFromFiles("LightTest");
 
@@ -83,7 +83,7 @@ void AnimationTestScene::Update()
 	
 	ImGui::Begin("Test");
 	{
-		if (auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
+		if (auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 			ImGui::Text("Press `(~) to use mouse control");
 			ImGui::Text("Mouse : %s", pPlayer->IsMouseOn() ? "ON" : "OFF");
 	

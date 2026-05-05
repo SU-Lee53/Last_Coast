@@ -1,5 +1,4 @@
 ﻿#pragma once
-#pragma once
 
 #include "targetver.h"
 #define WIN32_LEAN_AND_MEAN             // 거의 사용되지 않는 내용을 Windows 헤더에서 제외합니다.
@@ -35,7 +34,9 @@
 #include <filesystem>
 #include <typeindex>
 #include <functional>
+#include <queue>
 
+using namespace std::string_literals;
 
 // Direct3D related headers
 #include <wrl.h>
@@ -128,6 +129,7 @@ using namespace AIDLL;
 #include "CB_Types.h"
 #include "Concepts.h"
 #include "Utility.h"
+#include "RayTraceUtils.h"
 #include "ShaderResource.h"
 #include "DescriptorHeap.h"
 #include "Packets.h"
@@ -162,7 +164,7 @@ using namespace AIDLL;
 #include "ModelManager.h"
 #include "GuiManager.h"
 #include "NetworkManager.h"
-#include "EffectManager.h"
+#include "ParticleManager.h"
 #include "SoundManager.h"
 #include "AnimationManager.h"
 #include "AIManagerWrapper.h"

@@ -2,39 +2,31 @@
 #include "ThirdPersonPlayer.h"
 #include "ThirdPersonCamera.h"
 #include "NodeObject.h"
+#include "WeaponObject.h"
 #include "Sprite.h"
 
-ThirdPersonPlayer::ThirdPersonPlayer()
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Base ThirdPersonPlayer 
+
+IThirdPersonPlayer::IThirdPersonPlayer()
 {
 }
 
-ThirdPersonPlayer::~ThirdPersonPlayer()
+IThirdPersonPlayer::~IThirdPersonPlayer()
 {
 }
 
-void ThirdPersonPlayer::Initialize()
+void IThirdPersonPlayer::Initialize()
 {
 	if (!m_bInitialized) {
-		// Camera
-		m_pCamera = std::make_shared<ThirdPersonCamera>();
-		m_pCamera->SetViewport(0, 0, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight, 0.f, 1.f);
-		m_pCamera->SetScissorRect(0, 0, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight);
-		m_pCamera->GenerateViewMatrix(XMFLOAT3(0.f, 0.f, -15.f), XMFLOAT3(0.f, 0.f, 1.f), XMFLOAT3(0.f, 1.f, 0.f));
-		m_pCamera->GenerateProjectionMatrix(10.f, 300_m, ((float)WinCore::g_dwClientWidth / (float)WinCore::g_dwClientHeight), 60.0f);
-		m_pCamera->SetOwner(shared_from_this());
+		InitializeCommonPlayer();
 
-		// Model
-		auto pModel = MODEL->LoadOrGet("Ch33_nonPBR")->CopyObject<NodeObject>();
-		pModel->GetTransform()->Rotate(Vector3::Up, -90.f);
-		SetChild(pModel);
-		//GetTransform()->Rotate(Vector3::Up, -90.f);
+		if (UsesLocalCamera()) {
+			InitializeLocalCamera();
+		}
 
-		// AnimationController
-		AddComponent<PlayerAnimationController>();
-
-		if (auto& pUIBoard = CUR_SCENE->GetUIBoard(); pUIBoard) {
-			m_pCrosshair = std::make_shared<Crosshair>();
-			pUIBoard->InsertUI(m_pCrosshair);
+		if (UsesCrosshair()) {
+			InitializeCrosshair();
 		}
 	}
 
@@ -54,16 +46,269 @@ void ThirdPersonPlayer::Initialize()
 	m_bInitialized = true;
 }
 
-void ThirdPersonPlayer::ProcessInput()
+void IThirdPersonPlayer::ProcessInput()
+{
+}
+
+void IThirdPersonPlayer::OnMeleeEnd()
+{
+	PlayMeleeEndAction();
+}
+
+void IThirdPersonPlayer::Update()
+{
+	if (m_pCrosshair) {
+		m_pCrosshair->Update();
+	}
+
+	for (const auto& pChild : m_pChildren) {
+		pChild->Update();
+	}
+}
+
+void IThirdPersonPlayer::OnBeginCollision(const CollisionResult& collisionResult)
+{
+	// 여기서는 충돌이 일어난 객체들을 모아놓고 나중에 PostUpdate에서 한번에 이동 블락 처리를 한다
+	m_xmOBBCollided.push_back(collisionResult.DecomposeRef().second.GetOBBWorld());
+}
+
+void IThirdPersonPlayer::OnWhileCollision(const CollisionResult& collisionResult)
+{
+	m_xmOBBCollided.push_back(collisionResult.DecomposeRef().second.GetOBBWorld());
+}
+
+void IThirdPersonPlayer::OnEndCollision(const CollisionResult& collisionResult)
+{
+}
+
+void IThirdPersonPlayer::GiveWeapon(WEAPON_TYPE eWeaponType)
+{
+	ApplyWeaponChanged(eWeaponType);
+}
+
+void IThirdPersonPlayer::PostUpdate()
+{
+	if (UsesInputMovement()) {
+		ApplyInputMovement();
+	}
+	else if (UsesServerStateMovement()) {
+		ApplyServerMovementXZ();
+	}
+
+	if (m_bAiming && m_pCamera) {
+		auto pThirdPersonCamera =
+			std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
+
+		Vector3 v3LookDirection = pThirdPersonCamera->GetForwardXZ();
+		float fYaw = std::atan2f(v3LookDirection.x, v3LookDirection.z);
+		GetTransform()->SetRotation(0.f, fYaw, 0.f);
+	}
+
+	IPlayer::PostUpdate();
+
+	m_xmOBBCollided.clear();
+}
+
+void IThirdPersonPlayer::ApplyReplicatedState(/* const ServerSidePlayerState& state */)
+{
+	/*
+		TODO :
+		1.
+		서버에서 받은 패킷에서 XZ 좌표를 이용해 플레이어 위치 반영
+		좌표 보간이 필요하다면 보간이후 SetTargetXZ 호출이 필요
+		보간함수는 자유롭게 구현
+
+		Y 는 클라이언트가 Terrain/Collision 여부를 보고 결정
+
+		2.
+		패킷에 yaw 정보가 있다면 캐릭터 회전에 반영
+		이동중 방향 회전과 충돌하지 않아야 함
+
+		3.
+		이동/달리기/조준/사망/hp/weaponType 등을 이용하여
+
+		// State flags
+		bool m_bMoved = false;
+		bool m_bAiming = false;
+		bool m_bRunning = false;
+
+		위 변수들에 적용 + 무기는 m_pWeaponSocket 에 정보 반영해야함
+
+		예:
+		if (state.aiming) EnterAim();
+		else LeaveAim();
+	
+	*/
+}
+
+void IThirdPersonPlayer::ApplyReplicatedEvent(/* const ServerSidePlayerEvent& event */)
+{/*
+		TODO :
+		서버 이벤트 타입에 따라 액션 함수를 호출
+
+		발사				-> PlayFireAction()
+		무기 변경			-> ApplyWeaponChanged()
+		피격				-> ApplyHitReact()
+		사망				-> ApplyDead()
+		근접공격 시작/끝	-> PlayMeleeStartAction() / PlayMeleeEndAction()
+
+		- 참고사항
+			- 아직 피격/사망시 별도 애니메이션이나 처리가 없음
+	*/
+}
+
+void IThirdPersonPlayer::ToggleMouseLook()
+{
+	m_bMouseInUse = !m_bMouseInUse;
+
+	if (m_bMouseInUse) {
+		OnBeginMouseLook();
+	}
+	else {
+		OnEndMouseLook();
+	}
+}
+
+void IThirdPersonPlayer::OnBeginMouseLook()
+{
+	UpdateMouseLookData();
+	INPUT->HideCursor();
+	::ClipCursor(&m_MouseClipScreenRect);
+	::SetCursorPos(m_ptMouseCenterScreenPos.x, m_ptMouseCenterScreenPos.y);
+
+	m_bSkipMouseDeltaThisFrame = true;
+}
+
+void IThirdPersonPlayer::OnEndMouseLook()
+{
+	::ClipCursor(nullptr);
+	INPUT->ShowCursor();
+}
+
+void IThirdPersonPlayer::UpdateMouseLookData()
+{
+	RECT rtClientRect{};
+	::GetClientRect(WinCore::g_hWnd, &rtClientRect);
+
+	// Client center
+	m_ptMouseCenterClientPos.x = (rtClientRect.right - rtClientRect.left) / 2;
+	m_ptMouseCenterClientPos.y = (rtClientRect.bottom - rtClientRect.top) / 2;
+
+	// Screen center
+	m_ptMouseCenterScreenPos = m_ptMouseCenterClientPos;
+	::ClientToScreen(WinCore::g_hWnd, &m_ptMouseCenterScreenPos);
+
+	// Clip rect in screen space
+	POINT ptLeftTop{};
+	ptLeftTop.x = rtClientRect.left;
+	ptLeftTop.y = rtClientRect.top;
+	::ClientToScreen(WinCore::g_hWnd, &ptLeftTop);
+
+	POINT ptRightBottom{};
+	ptRightBottom.x = rtClientRect.right;
+	ptRightBottom.y = rtClientRect.bottom;
+	::ClientToScreen(WinCore::g_hWnd, &ptRightBottom);
+
+	m_MouseClipScreenRect.left = ptLeftTop.x;
+	m_MouseClipScreenRect.top = ptLeftTop.y;
+	m_MouseClipScreenRect.right = ptRightBottom.x;
+	m_MouseClipScreenRect.bottom = ptRightBottom.y;
+}
+
+void IThirdPersonPlayer::HandleCollision()
+{
+	// 문제점
+	// 1. TryUp 이 ResolveCollision 에서만 호출되면서, Terrain -> Box 위로 올라설 수 없음
+	// 2. Terrain 이 Box 와 Ground 를 무시하고 일정 거리 안이면 그냥 땅에 붙어버림
+
+	auto& pTransform = GetTransform();
+
+	const bool bWasGrounded = m_bGrounded;
+	m_bGrounded = false;
+
+	Vector3 v3Delta;
+	if (m_bMoved) {
+		m_fMoveSpeed += +0.5 * m_fAcceleration * m_fFriction;
+		float fMaxSpeed = m_bRunning ? m_fMaxMoveSpeed * 2.f : m_fMaxMoveSpeed;
+		m_fMoveSpeed = std::clamp(m_fMoveSpeed, 0.f, fMaxSpeed);
+	}
+	else {
+		m_fMoveSpeed -= 0.5 * m_fAcceleration * m_fFriction;
+		m_fMoveSpeed = std::clamp(m_fMoveSpeed, 0.f, m_fMaxMoveSpeed);
+		if (m_fMoveSpeed <= 0.f) {
+			m_v3MoveDirection = Vector3(0, 0, 0);
+		}
+	}
+	v3Delta = m_v3MoveDirection * (m_fMoveSpeed * DT);
+	v3Delta.y += m_fVerticalVelocity * DT;
+
+	ResolveCollision(v3Delta);
+
+	TerrainHit hit{};
+	ResolveTerrain(v3Delta, hit, bWasGrounded);
+	if (hit.bGrounded) {
+		m_bGrounded = true;
+		if (m_fVerticalVelocity < 0.f) {
+			m_fVerticalVelocity = 0.f;
+		}
+	}
+
+	pTransform->Move(v3Delta, 1.f);
+}
+
+float IThirdPersonPlayer::GetMoveSpeedXZ() const
+{
+	Vector3 v3Delta = m_v3MoveDirection * (m_fMoveSpeed * DT);
+	v3Delta.y = 0.f;
+	return v3Delta.Length();
+}
+
+float IThirdPersonPlayer::GetMoveSpeedSqXZ() const
+{
+	Vector3 v3Delta = m_v3MoveDirection * (m_fMoveSpeed * DT);
+	v3Delta.y = 0.f;
+	return v3Delta.LengthSquared();
+}
+
+void IThirdPersonPlayer::InitializeCommonPlayer()
+{
+	auto pModel = MODEL->LoadOrGet("Ch33_nonPBR")->CopyObject<NodeObject>();
+	pModel->GetTransform()->Rotate(Vector3::Up, -90.f);
+	SetChild(pModel);
+
+	AddComponent<PlayerAnimationController>();
+
+	m_pWeaponSocket = GetComponent<Skeleton>()->CreateAttachSocket<WeaponSocket>("RightHand"s);
+}
+
+void IThirdPersonPlayer::InitializeLocalCamera()
+{
+	m_pCamera = std::make_shared<ThirdPersonCamera>();
+	m_pCamera->SetViewport(0, 0, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight, 0.f, 1.f);
+	m_pCamera->SetScissorRect(0, 0, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight);
+	m_pCamera->GenerateViewMatrix(
+		XMFLOAT3(0.f, 0.f, -15.f),
+		XMFLOAT3(0.f, 0.f, 1.f),
+		XMFLOAT3(0.f, 1.f, 0.f));
+	m_pCamera->GenerateProjectionMatrix(
+		10.f,
+		300_m,
+		static_cast<float>(WinCore::g_dwClientWidth) / static_cast<float>(WinCore::g_dwClientHeight),
+		60.0f);
+	m_pCamera->SetOwner(shared_from_this());
+}
+
+void IThirdPersonPlayer::InitializeCrosshair()
+{
+	if (auto& pUIBoard = CUR_SCENE->GetUIBoard(); pUIBoard) {
+		m_pCrosshair = std::make_shared<Crosshair>();
+		pUIBoard->InsertUI(m_pCrosshair);
+	}
+}
+
+void IThirdPersonPlayer::ProcessLocalCameraInput()
 {
 	auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
-	auto pTransform = GetTransform();
-	auto pAnimationCtrl = static_pointer_cast<PlayerAnimationController>(GetComponent<AnimationController>());
-
-	// 디버그용 마우스 사용/헤제
-	if (INPUT->GetButtonDown(VK_OEM_3)) {	// " ` " -> 물결표 그 버튼임
-		ToggleMouseLook();
-	}
 
 	// Camera Rotate
 	if (m_bMouseInUse) {
@@ -80,35 +325,10 @@ void ThirdPersonPlayer::ProcessInput()
 		if (ptDelta.x != 0 || ptDelta.y != 0) {
 			pThirdPersonCamera->AddYaw(static_cast<float>(ptDelta.x) * m_fMouseSensitivity);
 			pThirdPersonCamera->AddPitch(static_cast<float>(ptDelta.y) * m_fMouseSensitivity);
-		
+
 			::SetCursorPos(m_ptMouseCenterScreenPos.x, m_ptMouseCenterScreenPos.y);
 		}
 
-		// Aim
-		if (INPUT->GetButtonDown(VK_RBUTTON)) {
-			m_bAiming = true;
-			pThirdPersonCamera->EnterAimMode();
-			pAnimationCtrl->GetMontage()->PlayMontage("Rifle Aiming Idle");
-
-			if (m_pCrosshair) {
-				m_pCrosshair->SetVisible(true);
-			}
-		}
-		if (INPUT->GetButtonUp(VK_RBUTTON)) {
-			m_bAiming = false;
-			pThirdPersonCamera->LeaveAimMode();
-			pAnimationCtrl->GetMontage()->StopMontage();
-
-			if (m_pCrosshair) {
-				m_pCrosshair->SetVisible(false);
-			}
-		}
-
-		// Fire
-		if (INPUT->GetButtonDown(VK_LBUTTON) && m_bAiming) {
-			pAnimationCtrl->GetMontage()->JumpToSection("Rifle Fire");
-			m_bFiredThisFrame = true;
-		}
 	}
 
 lb_breakMouseInput:
@@ -126,6 +346,13 @@ lb_breakMouseInput:
 	if (INPUT->GetButtonPressed(VK_RIGHT)) {
 		pThirdPersonCamera->AddYaw(500.f * m_fMouseSensitivity * DT);
 	}
+}
+
+void IThirdPersonPlayer::ProcessLocalMovementInput()
+{
+	auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
+	auto pAnimationCtrl = static_pointer_cast<PlayerAnimationController>(GetComponent<AnimationController>());
+	auto pTransform = GetTransform();
 
 	// Move
 	bool bMoved = false;
@@ -168,138 +395,88 @@ lb_breakMouseInput:
 		m_bRunning = false;
 	}
 
-	m_v3MoveDirection.Normalize();
-}
-
-void ThirdPersonPlayer::Update()
-{
-	for (const auto& pChild : m_pChildren) {
-		pChild->Update();
-	}
-}
-
-void ThirdPersonPlayer::OnBeginCollision(const CollisionResult& collisionResult)
-{
-	// 여기서는 충돌이 일어난 객체들을 모아놓고 나중에 PostUpdate에서 한번에 이동 블락 처리를 한다
-	m_xmOBBCollided.push_back(collisionResult.DecomposeRef().second.GetOBBWorld());
-}
-
-void ThirdPersonPlayer::OnWhileCollision(const CollisionResult& collisionResult)
-{
-	m_xmOBBCollided.push_back(collisionResult.DecomposeRef().second.GetOBBWorld());
-}
-
-void ThirdPersonPlayer::OnEndCollision(const CollisionResult& collisionResult)
-{
-}
-
-void ThirdPersonPlayer::PostUpdate()
-{
-	auto& pTransform = GetTransform();
-
-	HandleCollision();
-	ApplyGravity();
-
 	if (m_bMoved) {
-		// 플레이어가 이동 방향을 바라보도록 돌린다
-		float fYaw = std::atan2f(m_v3MoveDirection.x, m_v3MoveDirection.z);
-		pTransform->SetRotation(0.f, fYaw, 0.f);
-	}
-
-	if (m_bAiming) {
-		auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
-		Vector3 v3LookDirection = pThirdPersonCamera->GetForwardXZ();
-		float fYaw = std::atan2f(v3LookDirection.x, v3LookDirection.z);
-		GetTransform()->SetRotation(0.f, fYaw, 0.f);
-	}
-
-	IPlayer::PostUpdate();
-
-	m_xmOBBCollided.clear();
-}
-
-void ThirdPersonPlayer::ToggleMouseLook()
-{
-	m_bMouseInUse = !m_bMouseInUse;
-
-	if (m_bMouseInUse) {
-		OnBeginMouseLook();
+		m_v3MoveDirection.Normalize();
 	}
 	else {
-		OnEndMouseLook();
+		m_v3MoveDirection = Vector3::Zero;
 	}
 }
 
-void ThirdPersonPlayer::OnBeginMouseLook()
+void  IThirdPersonPlayer::ProcessLocalActionInput()
 {
-	UpdateMouseLookData();
-	INPUT->HideCursor();
-	::ClipCursor(&m_MouseClipScreenRect);
-	::SetCursorPos(m_ptMouseCenterScreenPos.x, m_ptMouseCenterScreenPos.y);
+	auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
+	auto pAnimationCtrl = static_pointer_cast<PlayerAnimationController>(GetComponent<AnimationController>());
 
-	m_bSkipMouseDeltaThisFrame = true;
+	// Gun Handling
+	if (m_bMouseInUse) {
+		// Aim
+		if (INPUT->GetButtonDown(VK_RBUTTON)) {
+			EnterAim();
+		}
+
+		if (INPUT->GetButtonUp(VK_RBUTTON)) {
+			LeaveAim();
+		}
+
+		if ((INPUT->GetButtonDown(VK_LBUTTON) || INPUT->GetButtonPressed(VK_LBUTTON)) && m_bAiming) {
+			if (!m_bInMeleeAttack) {
+				m_bFiredThisFrame = m_pWeaponSocket->TryFire();
+				if (m_bFiredThisFrame) {
+					PlayFireAction();
+				}
+			}
+		}
+		
+		if (m_pCrosshair && m_pWeaponSocket && m_pWeaponSocket->GetWeaponModel()) {
+			if (!m_bFiredThisFrame) {
+				m_pCrosshair->RemoveRecoil(
+					m_pWeaponSocket->GetWeaponModel()->GetRecoilRecovery());
+			}
+		}
+
+	}
+
+	// Fire debug
+	if (INPUT->GetButtonDown(VK_LCONTROL) || INPUT->GetButtonPressed(VK_LCONTROL)) {
+		if (!m_bInMeleeAttack) {
+			m_bFiredThisFrame = m_pWeaponSocket->TryFire();
+			if (m_bFiredThisFrame) {
+				PlayFireAction();
+			}
+		}
+	}
+
+	// Melee attack
+	if (INPUT->GetButtonDown('V') && !m_bInMeleeAttack) {
+		PlayMeleeStartAction();
+	}
+
 }
 
-void ThirdPersonPlayer::OnEndMouseLook()
+void IThirdPersonPlayer::ApplyInputMovement()
 {
-	::ClipCursor(nullptr);
-	INPUT->ShowCursor();
-}
-
-void ThirdPersonPlayer::UpdateMouseLookData()
-{
-	RECT rtClientRect{};
-	::GetClientRect(WinCore::g_hWnd, &rtClientRect);
-
-	// Client center
-	m_ptMouseCenterClientPos.x = (rtClientRect.right - rtClientRect.left) / 2;
-	m_ptMouseCenterClientPos.y = (rtClientRect.bottom - rtClientRect.top) / 2;
-
-	// Screen center
-	m_ptMouseCenterScreenPos = m_ptMouseCenterClientPos;
-	::ClientToScreen(WinCore::g_hWnd, &m_ptMouseCenterScreenPos);
-
-	// Clip rect in screen space
-	POINT ptLeftTop{};
-	ptLeftTop.x = rtClientRect.left;
-	ptLeftTop.y = rtClientRect.top;
-	::ClientToScreen(WinCore::g_hWnd, &ptLeftTop);
-
-	POINT ptRightBottom{};
-	ptRightBottom.x = rtClientRect.right;
-	ptRightBottom.y = rtClientRect.bottom;
-	::ClientToScreen(WinCore::g_hWnd, &ptRightBottom);
-
-	m_MouseClipScreenRect.left = ptLeftTop.x;
-	m_MouseClipScreenRect.top = ptLeftTop.y;
-	m_MouseClipScreenRect.right = ptRightBottom.x;
-	m_MouseClipScreenRect.bottom = ptRightBottom.y;
-}
-
-void ThirdPersonPlayer::HandleCollision()
-{
-	// 문제점
-	// 1. TryUp 이 ResolveCollision 에서만 호출되면서, Terrain -> Box 위로 올라설 수 없음
-	// 2. Terrain 이 Box 와 Ground 를 무시하고 일정 거리 안이면 그냥 땅에 붙어버림
-
 	auto& pTransform = GetTransform();
 
 	const bool bWasGrounded = m_bGrounded;
 	m_bGrounded = false;
 
 	Vector3 v3Delta;
+
 	if (m_bMoved) {
-		m_fMoveSpeed += +0.5 * m_fAcceleration * m_fFriction;
+		m_fMoveSpeed += 0.5f * m_fAcceleration * m_fFriction;
 		float fMaxSpeed = m_bRunning ? m_fMaxMoveSpeed * 2.f : m_fMaxMoveSpeed;
 		m_fMoveSpeed = std::clamp(m_fMoveSpeed, 0.f, fMaxSpeed);
 	}
 	else {
-		m_fMoveSpeed -= 0.5 * m_fAcceleration * m_fFriction;
+		m_fMoveSpeed -= 0.5f * m_fAcceleration * m_fFriction;
 		m_fMoveSpeed = std::clamp(m_fMoveSpeed, 0.f, m_fMaxMoveSpeed);
+
 		if (m_fMoveSpeed <= 0.f) {
-			m_v3MoveDirection = Vector3(0, 0, 0);
+			m_v3MoveDirection = Vector3::Zero;
 		}
 	}
+
 	v3Delta = m_v3MoveDirection * (m_fMoveSpeed * DT);
 	v3Delta.y += m_fVerticalVelocity * DT;
 
@@ -307,31 +484,231 @@ void ThirdPersonPlayer::HandleCollision()
 
 	TerrainHit hit{};
 	ResolveTerrain(v3Delta, hit, bWasGrounded);
+
 	if (hit.bGrounded) {
 		m_bGrounded = true;
+
 		if (m_fVerticalVelocity < 0.f) {
 			m_fVerticalVelocity = 0.f;
 		}
 	}
 
 	pTransform->Move(v3Delta, 1.f);
+
+	ApplyGravity();
+
+	if (m_bMoved) {
+		float fYaw = std::atan2f(m_v3MoveDirection.x, m_v3MoveDirection.z);
+		pTransform->SetRotation(0.f, fYaw, 0.f);
+	}
 }
 
-float ThirdPersonPlayer::GetMoveSpeedXZ() const
+void IThirdPersonPlayer::ApplyServerMovementXZ()
 {
-	Vector3 v3Delta = m_v3MoveDirection * (m_fMoveSpeed * DT);
+	if (!m_bHasServerTargetXZ) {
+		m_bMoved = false;
+		return;
+	}
+
+	auto pTransform = GetTransform();
+	Vector3 v3Current = pTransform->GetPosition();
+
+	Vector3 v3Delta = Vector3::Zero;
+	v3Delta.x = m_v2ServerTargetXZ.x - v3Current.x;
+	v3Delta.z = m_v2ServerTargetXZ.y - v3Current.z;
 	v3Delta.y = 0.f;
-	return v3Delta.Length();
+
+	float fLenSq = v3Delta.x * v3Delta.x + v3Delta.z * v3Delta.z;
+	m_bMoved = fLenSq > 0.0001f;
+
+	if (m_bMoved) {
+		m_v3MoveDirection = Vector3(v3Delta.x, 0.f, v3Delta.z);
+		m_v3MoveDirection.Normalize();
+
+		m_fMoveSpeed = std::sqrt(fLenSq) / std::max(DT, 0.0001f);
+	}
+	else {
+		m_v3MoveDirection = Vector3::Zero;
+		m_fMoveSpeed = 0.f;
+	}
+
+	ResolveGroundYOnly(v3Delta);
+
+	pTransform->Move(v3Delta, 1.f);
+
+	if (m_bMoved && !m_bAiming) {
+		float fYaw = std::atan2f(m_v3MoveDirection.x, m_v3MoveDirection.z);
+		pTransform->SetRotation(0.f, fYaw, 0.f);
+	}
 }
 
-float ThirdPersonPlayer::GetMoveSpeedSqXZ() const
+void IThirdPersonPlayer::SetServerTargetXZ(float x, float z)
 {
-	Vector3 v3Delta = m_v3MoveDirection * (m_fMoveSpeed * DT);
-	v3Delta.y = 0.f;
-	return v3Delta.LengthSquared();
+	m_v2ServerTargetXZ = Vector2(x, z);
+	m_bHasServerTargetXZ = true;
 }
 
-void ThirdPersonPlayer::ApplyGravity()
+void IThirdPersonPlayer::ResolveGroundYOnly(Vector3& delta)
+{
+	TerrainHit hit{};
+
+	ResolveTerrain(delta, hit, false);
+
+	if (hit.bGrounded) {
+		m_bGrounded = true;
+		m_fVerticalVelocity = 0.f;
+	}
+	else {
+		m_bGrounded = false;
+
+		delta.y += m_fVerticalVelocity * DT;
+		ApplyGravity();
+	}
+}
+
+void IThirdPersonPlayer::EnterAim()
+{
+	if (m_bAiming) {
+		return;
+	}
+
+	m_bAiming = true;
+
+	if (m_pCamera) {
+		auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
+		pThirdPersonCamera->EnterAimMode();
+	}
+
+	auto pAnimationCtrl =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>());
+
+	if (m_pWeaponSocket->GetCurrentWeaponType() != WEAPON_TYPE::PISTOL) {
+		pAnimationCtrl->GetMontage()->PlayMontage("Rifle Aiming Idle");
+	}
+	else {
+		pAnimationCtrl->GetMontage()->PlayMontage("Pistol Aiming Idle");
+	}
+
+	if (m_pCrosshair) {
+		m_pCrosshair->SetVisible(true);
+	}
+}
+
+void IThirdPersonPlayer::LeaveAim()
+{
+	if (!m_bAiming) {
+		return;
+	}
+
+	m_bAiming = false;
+
+	if (m_pCamera) {
+		auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
+		pThirdPersonCamera->LeaveAimMode();
+	}
+
+	auto pAnimationCtrl =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>());
+
+	// TODO:
+	// 현재 StopMontage()는 조준 idle뿐 아니라 fire/melee montage도 끊을 수 있음.
+	// 서버 이벤트 기반 애니메이션이 들어오면 Aim montage만 멈추는 방식으로 분리 필요.
+	pAnimationCtrl->GetMontage()->StopMontage();
+
+	if (m_pCrosshair) {
+		m_pCrosshair->SetVisible(false);
+	}
+}
+
+void IThirdPersonPlayer::PlayFireAction()
+{
+	if (!m_pWeaponSocket) {
+		return;
+	}
+
+	m_bFiredThisFrame = true;
+
+	auto pAnimationCtrl =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>());
+
+	if (m_pWeaponSocket->GetCurrentWeaponType() != WEAPON_TYPE::PISTOL) {
+		pAnimationCtrl->GetMontage()->JumpToSection("Rifle Fire");
+	}
+	else {
+		pAnimationCtrl->GetMontage()->JumpToSection("Pistol Fire");
+	}
+
+	if (m_pCrosshair && m_pWeaponSocket->GetWeaponModel()) {
+		m_pCrosshair->AddRecoil(m_pWeaponSocket->GetWeaponModel()->GetRecoil());
+	}
+
+	// TODO : Add muzzle flash, etc...
+}
+
+void IThirdPersonPlayer::PlayMeleeStartAction()
+{
+	if (m_bInMeleeAttack) {
+		return;
+	}
+
+	auto pAnimationCtrl =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>());
+
+	m_eWeaponTypeBeforeMelee = m_pWeaponSocket->GetCurrentWeaponType();
+	m_bWasAimBeforeMelee = m_bAiming;
+	m_bInMeleeAttack = true;
+
+	ApplyWeaponChanged(WEAPON_TYPE::MELEE);
+	pAnimationCtrl->GetMontage()->PlayMontage("Melee Attack");
+}
+
+void IThirdPersonPlayer::PlayMeleeEndAction()
+{
+	auto pAnimationCtrl =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>());
+
+	ApplyWeaponChanged(m_eWeaponTypeBeforeMelee);
+	pAnimationCtrl->GetMontage()->StopMontage();
+
+	m_bInMeleeAttack = false;
+
+	if (m_bWasAimBeforeMelee) {
+		EnterAim();
+	}
+}
+
+void IThirdPersonPlayer::ApplyWeaponChanged(WEAPON_TYPE eWeaponType)
+{
+	auto eBefore = m_pWeaponSocket->GetCurrentWeaponType();
+	if (eBefore != eWeaponType && m_bAiming) {
+		auto pAnimationCtrl = static_pointer_cast<PlayerAnimationController>(GetComponent<AnimationController>());
+		if (eWeaponType == WEAPON_TYPE::PISTOL) {
+			pAnimationCtrl->GetMontage()->JumpToSection("Pistol Aiming Idle");
+		}
+		else if (eBefore == WEAPON_TYPE::PISTOL) {
+			pAnimationCtrl->GetMontage()->JumpToSection("Rifle Aiming Idle");
+		}
+	}
+
+	m_pWeaponSocket->SetWeapon(eWeaponType);
+}
+
+void IThirdPersonPlayer::ApplyHitReact(float damage)
+{
+
+}
+
+void IThirdPersonPlayer::ApplyDead()
+{
+
+}
+
+void IThirdPersonPlayer::ApplyGravity()
 {
 	if (!m_bGrounded) {
 		m_fVerticalVelocity += m_fGravity * DT; 
@@ -341,7 +718,7 @@ void ThirdPersonPlayer::ApplyGravity()
 	}
 }
 
-void ThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
+void IThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 {
 	const BoundingCapsule& capsuleWorld = GetComponent<PlayerCollider>()->GetCapsuleWorld();
 
@@ -408,7 +785,7 @@ void ThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 	}
 }
 
-bool ThirdPersonPlayer::CheckGround(float fMaxDistance, OUT Vector3& outv3Normal)
+bool IThirdPersonPlayer::CheckGround(float fMaxDistance, OUT Vector3& outv3Normal)
 {
 	const BoundingCapsule& capsuleWorld = GetComponent<PlayerCollider>()->GetCapsuleWorld();
 	const float fProbe = fMaxDistance;
@@ -429,7 +806,7 @@ bool ThirdPersonPlayer::CheckGround(float fMaxDistance, OUT Vector3& outv3Normal
 	return false;
 }
 
-bool ThirdPersonPlayer::TryStepUp(const BoundingCapsule& capsule, const BoundingOrientedBox& box, OUT Vector3& outv3Delta)
+bool IThirdPersonPlayer::TryStepUp(const BoundingCapsule& capsule, const BoundingOrientedBox& box, OUT Vector3& outv3Delta)
 {
 	// Try move up
 	Vector3 v3Up = Vector3(0.f, m_fStepHeight, 0.f);
@@ -448,4 +825,60 @@ bool ThirdPersonPlayer::TryStepUp(const BoundingCapsule& capsule, const Bounding
 	v3StepDelta.y -= m_fStepHeight;
 	outv3Delta = v3StepDelta;
 	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+// LocalThirdPersonPlayer
+
+void LocalThirdPersonPlayer::ProcessInput()
+{
+	// 디버그용 마우스 사용/헤제
+	if (INPUT->GetButtonDown(VK_OEM_3)) {	// " ` " -> 물결표 그 버튼임
+		ToggleMouseLook();
+	}
+
+
+	ProcessLocalCameraInput();
+	ProcessLocalMovementInput();
+	ProcessLocalActionInput();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+// NetworkOwnerThirdPersonPlayer
+
+void NetworkOwnerThirdPersonPlayer::ProcessInput()
+{
+	// 디버그용 마우스 사용/헤제
+	if (INPUT->GetButtonDown(VK_OEM_3)) {	// " ` " -> 물결표 그 버튼임
+		ToggleMouseLook();
+	}
+
+	// 카메라는 클라가 돌림
+	ProcessLocalCameraInput();
+
+	// 서버로 이동 패킷 전송
+	SendLocalCommandToServer();
+
+	// 직접 이동/발사/근접공격 확정은 하지 않음.
+	// 최종 이동, 애니메이션, 피격, 무기 변경 등은 서버에서 받은 ApplyReplicatedState / ApplyReplicatedEvent 쪽에서 처리.
+}
+
+void NetworkOwnerThirdPersonPlayer::SendLocalCommandToServer()
+{
+	// TODO : 서버로 이동 관련 입력을 전송
+	// - 필요한 것 (용도별)
+	//		- 이동처리:
+	//			- W/A/S/D 이동 입력
+	//			- 달리기 입력 여부
+	//		- 애니메이션 + 기타 처리
+	//			- 달리기 입력 여부
+	//			- 조준 입력 여부
+	//			- 발사 입력 여부
+	//			- 근접공격 입력 여부 (아직 안해도 됨)
+	//		- 발사 처리
+	//			- 발사 처리를 위한 정보 (카메라 위치, 방향 or 발사 Ray 정보)
+	//		- 단발서 이벤트 (이번 프레임에서)
+	//			- 발사
+	//			- 근접공격 시작/끝
+	//			- 무기변경
 }

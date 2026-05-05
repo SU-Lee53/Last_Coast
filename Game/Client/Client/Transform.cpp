@@ -169,7 +169,19 @@ const Matrix& Transform::GetWorldMatrix() const
 	return m_mtxWorld;
 }
 
+const Matrix& Transform::GetTransformMatrix() const
+{
+	return m_mtxTransform;
+}
+
 const Matrix& Transform::GetFrameMatrix() const
 {
 	return m_mtxFrameRelative;
+}
+
+void Transform::ShowControlImGui()
+{
+	ImGuiHelper::PrintTransformMatrix("Local", m_mtxFrameRelative);
+	ImGuiHelper::PrintTransformMatrix("Transform", m_mtxTransform);
+	ImGuiHelper::PrintTransformMatrix("World", m_mtxWorld);
 }

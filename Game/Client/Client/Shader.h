@@ -28,7 +28,6 @@ protected:
 	ComPtr<ID3DBlob> m_pd3dPixelShaderBlob = nullptr;
 
 	std::vector<ComPtr<ID3D12PipelineState>>	m_pd3dPipelineStates = {};
-
 	std::vector<D3D12_INPUT_ELEMENT_DESC>		m_d3dInputElements = {};
 
 };

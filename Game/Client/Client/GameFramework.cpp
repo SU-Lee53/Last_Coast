@@ -2,7 +2,10 @@
 #include "GameFramework.h"
 #include "Scene.h"
 
+#include "MuzzleFlashEffect.h"
+
 std::unique_ptr<D3DCore> GameFramework::g_pD3DCore = nullptr;
+std::unique_ptr<GameContext> GameFramework::g_GameContext = nullptr;
 
 GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnableVSync)
 {
@@ -24,12 +27,15 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 	MODEL->Initialize();
 	ANIMATION->Initialize();
 
+	g_GameContext = std::make_unique<GameContext>();
+	GCTX->Initialize();
+
 	SCENE->Initialize();
 
 	INPUT->Initialize(WinCore::g_hWnd);
 	GUI->Initialize(g_pD3DCore->GetDevice());
 	NETWORK->Initialize();
-	EFFECT->Initialize(g_pD3DCore->GetDevice());
+	PARTICLE->Initialize();
 	//UI->Initialize(g_pD3DCore->GetDevice());
 
 	RENDER->BuildRenderGraph();
@@ -64,7 +70,7 @@ void GameFramework::Update()
 	AI->UpdateAll(DT);   // 에이전트 이동 먼저 → Zombie::PostUpdate에서 최신 위치 사용
 	SCENE->Update();
 
-	EFFECT->Update(DT);
+	PARTICLE->Update();
 
 	// 게임 중간에 리소스 생성이 필요할 수 있으므로 대기
 	// 리소스 생성될게 없으면 바로 리턴함

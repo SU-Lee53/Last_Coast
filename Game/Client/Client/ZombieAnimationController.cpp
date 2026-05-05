@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "ZombieAnimationController.h"
 #include "Zombie.h"
 #include "Skeleton.h"
@@ -63,6 +63,7 @@ void ZombieAnimationController::Initialize()
 	int nBones = GetOwnerBones().size();
 	m_mtxCachedLocalBoneTransforms.resize(nBones);
 	m_mtxFinalBoneTransforms.resize(nBones);
+	m_mtxFinalModelLocalTransforms.resize(nBones);
 }
 
 void ZombieAnimationController::ComputeAnimation()

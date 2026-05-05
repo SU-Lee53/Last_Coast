@@ -24,6 +24,7 @@ enum class ROOT_PARAMETER : uint32 {
 	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 13,
 	TERRAIN_WORLD_TRANSFORM					= 14,
 	UI_DATA									= 15,
+	PARTICLE_DATA							= 16,
 };
 
 struct GBuffer {

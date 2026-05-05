@@ -11,7 +11,7 @@ void TerrainTestScene::BuildObjects()
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize();
 
-	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	m_pPlayer = std::make_shared<LocalThirdPersonPlayer>();
 
 	m_pTerrain = std::make_shared<TerrainObject>();
 	m_pTerrain->LoadFromFiles("TEST");
@@ -43,7 +43,7 @@ void TerrainTestScene::Update()
 
 		if (ImGui::BeginTabBar("Debug")) {
 			if (ImGui::BeginTabItem("Player")) {
-				if (auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
+				if (auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 					ImGui::Text("Press `(~) to use mouse control");
 					ImGui::Text("Mouse : %s", pPlayer->IsMouseOn() ? "ON" : "OFF");
 

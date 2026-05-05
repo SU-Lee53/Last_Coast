@@ -13,7 +13,7 @@ void GameScene::BuildObjects()
 	using namespace std::chrono;
 
 	m_pUIBoard = std::make_unique<UIBoard>();
-	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	m_pPlayer = std::make_shared<LocalThirdPersonPlayer>();
 
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize();
@@ -73,7 +73,7 @@ void GameScene::Update()
 	
 		if (ImGui::BeginTabBar("Debug")) {
 			if (ImGui::BeginTabItem("Player")) {
-				if (auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
+				if (auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 					ImGui::Text("Press `(~) to use mouse control");
 					ImGui::Text("Mouse : %s", pPlayer->IsMouseOn() ? "ON" : "OFF");
 	
@@ -128,7 +128,7 @@ void GameScene::Update()
 			}
 	
 			if (ImGui::BeginTabItem("Objects")) {
-				for (const auto& pObj : GetStaticObjectsInScene()) {
+				for (const auto& pObj : m_World.GetObjects<StaticObject>()) {
 					if (ImGui::TreeNode(pObj->GetName().c_str())) {
 						auto pTransform = pObj->GetTransform();
 						const Vector3 v3Position = pTransform->GetPosition();
@@ -138,8 +138,6 @@ void GameScene::Update()
 
 						ImGui::TreePop();
 					}
-
-
 				}
 
 				ImGui::EndTabItem();

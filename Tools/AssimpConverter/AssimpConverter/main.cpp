@@ -8,7 +8,7 @@
 
 TCHAR g_str[1024] = L"";
 TCHAR g_lpstrFile[8192] = L"";
-TCHAR g_lpstrFilter[256] = L"fbx File(*.fbx)\0*.fbx\0";
+TCHAR g_lpstrFilter[256] = L"fbx File(*.fbx)\0*.fbx\0gltf File(*.gltf)\0*.gltf\0glb File(*.glb)\0*.glb\0";
 TCHAR g_lpstrFileTitle[256] = L"";
 
 bool g_bModelConvertOn = false;

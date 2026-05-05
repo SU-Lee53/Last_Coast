@@ -38,6 +38,7 @@ public:
 public:
 	virtual void Initialize(const MATERIALLOADINFO& materialLoadInfo) = 0;
 
+	bool HasAlphaMask() const { return (m_MaterialData.eAlphaMode == std::to_underlying(Texture::ALPHA_MODE::Masked)); }
 	const MaterialData& GetMaterialData() const { return m_MaterialData; }
 	const std::shared_ptr<Shader>& GetShader() const { return m_pShader; }
 	void SetShader(std::shared_ptr<Shader> pShader);

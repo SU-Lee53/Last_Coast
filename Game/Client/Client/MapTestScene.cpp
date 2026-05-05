@@ -5,6 +5,7 @@
 #include "Skybox.h"
 #include "GameScene.h"
 #include "TextBox.h"
+#include "WeaponObject.h"
 
 void MapTestScene::BuildObjects()
 {
@@ -13,7 +14,7 @@ void MapTestScene::BuildObjects()
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize();
 
-	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	m_pPlayer = std::make_shared<LocalThirdPersonPlayer>();
 	m_pPlayer->Initialize();
 
 	//m_pPlayer = std::make_shared<DebugPlayer>();
@@ -35,7 +36,7 @@ void MapTestScene::BuildObjects()
 	m_pTimeText->SetPosition(Vector2{ 200,50 });
 	m_pTimeText->SetSize(Vector2{ 100,50 });
 
-	m_pKoreanText = std::make_shared<TextBox>(L"Malgun Gothic");
+	m_pKoreanText = std::make_shared<TextButton>(L"Malgun Gothic");
 	m_pKoreanText->SetText(L"클릭하면 글자색이 바뀜");
 	m_pKoreanText->SetLayer(0);
 	m_pKoreanText->SetAnchor(Vector2{ 0,0 });
@@ -43,16 +44,34 @@ void MapTestScene::BuildObjects()
 	m_pKoreanText->SetPosition(Vector2{ 350,50 });
 	m_pKoreanText->SetSize(Vector2{ 250,50 });
 	
-	auto fnCallback = [](IUIComponent* pComp) {
-		auto pText = static_cast<TextBox*>(pComp);
-		pText->SetTextColor(RandomGenerator::GenerateRandomColor3());
-	};
+	m_pKoreanText->SetBeginHoverCallback(
+		[](IUIComponent* pComp) {
+			auto pText = static_cast<TextBox*>(pComp);
+			pText->SetColor(Vector3(1,0,0));
+		}
+	);
 
-	m_pKoreanText->SetButtonCallback(fnCallback);
+	m_pKoreanText->SetEndHoverCallback(
+		[](IUIComponent* pComp) {
+			auto pText = static_cast<TextBox*>(pComp);
+			pText->SetColor(Vector3(1,1,1));
+		}
+	);
+
+	m_pKoreanText->SetButtonCallback(
+		[](IUIComponent* pComp) {
+			auto pText = static_cast<TextBox*>(pComp);
+			pText->SetColor(RandomGenerator::GenerateRandomColor3());
+		}
+	);
 
 	m_pUIBoard->InsertUI(m_pFPSText);
 	m_pUIBoard->InsertUI(m_pTimeText);
 	m_pUIBoard->InsertUI(m_pKoreanText);
+
+	if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
+		pThirdPerson->GiveWeapon(static_cast<WEAPON_TYPE>(m_nWeaponSelected));
+	}
 
 	LoadFromFiles("LightTest");
 }
@@ -71,6 +90,7 @@ void MapTestScene::ProcessInput()
 
 void MapTestScene::Update()
 {
+
 	// Update text test
 	std::wstring wstrFrameRate;
 	wstrFrameRate = std::format(L"FPS : {}", TIME->GetCurrentFrameRate());
@@ -91,7 +111,9 @@ void MapTestScene::Update()
 
 		if (ImGui::BeginTabBar("Debug")) {
 			if (ImGui::BeginTabItem("Player")) {
-				if (auto pPlayer = std::static_pointer_cast<ThirdPersonPlayer>(m_pPlayer)) {
+				if (auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
+					m_pPlayer->ShowControlImGui();
+
 					ImGui::Text("Press `(~) to use mouse control");
 					ImGui::Text("Mouse : %s", pPlayer->IsMouseOn() ? "ON" : "OFF");
 
@@ -116,6 +138,29 @@ void MapTestScene::Update()
 						ImGui::Text("Collision {%s : %s}", pair.pSelf->GetName().c_str(), pair.pOther->GetName().c_str());
 					}
 
+					ImGui::Text("====== Weapon Test ======");
+					const auto& strWeaponNames = GameContext::g_strWeaponName;
+					if(ImGui::BeginCombo("Weapons", strWeaponNames[m_nWeaponSelected].c_str())) {
+						for (int i = 0; i < strWeaponNames.size(); ++i) {
+							bool bSelected = (m_nWeaponSelected == i);
+							if (ImGui::Selectable(strWeaponNames[i].c_str(), bSelected)) {
+								m_nWeaponSelected = i;
+								if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
+									pThirdPerson->GiveWeapon(static_cast<WEAPON_TYPE>(m_nWeaponSelected));
+								}
+							}
+
+							if (bSelected) {
+								ImGui::SetItemDefaultFocus();
+							}
+
+						}
+
+						ImGui::EndCombo();
+					}
+
+
+					//m_pGun->ShowControlImGui();
 				}
 				else {
 					ImGui::Text("No Animation");

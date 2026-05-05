@@ -45,6 +45,8 @@ public:
 	void SetChild(std::shared_ptr<IGameObject> pChild);
 	void SetName(const std::string& strFrameName);
 
+	void SwapChild(size_t nIndex, std::shared_ptr<IGameObject> pNewChild);
+
 	const std::string& GetName() const { return m_strFrameName; }
 
 	template<ComponentType T>
@@ -65,13 +67,17 @@ public:
 	virtual void OnBeginCollision(const CollisionResult& collisionResult) {};
 	virtual void OnWhileCollision(const CollisionResult& collisionResult) {};
 	virtual void OnEndCollision(const CollisionResult& collisionResult) {};
+	virtual void OnTraceHit(const RayTraceHitResult& hitResult) {};
 
 public:
 	std::shared_ptr<IGameObject> FindFrame(const std::string& strFrameName);
+	std::shared_ptr<IGameObject> FindFrameEndsWith(const std::string& strFrameName);
 	std::shared_ptr<IGameObject> FindMeshedFrame(const std::string& strFrameName);
 
 	template<typename T>
-	std::shared_ptr<T> CopyObject(std::shared_ptr<IGameObject> pParent = nullptr, std::shared_ptr<IGameObject> pRoot = nullptr) const;
+	std::shared_ptr<T> CopyObject(
+		std::shared_ptr<IGameObject> pParent = nullptr, 
+		std::shared_ptr<IGameObject> pRoot = nullptr) const;
 
 protected:
 	template<ComponentType T>
@@ -112,7 +118,8 @@ inline void IGameObject::AddComponent()
 template<ComponentType T>
 inline void IGameObject::MoveComponent(std::shared_ptr<IGameObject> pFrom)
 {
-	m_pComponents[std::to_underlying(ComponentIndex<T>::componentType)] = std::move(pFrom->GetComponent<T>());
+	m_pComponents[std::to_underlying(ComponentIndex<T>::componentType)] = std::move(pFrom->m_pComponents[std::to_underlying(ComponentIndex<T>::componentType)]);
+	m_pComponents[std::to_underlying(ComponentIndex<T>::componentType)]->SetOwner(shared_from_this());
 }
 
 template<ComponentType T, typename... Args>
@@ -138,13 +145,16 @@ inline 	std::shared_ptr<T> IGameObject::GetComponent() const
 }
 
 template<ComponentType T>
-std::shared_ptr<T> IGameObject::GetComponentFromRoot() const
+inline std::shared_ptr<T> IGameObject::GetComponentFromRoot() const
 {
+	if (m_pRoot.expired()) {
+		return GetComponent<T>();
+	}
 	return static_pointer_cast<T>(m_pRoot.lock()->GetComponent<T>());
 }
 
 template<typename T>
-std::shared_ptr<T> IGameObject::CopyObject(std::shared_ptr<IGameObject> pParent, std::shared_ptr<IGameObject> pRoot) const
+inline std::shared_ptr<T> IGameObject::CopyObject(std::shared_ptr<IGameObject> pParent, std::shared_ptr<IGameObject> pRoot) const
 {
 	std::shared_ptr<T> pClone = std::make_shared<T>();
 	pClone->m_strFrameName = m_strFrameName;
@@ -170,6 +180,10 @@ std::shared_ptr<T> IGameObject::CopyObject(std::shared_ptr<IGameObject> pParent,
 	for (auto pChild : m_pChildren) {
 		std::shared_ptr<NodeObject> pChildClone = pChild->CopyObject<NodeObject>(pClone, pRoot);
 		pClone->m_pChildren.push_back(pChildClone);
+	}
+
+	if (auto pSkeleton = pClone->GetComponent<Skeleton>()) {
+		pSkeleton->ResetBoneNodes();
 	}
 
 	return pClone;

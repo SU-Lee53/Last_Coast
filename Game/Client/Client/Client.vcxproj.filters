@@ -134,6 +134,21 @@
     <Filter Include="02.Game\UI\UIComponent\Components">
       <UniqueIdentifier>{dd161558-19d2-43cc-ab43-2a2b63200a9e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02.Game\GameObject\Weapons">
+      <UniqueIdentifier>{37e57477-68bc-4529-92f5-1c9ae9080c9f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Game\World">
+      <UniqueIdentifier>{797f8f39-2e7a-4dba-865c-788ca86b7314}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Game\Particle">
+      <UniqueIdentifier>{e2bb6ddc-61cd-4a1e-9e3c-f2f258257a5a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Game\Particle\Composites">
+      <UniqueIdentifier>{48794290-60c9-49ef-9da8-f73927ac23ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Game\Particle\Particles">
+      <UniqueIdentifier>{01128195-ef50-498f-80da-aeac1b01fc76}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h">
@@ -217,9 +232,6 @@
     <ClInclude Include="Mesh.h">
       <Filter>03.Engine\Resources\Mesh</Filter>
     </ClInclude>
-    <ClInclude Include="Effect.h">
-      <Filter>03.Engine\Graphic Components</Filter>
-    </ClInclude>
     <ClInclude Include="Light.h">
       <Filter>03.Engine\Graphic Components</Filter>
     </ClInclude>
@@ -238,7 +250,7 @@
     <ClInclude Include="Material.h">
       <Filter>03.Engine\Resources\Material</Filter>
     </ClInclude>
-    <ClInclude Include="EffectManager.h">
+    <ClInclude Include="ParticleManager.h">
       <Filter>04.Managers\Rendering Management</Filter>
     </ClInclude>
     <ClInclude Include="GameTimer.h">
@@ -459,6 +471,54 @@
     <ClInclude Include="UIPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
+    <ClInclude Include="WeaponObject.h">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="TypedObjectPool.h">
+      <Filter>02.Game\World</Filter>
+    </ClInclude>
+    <ClInclude Include="World.h">
+      <Filter>02.Game\World</Filter>
+    </ClInclude>
+    <ClInclude Include="GameContext.h">
+      <Filter>02.Game</Filter>
+    </ClInclude>
+    <ClInclude Include="ParticleEffect.h">
+      <Filter>02.Game\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="ParticleEmitter.h">
+      <Filter>02.Game\Particle\Composites</Filter>
+    </ClInclude>
+    <ClInclude Include="ParticleModule.h">
+      <Filter>02.Game\Particle\Composites</Filter>
+    </ClInclude>
+    <ClInclude Include="ParticleModules.h">
+      <Filter>02.Game\Particle\Composites</Filter>
+    </ClInclude>
+    <ClInclude Include="ParticleRenderBatch.h">
+      <Filter>02.Game\Particle\Composites</Filter>
+    </ClInclude>
+    <ClInclude Include="ParticleTypes.h">
+      <Filter>02.Game\Particle\Composites</Filter>
+    </ClInclude>
+    <ClInclude Include="MuzzleFlashEffect.h">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="ParticleTextureCache.h">
+      <Filter>02.Game\Particle\Composites</Filter>
+    </ClInclude>
+    <ClInclude Include="RayTraceUtils.h">
+      <Filter>99.Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="BloodEffect.h">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="ParticlePass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="BulletImpactEffect.h">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -546,9 +606,6 @@
     <ClCompile Include="Mesh.cpp">
       <Filter>03.Engine\Resources\Mesh</Filter>
     </ClCompile>
-    <ClCompile Include="Effect.cpp">
-      <Filter>03.Engine\Graphic Components</Filter>
-    </ClCompile>
     <ClCompile Include="Light.cpp">
       <Filter>03.Engine\Graphic Components</Filter>
     </ClCompile>
@@ -567,7 +624,7 @@
     <ClCompile Include="Material.cpp">
       <Filter>03.Engine\Resources\Material</Filter>
     </ClCompile>
-    <ClCompile Include="EffectManager.cpp">
+    <ClCompile Include="ParticleManager.cpp">
       <Filter>04.Managers\Rendering Management</Filter>
     </ClCompile>
     <ClCompile Include="GameTimer.cpp">
@@ -779,6 +836,48 @@
     <ClCompile Include="UIPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
+    <ClCompile Include="WeaponObject.cpp">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="TypedObjectPool.cpp">
+      <Filter>02.Game\World</Filter>
+    </ClCompile>
+    <ClCompile Include="World.cpp">
+      <Filter>02.Game\World</Filter>
+    </ClCompile>
+    <ClCompile Include="GameContext.cpp">
+      <Filter>02.Game</Filter>
+    </ClCompile>
+    <ClCompile Include="ParticleEffect.cpp">
+      <Filter>02.Game\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="ParticleEmitter.cpp">
+      <Filter>02.Game\Particle\Composites</Filter>
+    </ClCompile>
+    <ClCompile Include="ParticleModule.cpp">
+      <Filter>02.Game\Particle\Composites</Filter>
+    </ClCompile>
+    <ClCompile Include="ParticleModules.cpp">
+      <Filter>02.Game\Particle\Composites</Filter>
+    </ClCompile>
+    <ClCompile Include="ParticleRenderBatch.cpp">
+      <Filter>02.Game\Particle\Composites</Filter>
+    </ClCompile>
+    <ClCompile Include="MuzzleFlashEffect.cpp">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="ParticleTextureCache.cpp">
+      <Filter>02.Game\Particle\Composites</Filter>
+    </ClCompile>
+    <ClCompile Include="BloodEffect.cpp">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="ParticlePass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="BulletImpactEffect.cpp">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
@@ -795,19 +894,7 @@
     <FxCompile Include="..\HLSL\HDRIToCubeMap.hlsl">
       <Filter>03.Engine\HLSL\Compute</Filter>
     </FxCompile>
-    <FxCompile Include="..\HLSL\Common.hlsl">
-      <Filter>03.Engine\HLSL\Graphics</Filter>
-    </FxCompile>
     <FxCompile Include="..\HLSL\DefferedShader.hlsl">
-      <Filter>03.Engine\HLSL\Graphics</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\EffectCommon.hlsl">
-      <Filter>03.Engine\HLSL\Graphics</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\EffectShader.hlsl">
-      <Filter>03.Engine\HLSL\Graphics</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\FullScreenShader.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\Light.hlsl">
@@ -816,16 +903,10 @@
     <FxCompile Include="..\HLSL\NewCommon.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
-    <FxCompile Include="..\HLSL\RayShader.hlsl">
-      <Filter>03.Engine\HLSL\Graphics</Filter>
-    </FxCompile>
     <FxCompile Include="..\HLSL\Shaders.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\Sprite.hlsl">
-      <Filter>03.Engine\HLSL\Graphics</Filter>
-    </FxCompile>
-    <FxCompile Include="..\HLSL\SpriteShader.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\ToneMapping.hlsl">
@@ -840,14 +921,17 @@
     <FxCompile Include="..\HLSL\ShadowMapShader.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
-    <FxCompile Include="..\HLSL\ToneMappingCommon.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
-    </FxCompile>
     <FxCompile Include="..\HLSL\LUTBaking.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
+      <Filter>03.Engine\HLSL\Compute</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\HDRPostProcessing.hlsl">
-      <Filter>03.Engine\HLSL</Filter>
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\ToneMappingCommon.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\Particle.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

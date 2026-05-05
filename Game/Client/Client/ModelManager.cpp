@@ -31,17 +31,17 @@ std::shared_ptr<IGameObject> ModelManager::Get(const std::string& strObjName)
 	return it->second;
 }
 
-std::shared_ptr<IGameObject> ModelManager::LoadOrGet(const std::string& strFileName)
+std::shared_ptr<IGameObject> ModelManager::LoadOrGet(const std::string& strFileName, bool bUseNameFilenameOnRoot)
 {
 	auto it = m_pModelPool.find(strFileName);
 	if (it == m_pModelPool.end()) {
-		return LoadModelFromFile(strFileName);
+		return LoadModelFromFile(strFileName, bUseNameFilenameOnRoot);
 	}
 
 	return it->second;
 }
 
-std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& strFileName)
+std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& strFileName, bool bUseNameFilenameOnRoot)
 {
 	if (auto pObj = Get(strFileName)) {
 		return pObj;
@@ -53,7 +53,7 @@ std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& 
 	nlohmann::json j = nlohmann::json::from_bson(buf);
 
 	std::shared_ptr<IGameObject> pGameObject;
-	pGameObject = LoadFrameHierarchyFromFile(nullptr, nullptr, j["Hierarchy"]);
+	pGameObject = LoadFrameHierarchyFromFile(strFileName, nullptr, nullptr, j["Hierarchy"], bUseNameFilenameOnRoot);
 
 	size_t nBones = j["nBones"].get<size_t>();
 	if (nBones != 0) {
@@ -61,10 +61,11 @@ std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& 
 		bones.resize(nBones);
 		for (const auto& jBone : j["Bones"]) {
 			int nBoneIndex = jBone["Index"].get<int>();
+			std::string strBoneName = jBone["Name"].get<std::string>();
 
 			bones[nBoneIndex].nIndex = nBoneIndex;
 			bones[nBoneIndex].nParentIndex = jBone["ParentIndex"].get<int>();
-			bones[nBoneIndex].strBoneName = jBone["Name"].get<std::string>();
+			bones[nBoneIndex].strBoneName = strBoneName;
 
 			bones[nBoneIndex].nDepth = jBone["Depth"].get<int>();
 			bones[nBoneIndex].nChildren = jBone["nChildren"].get<int>();
@@ -75,6 +76,7 @@ std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& 
 			bones[nBoneIndex].mtxTransform = Matrix(jBone["localBind"].get<std::vector<float>>().data());
 			bones[nBoneIndex].mtxOffset = Matrix(jBone["inverseBind"].get<std::vector<float>>().data());
 
+			bones[nBoneIndex].pNode = pGameObject->FindFrameEndsWith(strBoneName);
 		}
 		pGameObject->AddComponent<Skeleton>(bones);
 	}
@@ -86,12 +88,12 @@ std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& 
 	return pGameObject;
 }
 
-std::shared_ptr<IGameObject> ModelManager::LoadFrameHierarchyFromFile(std::shared_ptr<IGameObject> pParent, std::shared_ptr<IGameObject> pRoot, const nlohmann::json& inJson)
+std::shared_ptr<IGameObject> ModelManager::LoadFrameHierarchyFromFile(const std::string& strFilename, std::shared_ptr<IGameObject> pParent, std::shared_ptr<IGameObject> pRoot, const nlohmann::json& inJson, bool bUseNameFilenameOnRoot)
 {
 	std::shared_ptr<IGameObject> pGameObject = std::make_shared<NodeObject>();
 
 	unsigned nMeshes = inJson["nMeshes"].get<unsigned>();
-	pGameObject->m_strFrameName = inJson["Name"].get<std::string>();
+	pGameObject->m_strFrameName = (bUseNameFilenameOnRoot) ? strFilename : inJson["Name"].get<std::string>();
 	pGameObject->GetTransform()->SetFrameMatrix(::ReadMatrixFromJson(inJson["Transform"]));
 	
 
@@ -121,7 +123,7 @@ std::shared_ptr<IGameObject> ModelManager::LoadFrameHierarchyFromFile(std::share
 	unsigned nChildren = inJson["nChildren"].get<unsigned>();
 	pGameObject->m_pChildren.reserve(nChildren);
 	for (int i = 0; i < nChildren; ++i) {
-		pGameObject->m_pChildren.push_back(LoadFrameHierarchyFromFile(pGameObject, pRoot, inJson["Children"][i]));
+		pGameObject->m_pChildren.push_back(LoadFrameHierarchyFromFile(strFilename, pGameObject, pRoot, inJson["Children"][i], false));
 	}
 
 	return pGameObject;

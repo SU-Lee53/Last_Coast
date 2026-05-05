@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "StaticObject.h"
 #include "Collider.h"
+#include "BulletImpactEffect.h"
 
 void StaticObject::Initialize()
 {
@@ -49,7 +50,7 @@ void StaticObject::Update()
 
 void StaticObject::PostUpdate()
 {
-	for (auto& component : m_pComponents) {
+	for (auto& component : m_pComponents | std::views::drop(std::to_underlying(COMPONENT_TYPE::TRANSFORM) + 1)) {
 		if (component) {
 			component->Update();
 		}
@@ -58,4 +59,23 @@ void StaticObject::PostUpdate()
 	for (auto& pChild : m_pChildren) {
 		pChild->PostUpdate();
 	}
+}
+
+void StaticObject::OnTraceHit(const RayTraceHitResult& hitResult)
+{
+	ParticleEffectSpawnDesc desc{};
+	desc.v3Position = hitResult.v3ImpactPoint;
+
+	// 먼지는 표면 normal 방향으로 튀는 게 자연스러움
+	desc.v3Direction = hitResult.v3ImpactNormal;
+	desc.v3Direction.Normalize();
+
+	desc.v3Normal = hitResult.v3ImpactNormal;
+	desc.mtxWorld = Matrix::CreateWorld(
+		desc.v3Position,
+		desc.v3Direction,
+		Vector3::Up
+	);
+
+	PARTICLE->Spawn<BulletImpactEffect>(desc);
 }

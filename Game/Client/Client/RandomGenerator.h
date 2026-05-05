@@ -46,4 +46,3 @@ public:
 private:
 	static std::default_random_engine g_dre;
 };
-

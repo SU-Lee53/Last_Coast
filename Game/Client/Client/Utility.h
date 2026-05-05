@@ -56,7 +56,7 @@ public:
 	//ElemType& operator[](KeyType key) { return m_Elements[m_IndexMap[key]]; }
 	ElemType& operator[](size_t idx) { return m_Elements[idx]; }
 
-	const std::vector<ElemType>& GetElements() { return m_Elements; }
+	const std::vector<ElemType>& GetElements() const { return m_Elements; }
 };
 
 
@@ -222,6 +222,19 @@ inline Vector3 ReadVector3FromJson(const nlohmann::json& j)
 		j[1].get<float>(),
 		j[2].get<float>(),
 	};
+}
+
+/////////////////////////////////////////////////////////////////////////////////
+// ImGui Helpers
+
+namespace ImGuiHelper {
+
+	extern void PrintVector2(const char* label, const Vector2& v);
+	extern void PrintVector3(const char* label, const Vector3& v);
+	extern void PrintVector4(const char* label, const Vector4& v);
+	extern void PrintQuaternion(const char* label, const Quaternion& q);
+	extern void PrintMatrix(const char* label, const Matrix& m);
+	extern void PrintTransformMatrix(const char* label, const Matrix& m);
 }
 
 

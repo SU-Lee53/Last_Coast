@@ -586,7 +586,6 @@ void TextureManager::ExcuteCommandList(CommandListPair& cmdPair)
 		__debugbreak();
 	}
 
-
 	ID3D12CommandList* ppCommandLists[] = { cmdPair.pd3dCommandList.Get() };
 	m_pd3dCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 

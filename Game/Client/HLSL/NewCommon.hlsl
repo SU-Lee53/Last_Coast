@@ -198,7 +198,7 @@ cbuffer cbToneMappingData : register(b4, space0)
 {
 	float gfExposure;
 	float gfGamma;
-	float gfSaturation;
+	float gfPostSaturation;
 	float gfInputScale;
 	
 	float gfOutputScale;
@@ -301,6 +301,20 @@ struct UIRectData
 	int nTexIndex;
 };
 
+struct ParticleDrawData
+{
+	float3 v3Position;
+	float fSize;
+	
+	float4 v4Color;
+	float4 v4UVRect;
+	
+	float fRotation;
+	int nTextureIndex;
+	float fSoftParticleFactor;
+	float pad;
+};
+
 #define MAX_BONES 100
 #define MAX_TERRAIN_COMPONENTS 8*8
 
@@ -357,6 +371,7 @@ Texture2D gtxtTerrainWeightMap : register(t11, space2);
 
 // UI
 StructuredBuffer<UIRectData> gUIData : register(t12, space2);
+StructuredBuffer<ParticleDrawData> gParticleData : register(t13, space2);
 
 
 // ================================================================================

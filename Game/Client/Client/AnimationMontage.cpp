@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "AnimationMontage.h"
 #include "Zombie.h"
+#include "ThirdPersonPlayer.h"
 
 void AnimationMontage::Initialize(std::shared_ptr<IGameObject> pOwner)
 {
@@ -255,20 +256,58 @@ void AnimationMontage::UpdateFallback()
 void PlayerAnimationMontage::BuildMontage()
 {
 	// 1. Fire
-	MontageSection fireSection{};
-	fireSection.strName = "Rifle Fire";
-	fireSection.pAnimationToPlay = ANIMATION->Get("Firing Rifle");
-	fireSection.eEndRule = MONTAGE_SECTION_END_RULE::NEXT;
-	m_MontageSections.push_back(fireSection);
+	{
+		MontageSection fireSection{};
+		fireSection.strName = "Rifle Fire";
+		fireSection.pAnimationToPlay = ANIMATION->Get("Firing Rifle");
+		fireSection.eEndRule = MONTAGE_SECTION_END_RULE::NEXT;
+		m_MontageSections.push_back(fireSection);
+	}
 
-	// 2. Aim Idle
-	MontageSection aimSection{};
-	aimSection.strName = "Rifle Aiming Idle";
-	aimSection.pAnimationToPlay = ANIMATION->Get("Rifle Aiming Idle");
-	aimSection.eEndRule = MONTAGE_SECTION_END_RULE::LOOP;
-	m_MontageSections.push_back(aimSection);
+	// 2. Rifle Aim Idle
+	{
+		MontageSection aimSection{};
+		aimSection.strName = "Rifle Aiming Idle";
+		aimSection.pAnimationToPlay = ANIMATION->Get("Rifle Aiming Idle");
+		aimSection.eEndRule = MONTAGE_SECTION_END_RULE::LOOP;
+		m_MontageSections.push_back(aimSection);
+	}
+	
+	// 1. Pistol Fire
+	{
+		MontageSection fireSection{};
+		fireSection.strName = "Pistol Fire";
+		fireSection.pAnimationToPlay = ANIMATION->Get("Pistol Idle");
+		fireSection.eEndRule = MONTAGE_SECTION_END_RULE::NEXT;
+		m_MontageSections.push_back(fireSection);
+	}
 
+	// 2. Pistol Aim Idle
+	{
+		MontageSection aimSection{};
+		aimSection.strName = "Pistol Aiming Idle";
+		aimSection.pAnimationToPlay = ANIMATION->Get("Pistol Idle");
+		aimSection.eEndRule = MONTAGE_SECTION_END_RULE::LOOP;
+		m_MontageSections.push_back(aimSection);
+	}
 
+	// 2. Pistol Aim Idle
+	{
+		MontageSection meleeSection{};
+		meleeSection.strName = "Melee Attack";
+		meleeSection.pAnimationToPlay = ANIMATION->Get("Standing Melee Attack Horizontal");
+		meleeSection.eEndRule = MONTAGE_SECTION_END_RULE::JUMP;
+		meleeSection.strJumpTarget = "Rifle Fire";
+		m_MontageSections.push_back(meleeSection);
+
+		MontageNotify meleeEndNotify;
+		meleeEndNotify.nSectionIndex = m_MontageSections.size() - 1;
+		meleeEndNotify.fTime = ANIMATION->Get("Standing Melee Attack Horizontal")->GetDuration() - 0.1f;
+		meleeEndNotify.pCallback = [](std::shared_ptr<IGameObject> pObj) {
+			std::static_pointer_cast<IThirdPersonPlayer>(pObj)->OnMeleeEnd();
+		};
+		m_Notifies.push_back(meleeEndNotify);
+	}
 }
 
 void ZombieAnimationMontage::BuildMontage()

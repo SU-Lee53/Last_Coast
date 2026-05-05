@@ -98,7 +98,7 @@ public:
 		return m_id;
 	}
 
-	const ResourcePtr& GetResource() const {
+	ResourcePtr GetResource() const {
 		if (!IsValid()) {
 			return nullptr;
 		}
@@ -181,7 +181,7 @@ public:
 		return { this, it->second };
 	}
 	
-	const ResourcePtr& GetResourceByID(ID id) const {
+	ResourcePtr GetResourceByID(ID id) const {
 		if (id >= m_ResourceEntries.size()) {
 			return nullptr;
 		}
@@ -231,6 +231,10 @@ private:
 
 	bool Release(ID id) {
 		if (id >= m_unMaxSize) {
+			return false;
+		}
+
+		if (id >= m_ResourceEntries.size()) {
 			return false;
 		}
 
@@ -460,7 +464,7 @@ public:
 		return { this, it->second };
 	}
 
-	const ResourcePtr& GetResourceByID(ID id) const {
+	ResourcePtr GetResourceByID(ID id) const {
 		if (id >= m_ResourceEntries.size()) {
 			return nullptr;
 		}
@@ -514,6 +518,10 @@ private:
 
 	bool Release(ID id) {
 		if (id >= m_unMaxSize) {
+			return false;
+		}
+
+		if (id >= m_ResourceEntries.size()) {
 			return false;
 		}
 

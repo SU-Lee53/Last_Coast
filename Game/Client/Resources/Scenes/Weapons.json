@@ -1,0 +1,112 @@
+{
+    "AK": {
+        "Damage": 40.0,
+        "FirePerSecond": 600.0,
+        "MuzzlePosition": [
+            65.0,
+            7.5,
+            0.0
+        ],
+        "OffsetPosition": [
+            2.4000000953674316,
+            9.300000190734863,
+            0.20000000298023224
+        ],
+        "OffsetRotation": [
+            183.5,
+            -90.0,
+            -90.0
+        ],
+        "Recoil": 50.0,
+        "RecoilRecovery": 30.0,
+        "ReloadTime": 2.5
+    },
+    "M4": {
+        "Damage": 30.0,
+        "FirePerSecond": 800.0,
+        "MuzzlePosition": [
+            60.0,
+            11.0,
+            0.0
+        ],
+        "OffsetPosition": [
+            1.899999976158142,
+            8.899999618530273,
+            -0.20000000298023224
+        ],
+        "OffsetRotation": [
+            182.0,
+            -90.0,
+            -90.0
+        ],
+        "Recoil": 30.0,
+        "RecoilRecovery": 25.0,
+        "ReloadTime": 2.0
+    },
+    "MELEE": {
+        "Damage": 0.0,
+        "FirePerSecond": 0.0,
+        "MuzzlePosition": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "OffsetPosition": [
+            4.800000190734863,
+            10.100000381469727,
+            0.6000000238418579
+        ],
+        "OffsetRotation": [
+            180.0,
+            -60.0,
+            -90.0
+        ],
+        "Recoil": 0.0,
+        "RecoilRecovery": 0.0,
+        "ReloadTime": 0.0
+    },
+    "PISTOL": {
+        "Damage": 10.0,
+        "FirePerSecond": 100.0,
+        "MuzzlePosition": [
+            22.0,
+            7.5,
+            0.0
+        ],
+        "OffsetPosition": [
+            2.0999999046325684,
+            9.399999618530273,
+            1.399999976158142
+        ],
+        "OffsetRotation": [
+            180.60000610351563,
+            -90.0,
+            -90.0
+        ],
+        "Recoil": 20.0,
+        "RecoilRecovery": 10.0,
+        "ReloadTime": 1.0
+    },
+    "RIFLE": {
+        "Damage": 100.0,
+        "FirePerSecond": 200.0,
+        "MuzzlePosition": [
+            0.0,
+            2.0,
+            53.0
+        ],
+        "OffsetPosition": [
+            1.7000000476837158,
+            22.5,
+            2.4000000953674316
+        ],
+        "OffsetRotation": [
+            274.79998779296875,
+            -90.0,
+            -90.0
+        ],
+        "Recoil": 80.0,
+        "RecoilRecovery": 0.0,
+        "ReloadTime": 4.0
+    }
+}
