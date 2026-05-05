@@ -90,6 +90,9 @@ void IThirdPersonPlayer::PostUpdate()
 {
 	if (UsesInputMovement()) {
 		ApplyInputMovement();
+		if (NeedsSendMovementState()) {
+			SendLocalCommandToServer();
+		}
 	}
 	else if (UsesServerStateMovement()) {
 		ApplyServerMovementXZ();
@@ -115,7 +118,7 @@ void IThirdPersonPlayer::ApplyReplicatedState(/* const ServerSidePlayerState& st
 		TODO :
 		1.
 		서버에서 받은 패킷에서 XZ 좌표를 이용해 플레이어 위치 반영
-		좌표 보간이 필요하다면 보간이후 SetTargetXZ 호출이 필요
+		좌표 보간이 필요하다면 보간 이후 위치 반영을 해야함
 		보간함수는 자유롭게 구현
 
 		Y 는 클라이언트가 Terrain/Collision 여부를 보고 결정
@@ -137,12 +140,13 @@ void IThirdPersonPlayer::ApplyReplicatedState(/* const ServerSidePlayerState& st
 		예:
 		if (state.aiming) EnterAim();
 		else LeaveAim();
-	
+
 	*/
 }
 
 void IThirdPersonPlayer::ApplyReplicatedEvent(/* const ServerSidePlayerEvent& event */)
-{/*
+{
+	/*
 		TODO :
 		서버 이벤트 타입에 따라 액션 함수를 호출
 
@@ -427,7 +431,7 @@ void  IThirdPersonPlayer::ProcessLocalActionInput()
 				}
 			}
 		}
-		
+
 		if (m_pCrosshair && m_pWeaponSocket && m_pWeaponSocket->GetWeaponModel()) {
 			if (!m_bFiredThisFrame) {
 				m_pCrosshair->RemoveRecoil(
@@ -711,7 +715,7 @@ void IThirdPersonPlayer::ApplyDead()
 void IThirdPersonPlayer::ApplyGravity()
 {
 	if (!m_bGrounded) {
-		m_fVerticalVelocity += m_fGravity * DT; 
+		m_fVerticalVelocity += m_fGravity * DT;
 	}
 	else {
 		m_fVerticalVelocity = 0.f;
@@ -755,13 +759,13 @@ void IThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 					float fPush = std::min(fDepth + fSkin, 5.f);
 					outv3Delta += v3Normal * fPush;
 				}
-				
+
 				// Slope Projection
 				float fProjected = outv3Delta.Dot(v3Normal);
 				if (fProjected < 0.f) {
 					outv3Delta -= v3Normal * fProjected;
 				}
-			
+
 				continue;
 			}
 
@@ -857,7 +861,7 @@ void NetworkOwnerThirdPersonPlayer::ProcessInput()
 	ProcessLocalCameraInput();
 
 	// 서버로 이동 패킷 전송
-	SendLocalCommandToServer();
+	//SendLocalCommandToServer();
 
 	// 직접 이동/발사/근접공격 확정은 하지 않음.
 	// 최종 이동, 애니메이션, 피격, 무기 변경 등은 서버에서 받은 ApplyReplicatedState / ApplyReplicatedEvent 쪽에서 처리.

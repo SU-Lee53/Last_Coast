@@ -143,22 +143,18 @@ void NetworkManager::Disconnect()
 // 일단 키 입력만
 void NetworkManager::SendData()
 {
-	C2S_Move packet;
+	/*C2S_Move packet;
 	packet.size = sizeof(C2S_Move);
 	packet.type = C2S_MOVE;
+	packet.dir = 0;
 
-	if (INPUT->GetButtonDown('W')) {
-		packet.dir = UP;
-	}
-	if (INPUT->GetButtonDown('S')) {
-		packet.dir = DOWN;
-	}
-	if (INPUT->GetButtonDown('A')) {
-		packet.dir = LEFT;
-	}
-	if (INPUT->GetButtonDown('D')) {
-		packet.dir = RIGHT;
-	}
+	if (INPUT->GetButtonPressed('W')) packet.dir |= UP;
+	if (INPUT->GetButtonPressed('S')) packet.dir |= DOWN;
+	if (INPUT->GetButtonPressed('A')) packet.dir |= LEFT;
+	if (INPUT->GetButtonPressed('D')) packet.dir |= RIGHT;*/
+	
+	switch()
+
 	m_wsabuf.buf = reinterpret_cast<char*>(&packet);
 	m_wsabuf.len = sizeof(packet);
 	WSASend(m_hClientSocket, &m_wsabuf, 1, 0, 0, &m_over, send_callback);

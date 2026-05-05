@@ -11,7 +11,12 @@ constexpr int BUF_SIZE = 200;
 enum IOType { IO_SEND, IO_RECV, IO_ACCEPT };
 
 enum PACKET_TYPE { C2S_LOGIN, C2S_MOVE, S2C_LOGIN_RESULT, S2C_AVATAR_INFO, S2C_ADD_PLAYER, S2C_REMOVE_PLAYER, S2C_MOVE_PLAYER };
-enum DIRECTION { UP, DOWN, LEFT, RIGHT };
+enum DIRECTION {
+	UP = 1 << 0,
+	DOWN = 1 << 1,
+	LEFT = 1 << 2,
+	RIGHT = 1 << 3
+};
 
 #pragma pack(push, 1) // Ensure no padding between struct members
 struct C2S_Login {
@@ -23,7 +28,7 @@ struct C2S_Login {
 struct C2S_Move {
 	unsigned char size;
 	PACKET_TYPE   type;
-	DIRECTION    dir;
+	unsigned char dir;
 };
 
 struct S2C_LoginResult {

@@ -149,7 +149,7 @@ private:
 
 
 protected:
-	World<StaticObject, WeaponObject, Zombie> m_World;
+	World<IThirdPersonPlayer, StaticObject, WeaponObject, Zombie> m_World;
 
 	//std::vector<std::shared_ptr<IGameObject>>	m_pStaticObjects = {};
 	//std::vector<std::shared_ptr<IGameObject>>	m_pDynamicObjects = {};

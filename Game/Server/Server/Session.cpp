@@ -49,18 +49,13 @@ bool Session::process_packet(unsigned char* p)
 				  break;
 	case C2S_MOVE: {
 		C2S_Move* packet = reinterpret_cast<C2S_Move*>(p);
-		DIRECTION dir = packet->dir;
-		// TODO : Move 로직
-		switch (dir) {
-		case UP: m_y++;
-			break;
-		case DOWN: m_y--;
-			break;
-		case LEFT: m_x--;
-			break;
-		case RIGHT: m_x++;
-			break;
-		}
+		unsigned char dir = packet->dir;
+
+		if (dir & UP)    m_y++;
+		if (dir & DOWN)  m_y--;
+		if (dir & LEFT)  m_x--;
+		if (dir & RIGHT) m_x++;
+
 		std::cout << "Player[" << m_id << "] moved to (" << m_x << ", " << m_y << ")\n";
 		send_move_packet(m_id);
 	}
