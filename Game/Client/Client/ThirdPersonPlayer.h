@@ -67,11 +67,15 @@ public:
 	virtual void ApplyReplicatedEvent(/* const ServerSidePlayerEvent& event */);
 
 protected:
+	virtual void SendLocalCommandToServer() {}
+
+protected:
 	// Derived player attributes
 	virtual bool UsesLocalCamera() const { return false; }
 	virtual bool UsesCrosshair() const { return false; }
 	virtual bool UsesInputMovement() const { return false; }
 	virtual bool UsesServerStateMovement() const { return false; }
+	virtual bool NeedsSendMovementState() const { return false; }
 
 protected:
 	// Initializer
@@ -187,6 +191,7 @@ protected:
 	bool UsesCrosshair() const override { return true; }
 	bool UsesInputMovement() const override { return true; }
 	bool UsesServerStateMovement() const override { return false; }
+	bool NeedsSendMovementState() const override { return false; }
 };
 
 class NetworkOwnerThirdPersonPlayer final : public IThirdPersonPlayer {
@@ -196,11 +201,12 @@ public:
 protected:
 	bool UsesLocalCamera() const override { return true; }
 	bool UsesCrosshair() const override { return true; }
-	bool UsesInputMovement() const override { return false; }
+	bool UsesInputMovement() const override { return true; }
 	bool UsesServerStateMovement() const override { return true; }
+	bool NeedsSendMovementState() const override { return true; }
 
-private:
-	void SendLocalCommandToServer();
+protected:
+	virtual void SendLocalCommandToServer() override;
 };
 
 class NetworkRemoteThirdPersonPlayer final : public IThirdPersonPlayer {
@@ -212,4 +218,5 @@ protected:
 	bool UsesCrosshair() const override { return false; }
 	bool UsesInputMovement() const override { return false; }
 	bool UsesServerStateMovement() const override { return true; }
+	bool NeedsSendMovementState() const override { return false; }
 };

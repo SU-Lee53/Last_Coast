@@ -231,8 +231,8 @@ bool UJsonSaveManager::SaveActorsToJson(const TArray<AActor*>& Actors, const FSt
 
     return bSuccess;
 }
-#if WITH_EDITOR
-bool UJsonSaveManager::SaveActorsMeshToFBX(const TArray<AActor*>& Actors)
+
+bool UJsonSaveManager::SaveActorsMesh(const TArray<AActor*>& Actors, EMeshExportFormat ExportFormat)
 {
     if (Actors.Num() == 0)
     {
@@ -244,48 +244,79 @@ bool UJsonSaveManager::SaveActorsMeshToFBX(const TArray<AActor*>& Actors)
     TSet<UStaticMesh*> FailedMeshes;
     bool bFirstExport = true;
 
-    for (int32 i = 0; i < Actors.Num(); i++)
+    for (AActor* Actor : Actors)
     {
-        AActor* Actor = Actors[i];
-        if (Actor)
+        if (!Actor)
         {
-            AStaticMeshActor* StaticMeshActor = Cast<AStaticMeshActor>(Actor);
-            if (StaticMeshActor && StaticMeshActor->GetStaticMeshComponent())
-            {
-                UStaticMesh* Mesh = StaticMeshActor->GetStaticMeshComponent()->GetStaticMesh();
-                if (Mesh)
-                {
-                    // 중복되지 않은 메시만 export
-                    if (!ExportedMeshes.Contains(Mesh) && !FailedMeshes.Contains(Mesh))
-                    {
-                        FString MeshFileName = Mesh->GetName();
-                        bool bShowOptions = bFirstExport;
-                        bFirstExport = false;
+            continue;
+        }
 
-                        if (ExportMeshToFBX(Mesh, MeshFileName, bShowOptions))
-                        {
-                            ExportedMeshes.Add(Mesh);
-                            UE_LOG(LogTemp, Log, TEXT("Exported mesh: %s"), *MeshFileName);
-                        }
-                        else
-                        {
-                            FailedMeshes.Add(Mesh);
-                            UE_LOG(LogTemp, Warning, TEXT("Failed to export mesh: %s"), *MeshFileName);
-                        }
-                    }
-                }
-            }
+        AStaticMeshActor* StaticMeshActor = Cast<AStaticMeshActor>(Actor);
+        if (!StaticMeshActor || !StaticMeshActor->GetStaticMeshComponent())
+        {
+            continue;
+        }
+
+        UStaticMesh* Mesh = StaticMeshActor->GetStaticMeshComponent()->GetStaticMesh();
+        if (!Mesh)
+        {
+            continue;
+        }
+
+        if (ExportedMeshes.Contains(Mesh) || FailedMeshes.Contains(Mesh))
+        {
+            continue;
+        }
+
+        FString MeshFileName = FPaths::MakeValidFileName(Mesh->GetName());
+
+        const bool bShowOptions = bFirstExport;
+        bFirstExport = false;
+
+        if (ExportMesh(Mesh, MeshFileName, ExportFormat, bShowOptions))
+        {
+            ExportedMeshes.Add(Mesh);
+            UE_LOG(
+                LogTemp,
+                Log,
+                TEXT("Exported mesh: %s as %s"),
+                *MeshFileName,
+                *GetMeshExportFormatName(ExportFormat)
+            );
+        }
+        else
+        {
+            FailedMeshes.Add(Mesh);
+            UE_LOG(
+                LogTemp,
+                Warning,
+                TEXT("Failed to export mesh: %s as %s"),
+                *MeshFileName,
+                *GetMeshExportFormatName(ExportFormat)
+            );
         }
     }
 
-    // 결과 요약
-    int32 TotalUniqueMeshes = ExportedMeshes.Num() + FailedMeshes.Num();
-    bool bSuccess = (FailedMeshes.Num() == 0) && (ExportedMeshes.Num() > 0);
+    const int32 TotalUniqueMeshes = ExportedMeshes.Num() + FailedMeshes.Num();
+    const bool bSuccess = FailedMeshes.Num() == 0 && ExportedMeshes.Num() > 0;
 
-    UE_LOG(LogTemp, Log, TEXT("Mesh export complete: %d succeeded, %d failed out of %d unique meshes"),
-        ExportedMeshes.Num(), FailedMeshes.Num(), TotalUniqueMeshes);
+    UE_LOG(
+        LogTemp,
+        Log,
+        TEXT("Mesh export complete [%s]: %d succeeded, %d failed out of %d unique meshes"),
+        *GetMeshExportFormatName(ExportFormat),
+        ExportedMeshes.Num(),
+        FailedMeshes.Num(),
+        TotalUniqueMeshes
+    );
 
     return bSuccess;
+}
+
+#if WITH_EDITOR
+bool UJsonSaveManager::SaveActorsMeshToFBX(const TArray<AActor*>& Actors)
+{
+    return SaveActorsMesh(Actors, EMeshExportFormat::FBX);
 }
 #endif
 
@@ -406,6 +437,90 @@ bool UJsonSaveManager::ExportMeshToFBX(UStaticMesh* Mesh, const FString& FileNam
     }
 
     return bSuccess;
+}
+
+bool UJsonSaveManager::ExportMesh(UStaticMesh* Mesh, const FString& FileName, EMeshExportFormat ExportFormat, bool bShowOptions)
+{
+    if (!Mesh)
+    {
+        return false;
+    }
+
+    const FString MeshDirectory =
+        FPaths::ProjectSavedDir() + TEXT("../ExportedMeshes/");
+
+    IPlatformFile& PlatformFile =
+        FPlatformFileManager::Get().GetPlatformFile();
+
+    if (!PlatformFile.DirectoryExists(*MeshDirectory))
+    {
+        PlatformFile.CreateDirectoryTree(*MeshDirectory);
+    }
+
+    const FString Extension = GetMeshExportExtension(ExportFormat);
+    const FString FullPath = FPaths::Combine(
+        MeshDirectory,
+        FileName + TEXT(".") + Extension
+    );
+
+    UAssetExportTask* ExportTask = NewObject<UAssetExportTask>();
+    ExportTask->Object = Mesh;
+    ExportTask->Exporter = nullptr;              // 확장자로 exporter 자동 선택
+    ExportTask->Filename = FullPath;
+    ExportTask->bSelected = false;
+    ExportTask->bReplaceIdentical = true;
+    ExportTask->bPrompt = bShowOptions;
+    ExportTask->bUseFileArchive = false;
+    ExportTask->bWriteEmptyFiles = false;
+    ExportTask->bAutomated = !bShowOptions;
+
+    const bool bSuccess = UExporter::RunAssetExportTask(ExportTask);
+
+    if (bSuccess)
+    {
+        UE_LOG(LogTemp, Log, TEXT("Successfully exported mesh to: %s"), *FullPath);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to export mesh to: %s"), *FullPath);
+    }
+
+    return bSuccess;
+}
+
+FString UJsonSaveManager::GetMeshExportExtension(EMeshExportFormat ExportFormat)
+{
+    switch (ExportFormat)
+    {
+    case EMeshExportFormat::FBX:
+        return TEXT("fbx");
+
+    case EMeshExportFormat::GLTF:
+        return TEXT("gltf");
+
+    case EMeshExportFormat::GLB:
+        return TEXT("glb");
+
+    default:
+        return TEXT("glb");
+    }
+}
+FString UJsonSaveManager::GetMeshExportFormatName(EMeshExportFormat ExportFormat)
+{
+    switch (ExportFormat)
+    {
+    case EMeshExportFormat::FBX:
+        return TEXT("FBX");
+
+    case EMeshExportFormat::GLTF:
+        return TEXT("glTF");
+
+    case EMeshExportFormat::GLB:
+        return TEXT("GLB");
+
+    default:
+        return TEXT("Unknown");
+    }
 }
 #endif
 

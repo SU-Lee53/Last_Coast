@@ -84,6 +84,16 @@ float Camera::GetAspectRatio() const
 	return m_fAspectRatio;
 }
 
+void Camera::SetWorldMatrix(const Matrix& mtxWorld)
+{
+	m_mtxWorld = mtxWorld;
+
+	m_v3Right		= Vector3(m_mtxWorld._11, m_mtxWorld._12, m_mtxWorld._13);
+	m_v3Up			= Vector3(m_mtxWorld._21, m_mtxWorld._22, m_mtxWorld._23);
+	m_v3Look		= Vector3(m_mtxWorld._31, m_mtxWorld._32, m_mtxWorld._33);
+	m_v3Position	= Vector3(m_mtxWorld._41, m_mtxWorld._42, m_mtxWorld._43);
+}
+
 void Camera::SetPosition(float x, float y, float z)
 {
 	SetPosition(Vector3(x, y, z));

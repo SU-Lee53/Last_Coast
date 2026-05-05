@@ -185,6 +185,7 @@
     <ClInclude Include="DirectionalCascadeShadowMapPass.h" />
     <ClInclude Include="DynamicObject.h" />
     <ClInclude Include="MuzzleFlashEffect.h" />
+    <ClInclude Include="NetworkGameTestScene.h" />
     <ClInclude Include="ParticleEffect.h" />
     <ClInclude Include="ParticleEmitter.h" />
     <ClInclude Include="ParticleManager.h" />
@@ -347,6 +348,7 @@
     <ClCompile Include="DirectionalCascadeShadowMapPass.cpp" />
     <ClCompile Include="DynamicObject.cpp" />
     <ClCompile Include="MuzzleFlashEffect.cpp" />
+    <ClCompile Include="NetworkGameTestScene.cpp" />
     <ClCompile Include="ParticleEffect.cpp" />
     <ClCompile Include="ParticleEmitter.cpp" />
     <ClCompile Include="ParticleManager.cpp" />

@@ -90,6 +90,9 @@ void IThirdPersonPlayer::PostUpdate()
 {
 	if (UsesInputMovement()) {
 		ApplyInputMovement();
+		if (NeedsSendMovementState()) {
+			SendLocalCommandToServer();
+		}
 	}
 	else if (UsesServerStateMovement()) {
 		ApplyServerMovementXZ();
@@ -142,7 +145,8 @@ void IThirdPersonPlayer::ApplyReplicatedState(/* const ServerSidePlayerState& st
 }
 
 void IThirdPersonPlayer::ApplyReplicatedEvent(/* const ServerSidePlayerEvent& event */)
-{/*
+{
+	/*
 		TODO :
 		서버 이벤트 타입에 따라 액션 함수를 호출
 
@@ -837,7 +841,6 @@ void LocalThirdPersonPlayer::ProcessInput()
 		ToggleMouseLook();
 	}
 
-
 	ProcessLocalCameraInput();
 	ProcessLocalMovementInput();
 	ProcessLocalActionInput();
@@ -855,9 +858,11 @@ void NetworkOwnerThirdPersonPlayer::ProcessInput()
 
 	// 카메라는 클라가 돌림
 	ProcessLocalCameraInput();
+	ProcessLocalMovementInput();
+	ProcessLocalActionInput();
 
 	// 서버로 이동 패킷 전송
-	SendLocalCommandToServer();
+	//SendLocalCommandToServer();
 
 	// 직접 이동/발사/근접공격 확정은 하지 않음.
 	// 최종 이동, 애니메이션, 피격, 무기 변경 등은 서버에서 받은 ApplyReplicatedState / ApplyReplicatedEvent 쪽에서 처리.
@@ -868,7 +873,7 @@ void NetworkOwnerThirdPersonPlayer::SendLocalCommandToServer()
 	// TODO : 서버로 이동 관련 입력을 전송
 	// - 필요한 것 (용도별)
 	//		- 이동처리:
-	//			- W/A/S/D 이동 입력
+	//			- W/A/S/D 이동 입력 -> 행렬로 변경
 	//			- 달리기 입력 여부
 	//		- 애니메이션 + 기타 처리
 	//			- 달리기 입력 여부

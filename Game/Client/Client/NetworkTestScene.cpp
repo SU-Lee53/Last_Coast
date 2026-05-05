@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "NetworkTestScene.h"
 #include "DebugPlayer.h"
+#include "ThirdPersonPlayer.h"
 
 #include "TerrainTestScene.h"
 
