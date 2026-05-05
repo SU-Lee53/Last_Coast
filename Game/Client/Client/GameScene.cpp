@@ -13,7 +13,7 @@ void GameScene::BuildObjects()
 	using namespace std::chrono;
 
 	m_pUIBoard = std::make_unique<UIBoard>();
-	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	m_pPlayer = std::make_shared<LocalThirdPersonPlayer>();
 
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize();

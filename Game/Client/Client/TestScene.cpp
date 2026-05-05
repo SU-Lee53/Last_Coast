@@ -15,7 +15,7 @@ void TestScene::BuildObjects()
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize();
 
-	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	m_pPlayer = std::make_shared<LocalThirdPersonPlayer>();
 	m_pPlayer->Initialize();
 
 	for (int i = 0; i < 100; ++i) {
@@ -211,7 +211,7 @@ void TestScene::ProcessPlayerShoot()
 
 void TestScene::RemoveDeadZombies()
 {
-	m_World.EraseIfAlive<Zombie>([](const std::shared_ptr<IGameObject>& obj) {
+	m_World.RemoveIfAlive<Zombie>([](const std::shared_ptr<IGameObject>& obj) {
 		auto pZombie = std::dynamic_pointer_cast<Zombie>(obj);
 		return pZombie && pZombie->IsReadyToRemove();
 	});

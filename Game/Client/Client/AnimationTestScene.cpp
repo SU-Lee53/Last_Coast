@@ -23,7 +23,7 @@ void AnimationTestScene::BuildObjects()
 	m_pLights.reserve(1);
 	m_pLights.push_back(pLight);
 
-	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	m_pPlayer = std::make_shared<LocalThirdPersonPlayer>();
 	//m_pPlayer = std::make_shared<DebugPlayer>();
 	//LoadFromFiles("LightTest");
 

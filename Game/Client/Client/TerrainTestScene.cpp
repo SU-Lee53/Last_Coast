@@ -11,7 +11,7 @@ void TerrainTestScene::BuildObjects()
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize();
 
-	m_pPlayer = std::make_shared<ThirdPersonPlayer>();
+	m_pPlayer = std::make_shared<LocalThirdPersonPlayer>();
 
 	m_pTerrain = std::make_shared<TerrainObject>();
 	m_pTerrain->LoadFromFiles("TEST");
