@@ -115,7 +115,7 @@ void IThirdPersonPlayer::ApplyReplicatedState(/* const ServerSidePlayerState& st
 		TODO :
 		1.
 		서버에서 받은 패킷에서 XZ 좌표를 이용해 플레이어 위치 반영
-		좌표 보간이 필요하다면 보간이후 SetTargetXZ 호출이 필요
+		좌표 보간이 필요하다면 보간 이후 위치 반영을 해야함
 		보간함수는 자유롭게 구현
 
 		Y 는 클라이언트가 Terrain/Collision 여부를 보고 결정
