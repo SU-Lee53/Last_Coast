@@ -195,6 +195,7 @@
     <ClInclude Include="ParticleRenderBatch.h" />
     <ClInclude Include="ParticleTextureCache.h" />
     <ClInclude Include="ParticleTypes.h" />
+    <ClInclude Include="RayTraceUtils.h" />
     <ClInclude Include="TextRenderer.h" />
     <ClInclude Include="GameFramework.h" />
     <ClInclude Include="GameObject.h" />

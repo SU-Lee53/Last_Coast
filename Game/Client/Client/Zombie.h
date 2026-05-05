@@ -38,6 +38,7 @@ public:
 	virtual void OnBeginCollision(const CollisionResult& collisionResult) override;
 	virtual void OnWhileCollision(const CollisionResult& collisionResult) override;
 	virtual void OnEndCollision(const CollisionResult& collisionResult) override;
+	virtual void OnTraceHit(const RayTraceHitResult& hitResult) override;
 
 private:
 	void ApplyGravity();
@@ -74,4 +75,27 @@ private:
 	float m_fHP = 100.f;
 	bool m_bDying = false;
 	bool m_bReadyToRemove = false;
+};
+
+template<>
+struct TraceHitTester<Zombie>
+{
+	static bool Intersects(
+		const std::shared_ptr<Zombie>& pZombie,
+		const XMVECTOR& rayOrigin,
+		const XMVECTOR& rayDir,
+		OUT float& outDist)
+	{
+		auto pCollider = pZombie->GetComponent<PlayerCollider>();
+		if (!pCollider) {
+			return false;
+		}
+
+		BoundingBox aabb;
+		pCollider->GetCapsuleWorld().CreateAABBFromCapsule(aabb);
+
+		return aabb.Intersects(rayOrigin, rayDir, outDist);
+	}
+
+	static constexpr TRACE_HIT_TYPE HitType = TRACE_HIT_TYPE::ZOMBIE;
 };

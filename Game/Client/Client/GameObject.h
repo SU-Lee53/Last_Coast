@@ -67,6 +67,7 @@ public:
 	virtual void OnBeginCollision(const CollisionResult& collisionResult) {};
 	virtual void OnWhileCollision(const CollisionResult& collisionResult) {};
 	virtual void OnEndCollision(const CollisionResult& collisionResult) {};
+	virtual void OnTraceHit(const RayTraceHitResult& hitResult) {};
 
 public:
 	std::shared_ptr<IGameObject> FindFrame(const std::string& strFrameName);

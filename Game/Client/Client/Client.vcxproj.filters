@@ -509,6 +509,9 @@
     </ClInclude>
     <ClInclude Include="ParticlePass.h" />
     <ClInclude Include="BloodEffect.h" />
+    <ClInclude Include="RayTraceUtils.h">
+      <Filter>99.Utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">

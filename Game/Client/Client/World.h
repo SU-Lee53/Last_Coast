@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "TypedObjectPool.h"
+#include "RayTraceUtils.h"
 
 template<typename T, typename... Types>
 concept OneOf = (std::same_as<T, Types> || ...);
@@ -155,10 +156,103 @@ public:
 		return GetObjects<T>().RemoveIfAlive(std::forward<Func>(func), std::forward<Args>(args)...);
 	}
 
+public:
+	// Ray(line)trace
+	template<typename... TargetTypes> requires (OneOf<TargetTypes, ObjTypes...> && ...)
+	bool LineTraceSingle(const RayTraceDesc& desc, OUT RayTraceHitResult& outHit) const;
+
+private:
+	// Ray(line) trace helper
+	template<typename T>
+	void CheckTraceAgainstPool(
+		const RayTraceDesc& desc,
+		const Vector3& v3Dir,
+		const XMVECTOR& rayOrigin,
+		const XMVECTOR& rayDir,
+		OUT float& fBestDist,
+		OUT bool& bHit,
+		OUT RayTraceHitResult& outHit) const;
+
 private:
 	std::tuple<TypedObjectPool<ObjTypes>...> m_Objects;
 };
 
+
+
+template<typename... ObjTypes> requires (std::derived_from<ObjTypes, IGameObject> && ...)
+template<typename... TargetTypes> requires (OneOf<TargetTypes, ObjTypes...> && ...)
+bool World<ObjTypes...>::LineTraceSingle(const RayTraceDesc& desc, OUT RayTraceHitResult& outHit) const
+{
+	outHit = {};
+
+	Vector3 v3Dir = desc.v3Direction;
+	if (v3Dir.LengthSquared() <= 1e-8f) {
+		return false;
+	}
+	v3Dir.Normalize();
+
+	const XMVECTOR rayOrigin = XMLoadFloat3(&desc.v3Origin);
+	const XMVECTOR rayDir = XMLoadFloat3(&v3Dir);
+
+	bool bHit = false;
+	float fBestDist = desc.fMaxDistance;
+
+	(CheckTraceAgainstPool<TargetTypes>(
+		desc,
+		v3Dir,
+		rayOrigin,
+		rayDir,
+		fBestDist,
+		bHit,
+		outHit), ...);
+
+	if (bHit && outHit.pHitObject) {
+		outHit.pHitObject->OnTraceHit(outHit);
+	}
+
+	return bHit;
+}
+
+template<typename... ObjTypes> requires (std::derived_from<ObjTypes, IGameObject> && ...)
+template<typename T>
+void World<ObjTypes...>::CheckTraceAgainstPool(const RayTraceDesc& desc, const Vector3& v3Dir, const XMVECTOR& rayOrigin, const XMVECTOR& rayDir, OUT float& fBestDist, OUT bool& bHit, OUT RayTraceHitResult& outHit) const
+{
+	for (const auto& pObj : GetObjects<T>()) {
+		if (!pObj) {
+			continue;
+		}
+
+		if (pObj == desc.pInstigator || pObj == desc.pSourceObject) {
+			continue;
+		}
+
+		float fDist = 0.f;
+		if (!TraceHitTester<T>::Intersects(pObj, rayOrigin, rayDir, fDist)) {
+			continue;
+		}
+
+		if (fDist < 0.f || fDist > fBestDist) {
+			continue;
+		}
+
+		fBestDist = fDist;
+		bHit = true;
+
+		outHit.bBlockingHit = true;
+		outHit.eHitType = TraceHitTester<T>::HitType;
+		outHit.fDistance = fDist;
+
+		outHit.v3Origin = desc.v3Origin;
+		outHit.v3Direction = v3Dir;
+		outHit.v3ImpactPoint = desc.v3Origin + v3Dir * fDist;
+		outHit.v3ImpactNormal = -v3Dir; // 임시
+
+		outHit.fDamage = desc.fDamage;
+		outHit.pInstigator = desc.pInstigator;
+		outHit.pSourceObject = desc.pSourceObject;
+		outHit.pHitObject = pObj;
+	}
+}
 
 template<typename... ObjTypes> requires (std::derived_from<ObjTypes, IGameObject> && ...)
 void World<ObjTypes...>::IntiializeObjects()

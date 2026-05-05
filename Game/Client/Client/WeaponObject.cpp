@@ -3,6 +3,9 @@
 #include "MuzzleFlashEffect.h"
 #include "BloodEffect.h"
 
+#include "StaticObject.h"
+#include "Zombie.h"
+
 void WeaponObject::Initialize() 
 {
 	for (auto& component : m_pComponents) {
@@ -43,16 +46,30 @@ bool WeaponObject::TryFire()
 {
 	if (m_fTimeAfterFire >= m_fFireInterval) {
 		m_fTimeAfterFire = 0.f;
-		ParticleEffectSpawnDesc desc;
+
+		const auto& pCamera = CUR_SCENE->GetCamera();
+		const auto& pPlayer = CUR_SCENE->GetPlayer();
+
+		RayTraceDesc rayDesc{};
+		rayDesc.v3Origin = pCamera->GetPosition();
+		rayDesc.v3Direction = pCamera->GetLook();
+		rayDesc.fMaxDistance = 5000.f;
+		rayDesc.fDamage = 25.f;
+		rayDesc.pInstigator = pPlayer;
+		rayDesc.pSourceObject = shared_from_this();
+
+		RayTraceHitResult hit{};
+		CUR_SCENE->GetWorld().LineTraceSingle<StaticObject, Zombie>(rayDesc, hit);
+
+		ParticleEffectSpawnDesc particleDesc;
 		{
-			desc.v3Position = m_v3MuzzlePositionWorld;
-			desc.v3Direction = GetTransform()->GetLook();
-			desc.v3Normal = GetTransform()->GetUp();
-			desc.mtxWorld = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
+			particleDesc.v3Position = m_v3MuzzlePositionWorld;
+			particleDesc.v3Direction = GetTransform()->GetLook();
+			particleDesc.v3Normal = GetTransform()->GetUp();
+			particleDesc.mtxWorld = Matrix::CreateWorld(particleDesc.v3Position, particleDesc.v3Direction, particleDesc.v3Normal);
 		};
 
-		//PARTICLE->Spawn<MuzzleFlashEffect>(desc);
-		PARTICLE->Spawn<BloodEffect>(desc);
+		PARTICLE->Spawn<MuzzleFlashEffect>(particleDesc);
 		return true;
 	}
 

@@ -59,3 +59,8 @@ void StaticObject::PostUpdate()
 		pChild->PostUpdate();
 	}
 }
+
+void StaticObject::OnTraceHit(const RayTraceHitResult& hitResult)
+{
+	// TODO : Make spark effect
+}

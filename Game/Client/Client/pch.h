@@ -129,6 +129,7 @@ using namespace AIDLL;
 #include "CB_Types.h"
 #include "Concepts.h"
 #include "Utility.h"
+#include "RayTraceUtils.h"
 #include "ShaderResource.h"
 #include "DescriptorHeap.h"
 #include "Packets.h"

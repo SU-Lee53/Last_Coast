@@ -2,8 +2,7 @@
 #include "Zombie.h"
 #include "NodeObject.h"
 #include "ZombieAnimationController.h"
-// #include "Player.h"           ← 프로젝트에 맞게 include
-// #include "AIManagerWrapper.h" ← 싱글톤 래퍼
+#include "BloodEffect.h"
 
 Zombie::Zombie()
 {
@@ -237,6 +236,32 @@ void Zombie::OnWhileCollision(const CollisionResult& collisionResult)
 
 void Zombie::OnEndCollision(const CollisionResult& collisionResult)
 {
+}
+
+void Zombie::OnTraceHit(const RayTraceHitResult& hitResult)
+{
+	if (IsDead()) {
+		return;
+	}
+
+	if (hitResult.fDamage > 0.f) {
+		TakeDamage(hitResult.fDamage);
+	}
+
+	Vector3 v3BloodDir = -hitResult.v3Direction;
+	if (v3BloodDir.LengthSquared() > 1e-8f) {
+		v3BloodDir.Normalize();
+	}
+
+	ParticleEffectSpawnDesc desc;
+	{
+		desc.v3Position = hitResult.v3ImpactPoint;
+		desc.v3Direction = hitResult.v3Direction;
+		desc.v3Normal = hitResult.v3ImpactNormal;
+		desc.mtxWorld = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
+	};
+
+	PARTICLE->Spawn<BloodEffect>(desc);
 }
 
 void Zombie::TriggerAttackHit()

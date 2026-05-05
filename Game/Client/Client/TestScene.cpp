@@ -171,7 +171,7 @@ void TestScene::Update()
 	}
 	ImGui::End();
 
-	ProcessPlayerShoot();
+	//ProcessPlayerShoot();
 	RemoveDeadZombies();
 
 }
