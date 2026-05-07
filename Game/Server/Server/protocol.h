@@ -10,6 +10,7 @@ constexpr int BUF_SIZE = 512;
 
 enum PACKET_TYPE {
 	C2S_LOGIN, C2S_MOVE,
+	C2S_PLAYER_POSITION,                          // 클라이언트 → 서버: 플레이어 위치/방향 (20Hz)
 	S2C_LOGIN_RESULT, S2C_AVATAR_INFO,
 	S2C_ADD_PLAYER, S2C_REMOVE_PLAYER, S2C_MOVE_PLAYER,
 	S2C_SPAWN_ZOMBIE,                             // 서버 → 클라이언트: 좀비 스폰

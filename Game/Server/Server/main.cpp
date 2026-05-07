@@ -71,89 +71,74 @@ static void BroadcastAll(Fn fn)
 // ─────────────────────────────────────────────────────────────────────────────
 // 게임 틱 스레드 (30Hz) — AI 업데이트 + 좀비 상태 브로드캐스트
 // ─────────────────────────────────────────────────────────────────────────────
-//static DWORD WINAPI GameTickThread(LPVOID)
-//{
-//	timeBeginPeriod(1); // 1ms 정밀도 타이머 활성화
-//
-//	while (g_bRunning)
-//	{
-//		DWORD dwTickStart = timeGetTime();
-//
-//		// ── 플레이어 위치 스냅샷 ─────────────────────────────────────────────
-//		unordered_map<int, Vector3> playerSnapshots;
-//		{
-//			lock_guard<mutex> lock(g_Mutex);
-//			playerSnapshots = g_PlayerPositions;
-//		}
-//
-//		// ── AI Tick ──────────────────────────────────────────────────────────
-//		vector<pair<int, int>> attacks; // (zombieId, targetPlayerId)
-//		g_ZombieManager.Tick(TICK_DT, playerSnapshots, attacks);
-//
-//		// ── 결과 브로드캐스트 ────────────────────────────────────────────────
-//		{
-//			lock_guard<mutex> lock(g_Mutex);
-//
-//			// 좀비 상태 전송
-//			for (auto& [nId, zombie] : g_ZombieManager.GetZombies())
-//			{
-//				if (!zombie.bAlive || !zombie.pAgent) continue;
-//
-//				Vector3 v3Pos = zombie.pAgent->GetPosition();
-//				AIBehaviorState   aiState = zombie.pAgent->GetBehaviorState();
-//				ZombieBehaviorState state =
-//					static_cast<ZombieBehaviorState>(static_cast<int>(aiState));
-//
-//				// 다음 waypoint: 현재 경로의 최종 목표
-//				const auto& dbg = zombie.pAgent->GetPathDebugInfo();
-//				float waypointX = v3Pos.x;
-//				float waypointZ = v3Pos.z;
-//				if (!dbg.Waypoints.empty()) {
-//					waypointX = dbg.Waypoints.back().x;
-//					waypointZ = dbg.Waypoints.back().z;
-//				}
-//
-//				BroadcastAll([&](SESSION& cl) {
-//					cl.send_zombie_state(nId, v3Pos.x, v3Pos.z,
-//						zombie.fYaw,
-//						waypointX, waypointZ,
-//						state);
-//					});
-//			}
-//
-//			// 공격 이벤트 전송
-//			for (auto& [nZombieId, nTargetId] : attacks)
-//			{
-//				BroadcastAll([&](SESSION& cl) {
-//					cl.send_zombie_attack(nZombieId, nTargetId, 10.f);
-//					});
-//			}
-//		}
-//
-//		// ── 다음 틱까지 대기 ─────────────────────────────────────────────────
-//		DWORD dwElapsed = timeGetTime() - dwTickStart;
-//		if (dwElapsed < TICK_MS)
-//			Sleep(TICK_MS - dwElapsed);
-//	}
-//
-//	timeEndPeriod(1);
-//	return 0;
-//}
+static DWORD WINAPI GameTickThread(LPVOID)
+{
+	timeBeginPeriod(1); // 1ms 정밀도 타이머 활성화
+
+	while (g_bRunning)
+	{
+		DWORD dwTickStart = timeGetTime();
+
+		// ── 플레이어 위치 스냅샷 ─────────────────────────────────────────────
+		unordered_map<int, Vector3> playerSnapshots;
+		{
+			lock_guard<mutex> lock(g_Mutex);
+			playerSnapshots = g_PlayerPositions;
+		}
+
+		// ── AI Tick (락 밖에서 실행 — AIManager 자체 스레드 안전) ───────────
+		vector<pair<int, int>> attacks; // (zombieId, targetPlayerId)
+		g_ZombieManager.Tick(TICK_DT, playerSnapshots, attacks);
+
+		// ── 결과 브로드캐스트 ────────────────────────────────────────────────
+		{
+			lock_guard<mutex> lock(g_Mutex);
+
+			// 좀비 상태 전송
+			for (auto& [nId, zombie] : g_ZombieManager.GetZombies())
+			{
+				if (!zombie.bAlive || !zombie.pAgent) continue;
+
+				Vector3 v3Pos = zombie.pAgent->GetPosition();
+				ZombieBehaviorState state = static_cast<ZombieBehaviorState>(
+					static_cast<int>(zombie.pAgent->GetBehaviorState()));
+
+				// 다음 waypoint: 경로의 마지막 웨이포인트 (없으면 현재 위치)
+				const auto& dbg = zombie.pAgent->GetPathDebugInfo();
+				float waypointX = v3Pos.x;
+				float waypointZ = v3Pos.z;
+				if (!dbg.Waypoints.empty()) {
+					waypointX = dbg.Waypoints.back().x;
+					waypointZ = dbg.Waypoints.back().z;
+				}
+
+				BroadcastAll([&](Session& cl) {
+					cl.send_zombie_state(nId, v3Pos.x, v3Pos.z,
+						zombie.fYaw, waypointX, waypointZ, state);
+				});
+			}
+
+			// 공격 이벤트 전송
+			for (auto& [nZombieId, nTargetId] : attacks)
+			{
+				BroadcastAll([&](Session& cl) {
+					cl.send_zombie_attack(nZombieId, nTargetId, 10.f);
+				});
+			}
+		}
+
+		// ── 다음 틱까지 대기 ─────────────────────────────────────────────────
+		DWORD dwElapsed = timeGetTime() - dwTickStart;
+		if (dwElapsed < TICK_MS)
+			Sleep(TICK_MS - dwElapsed);
+	}
+
+	timeEndPeriod(1);
+	return 0;
+}
 
 void disconnect(int id)
 {
-	// ── ZombieManager 초기화 ─────────────────────────────────────────────────
-	if (!g_ZombieManager.Initialize(NAVMESH_PATH))
-	{
-		std::cout << "[Server] ZombieManager 초기화 실패. NavMesh 경로 확인: " << NAVMESH_PATH << "\n";
-		// NavMesh 없이 계속 진행 (좀비 AI 비활성)
-	}
-	else
-	{
-		for (int i = 0; i < INITIAL_ZOMBIES; ++i)
-			g_ZombieManager.SpawnZombie();
-	}
-
 	Session& cl = clients[id];
 
 	if (!cl.m_is_connected) return;
@@ -294,7 +279,19 @@ void worker_thread()
 
 int main()
 {
-	/*HANDLE hTickThread = CreateThread(NULL, 0, GameTickThread, NULL, 0, NULL);*/
+	// ── ZombieManager 초기화 + 초기 좀비 스폰 ───────────────────────────────
+	if (!g_ZombieManager.Initialize(NAVMESH_PATH))
+	{
+		std::cout << "[Server] ZombieManager 초기화 실패. NavMesh 경로 확인: " << NAVMESH_PATH << "\n";
+	}
+	else
+	{
+		for (int i = 0; i < INITIAL_ZOMBIES; ++i)
+			g_ZombieManager.SpawnZombie();
+	}
+
+	// ── 게임 틱 스레드 시작 (30Hz) ───────────────────────────────────────────
+	HANDLE hTickThread = CreateThread(NULL, 0, GameTickThread, NULL, 0, NULL);
 
 	WSADATA WSAData;
 	WSAStartup(MAKEWORD(2, 2), &WSAData);

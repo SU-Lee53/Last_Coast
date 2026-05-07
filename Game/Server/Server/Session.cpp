@@ -1,5 +1,10 @@
 ﻿#include "pch.h"
 #include "Session.h"
+#include "ZombieManager.h"
+
+extern ZombieManager                g_ZombieManager;
+extern std::unordered_map<int, Vector3> g_PlayerPositions;
+extern std::mutex                   g_Mutex;
 
 void Session::init(SOCKET s, int id, Room* room)
 {
@@ -102,26 +107,34 @@ bool Session::process_packet(unsigned char* p)
 		strncpy_s(m_username, packet->username, MAX_NAME_LEN);
 		std::cout << "Player[" << m_id << "] logged in as " << m_username << std::endl;
 		send_avatar_info();
+
+		// 이미 스폰된 좀비 목록을 신규 클라이언트에게 전송
+		for (auto& [nZombieId, zombie] : g_ZombieManager.GetZombies())
+		{
+			if (!zombie.bAlive || !zombie.pAgent) continue;
+			send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
+		}
 	}
 				  break;
 	case C2S_MOVE: {
 		C2S_Move* packet = reinterpret_cast<C2S_Move*>(p);
 		DIRECTION dir = packet->dir;
-		// TODO : Move 로직
 		switch (dir) {
-		case UP: m_y++;
-			break;
-		case DOWN: m_y--;
-			break;
-		case LEFT: m_x--;
-			break;
-		case RIGHT: m_x++;
-			break;
+		case UP:    m_y++; break;
+		case DOWN:  m_y--; break;
+		case LEFT:  m_x--; break;
+		case RIGHT: m_x++; break;
 		}
 		std::cout << "Player[" << m_id << "] moved to (" << m_x << ", " << m_y << ")\n";
 		send_move_packet(m_id);
 	}
 				 break;
+	case C2S_PLAYER_POSITION: {
+		C2S_PlayerPosition* packet = reinterpret_cast<C2S_PlayerPosition*>(p);
+		std::lock_guard<std::mutex> lock(g_Mutex);
+		g_PlayerPositions[m_id] = Vector3(packet->x, packet->y, packet->z);
+	}
+							break;
 	default:
 		std::cout << "Unknown packet type received from player[" << m_id << "].\n";
 		return false;
