@@ -18,7 +18,7 @@ public:
 
 public:
 	IGameObject(OBJECT_MOBILITY_TYPE eType);
-	~IGameObject();
+	virtual ~IGameObject();
 
 public:
 	virtual void Initialize() = 0;

@@ -537,7 +537,8 @@ void RenderManager::CreateSwapChain()
 	dxgiSwapChainDesc.Scaling = DXGI_SCALING_NONE;
 	dxgiSwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	dxgiSwapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-	dxgiSwapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING | DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+	//dxgiSwapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING | DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+	dxgiSwapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
 	DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc;
 	fsSwapChainDesc.Windowed = TRUE;
@@ -601,8 +602,6 @@ void RenderManager::CreateDepthStencil()
 
 void RenderManager::Present()
 {
-	Fence();
-
 	// 0 : V-Sync OFF
 	// 1 : V-Sync ON
 	uint32 unSyncInterval = D3DCore::g_unSyncInterval;
@@ -619,6 +618,8 @@ void RenderManager::Present()
 		auto hr = DEVICE->GetDeviceRemovedReason();
 		__debugbreak();
 	}
+
+	Fence();
 
 	m_unBackBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 

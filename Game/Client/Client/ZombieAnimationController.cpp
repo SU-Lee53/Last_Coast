@@ -13,12 +13,12 @@ void ZombieAnimationStateMachine::InitializeStateGraph()
 	std::shared_ptr<AnimationState> pWalk = std::make_shared<AnimationState>();
 
 	pIdle->strName = "Idle";
-	pIdle->pAnimationToPlay = ANIMATION->Get("Breathing Idle");
+	pIdle->pAnimationToPlay = ANIMATION->Get("Zombie Idle");
 	pIdle->eAnimationPlayType = ANIMATION_PLAY_LOOP;
 	pIdle->fnStateTransitionCallback = IdleCallback;
 
 	pWalk->strName = "Walk";
-	pWalk->pAnimationToPlay = ANIMATION->Get("Walking");
+	pWalk->pAnimationToPlay = ANIMATION->Get("Zombie Running");
 	pWalk->eAnimationPlayType = ANIMATION_PLAY_LOOP;
 	pWalk->fnStateTransitionCallback = WalkCallback;
 

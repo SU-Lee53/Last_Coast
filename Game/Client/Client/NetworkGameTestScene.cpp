@@ -18,7 +18,7 @@ void NetworkGameTestScene::BuildObjects()
 	m_pTerrain->LoadFromFiles("Game");
 
 	if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
-		pThirdPerson->GiveWeapon(WEAPON_TYPE::AK);
+		pThirdPerson->GiveWeapon(WEAPON_TYPE::M4);
 	}
 
 	//LoadFromFiles("Game");

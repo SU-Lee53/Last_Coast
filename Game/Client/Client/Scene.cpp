@@ -459,8 +459,9 @@ void Scene::PrepareRender()
 		pObj->Render();
 	}
 
+	m_World.PrepareRender<NetworkRemoteThirdPersonPlayer>();
 	m_World.PrepareRender<Zombie>();
-
+	m_World.PrepareRender<WeaponObject>();
 }
 
 void Scene::CheckCollision()
@@ -690,7 +691,7 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 			pObj->GetTransform()->SetWorldMatrix(mtxWorldMatrix);
 
 			std::string strMeshName = jObject["MeshName"].get<std::string>();
-			auto pMeshObject = MODEL->LoadOrGet(strMeshName)->CopyObject<NodeObject>();
+			auto pMeshObject = MODEL->LoadOrGet(strMeshName, true)->CopyObject<NodeObject>();
 			pObj->SetChild(pMeshObject);
 
 			//m_pGameObjects.push_back(pObj);

@@ -53,7 +53,8 @@ std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& 
 	nlohmann::json j = nlohmann::json::from_bson(buf);
 
 	std::shared_ptr<IGameObject> pGameObject;
-	pGameObject = LoadFrameHierarchyFromFile(strFileName, nullptr, nullptr, j["Hierarchy"], bUseNameFilenameOnRoot);
+	int nIndex = 0;
+	pGameObject = LoadFrameHierarchyFromFile(strFileName, nullptr, nullptr, j["Hierarchy"], bUseNameFilenameOnRoot, &nIndex);
 
 	size_t nBones = j["nBones"].get<size_t>();
 	if (nBones != 0) {
@@ -88,12 +89,12 @@ std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& 
 	return pGameObject;
 }
 
-std::shared_ptr<IGameObject> ModelManager::LoadFrameHierarchyFromFile(const std::string& strFilename, std::shared_ptr<IGameObject> pParent, std::shared_ptr<IGameObject> pRoot, const nlohmann::json& inJson, bool bUseNameFilenameOnRoot)
+std::shared_ptr<IGameObject> ModelManager::LoadFrameHierarchyFromFile(const std::string& strFilename, std::shared_ptr<IGameObject> pParent, std::shared_ptr<IGameObject> pRoot, const nlohmann::json& inJson, bool bUseNameFilenameOnRoot, int32* poutnIndex)
 {
 	std::shared_ptr<IGameObject> pGameObject = std::make_shared<NodeObject>();
 
 	unsigned nMeshes = inJson["nMeshes"].get<unsigned>();
-	pGameObject->m_strFrameName = (bUseNameFilenameOnRoot) ? strFilename : inJson["Name"].get<std::string>();
+	pGameObject->m_strFrameName = (bUseNameFilenameOnRoot) ? strFilename + std::to_string(*poutnIndex) : inJson["Name"].get<std::string>();
 	pGameObject->GetTransform()->SetFrameMatrix(::ReadMatrixFromJson(inJson["Transform"]));
 	
 
@@ -123,7 +124,8 @@ std::shared_ptr<IGameObject> ModelManager::LoadFrameHierarchyFromFile(const std:
 	unsigned nChildren = inJson["nChildren"].get<unsigned>();
 	pGameObject->m_pChildren.reserve(nChildren);
 	for (int i = 0; i < nChildren; ++i) {
-		pGameObject->m_pChildren.push_back(LoadFrameHierarchyFromFile(strFilename, pGameObject, pRoot, inJson["Children"][i], false));
+		++(*poutnIndex);
+		pGameObject->m_pChildren.push_back(LoadFrameHierarchyFromFile(strFilename, pGameObject, pRoot, inJson["Children"][i], false, poutnIndex));
 	}
 
 	return pGameObject;

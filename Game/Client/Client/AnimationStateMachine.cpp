@@ -13,57 +13,169 @@ void AnimationStateMachine::Initialize(std::shared_ptr<IGameObject> pOwner, floa
 	m_fTotalAnimationTime = fInitialTime;
 
 	InitializeStateGraph();
+
+	m_fLastAnimationChangedTime = m_fTotalAnimationTime;
+	m_fCurrentTransitionTime = 0.0f;
+	m_fCurrentAnimationStartOffset = 0.0f;
+	m_fBeforeAnimationTimeAtTransition = 0.0f;
 }
 
 void AnimationStateMachine::Update()
 {
-	m_fTotalAnimationTime += DT;			// Test
+	auto pOwner = m_wpOwner.lock();
+	if (!pOwner || !m_pCurrentState || !m_pCurrentState->pAnimationToPlay) {
+		return;
+	}
 
-	// Update StateMachine
+	m_fTotalAnimationTime += DT;
+
+	// State transition check
 	std::shared_ptr<AnimationState> pNextState = nullptr;
-	for (const auto& pEdges : m_pCurrentState->pConnectedEdges) {
-		if (!pEdges.pConnectedState.expired()) {
-			if (pEdges.pConnectedState.lock()->fnStateTransitionCallback(m_wpOwner.lock())) {
-				pNextState = pEdges.pConnectedState.lock();
-				m_fCurrentTransitionTime = pEdges.dTransitionTime;
-				break;
-			}
+	float fNextTransitionTime = 0.0f;
+
+	for (const auto& edge : m_pCurrentState->pConnectedEdges) {
+		auto pConnectedState = edge.pConnectedState.lock();
+		if (!pConnectedState) {
+			continue;
+		}
+
+		if (!pConnectedState->fnStateTransitionCallback) {
+			continue;
+		}
+
+		if (pConnectedState->fnStateTransitionCallback(pOwner)) {
+			pNextState = pConnectedState;
+			fNextTransitionTime = static_cast<float>(edge.dTransitionTime);
+			break;
 		}
 	}
 
-	if (pNextState) {
+	if (pNextState && pNextState != m_pCurrentState) {
+		const float fPrevStateElapsed = m_fTotalAnimationTime - m_fLastAnimationChangedTime;
+
+		m_fBeforeAnimationTimeAtTransition = m_pCurrentState->pAnimationToPlay->GetLoopedAnimationTime(m_fCurrentAnimationStartOffset + fPrevStateElapsed);
+
 		m_pBeforeState = m_pCurrentState;
 		m_pCurrentState = pNextState;
 
+		m_fCurrentTransitionTime = fNextTransitionTime;
 		m_fLastAnimationChangedTime = m_fTotalAnimationTime;
+
+		// Play new animation from first frame
+		m_fCurrentAnimationStartOffset = 0.0f;
 	}
 
-	const std::vector<Bone>& ownerBones = m_wpOwner.lock()->GetComponent<Skeleton>()->GetBones();
-	int nBones = ownerBones.size();
-	auto pAnimation = m_pCurrentState->pAnimationToPlay;
+	auto pSkeleton = pOwner->GetComponent<Skeleton>();
+	if (!pSkeleton) {
+		return;
+	}
 
-	float fCurrentTime = m_fTotalAnimationTime - m_fLastAnimationChangedTime;
-	float fTime = std::fmod(m_fTotalAnimationTime, pAnimation->GetDuration());
-	
+	const std::vector<Bone>& ownerBones = pSkeleton->GetBones();
+	const int nBones = static_cast<int>(ownerBones.size());
+
+	auto pCurrentAnimation = m_pCurrentState->pAnimationToPlay;
+	if (!pCurrentAnimation) {
+		return;
+	}
+
 	m_OutputPose.resize(nBones);
-	if (fCurrentTime < m_fCurrentTransitionTime) {
-		auto pLastAnimation = m_pBeforeState->pAnimationToPlay;
-		float fLastTime = std::fmod(m_fLastAnimationChangedTime + fCurrentTime, pLastAnimation->GetDuration());
 
-		float fWeight = std::clamp(fCurrentTime / m_fCurrentTransitionTime, 0.f, 1.f);
-		fWeight = ::SmoothStep(fWeight, 0.f, 1.f);
+	const float fStateElapsed = m_fTotalAnimationTime - m_fLastAnimationChangedTime;
+	const float fCurrentAnimTime = pCurrentAnimation->GetLoopedAnimationTime(m_fCurrentAnimationStartOffset + fStateElapsed);
+
+	if (m_pBeforeState &&
+		m_pBeforeState->pAnimationToPlay &&
+		fStateElapsed < m_fCurrentTransitionTime &&
+		m_fCurrentTransitionTime > 0.0f) {
+
+		auto pBeforeAnimation = m_pBeforeState->pAnimationToPlay;
+
+		const float fBeforeAnimTime =
+			pBeforeAnimation->GetLoopedAnimationTime(
+				m_fBeforeAnimationTimeAtTransition + fStateElapsed);
+
+		float fWeight = std::clamp(fStateElapsed / m_fCurrentTransitionTime, 0.0f, 1.0f);
+		fWeight = ::SmoothStep(fWeight, 0.0f, 1.0f);
 
 		for (const auto& bone : ownerBones) {
-			AnimationKey key0 = pLastAnimation->GetKeyFrameSRT(bone.strBoneName, fLastTime, bone.mtxTransform);
-			AnimationKey key1 = pAnimation->GetKeyFrameSRT(bone.strBoneName, fTime, bone.mtxTransform);
+			AnimationKey key0 =
+				pBeforeAnimation->GetKeyFrameSRT(
+					bone.strBoneName,
+					fBeforeAnimTime,
+					bone.mtxTransform
+				);
+
+			AnimationKey key1 =
+				pCurrentAnimation->GetKeyFrameSRT(
+					bone.strBoneName,
+					fCurrentAnimTime,
+					bone.mtxTransform
+				);
+
 			m_OutputPose[bone.nIndex] = AnimationKey::Lerp(key0, key1, fWeight);
 		}
 	}
 	else {
+		m_pBeforeState = nullptr;
+
 		for (const auto& bone : ownerBones) {
-			m_OutputPose[bone.nIndex] = pAnimation->GetKeyFrameSRT(bone.strBoneName, fTime, bone.mtxTransform);
+			m_OutputPose[bone.nIndex] =
+				pCurrentAnimation->GetKeyFrameSRT(
+					bone.strBoneName,
+					fCurrentAnimTime,
+					bone.mtxTransform
+				);
 		}
 	}
+
+
+	//m_fTotalAnimationTime += DT;			// Test
+	//
+	//// Update StateMachine
+	//std::shared_ptr<AnimationState> pNextState = nullptr;
+	//for (const auto& pEdges : m_pCurrentState->pConnectedEdges) {
+	//	if (!pEdges.pConnectedState.expired()) {
+	//		if (pEdges.pConnectedState.lock()->fnStateTransitionCallback(m_wpOwner.lock())) {
+	//			pNextState = pEdges.pConnectedState.lock();
+	//			m_fCurrentTransitionTime = pEdges.dTransitionTime;
+	//			break;
+	//		}
+	//	}
+	//}
+	//
+	//if (pNextState) {
+	//	m_pBeforeState = m_pCurrentState;
+	//	m_pCurrentState = pNextState;
+	//
+	//	m_fLastAnimationChangedTime = m_fTotalAnimationTime;
+	//}
+	//
+	//const std::vector<Bone>& ownerBones = m_wpOwner.lock()->GetComponent<Skeleton>()->GetBones();
+	//int nBones = ownerBones.size();
+	//auto pAnimation = m_pCurrentState->pAnimationToPlay;
+	//
+	//float fCurrentTime = m_fTotalAnimationTime - m_fLastAnimationChangedTime;
+	//float fTime = std::fmod(m_fTotalAnimationTime, pAnimation->GetDuration());
+	//
+	//m_OutputPose.resize(nBones);
+	//if (fCurrentTime < m_fCurrentTransitionTime) {
+	//	auto pLastAnimation = m_pBeforeState->pAnimationToPlay;
+	//	float fLastTime = std::fmod(m_fLastAnimationChangedTime + fCurrentTime, pLastAnimation->GetDuration());
+	//
+	//	float fWeight = std::clamp(fCurrentTime / m_fCurrentTransitionTime, 0.f, 1.f);
+	//	fWeight = ::SmoothStep(fWeight, 0.f, 1.f);
+	//
+	//	for (const auto& bone : ownerBones) {
+	//		AnimationKey key0 = pLastAnimation->GetKeyFrameSRT(bone.strBoneName, fLastTime, bone.mtxTransform);
+	//		AnimationKey key1 = pAnimation->GetKeyFrameSRT(bone.strBoneName, fTime, bone.mtxTransform);
+	//		m_OutputPose[bone.nIndex] = AnimationKey::Lerp(key0, key1, fWeight);
+	//	}
+	//}
+	//else {
+	//	for (const auto& bone : ownerBones) {
+	//		m_OutputPose[bone.nIndex] = pAnimation->GetKeyFrameSRT(bone.strBoneName, fTime, bone.mtxTransform);
+	//	}
+	//}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////

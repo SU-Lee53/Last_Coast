@@ -14,6 +14,10 @@ void GameScene::BuildObjects()
 
 	m_pUIBoard = std::make_unique<UIBoard>();
 	m_pPlayer = std::make_shared<LocalThirdPersonPlayer>();
+	m_pPlayer->Initialize();
+	if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
+		pThirdPerson->GiveWeapon(WEAPON_TYPE::AK);
+	}
 
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize();

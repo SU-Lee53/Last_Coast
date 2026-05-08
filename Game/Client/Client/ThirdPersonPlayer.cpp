@@ -4,6 +4,115 @@
 #include "NodeObject.h"
 #include "WeaponObject.h"
 #include "Sprite.h"
+#include "TextBox.h"
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+// PlayerHUD
+
+void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer& player)
+{
+	if (auto& pUIBoard = CUR_SCENE->GetUIBoard(); pUIBoard) {
+		pCrosshair = std::make_shared<Crosshair>();
+		pUIBoard->InsertUI(pCrosshair);
+
+		pHitMarker = std::make_shared<HitMarker>();
+		pUIBoard->InsertUI(pHitMarker);
+
+		pHealthText = std::make_shared<TextBox>(L"Malgun Gothic");
+		pHealthText->SetText(L"0");
+		pHealthText->SetLayer(0);
+		pHealthText->SetAnchor(Vector2{ 1, 1 });
+		pHealthText->SetPivot(Vector2{ 1,1 });
+		pHealthText->SetPosition(Vector2{ -50, -100 });
+		pHealthText->SetSize(Vector2{ 80,50 });
+		pUIBoard->InsertUI(pHealthText);
+
+		//pHealthImage
+
+		pAmmo = std::make_shared<TextBox>(L"Malgun Gothic");
+		pAmmo->SetText(L"1");
+		pAmmo->SetLayer(0);
+		pAmmo->SetAnchor(Vector2{ 1, 1 });
+		pAmmo->SetPivot(Vector2{ 1,1 });
+		pAmmo->SetPosition(Vector2{ -50, -40 });
+		pAmmo->SetSize(Vector2{ 80,50 });
+		pUIBoard->InsertUI(pAmmo);
+
+		pWeaponName = std::make_shared<TextBox>(L"Malgun Gothic");
+		pWeaponName->SetText(L"2");
+		pWeaponName->SetLayer(0);
+		pWeaponName->SetAnchor(Vector2{ 1, 1 });
+		pWeaponName->SetPivot(Vector2{ 1,1 });
+		pWeaponName->SetPosition(Vector2{ -170, -40 });
+		pWeaponName->SetSize(Vector2{ 50,50 });
+		pUIBoard->InsertUI(pWeaponName);
+
+		pReloadAlert = std::make_shared<TextBox>(L"Malgun Gothic");
+		pReloadAlert->SetText(L"2");
+		pReloadAlert->SetLayer(0);
+		pReloadAlert->SetAnchor(Vector2{ 0.5, 0.5 });
+		pReloadAlert->SetPivot(Vector2{ 0,0.5 });
+		pReloadAlert->SetPosition(Vector2{ 100, 0 });
+		pReloadAlert->SetSize(Vector2{ 70,40 });
+		pReloadAlert->SetVisible(false);
+		pUIBoard->InsertUI(pReloadAlert);
+	}
+}
+void IThirdPersonPlayer::PlayerHUD::Update(const IThirdPersonPlayer& player)
+{
+	auto pWeapon = player.GetCurrentWeaponObject();
+
+	if (pCrosshair) {
+		pCrosshair->Update();
+	}
+
+	if (pHitMarker) {
+		pHitMarker->Update();
+	}
+
+	if (pHealthText) {
+		pHealthText->SetText(std::to_wstring(static_cast<int32>(player.GetHP())));
+	}
+	
+	if (pHealthImage) {
+	
+	}
+
+	if (pAmmo) {
+		std::wstring wstrAmmo;
+		if (pWeapon) {
+			wstrAmmo = std::format(L"{} / {}", pWeapon->GetAmmoInClip(), pWeapon->GetTotalAmmo());
+		}
+		else {
+			wstrAmmo = std::format(L"{} / {}", 0, 0);
+		}
+
+		pAmmo->SetText(wstrAmmo);
+	}
+
+	if (pReloadAlert) {
+		if (pWeapon) {
+			if (pWeapon->IsInReloading()) {
+				pReloadAlert->SetVisible(true);
+				pReloadAlert->SetSize(Vector2{ 100,40 });
+				pReloadAlert->SetText(L"Reloading");
+			}
+			else {
+				const int32 nMaxAmmo = pWeapon->GetAmmoPerClip();
+				const int32 nCurrentAmmo = pWeapon->GetAmmoInClip();
+				if (nCurrentAmmo <= nMaxAmmo * 0.2) {
+					pReloadAlert->SetVisible(true);
+					pReloadAlert->SetSize(Vector2{ 70,40 });
+					pReloadAlert->SetText(L"Reload");
+				}
+				else {
+					pReloadAlert->SetVisible(false);
+				}
+			}
+		}
+	}
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Base ThirdPersonPlayer 
@@ -25,8 +134,8 @@ void IThirdPersonPlayer::Initialize()
 			InitializeLocalCamera();
 		}
 
-		if (UsesCrosshair()) {
-			InitializeCrosshair();
+		if (UsesHUD()) {
+			m_PlayerHUD.Initialize(*this);
 		}
 	}
 
@@ -55,11 +164,25 @@ void IThirdPersonPlayer::OnMeleeEnd()
 	PlayMeleeEndAction();
 }
 
+void IThirdPersonPlayer::OnReloadEnd()
+{
+	PlayReloadEndAction();
+}
+
+void IThirdPersonPlayer::ShowHitMarker()
+{
+	if (m_PlayerHUD.pHitMarker) {
+		m_PlayerHUD.pHitMarker->Show();
+	}
+}
+
 void IThirdPersonPlayer::Update()
 {
-	if (m_pCrosshair) {
-		m_pCrosshair->Update();
-	}
+	//if (m_pCrosshair) {
+	//	m_pCrosshair->Update();
+	//}
+
+	m_PlayerHUD.Update(*this);
 
 	for (const auto& pChild : m_pChildren) {
 		pChild->Update();
@@ -302,14 +425,6 @@ void IThirdPersonPlayer::InitializeLocalCamera()
 	m_pCamera->SetOwner(shared_from_this());
 }
 
-void IThirdPersonPlayer::InitializeCrosshair()
-{
-	if (auto& pUIBoard = CUR_SCENE->GetUIBoard(); pUIBoard) {
-		m_pCrosshair = std::make_shared<Crosshair>();
-		pUIBoard->InsertUI(m_pCrosshair);
-	}
-}
-
 void IThirdPersonPlayer::ProcessLocalCameraInput()
 {
 	auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
@@ -432,9 +547,9 @@ void  IThirdPersonPlayer::ProcessLocalActionInput()
 			}
 		}
 		
-		if (m_pCrosshair && m_pWeaponSocket && m_pWeaponSocket->GetWeaponModel()) {
+		if (m_PlayerHUD.pCrosshair && m_pWeaponSocket && m_pWeaponSocket->GetWeaponModel()) {
 			if (!m_bFiredThisFrame) {
-				m_pCrosshair->RemoveRecoil(
+				m_PlayerHUD.pCrosshair->RemoveRecoil(
 					m_pWeaponSocket->GetWeaponModel()->GetRecoilRecovery());
 			}
 		}
@@ -442,7 +557,16 @@ void  IThirdPersonPlayer::ProcessLocalActionInput()
 	}
 
 	// Fire debug
-	if (INPUT->GetButtonDown(VK_LCONTROL) || INPUT->GetButtonPressed(VK_LCONTROL)) {
+
+	if (INPUT->GetButtonDown(VK_RSHIFT)) {
+		EnterAim();
+	}
+
+	if (INPUT->GetButtonUp(VK_RSHIFT)) {
+		LeaveAim();
+	}
+
+	if ((INPUT->GetButtonDown(VK_LCONTROL) || INPUT->GetButtonPressed(VK_LCONTROL)) && m_bAiming) {
 		if (!m_bInMeleeAttack) {
 			m_bFiredThisFrame = m_pWeaponSocket->TryFire();
 			if (m_bFiredThisFrame) {
@@ -451,9 +575,14 @@ void  IThirdPersonPlayer::ProcessLocalActionInput()
 		}
 	}
 
-	// Melee attack
+	//  Melee attack
 	if (INPUT->GetButtonDown('V') && !m_bInMeleeAttack) {
 		PlayMeleeStartAction();
+	}
+
+	// Reloading
+	if (INPUT->GetButtonDown('R')) {
+		PlayReloadStartAction();
 	}
 
 }
@@ -587,15 +716,17 @@ void IThirdPersonPlayer::EnterAim()
 		std::static_pointer_cast<PlayerAnimationController>(
 			GetComponent<AnimationController>());
 
-	if (m_pWeaponSocket->GetCurrentWeaponType() != WEAPON_TYPE::PISTOL) {
-		pAnimationCtrl->GetMontage()->PlayMontage("Rifle Aiming Idle");
-	}
-	else {
-		pAnimationCtrl->GetMontage()->PlayMontage("Pistol Aiming Idle");
+	if (GetCurrentWeaponObject()->IsInReloading() == false) {
+		if (m_pWeaponSocket->GetCurrentWeaponType() != WEAPON_TYPE::PISTOL) {
+			pAnimationCtrl->GetMontage()->PlayMontage("Rifle Aiming Idle");
+		}
+		else {
+			pAnimationCtrl->GetMontage()->PlayMontage("Pistol Aiming Idle");
+		}
 	}
 
-	if (m_pCrosshair) {
-		m_pCrosshair->SetVisible(true);
+	if (m_PlayerHUD.pCrosshair) {
+		m_PlayerHUD.pCrosshair->SetVisible(true);
 	}
 }
 
@@ -619,10 +750,12 @@ void IThirdPersonPlayer::LeaveAim()
 	// TODO:
 	// 현재 StopMontage()는 조준 idle뿐 아니라 fire/melee montage도 끊을 수 있음.
 	// 서버 이벤트 기반 애니메이션이 들어오면 Aim montage만 멈추는 방식으로 분리 필요.
-	pAnimationCtrl->GetMontage()->StopMontage();
+	if (!GetCurrentWeaponObject()->IsInReloading() && !m_bInMeleeAttack) {
+		pAnimationCtrl->GetMontage()->StopMontage();
+	}
 
-	if (m_pCrosshair) {
-		m_pCrosshair->SetVisible(false);
+	if (m_PlayerHUD.pCrosshair) {
+		m_PlayerHUD.pCrosshair->SetVisible(false);
 	}
 }
 
@@ -645,11 +778,14 @@ void IThirdPersonPlayer::PlayFireAction()
 		pAnimationCtrl->GetMontage()->JumpToSection("Pistol Fire");
 	}
 
-	if (m_pCrosshair && m_pWeaponSocket->GetWeaponModel()) {
-		m_pCrosshair->AddRecoil(m_pWeaponSocket->GetWeaponModel()->GetRecoil());
+	if (m_PlayerHUD.pCrosshair && m_pWeaponSocket->GetWeaponModel()) {
+		m_PlayerHUD.pCrosshair->AddRecoil(m_pWeaponSocket->GetWeaponModel()->GetRecoil());
 	}
 
-	// TODO : Add muzzle flash, etc...
+	//if (m_PlayerHUD.pHitMarker && m_pWeaponSocket->GetWeaponModel()) {
+	//	m_PlayerHUD.pHitMarker->Show();
+	//}
+
 }
 
 void IThirdPersonPlayer::PlayMeleeStartAction()
@@ -672,9 +808,7 @@ void IThirdPersonPlayer::PlayMeleeStartAction()
 
 void IThirdPersonPlayer::PlayMeleeEndAction()
 {
-	auto pAnimationCtrl =
-		std::static_pointer_cast<PlayerAnimationController>(
-			GetComponent<AnimationController>());
+	auto pAnimationCtrl = std::static_pointer_cast<PlayerAnimationController>(GetComponent<AnimationController>());
 
 	ApplyWeaponChanged(m_eWeaponTypeBeforeMelee);
 	pAnimationCtrl->GetMontage()->StopMontage();
@@ -683,6 +817,43 @@ void IThirdPersonPlayer::PlayMeleeEndAction()
 
 	if (m_bWasAimBeforeMelee) {
 		EnterAim();
+	}
+}
+
+void IThirdPersonPlayer::PlayReloadStartAction()
+{
+	auto pWeapon = GetCurrentWeaponObject();
+	if (pWeapon->IsInReloading() == true) return;
+
+	auto pAnimationCtrl =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>());
+
+	if (m_bAiming) {
+		pAnimationCtrl->GetMontage()->JumpToSection("Rifle Reloading");
+	}
+	else {
+		pAnimationCtrl->GetMontage()->PlayMontage("Rifle Reloading");
+	}
+	pWeapon->BeginReload();
+}
+
+void IThirdPersonPlayer::PlayReloadEndAction()
+{
+	GetCurrentWeaponObject()->EndReload();
+
+	auto pAnimationCtrl = std::static_pointer_cast<PlayerAnimationController>(GetComponent<AnimationController>());
+
+	if (m_bAiming) {
+		if (m_pWeaponSocket->GetCurrentWeaponType() != WEAPON_TYPE::PISTOL) {
+			pAnimationCtrl->GetMontage()->JumpToSection("Rifle Aiming Idle");
+		}
+		else {
+			pAnimationCtrl->GetMontage()->JumpToSection("Pistol Aiming Idle");
+		}
+	}
+	else {
+		pAnimationCtrl->GetMontage()->StopMontage();
 	}
 }
 
@@ -700,6 +871,10 @@ void IThirdPersonPlayer::ApplyWeaponChanged(WEAPON_TYPE eWeaponType)
 	}
 
 	m_pWeaponSocket->SetWeapon(eWeaponType);
+	if (m_PlayerHUD.pWeaponName) {
+		const std::string& strWeaponName = GameContext::g_strWeaponName[std::to_underlying(eWeaponType)];
+		m_PlayerHUD.pWeaponName->SetText(::StringToWString(strWeaponName));
+	}
 }
 
 void IThirdPersonPlayer::ApplyHitReact(float damage)

@@ -8,7 +8,8 @@ const std::vector<std::string> GameContext::g_strWeaponName = {
 	"AK",
 	"RIFLE",
 	"PISTOL",
-	"MELEE"
+	"MELEE",
+	"UNKNOWN",
 };
 
 void GameContext::Initialize()
@@ -50,7 +51,7 @@ void GameContext::Initialize()
 					m_WeaponStats[i].fFirePerSecond = v["FirePerSecond"].get<float>();
 					m_WeaponStats[i].fRecoil = v["Recoil"].get<float>();
 					m_WeaponStats[i].fRecoilRecovery = v["RecoilRecovery"].get<float>();
-					m_WeaponStats[i].fReloadTime = v["ReloadTime"].get<float>();
+					m_WeaponStats[i].nAmmoPerClip = v["AmmoPerClip"].get<int32>();
 					m_WeaponStats[i].v3OffsetPosition = ::ReadVector3FromJson(v["OffsetPosition"]);
 					m_WeaponStats[i].v3OffsetRotation = ::ReadVector3FromJson(v["OffsetRotation"]);
 					m_WeaponStats[i].v3MuzzlePosition = ::ReadVector3FromJson(v["MuzzlePosition"]);
@@ -61,6 +62,18 @@ void GameContext::Initialize()
 		}
 	}
 
+	// Load Zombie Models
+	{
+		std::string strZombieFilename[] = {
+			"Ch10_nonPBR",
+			"Yaku J Ignite",
+			"Zombiegirl W Kurniawan",
+		};
+
+		for (int i = 0; i < g_unZombieModels; ++i) {
+			m_pZombieModels[i] = MODEL->LoadOrGet(strZombieFilename[i]);
+		}
+	}
 }
 
 std::shared_ptr<WeaponObject> GameContext::GetWeaponCopy(WEAPON_TYPE eWeaponType)
@@ -72,7 +85,8 @@ std::shared_ptr<WeaponObject> GameContext::GetWeaponCopy(WEAPON_TYPE eWeaponType
 	pWeapon->SetFirePerSecond(weaponStat.fFirePerSecond);
 	pWeapon->SetRecoil(weaponStat.fRecoil);
 	pWeapon->SetRecoilRecovery(weaponStat.fRecoilRecovery);
-	pWeapon->SetReloadTime(weaponStat.fReloadTime);
+	pWeapon->SetAmmoPerClip(weaponStat.nAmmoPerClip);
+	pWeapon->SetCurrentAmmoInClip(weaponStat.nAmmoPerClip);
 	pWeapon->SetOffsetPosition(weaponStat.v3OffsetPosition);
 	pWeapon->SetOffsetRotation(weaponStat.v3OffsetRotation);
 	pWeapon->SetMuzzlePositionLocal(weaponStat.v3MuzzlePosition);
@@ -81,10 +95,16 @@ std::shared_ptr<WeaponObject> GameContext::GetWeaponCopy(WEAPON_TYPE eWeaponType
 	return pWeapon;
 }
 
+std::shared_ptr<NodeObject> GameContext::GetZombieCopy(uint32 unIndex)
+{
+	return m_pZombieModels[unIndex]->CopyObject<NodeObject>();
+}
+
 std::shared_ptr<IGameObject> GameContext::GeModel(const std::string& strName)
 {
-	auto find = m_pGameModels.find(strName);
-	return (find != m_pGameModels.end()) ? find->second : nullptr;
+	//auto find = m_pGameModels.find(strName);
+	//return (find != m_pGameModels.end()) ? find->second : nullptr;
+	return nullptr;
 }
 
 TextureRef<Texture> GameContext::GetImage(const std::string& strName)

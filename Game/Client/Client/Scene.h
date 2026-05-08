@@ -40,7 +40,6 @@ struct ScenePartition {
 			y = std::move(cd.y);
 		}
 
-		
 		operator std::pair<int, int>() {
 			return { x, y };
 		}

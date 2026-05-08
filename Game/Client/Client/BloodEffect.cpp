@@ -70,10 +70,10 @@ void BloodEffect::CreateDropEmitter()
 
 	auto& emitter = AddEmitter<ParticleEmitter>(desc);
 
-	emitter.AddSpawnModule<BurstSpawnModule>(12);
+	emitter.AddSpawnModule<BurstSpawnModule>(20);
 
 	emitter.AddInitializeModule<InitPositionFromEffectModule>();
-	emitter.AddInitializeModule<InitLifetimeRandomModule>(0.45f, 1.0f);
+	emitter.AddInitializeModule<InitLifetimeRandomModule>(0.8f, 1.5f);
 
 	emitter.AddInitializeModule<InitSizeRandomModule>(
 		1.5f, 4.0f,     // start half-size: 지름 3~8cm
@@ -81,8 +81,8 @@ void BloodEffect::CreateDropEmitter()
 	);
 
 	emitter.AddInitializeModule<InitColorModule>(
-		Vector4(0.45f, 0.0f, 0.0f, 0.95f),
-		Vector4(0.12f, 0.0f, 0.0f, 0.0f)
+		Vector4(0.85f, 0.0f, 0.0f, 0.95f),
+		Vector4(0.35f, 0.0f, 0.0f, 0.0f)
 	);
 
 	emitter.AddInitializeModule<InitRandomRotationModule>(0.f, XM_2PI);

@@ -31,7 +31,7 @@ public:
 	bool TryFire();
 
 	void SetWeapon(WEAPON_TYPE eWeaponType);
-	const std::shared_ptr<WeaponObject>& GetWeaponModel() const { return m_pWeaponModel; };
+	std::shared_ptr<WeaponObject> GetWeaponModel() const { return m_pWeaponModel; };
 
 	WEAPON_TYPE GetCurrentWeaponType() const { return m_eCurrentWeapon; }
 

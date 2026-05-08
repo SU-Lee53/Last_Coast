@@ -15,7 +15,10 @@ void AnimationManager::LoadGameAnimations()
 	LoadAndAdd("Pistol Idle");
 	LoadAndAdd("Firing Rifle");
 	LoadAndAdd("Standing Melee Attack Horizontal");
+	LoadAndAdd("Reloading");
 
+	LoadAndAdd("Zombie Idle");
+	LoadAndAdd("Zombie Running");
 	LoadAndAdd("Zombie Attack");
 	LoadAndAdd("Zombie Death");
 }

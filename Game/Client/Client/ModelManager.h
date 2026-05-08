@@ -19,12 +19,14 @@ private:
 	std::shared_ptr<IGameObject> LoadModelFromFile(const std::string& strFilePath, bool bUseNamePrefixInKeyOnRoot = false);
 	std::shared_ptr<IGameObject> LoadFrameHierarchyFromFile(
 		const std::string& strFilename,
-		std::shared_ptr<IGameObject> pParent, 
-		std::shared_ptr<IGameObject> pRoot, 
-		const nlohmann::json& inJson, 
-		bool bUseNamePrefixInKeyOnRoot = false);
+		std::shared_ptr<IGameObject> pParent,
+		std::shared_ptr<IGameObject> pRoot,
+		const nlohmann::json& inJson,
+		bool bUseNamePrefixInKeyOnRoot = false,
+		int32* outpnIndex = nullptr);
 
 	std::pair<MESHLOADINFO, MATERIALLOADINFO> LoadMeshInfoFromFiles(const nlohmann::json& inJson);
+
 	MATERIALLOADINFO LoadMaterialInfoFromFiles(const nlohmann::json& inJson);
 
 private:

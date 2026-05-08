@@ -18,12 +18,13 @@ void Zombie::Initialize()
 
 	m_pAIAgent = AI->CreateAgent();  // shared_ptr 직접 할당
 	if (m_pAIAgent)
-		m_pAIAgent->SetMoveSpeed(110.0f);   // 1.1 m/s (플레이어 걷기 140 cm/s보다 약간 느림)
+		m_pAIAgent->SetMoveSpeed(220.0f);   // 1.1 m/s (플레이어 걷기 140 cm/s보다 약간 느림)
 
 	if (!m_bInitialized) {
 
 		// Model
-		auto pModel = MODEL->Get("Ch33_nonPBR")->CopyObject<NodeObject>();
+		//auto pModel = MODEL->Get("Ch33_nonPBR")->CopyObject<NodeObject>();
+		auto pModel = GCTX->GetZombieCopy(rand() % 3)->CopyObject<NodeObject>();
 		pModel->GetTransform()->Rotate(Vector3::Up, -90.f);
 		SetChild(pModel);
 		//GetTransform()->Rotate(Vector3::Up, -90.f);
@@ -246,6 +247,7 @@ void Zombie::OnTraceHit(const RayTraceHitResult& hitResult)
 
 	if (hitResult.fDamage > 0.f) {
 		TakeDamage(hitResult.fDamage);
+		static_pointer_cast<IThirdPersonPlayer>(hitResult.pInstigator)->ShowHitMarker();
 	}
 
 	Vector3 v3BloodDir = -hitResult.v3Direction;
