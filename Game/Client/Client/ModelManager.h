@@ -28,6 +28,15 @@ private:
 	std::pair<MESHLOADINFO, MATERIALLOADINFO> LoadMeshInfoFromFiles(const nlohmann::json& inJson);
 
 	MATERIALLOADINFO LoadMaterialInfoFromFiles(const nlohmann::json& inJson);
+	COLLISIONMESHINFO LoadCollisionInfoFromJson(const nlohmann::json& inJson);
+	COLLISIONMESHINFO GatherRenderMeshCollisionInfo(const nlohmann::json& hierarchyJson);
+
+public:
+	// 모델 이름으로 콜리전 정보 반환 (없으면 빈 vector)
+	const std::vector<COLLISIONMESHINFO>* GetCollisionInfos(const std::string& strModelName) const;
+
+private:
+	std::unordered_map<std::string, std::vector<COLLISIONMESHINFO>> m_CollisionInfoPool;
 
 private:
 	// Model Pool

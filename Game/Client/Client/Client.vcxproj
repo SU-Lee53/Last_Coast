@@ -273,6 +273,7 @@
     <ClInclude Include="World.h" />
     <ClInclude Include="Zombie.h" />
     <ClInclude Include="ZombieAnimationController.h" />
+    <ClInclude Include="ZombiePool.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc" />
@@ -435,6 +436,7 @@
     <ClCompile Include="World.cpp" />
     <ClCompile Include="Zombie.cpp" />
     <ClCompile Include="ZombieAnimationController.cpp" />
+    <ClCompile Include="ZombiePool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui.ini" />

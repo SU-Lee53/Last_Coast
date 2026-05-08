@@ -30,6 +30,8 @@
 #include <type_traits>
 #include <ranges>
 #include <concepts>
+#include <mutex>
+#include <atomic>
 #include <utility>
 #include <filesystem>
 #include <typeindex>

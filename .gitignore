@@ -14,3 +14,4 @@ Intermediates/
 *.db
 *.md
 !/**/Dependencies/**/x64/
+obj/

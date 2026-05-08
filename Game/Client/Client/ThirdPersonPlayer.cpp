@@ -5,6 +5,7 @@
 #include "WeaponObject.h"
 #include "Sprite.h"
 #include "TextBox.h"
+#include "Collider.h"
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -644,6 +645,7 @@ void IThirdPersonPlayer::ApplyInputMovement()
 	v3Delta.y += m_fVerticalVelocity * DT;
 
 	ResolveCollision(v3Delta);
+	ResolveMeshContacts(v3Delta);
 
 	TerrainHit hit{};
 	ResolveTerrain(v3Delta, hit, bWasGrounded);
@@ -964,13 +966,13 @@ void IThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 					float fPush = std::min(fDepth + fSkin, 5.f);
 					outv3Delta += v3Normal * fPush;
 				}
-				
+
 				// Slope Projection
 				float fProjected = outv3Delta.Dot(v3Normal);
 				if (fProjected < 0.f) {
 					outv3Delta -= v3Normal * fProjected;
 				}
-			
+
 				continue;
 			}
 
@@ -994,7 +996,50 @@ void IThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 	}
 }
 
-bool IThirdPersonPlayer::CheckGround(float fMaxDistance, OUT Vector3& outv3Normal)
+void ThirdPersonPlayer::ResolveMeshContacts(OUT Vector3& outv3Delta)
+{
+	const float fSkin = 0.5f;
+	const float fGround = 0.7f;
+	const float fSnapDistance = 1.0f;
+
+	for (auto& [v3Normal, fDepth] : m_MeshContacts) {
+		if (v3Normal.y > fGround && outv3Delta.y <= 0.f) {
+			m_bGrounded = true;
+			m_unGroundGraceFrames = m_unMaxGroundGraceFrames;
+			if (m_fVerticalVelocity < 0.f)
+				m_fVerticalVelocity = 0.f;
+
+			float fProjected = outv3Delta.Dot(v3Normal);
+			if (fProjected < 0.f)
+				outv3Delta -= v3Normal * fProjected;
+
+			if (fDepth > fSnapDistance) {
+				const float fPushSkin = 0.1f;
+				// 수직 방향으로만 밀어냄: 기울어진 face normal 방향으로 밀면
+				// 수평 성분이 벽 쪽으로 플레이어를 밀고, 벽 슬라이드가 수평만 제거하면
+				// 수직 성분이 남아 벽을 타고 올라가는 버그 발생
+				outv3Delta.y += std::min(fDepth - fPushSkin, 5.f);
+			}
+		}
+		else if (fDepth > fSkin) {
+			Vector3 v3HorizNormal(v3Normal.x, 0.f, v3Normal.z);
+			float fHorizLen = v3HorizNormal.Length();
+			if (fHorizLen < 1e-4f) continue;
+			v3HorizNormal /= fHorizLen;
+
+			float fProjectedAmount = outv3Delta.Dot(v3HorizNormal);
+			if (fProjectedAmount < 0.f)
+				outv3Delta -= v3HorizNormal * fProjectedAmount;
+
+			if (fDepth > fSnapDistance) {
+				const float fPushSkin = 0.1f;
+				outv3Delta += v3HorizNormal * std::min(fDepth - fPushSkin, 5.f);
+			}
+		}
+	}
+}
+
+bool ThirdPersonPlayer::CheckGround(float fMaxDistance, OUT Vector3& outv3Normal)
 {
 	const BoundingCapsule& capsuleWorld = GetComponent<PlayerCollider>()->GetCapsuleWorld();
 	const float fProbe = fMaxDistance;

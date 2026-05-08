@@ -343,7 +343,7 @@ void Scene::CheckCollision()
 			if (!pCollider)
 				continue;
 
-			bool bResult = zombieCollider.CheckCollision(pCollider);
+			bool bResult = pCollider->CheckCollision(pZombieCollider);
 			if (bResult) {
 				CollisionResult result1(pZombie.get(), pObj);
 				CollisionResult result2(pObj, pZombie.get());
@@ -482,6 +482,14 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 			std::string strMeshName = jObject["MeshName"].get<std::string>();
 			auto pMeshObject = MODEL->LoadOrGet(strMeshName, true)->CopyObject<NodeObject>();
 			pObj->SetChild(pMeshObject);
+
+			// 콜리전 메시를 자식이 아닌 루트 StaticObject에 직접 추가
+			const auto* pCollisionInfos = MODEL->GetCollisionInfos(strMeshName);
+			if (pCollisionInfos) {
+				for (const auto& info : *pCollisionInfos) {
+					pObj->AddComponent<MeshCollider>(info);
+				}
+			}
 
 			//m_pGameObjects.push_back(pObj);
 			AddObject(pObj);

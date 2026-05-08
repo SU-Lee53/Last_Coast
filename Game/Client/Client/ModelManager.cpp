@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "ModelManager.h"
 #include "AnimationManager.h"
+#include "Collider.h"
 #include "Skeleton.h"
 #include "NodeObject.h"
 
@@ -80,6 +81,24 @@ std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& 
 			bones[nBoneIndex].pNode = pGameObject->FindFrameEndsWith(strBoneName);
 		}
 		pGameObject->AddComponent<Skeleton>(bones);
+	}
+
+	// 콜리전 정보를 NodeObject가 아닌 별도 풀에 저장
+	// (StaticObject 루트에 붙여야 하므로 Scene::LoadFromFiles에서 꺼내 씀)
+	std::vector<COLLISIONMESHINFO> collisionInfos;
+	if (j.contains("nCollisions") && j["nCollisions"].get<size_t>() > 0) {
+		for (const auto& jCol : j["Collisions"]) {
+			collisionInfos.push_back(LoadCollisionInfoFromJson(jCol));
+		}
+	}
+	else {
+		COLLISIONMESHINFO info = GatherRenderMeshCollisionInfo(j["Hierarchy"]);
+		if (!info.v3Positions.empty()) {
+			collisionInfos.push_back(std::move(info));
+		}
+	}
+	if (!collisionInfos.empty()) {
+		m_CollisionInfoPool[strFileName] = std::move(collisionInfos);
 	}
 
 	if (pGameObject) {
@@ -269,5 +288,70 @@ MATERIALLOADINFO ModelManager::LoadMaterialInfoFromFiles(const nlohmann::json& i
 	materialLoadInfo.strNormalMapName = inJson["NormalMapName"].get<std::string>();
 
 	return materialLoadInfo;
+}
+
+const std::vector<COLLISIONMESHINFO>* ModelManager::GetCollisionInfos(const std::string& strModelName) const
+{
+	auto it = m_CollisionInfoPool.find(strModelName);
+	if (it == m_CollisionInfoPool.end())
+		return nullptr;
+	return &it->second;
+}
+
+COLLISIONMESHINFO ModelManager::GatherRenderMeshCollisionInfo(const nlohmann::json& nodeJson)
+{
+	COLLISIONMESHINFO info;
+	info.strType = "RENDER";
+
+	std::function<void(const nlohmann::json&)> Gather = [&](const nlohmann::json& node) {
+		unsigned nMeshes = node["nMeshes"].get<unsigned>();
+		for (unsigned i = 0; i < nMeshes; ++i) {
+			const auto& meshJson = node["Meshes"][i];
+			unsigned nVertices = meshJson["nVertices"].get<unsigned>();
+			uint32 nBaseVertex = static_cast<uint32>(info.v3Positions.size());
+
+			auto positions = meshJson["Positions"].get<std::vector<float>>();
+			info.v3Positions.reserve(info.v3Positions.size() + nVertices);
+			for (unsigned v = 0; v < nVertices; ++v) {
+				unsigned base = v * 3;
+				info.v3Positions.emplace_back(positions[base], positions[base + 1], positions[base + 2]);
+			}
+
+			auto indices = meshJson["Indices"].get<std::vector<uint32>>();
+			info.unIndices.reserve(info.unIndices.size() + indices.size());
+			for (uint32 idx : indices) {
+				info.unIndices.push_back(nBaseVertex + idx);
+			}
+		}
+
+		unsigned nChildren = node["nChildren"].get<unsigned>();
+		for (unsigned i = 0; i < nChildren; ++i) {
+			Gather(node["Children"][i]);
+		}
+	};
+
+	Gather(nodeJson);
+	return info;
+}
+
+COLLISIONMESHINFO ModelManager::LoadCollisionInfoFromJson(const nlohmann::json& inJson)
+{
+	COLLISIONMESHINFO info;
+	info.strType = inJson["Type"].get<std::string>();
+	info.strLinkedMesh = inJson["LinkedMesh"].get<std::string>();
+
+	// Positions
+	unsigned nVertices = inJson["nVertices"].get<unsigned>();
+	std::vector<float> positions = inJson["Positions"].get<std::vector<float>>();
+	info.v3Positions.reserve(nVertices);
+	for (unsigned i = 0; i < nVertices; ++i) {
+		unsigned base = i * 3;
+		info.v3Positions.emplace_back(positions[base], positions[base + 1], positions[base + 2]);
+	}
+
+	// Indices
+	info.unIndices = inJson["Indices"].get<std::vector<uint32>>();
+
+	return info;
 }
 

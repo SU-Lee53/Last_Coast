@@ -1,5 +1,6 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Zombie.h"
+#include "ZombiePool.h"
 #include "NodeObject.h"
 #include "ZombieAnimationController.h"
 #include "BloodEffect.h"
@@ -49,11 +50,12 @@ void Zombie::Initialize()
 
 void Zombie::ProcessInput()
 {
-
 }
 
 void Zombie::Update()
 {
+	if (!m_bPoolActive) return;
+
 	for (const auto& pChild : m_pChildren) {
 		pChild->Update();
 	}
@@ -65,13 +67,44 @@ void Zombie::Shutdown()
 	m_pAIAgent.reset();
 }
 
+void Zombie::PoolReset()
+{
+	m_bPoolActive       = false;
+	m_nActiveIndex      = -1;
+	m_fHP               = 100.f;
+	m_bDying            = false;
+	m_bReadyToRemove    = false;
+	m_fVerticalVelocity = 0.f;
+	m_fMoveSpeedSqXZ    = 0.f;
+	m_bWasVisible       = false;
+	m_xmOBBCollided.clear();
+	// AI 에이전트 상태는 재활성화 시 SetPosition/SetTarget으로 재설정됨
+}
+
+void Zombie::PoolActivate()
+{
+	m_bPoolActive       = true;
+	m_fHP               = 100.f;
+	m_bDying            = false;
+	m_bReadyToRemove    = false;
+	m_fVerticalVelocity = 0.f;
+	m_fMoveSpeedSqXZ    = 0.f;
+	m_bWasVisible       = false;
+	m_xmOBBCollided.clear();
+}
+
 void Zombie::PostUpdate()
 {
+	if (!m_bPoolActive) return;
+
 	// ── 사망 처리 ────────────────────────────────────────────────────────────
 	if (m_bDying) {
 		auto pAC = GetComponent<ZombieAnimationController>();
-		if (pAC && pAC->GetMontage() && pAC->GetMontage()->IsFreezed())
+		if (pAC && pAC->GetMontage() && pAC->GetMontage()->IsFreezed() && !m_bReadyToRemove)
+		{
 			m_bReadyToRemove = true;
+			if (m_pPool) m_pPool->MarkForRelease(std::static_pointer_cast<Zombie>(shared_from_this()));
+		}
 		DynamicObject::PostUpdate();
 		return;
 	}
@@ -227,11 +260,13 @@ void Zombie::ResolveCollision(Vector3& outv3Delta)
 
 void Zombie::OnBeginCollision(const CollisionResult& collisionResult)
 {
+	if (!m_bPoolActive) return;
 	m_xmOBBCollided.push_back(collisionResult.DecomposeRef().second.GetOBBWorld());
 }
 
 void Zombie::OnWhileCollision(const CollisionResult& collisionResult)
 {
+	if (!m_bPoolActive) return;
 	m_xmOBBCollided.push_back(collisionResult.DecomposeRef().second.GetOBBWorld());
 }
 
@@ -264,6 +299,31 @@ void Zombie::OnTraceHit(const RayTraceHitResult& hitResult)
 	};
 
 	PARTICLE->Spawn<BloodEffect>(desc);
+}
+
+void Zombie::ApplyServerState(float serverX, float serverZ,
+                               float waypointX, float waypointZ,
+                               ZombieBehaviorState /*state*/)
+{
+	if (!m_pAIAgent) return;
+
+	// ── XZ 보정 — 클라이언트 위치가 서버와 300cm 이상 벗어날 때만 스냅 ────
+	Vector3 v3AgentPos = m_pAIAgent->GetPosition();
+	float fErrSq = (v3AgentPos.x - serverX) * (v3AgentPos.x - serverX)
+	             + (v3AgentPos.z - serverZ) * (v3AgentPos.z - serverZ);
+	static constexpr float CORRECTION_THRESHOLD_SQ = 300.f * 300.f;
+	if (fErrSq > CORRECTION_THRESHOLD_SQ)
+		m_pAIAgent->SyncPosition(Vector3(serverX, v3AgentPos.y, serverZ));
+
+	// ── waypoint 변경 시에만 MoveToPosition 재요청 (A* 폭풍 방지) ────────
+	Vector3 v3NewWaypoint(waypointX, v3AgentPos.y, waypointZ);
+	float fWaypointChangeSq = Vector3::DistanceSquared(m_v3LastWaypoint, v3NewWaypoint);
+	static constexpr float WAYPOINT_CHANGE_THRESHOLD_SQ = 50.f * 50.f;
+	if (fWaypointChangeSq > WAYPOINT_CHANGE_THRESHOLD_SQ)
+	{
+		m_v3LastWaypoint = v3NewWaypoint;
+		m_pAIAgent->MoveToPosition(v3NewWaypoint);
+	}
 }
 
 void Zombie::TriggerAttackHit()
