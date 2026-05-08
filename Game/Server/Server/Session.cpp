@@ -1,4 +1,10 @@
-﻿#include "Session.h"
+﻿#include "pch.h"
+#include "Session.h"
+#include "ZombieManager.h"
+
+extern ZombieManager                g_ZombieManager;
+extern std::unordered_map<int, Vector3> g_PlayerPositions;
+extern std::mutex                   g_Mutex;
 
 void Session::init(SOCKET s, int id, Room* room)
 {
@@ -9,6 +15,7 @@ void Session::init(SOCKET s, int id, Room* room)
 	m_y = 0;
 	m_room = room;
 	m_prev_recv = 0;
+	m_v3Pos = {};
 }
 
 void Session::do_recv()
@@ -22,53 +29,24 @@ void Session::do_recv()
 
 	WSARecv(m_client, &m_recv_over.m_wsa, 1, 0, &recv_flag, &m_recv_over.m_over, nullptr);
 }
-void Session::send_add_player(int player_id)
+
+void Session::do_send(int num_bytes, char* mess)
 {
-	S2C_AddPlayer packet;
-	packet.size = sizeof(S2C_AddPlayer);
-	packet.type = S2C_ADD_PLAYER;
-	packet.playerId = player_id;
-	Session& pl = clients[player_id];
-	memcpy(packet.username, pl.m_username, sizeof(packet.username));
-	packet.x = pl.m_x;
-	packet.y = pl.m_y;
-	do_send(packet.size, reinterpret_cast<char*>(&packet));
+	EXP_OVER* o = new EXP_OVER(IO_SEND);
+	o->m_wsa.len = num_bytes;
+	memcpy(o->m_buff, mess, num_bytes);
+	WSASend(m_client, &o->m_wsa, 1, 0, 0, &o->m_over, nullptr);
 }
 
-bool Session::process_packet(unsigned char* p)
+void Session::send_avatar_info()
 {
-	PACKET_TYPE type = *reinterpret_cast<PACKET_TYPE*>(&p[1]);
-	switch (type) {
-	case C2S_LOGIN: {
-		C2S_Login* packet = reinterpret_cast<C2S_Login*>(p);
-		strncpy_s(m_username, packet->username, MAX_NAME_LEN);
-		std::cout << "Player[" << m_id << "] logged in as " << m_username << std::endl;
-		send_avatar_info();
-	}
-				  break;
-	case C2S_MOVE: {
-		C2S_Move* packet = reinterpret_cast<C2S_Move*>(p);
-		DIRECTION dir = packet->dir;
-		// TODO : Move 로직
-		switch (dir) {
-		case UP: m_y++;
-			break;
-		case DOWN: m_y--;
-			break;
-		case LEFT: m_x--;
-			break;
-		case RIGHT: m_x++;
-			break;
-		}
-		std::cout << "Player[" << m_id << "] moved to (" << m_x << ", " << m_y << ")\n";
-		send_move_packet(m_id);
-	}
-				 break;
-	default:
-		std::cout << "Unknown packet type received from player[" << m_id << "].\n";
-		return false;
-	}
-	return true;
+	S2C_AvatarInfo packet;
+	packet.size = sizeof(S2C_AvatarInfo);
+	packet.type = S2C_AVATAR_INFO;
+	packet.playerId = m_id;
+	packet.x = m_x;
+	packet.y = m_y;
+	do_send(packet.size, reinterpret_cast<char*>(&packet));
 }
 
 void Session::send_move_packet(int mover)
@@ -86,4 +64,127 @@ void Session::send_move_packet(int mover)
 		if (p == -1) continue;
 		clients[p].do_send(packet.size, reinterpret_cast<char*>(&packet));
 	}
+}
+
+void Session::send_add_player(int player_id)
+{
+	S2C_AddPlayer packet;
+	packet.size = sizeof(S2C_AddPlayer);
+	packet.type = S2C_ADD_PLAYER;
+	packet.playerId = player_id;
+	Session& pl = clients[player_id];
+	memcpy(packet.username, pl.m_username, sizeof(packet.username));
+	packet.x = pl.m_x;
+	packet.y = pl.m_y;
+	do_send(packet.size, reinterpret_cast<char*>(&packet));
+}
+
+void Session::send_login_success()
+{
+	S2C_LoginResult packet;
+	packet.size = sizeof(S2C_LoginResult);
+	packet.type = S2C_LOGIN_RESULT;
+	packet.success = true;
+	strncpy_s(packet.message, "Login successful.", sizeof(packet.message));
+	do_send(packet.size, reinterpret_cast<char*>(&packet));
+}
+
+void Session::send_remove_player(int player_id)
+{
+	S2C_RemovePlayer packet;
+	packet.size = sizeof(S2C_RemovePlayer);
+	packet.type = S2C_REMOVE_PLAYER;
+	packet.playerId = player_id;
+	do_send(packet.size, reinterpret_cast<char*>(&packet));
+}
+
+bool Session::process_packet(unsigned char* p)
+{
+	PACKET_TYPE type = *reinterpret_cast<PACKET_TYPE*>(&p[1]);
+	switch (type) {
+	case C2S_LOGIN: {
+		C2S_Login* packet = reinterpret_cast<C2S_Login*>(p);
+		strncpy_s(m_username, packet->username, MAX_NAME_LEN);
+		std::cout << "Player[" << m_id << "] logged in as " << m_username << std::endl;
+		send_avatar_info();
+
+		// 이미 스폰된 좀비 목록을 신규 클라이언트에게 전송
+		for (auto& [nZombieId, zombie] : g_ZombieManager.GetZombies())
+		{
+			if (!zombie.bAlive || !zombie.pAgent) continue;
+			send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
+		}
+	}
+				  break;
+	case C2S_MOVE: {
+		C2S_Move* packet = reinterpret_cast<C2S_Move*>(p);
+		DIRECTION dir = packet->dir;
+		switch (dir) {
+		case UP:    m_y++; break;
+		case DOWN:  m_y--; break;
+		case LEFT:  m_x--; break;
+		case RIGHT: m_x++; break;
+		}
+		std::cout << "Player[" << m_id << "] moved to (" << m_x << ", " << m_y << ")\n";
+		send_move_packet(m_id);
+	}
+				 break;
+	case C2S_PLAYER_POSITION: {
+		C2S_PlayerPosition* packet = reinterpret_cast<C2S_PlayerPosition*>(p);
+		std::lock_guard<std::mutex> lock(g_Mutex);
+		g_PlayerPositions[m_id] = Vector3(packet->x, packet->y, packet->z);
+	}
+							break;
+	default:
+		std::cout << "Unknown packet type received from player[" << m_id << "].\n";
+		return false;
+	}
+	return true;
+}
+
+void Session::send_spawn_zombie(int nZombieId, const Vector3& v3Pos)
+{
+	S2C_SpawnZombie p;
+	p.size = sizeof(S2C_SpawnZombie);
+	p.type = S2C_SPAWN_ZOMBIE;
+	p.zombieId = nZombieId;
+	p.x = v3Pos.x;
+	p.y = v3Pos.y;
+	p.z = v3Pos.z;
+	do_send(p.size, reinterpret_cast<char*>(&p));
+}
+
+void Session::send_despawn_zombie(int nZombieId)
+{
+	S2C_DespawnZombie p;
+	p.size = sizeof(S2C_DespawnZombie);
+	p.type = S2C_DESPAWN_ZOMBIE;
+	p.zombieId = nZombieId;
+	do_send(p.size, reinterpret_cast<char*>(&p));
+}
+
+void Session::send_zombie_state(int nZombieId, float x, float z, float yaw, float waypointX, float waypointZ, ZombieBehaviorState state)
+{
+	S2C_ZombieState p;
+	p.size = sizeof(S2C_ZombieState);
+	p.type = S2C_ZOMBIE_STATE;
+	p.zombieId = nZombieId;
+	p.x = x;
+	p.z = z;
+	p.yaw = yaw;
+	p.waypointX = waypointX;
+	p.waypointZ = waypointZ;
+	p.behaviorState = state;
+	do_send(p.size, reinterpret_cast<char*>(&p));
+}
+
+void Session::send_zombie_attack(int nZombieId, int nTargetPlayerId, float fDamage)
+{
+	S2C_ZombieAttack p;
+	p.size = sizeof(S2C_ZombieAttack);
+	p.type = S2C_ZOMBIE_ATTACK;
+	p.zombieId = nZombieId;
+	p.targetPlayerId = nTargetPlayerId;
+	p.damage = fDamage;
+	do_send(p.size, reinterpret_cast<char*>(&p));
 }

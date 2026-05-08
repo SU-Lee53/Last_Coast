@@ -9,9 +9,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Client", "Client\Client.vcxproj", "{1AA0F90B-A613-4B06-9A63-5BBA7ADBF30B}"
-	ProjectSection(ProjectDependencies) = postProject
-		{B019FDB4-06D4-47AA-8358-93648C1E7F12} = {B019FDB4-06D4-47AA-8358-93648C1E7F12}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AI", "AI\AI.vcxproj", "{B019FDB4-06D4-47AA-8358-93648C1E7F12}"
 EndProject

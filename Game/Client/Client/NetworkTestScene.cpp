@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "NetworkTestScene.h"
 #include "DebugPlayer.h"
+#include "TestScene.h"
 #include "ThirdPersonPlayer.h"
 
 #include "TerrainTestScene.h"
@@ -29,14 +30,14 @@ void NetworkTestScene::Update()
 	NETWORK->ConnectToServer();
 
 	if (ImGui::Button("Change To Scene")) {
-		SCENE->ChangeScene<TerrainTestScene>();
+		SCENE->ChangeScene<TestScene>();
 	}
 
 	if (NETWORK->IsConnected()) {
 		ImGui::Begin("Change Scene");
 		{
 			if (ImGui::Button("Change To Scene")) {
-				SCENE->ChangeScene<TerrainTestScene>();
+				SCENE->ChangeScene<TestScene>();
 			}
 		}
 		ImGui::End();

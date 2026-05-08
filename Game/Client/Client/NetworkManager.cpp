@@ -63,6 +63,7 @@ void NetworkManager::ConnectToServer()
 				m_connectState = ConnectState::Connected;
 				m_bConnected = true;
 				m_bOfflineMode = false;
+				SendLoginPacket();
 				g_hNetworkThread = CreateThread(NULL, 0, ProcessNetwork, this, 0, NULL);
 			}
 		}
@@ -103,7 +104,7 @@ void NetworkManager::ConnectToServer()
 					m_bConnected = true;
 					m_bOfflineMode = false;
 					m_strErrorLog = "Connected!";
-
+					SendLoginPacket();
 					g_hNetworkThread = CreateThread(NULL, 0, ProcessNetwork, this, 0, NULL);
 				}
 				else
@@ -143,26 +144,32 @@ void NetworkManager::Disconnect()
 }
 
 // 일단 키 입력만
+void NetworkManager::SendLoginPacket()
+{
+	C2S_Login packet;
+	packet.size = sizeof(C2S_Login);
+	packet.type = C2S_LOGIN;
+	strncpy_s(packet.username, "Player", sizeof(packet.username));
+
+	WSABUF wsa;
+	wsa.buf = reinterpret_cast<char*>(&packet);
+	wsa.len = packet.size;
+	WSASend(m_hClientSocket, &wsa, 1, nullptr, 0, nullptr, nullptr);
+}
+
 void NetworkManager::SendData()
 {
-	C2S_Move packet;
-	packet.size = sizeof(C2S_Move);
-	packet.type = C2S_MOVE;
+	m_SendMovePacket.size = sizeof(C2S_Move);
+	m_SendMovePacket.type = C2S_MOVE;
+	m_SendMovePacket.dir  = UP;
 
-	if (INPUT->GetButtonDown('W')) {
-		packet.dir = UP;
-	}
-	if (INPUT->GetButtonDown('S')) {
-		packet.dir = DOWN;
-	}
-	if (INPUT->GetButtonDown('A')) {
-		packet.dir = LEFT;
-	}
-	if (INPUT->GetButtonDown('D')) {
-		packet.dir = RIGHT;
-	}
-	m_wsabuf.buf = reinterpret_cast<char*>(&packet);
-	m_wsabuf.len = sizeof(packet);
+	if (INPUT->GetButtonDown('W')) m_SendMovePacket.dir = UP;
+	if (INPUT->GetButtonDown('S')) m_SendMovePacket.dir = DOWN;
+	if (INPUT->GetButtonDown('A')) m_SendMovePacket.dir = LEFT;
+	if (INPUT->GetButtonDown('D')) m_SendMovePacket.dir = RIGHT;
+
+	m_wsabuf.buf = reinterpret_cast<char*>(&m_SendMovePacket);
+	m_wsabuf.len = sizeof(m_SendMovePacket);
 	WSASend(m_hClientSocket, &m_wsabuf, 1, 0, 0, &m_over, send_callback);
 }
 
@@ -192,7 +199,7 @@ void NetworkManager::send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED o
 {
 	NetworkManager* N = NetworkManager::GetInstance();
 	N->m_over = *over;
-	memset(over, 0, sizeof(over));
+	memset(over, 0, sizeof(*over));
 	N->ReceiveData();
 }
 
