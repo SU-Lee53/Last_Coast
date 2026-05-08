@@ -161,8 +161,10 @@ struct TerrainHit {
 };
 
 struct CollisionResult {
-	std::shared_ptr<IGameObject> pSelf;
-	std::shared_ptr<IGameObject> pOther;
+// 	std::shared_ptr<IGameObject> pSelf;
+// 	std::shared_ptr<IGameObject> pOther;
+	IGameObject* pSelf;
+	IGameObject* pOther;
 
 	bool operator==(const CollisionResult& other) const noexcept {
 		return (pSelf == other.pSelf) && (pOther == other.pOther);
@@ -179,8 +181,8 @@ template<>
 struct std::hash<CollisionResult> {
 	size_t operator()(const CollisionResult& result) const {
 		// hash combine
-		size_t h1 = std::hash<std::shared_ptr<IGameObject>>{}(result.pSelf);
-		size_t h2 = std::hash<std::shared_ptr<IGameObject>>{}(result.pOther);
+		size_t h1 = std::hash<IGameObject*>{}(result.pSelf);
+		size_t h2 = std::hash<IGameObject*>{}(result.pOther);
 
 		return h1 ^ (h2 + 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
 	}

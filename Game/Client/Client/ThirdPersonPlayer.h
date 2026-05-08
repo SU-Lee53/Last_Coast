@@ -49,6 +49,9 @@ public:
 	virtual void Update() override;
 	virtual void PostUpdate() override;
 
+	virtual void Render() override;
+	virtual void AddToQueue(OUT std::vector<IGameObject*>& pRenderQueue) override;
+
 public:
 	// Getter
 	float GetMoveSpeed() const { return m_fMoveSpeed; }
@@ -189,7 +192,7 @@ protected:
 	const float	m_fMaxMoveSpeed = 1.4_m;
 	const float	m_fAcceleration = 10.0_cm;
 	const float	m_fFriction = 10.f;
-	const float	m_fGravity = -9.8_cm * 10;
+	const float	m_fGravity = -9.8_cm * 100;
 	
 	// Ground check constants
 	uint32			m_unGroundGraceFrames = 0;

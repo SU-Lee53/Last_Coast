@@ -39,6 +39,126 @@ bool BoundingCapsule::Intersects(const BoundingBox& box, OUT Vector3& outv3Norma
 	return SegmentIntersectOBBWithPenetrationDepth(v3Seg0, v3Seg1, fRadius, xmOBB, outv3Normal, outfDepth);
 }
 
+bool BoundingCapsule::Intersects(const Vector3& v3RayOrigin, const Vector3& v3RayDir, OUT float& outDist) const
+{
+	outDist = 0.f;
+
+	Vector3 dir = v3RayDir;
+	const float dirLenSq = dir.LengthSquared();
+	if (dirLenSq <= 1e-8f) {
+		return false;
+	}
+
+	dir.Normalize();
+
+	constexpr float EPS = 1e-6f;
+
+	const float radius = fRadius;
+	const float radiusSq = radius * radius;
+
+	// Segment = center + [-halfHeight, +halfHeight] on Y axis.
+	const Vector3 bottom = v3Center - Vector3::Up * fHalfHeight;
+	const Vector3 top = v3Center + Vector3::Up * fHalfHeight;
+
+	// 1. If ray starts inside capsule, hit distance is 0.
+	{
+		float y = std::clamp(v3RayOrigin.y, bottom.y, top.y);
+		Vector3 closestOnSegment{ v3Center.x, y, v3Center.z };
+
+		Vector3 diff = v3RayOrigin - closestOnSegment;
+		if (diff.LengthSquared() <= radiusSq) {
+			outDist = 0.f;
+			return true;
+		}
+	}
+
+	float bestT = std::numeric_limits<float>::max();
+	bool hit = false;
+
+	auto tryAddHit = [&](float t)
+		{
+			if (t >= 0.f && t < bestT) {
+				bestT = t;
+				hit = true;
+			}
+		};
+
+	// 2. Infinite cylinder side intersection, then clamp by Y range.
+	// Cylinder axis: Y
+	// Equation: (x - cx)^2 + (z - cz)^2 = r^2
+	{
+		const float ox = v3RayOrigin.x - v3Center.x;
+		const float oz = v3RayOrigin.z - v3Center.z;
+
+		const float dx = dir.x;
+		const float dz = dir.z;
+
+		const float a = dx * dx + dz * dz;
+		const float b = 2.f * (ox * dx + oz * dz);
+		const float c = ox * ox + oz * oz - radiusSq;
+
+		if (std::abs(a) > EPS) {
+			const float discriminant = b * b - 4.f * a * c;
+
+			if (discriminant >= 0.f) {
+				const float sqrtD = std::sqrt(discriminant);
+				const float inv2A = 1.f / (2.f * a);
+
+				const float t0 = (-b - sqrtD) * inv2A;
+				const float t1 = (-b + sqrtD) * inv2A;
+
+				auto testCylinderT = [&](float t)
+					{
+						if (t < 0.f) {
+							return;
+						}
+
+						const float y = v3RayOrigin.y + dir.y * t;
+						if (y >= bottom.y && y <= top.y) {
+							tryAddHit(t);
+						}
+					};
+
+				testCylinderT(t0);
+				testCylinderT(t1);
+			}
+		}
+	}
+
+	// 3. Sphere cap intersection helper.
+	auto testSphere = [&](const Vector3& sphereCenter)
+		{
+			const Vector3 m = v3RayOrigin - sphereCenter;
+
+			const float b = m.Dot(dir);
+			const float c = m.Dot(m) - radiusSq;
+
+			const float discriminant = b * b - c;
+			if (discriminant < 0.f) {
+				return;
+			}
+
+			const float sqrtD = std::sqrt(discriminant);
+
+			const float t0 = -b - sqrtD;
+			const float t1 = -b + sqrtD;
+
+			tryAddHit(t0);
+			tryAddHit(t1);
+		};
+
+	// 4. Bottom and top hemispheres.
+	testSphere(bottom);
+	testSphere(top);
+
+	if (!hit) {
+		return false;
+	}
+
+	outDist = bestT;
+	return true;
+}
+
 void BoundingCapsule::Transform(OUT BoundingCapsule& out, const DirectX::XMMATRIX mtxTransform) const noexcept
 {
 	out.v3Center = Vector3::Transform(v3Center, mtxTransform);

@@ -80,21 +80,23 @@ private:
 template<>
 struct TraceHitTester<Zombie>
 {
-	static bool Intersects(
-		const std::shared_ptr<Zombie>& pZombie,
-		const XMVECTOR& rayOrigin,
-		const XMVECTOR& rayDir,
-		OUT float& outDist)
+	static bool Intersects(Zombie* pObj, Vector3 rayOrigin, Vector3 rayDir, OUT float& outDist)
 	{
-		auto pCollider = pZombie->GetComponent<PlayerCollider>();
+		if (!pObj) {
+			return false;
+		}
+
+		auto pCollider = pObj->GetComponent<PlayerCollider>();
 		if (!pCollider) {
 			return false;
 		}
 
-		BoundingBox aabb;
-		pCollider->GetCapsuleWorld().CreateAABBFromCapsule(aabb);
+		return pCollider->GetCapsuleWorld().Intersects(rayOrigin, rayDir, outDist);
+	}
 
-		return aabb.Intersects(rayOrigin, rayDir, outDist);
+	static bool Intersects(const std::shared_ptr<Zombie>& pObj, Vector3 rayOrigin, Vector3 rayDir, OUT float& outDist)
+	{
+		return Intersects(pObj.get(), rayOrigin, rayDir, outDist);
 	}
 
 	static constexpr TRACE_HIT_TYPE HitType = TRACE_HIT_TYPE::ZOMBIE;

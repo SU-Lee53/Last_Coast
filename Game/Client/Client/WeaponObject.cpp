@@ -58,8 +58,8 @@ bool WeaponObject::TryFire()
 		rayDesc.v3Direction = pCamera->GetLook();
 		rayDesc.fMaxDistance = 5000.f;
 		rayDesc.fDamage = m_fDamage;
-		rayDesc.pInstigator = m_wpOwner.lock();
-		rayDesc.pSourceObject = shared_from_this();
+		rayDesc.pInstigator = m_wpOwner.lock().get();
+		rayDesc.pSourceObject = this;
 
 		RayTraceHitResult hit{};
 		CUR_SCENE->GetWorld().LineTraceSingle<StaticObject, Zombie>(rayDesc, hit);

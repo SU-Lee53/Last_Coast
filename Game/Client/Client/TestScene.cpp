@@ -144,12 +144,6 @@ void TestScene::Update()
 			}
 			if (zombieIdx == 0) ImGui::Text("No Zombies");
 
-			const auto& spaceDesc = GetSpacePartition();
-			ScenePartition::CellCoord cdPlayer = spaceDesc.WorldToCellXZ(v3PlayerPos);
-			int32 cellIndex = spaceDesc.CellToIndex(cdPlayer.x, cdPlayer.y);
-			ImGui::NewLine();
-			ImGui::Text("====== Space Partition ======");
-			ImGui::Text("Player is in (%d, %d) - # %d", cdPlayer.x, cdPlayer.y, cellIndex);
 			ImGui::Text("====== Collision Result ======");
 			for (const auto& pair : m_pCollisionPairs) {
 				ImGui::Text("Collision {%s : %s}", pair.pSelf->GetName().c_str(), pair.pOther->GetName().c_str());
@@ -184,7 +178,7 @@ void TestScene::ProcessPlayerShoot()
 
 	auto pCamera = std::static_pointer_cast<ThirdPersonCamera>(pPlayer->GetCamera());
 	Vector3 v3RayOrigin = pCamera->GetPosition();
-	Vector3 v3RayDir    = pCamera->GetLook();
+	Vector3 v3RayDir = pCamera->GetLook();
 
 	float fMinDist = std::numeric_limits<float>::max();
 	std::shared_ptr<Zombie> pHitZombie;
@@ -211,9 +205,14 @@ void TestScene::ProcessPlayerShoot()
 
 void TestScene::RemoveDeadZombies()
 {
-	m_World.RemoveIfAlive<Zombie>([](const std::shared_ptr<IGameObject>& obj) {
+	m_World.RemoveIfAlive<Zombie>([&](const std::shared_ptr<IGameObject>& obj) {
 		auto pZombie = std::dynamic_pointer_cast<Zombie>(obj);
-		return pZombie && pZombie->IsReadyToRemove();
+		if (!pZombie || !pZombie->IsReadyToRemove()) {
+			return false;
+		}
+
+		RemoveCollisionPairsOf(pZombie.get());
+		return true;
 	});
 
 

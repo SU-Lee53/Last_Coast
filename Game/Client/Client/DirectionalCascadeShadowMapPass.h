@@ -41,7 +41,7 @@ private:
 
 	void BindGeometryData(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-		const std::vector<std::shared_ptr<IGameObject>>& frustumCulled,
+		const std::vector<IGameObject*>& frustumCulled,
 		OUT DescriptorHandle& outDescHandle) const;
 
 	void DrawGeometry(
@@ -50,7 +50,7 @@ private:
 
 	void DrawTerrain(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-		int nCascadeIndex, 
+		const std::vector<TerrainComponent*>& frustumCulled,
 		OUT DescriptorHandle& outDescHandle) const;
 
 	void ComputeCascade() const;

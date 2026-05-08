@@ -17,18 +17,23 @@ public:
 template<>
 struct TraceHitTester<StaticObject>
 {
-	static bool Intersects(
-		const std::shared_ptr<StaticObject>& pObj,
-		const XMVECTOR& rayOrigin,
-		const XMVECTOR& rayDir,
-		OUT float& outDist)
+	static bool Intersects(StaticObject* pObj, Vector3 rayOrigin, Vector3 rayDir, OUT float& outDist)
 	{
+		if (!pObj) {
+			return false;
+		}
+
 		auto pCollider = pObj->GetComponent<StaticCollider>();
 		if (!pCollider) {
 			return false;
 		}
 
 		return pCollider->GetOBBWorld().Intersects(rayOrigin, rayDir, outDist);
+	}
+
+	static bool Intersects(const std::shared_ptr<StaticObject>& pObj, Vector3 rayOrigin, Vector3 rayDir, OUT float& outDist)
+	{
+		return Intersects(pObj.get(), rayOrigin, rayDir, outDist);
 	}
 
 	static constexpr TRACE_HIT_TYPE HitType = TRACE_HIT_TYPE::STATIC_OBJECT;

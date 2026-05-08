@@ -29,6 +29,7 @@ public:
 	virtual void PostUpdate() = 0;
 
 	virtual void Render();
+	virtual void AddToQueue(OUT std::vector<IGameObject*>& pRenderQueue);
 
 public:
 	template<ComponentType T>

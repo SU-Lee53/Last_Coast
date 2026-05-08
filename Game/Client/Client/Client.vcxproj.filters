@@ -149,6 +149,9 @@
     <Filter Include="02.Game\Particle\Particles">
       <UniqueIdentifier>{01128195-ef50-498f-80da-aeac1b01fc76}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02.Game\World\SpacePartition">
+      <UniqueIdentifier>{6954c5ca-c491-4c64-8aac-2b2eeeabac6a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h">
@@ -522,6 +525,15 @@
     <ClInclude Include="NetworkGameTestScene.h">
       <Filter>02.Game\Scene\Test</Filter>
     </ClInclude>
+    <ClInclude Include="SpatialWorld.h">
+      <Filter>02.Game\World\SpacePartition</Filter>
+    </ClInclude>
+    <ClInclude Include="SpatialTypes.h">
+      <Filter>02.Game\World\SpacePartition</Filter>
+    </ClInclude>
+    <ClInclude Include="SpatialTraits.h">
+      <Filter>02.Game\World\SpacePartition</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -883,6 +895,9 @@
     </ClCompile>
     <ClCompile Include="NetworkGameTestScene.cpp">
       <Filter>02.Game\Scene\Test</Filter>
+    </ClCompile>
+    <ClCompile Include="SpatialWorld.cpp">
+      <Filter>02.Game\World\SpacePartition</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

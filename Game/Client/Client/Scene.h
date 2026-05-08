@@ -18,61 +18,6 @@ class Skybox;
 
 using CollisionPair = std::pair<std::shared_ptr<IGameObject>, std::shared_ptr<IGameObject>>;
 
-struct GridCell {
-	std::vector<std::shared_ptr<IGameObject>> pObjectsInCell;
-	std::vector<std::shared_ptr<TerrainComponent>> pTerrainComponentsInCell;
-	BoundingBox xmAABB;
-};
-
-struct ScenePartition {
-	struct CellCoord : public XMINT2 {
-		CellCoord() = default;
-		
-		constexpr CellCoord(int32 x, int32 y) : XMINT2(x, y) {}
-		
-		constexpr CellCoord(const CellCoord& cd) {
-			x = cd.x;
-			y = cd.y;
-		}
-
-		constexpr CellCoord(CellCoord&& cd) {
-			x = std::move(cd.x);
-			y = std::move(cd.y);
-		}
-
-		operator std::pair<int, int>() {
-			return { x, y };
-		}
-	};
-
-	const static CellCoord g_cdDirection[8];
-
-	std::vector<GridCell> Cells;
-	Vector2 v2SceneOriginXZ;
-	Vector2 v2CellSizeXZ;
-	XMUINT2 xmui2NumCellsXZ;
-
-	float fSceneMinY = 0.f;
-	float fSceneMaxY = 0.f;
-
-	const GridCell* GetCellData(const CellCoord& cdCell) const;
-	std::vector<std::shared_ptr<IGameObject>> BroadPhaseDFS(const CellCoord& cdStart, int32 nMaxDepth) const;
-
-	std::vector<std::shared_ptr<IGameObject>> ObjectBroadPhaseFrustumCulling(const BoundingFrustum& xmFrustumWorld) const;
-	std::vector<std::shared_ptr<TerrainComponent>> TerrainBroadPhaseFrustumCulling(const BoundingFrustum& xmFrustumWorld) const;
-
-	CellCoord WorldToCellXZ(const Vector3& v3WorldPos) const;
-
-	int32 CellToIndex(uint32 x, uint32 z) const;
-
-	void Insert(const std::shared_ptr<IGameObject>& pObj);
-	void Insert(const std::shared_ptr<TerrainComponent>& pTerrainComponent);
-
-	void GenerateCellBounds();
-	void SetMinHeight(float value) { fSceneMinY = value; }
-	void SetMaxHeight(float value) { fSceneMaxY = value; }
-};
-
 class Scene {
 	friend class SceneManager;
 
@@ -84,9 +29,7 @@ public:
 
 public:
 	template<typename T> requires std::derived_from<T, IGameObject>
-	void AddObject(std::shared_ptr<T> pObj) {
-		m_World.Add<T>(pObj);
-	}
+	void AddObject(std::shared_ptr<T> pObj);
 
 	template<typename... Objs, 
 		typename = std::enable_if_t<(std::is_same_v<Objs, std::shared_ptr<IGameObject>> && ...)>>
@@ -119,7 +62,6 @@ public:
 	void CheckCollision();
 
 	void GenerateSceneBound();
-	void CellPartition(const Vector2& v3OriginXZ, const Vector2& v2SizePerCellXZ, uint32 unCellsX, uint32 unCellsZ);
 
 	virtual void SyncSceneWithServer() {}
 
@@ -136,11 +78,12 @@ public:
 	const Vector4& GetGlobalAmbient() const { return m_v4GlobalAmbient; }
 	const std::unique_ptr<UIBoard>& GetUIBoard() const { return m_pUIBoard; }
 
-	const ScenePartition& GetSpacePartition() const { return m_SpacePartition; }
-
 	std::vector<LightData> MakeLightData() const;
 
 	TerrainHit QueryTerrainHit(const Vector3& v3WorldPos);
+
+protected:
+	void RemoveCollisionPairsOf(IGameObject* pDeadObject);
 
 private:
 	void InitializeObjects();
@@ -149,25 +92,19 @@ private:
 protected:
 	WorldType m_World;
 
-	//std::vector<std::shared_ptr<IGameObject>>	m_pStaticObjects = {};
-	//std::vector<std::shared_ptr<IGameObject>>	m_pDynamicObjects = {};
-
 	std::vector<std::shared_ptr<Light>>			m_pLights = {};
 	
 	std::shared_ptr<IPlayer>					m_pPlayer = nullptr;
 	std::shared_ptr<TerrainObject>				m_pTerrain = nullptr;
 	std::shared_ptr<Skybox>						m_pSkybox = nullptr;
 
-	//std::vector<GridCell> m_GridCells;
-	ScenePartition m_SpacePartition{};
 	BoundingBox m_xmSceneBound{};
-	
 	std::unique_ptr<UIBoard> m_pUIBoard{};
-
-
 	std::unordered_set<CollisionResult> m_pCollisionPairs;
-
 	Vector4 m_v4GlobalAmbient;
+
+private:
+	bool m_bSpatialRuntimeRegistrationEnabled = false;
 
 public:
 	constexpr static float g_fWorldMinX = -500_m;
@@ -184,4 +121,35 @@ private:
 
 
 };
+
+template<typename T> requires std::derived_from<T, IGameObject>
+void Scene::AddObject(std::shared_ptr<T> pObj)
+{
+	if (!pObj) {
+		return;
+	}
+
+	// 1. 항상 World pool에는 넣는다.
+	m_World.Add<T>(pObj);
+
+	// 2. PostInitialize 전 초기 로딩 중이면 spatial 등록하지 않는다.
+	//    이 시점에는 collider initialize / scene bound / static grid가 아직 준비 안 됐을 수 있음.
+	if (!m_bSpatialRuntimeRegistrationEnabled) {
+		return;
+	}
+
+	// 3. 런타임 추가는 dynamic spatial object만 자동 등록한다.
+	//    StaticObject는 런타임 추가하지 않는 정책이므로 여기서 무시하거나 debugbreak.
+	if constexpr (SpatialObjectTraits<T>::bSpatial) {
+		if constexpr (SpatialObjectTraits<T>::bDynamic) {
+			m_World.RegisterSpatialObject<T>(pObj);
+			m_World.UpdateSpatial();
+		}
+		else {
+			// StaticObject는 런타임 추가하지 않는 정책.
+			// 실수 방지용으로 Debug에서만 잡아도 됨.
+			assert(false && "Runtime static spatial registration is not supported. Add static objects before PostInitialize().");
+		}
+	}
+}
 

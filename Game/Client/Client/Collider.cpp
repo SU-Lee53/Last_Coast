@@ -71,7 +71,7 @@ bool ICollider::CheckCollision(std::shared_ptr<ICollider> pOther) const
 	return m_xmOBBWorld.Intersects(pOther->m_xmOBBWorld);
 }
 
-const BoundingBox ICollider::GetAABBFromOBBWorld() const
+BoundingBox ICollider::GetAABBFromOBBWorld() const
 {
 	BoundingBox xmRet;
 	XMFLOAT3 pxmf3OBBCorners[BoundingOrientedBox::CORNER_COUNT];
@@ -169,6 +169,7 @@ void PlayerCollider::Initialize()
 	//m_CapsuleOrigin.fRadius = std::min(m_xmOBBOrigin.Extents.x, m_xmOBBOrigin.Extents.z) * 2;
 
 	const Matrix& mtxWorld = m_wpOwner.lock()->GetWorldMatrix();
+	m_xmOBBOrigin.Transform(m_xmOBBWorld, mtxWorld);
 	m_CapsuleOrigin.Transform(m_CapsuleWorld, mtxWorld);
 
 	m_bInitialized = true;
@@ -177,6 +178,8 @@ void PlayerCollider::Initialize()
 void PlayerCollider::Update()
 {
 	const Matrix& mtxWorld = m_wpOwner.lock()->GetWorldMatrix();
+
+	m_xmOBBOrigin.Transform(m_xmOBBWorld, mtxWorld);
 	m_CapsuleOrigin.Transform(m_CapsuleWorld, mtxWorld);
 }
 
@@ -219,4 +222,15 @@ bool PlayerCollider::IsInOBB(const BoundingOrientedBox& xmOBB) const
 bool PlayerCollider::CheckCollision(std::shared_ptr<ICollider> pOther) const
 {
 	return m_CapsuleWorld.Intersects(pOther->GetOBBWorld());
+}
+
+DirectX::BoundingBox PlayerCollider::GetAABBFromOBBWorld() const
+{
+	BoundingBox xmRet;
+	XMFLOAT3 pxmf3AABBCorners[BoundingOrientedBox::CORNER_COUNT];
+	BoundingBox xmAABB;
+	m_CapsuleWorld.CreateAABBFromCapsule(xmAABB);
+	xmAABB.GetCorners(pxmf3AABBCorners);
+	BoundingBox::CreateFromPoints(xmRet, BoundingOrientedBox::CORNER_COUNT, pxmf3AABBCorners, sizeof(XMFLOAT3));
+	return xmRet;
 }

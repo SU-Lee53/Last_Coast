@@ -16,7 +16,6 @@ IGameObject::~IGameObject()
 
 void IGameObject::Render()
 {
-	// TODO : Prepare Render Logic Here
 	if (auto p = GetComponent<Skeleton>(); p) {
 		p->PrepareRenderAttached();
 	}
@@ -27,6 +26,17 @@ void IGameObject::Render()
 
 	for (auto& pChild : m_pChildren) {
 		pChild->Render();
+	}
+}
+
+void IGameObject::AddToQueue(OUT std::vector<IGameObject*>& pRenderQueue)
+{
+	if (auto p = GetComponent<MeshRenderer>()) {
+		pRenderQueue.push_back(this);
+	}
+
+	for (auto& pChild : m_pChildren) {
+		pChild->AddToQueue(pRenderQueue);
 	}
 }
 

@@ -247,7 +247,7 @@ void Zombie::OnTraceHit(const RayTraceHitResult& hitResult)
 
 	if (hitResult.fDamage > 0.f) {
 		TakeDamage(hitResult.fDamage);
-		static_pointer_cast<IThirdPersonPlayer>(hitResult.pInstigator)->ShowHitMarker();
+		static_cast<IThirdPersonPlayer*>(hitResult.pInstigator)->ShowHitMarker();
 	}
 
 	Vector3 v3BloodDir = -hitResult.v3Direction;

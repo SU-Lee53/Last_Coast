@@ -126,13 +126,6 @@ void MapTestScene::Update()
 					Vector3 v3PlayerPos = transform->GetPosition();
 					ImGui::Text("Player Position : (%f, %f, %f)", v3PlayerPos.x, v3PlayerPos.y, v3PlayerPos.z);
 
-					const auto& spaceDesc = GetSpacePartition();
-					ScenePartition::CellCoord cdPlayer = spaceDesc.WorldToCellXZ(v3PlayerPos);
-					int32 cellIndex = spaceDesc.CellToIndex(cdPlayer.x, cdPlayer.y);
-					ImGui::NewLine();
-					ImGui::Text("====== Space Partition ======");
-					ImGui::Text("Player is in (%d, %d) - # %d", cdPlayer.x, cdPlayer.y, cellIndex);
-
 					ImGui::Text("====== Collision Result ======");
 					for (const auto& pair : m_pCollisionPairs) {
 						ImGui::Text("Collision {%s : %s}", pair.pSelf->GetName().c_str(), pair.pOther->GetName().c_str());

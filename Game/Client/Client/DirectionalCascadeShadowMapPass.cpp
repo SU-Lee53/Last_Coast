@@ -38,38 +38,31 @@ void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> p
 {
 	constexpr uint32 rootParamLightCameraData = std::to_underlying(ROOT_PARAMETER::LIGHT_CAMERA_DATA);
 
-	BoundingBox xmAABBFitToWholeFrustum;
-	std::array<Vector3, BoundingFrustum::CORNER_COUNT> v3Corners;
-	CUR_SCENE->GetCamera()->GetFrustumWorld().GetCorners(v3Corners.data());
-	BoundingBox::CreateFromPoints(xmAABBFitToWholeFrustum, BoundingFrustum::CORNER_COUNT, v3Corners.data(), sizeof(Vector3));
-
-	std::vector<std::shared_ptr<IGameObject>> AABBCulled;
-	{
-		const std::vector<std::shared_ptr<IGameObject>>& inputResource = RENDER->GetObjectsToRender();
-		AABBCulled.reserve(inputResource.size());
-
-		std::copy_if(inputResource.begin(), inputResource.end(), std::back_inserter(AABBCulled), [&xmAABBFitToWholeFrustum](const auto& pObj) {
-			const auto pCollider = pObj->GetComponentFromRoot<ICollider>();
-			return (pCollider) ? pCollider->IsInAABB(xmAABBFitToWholeFrustum) : true;
-		});
-	}
-
 	for (int i = 0; i < g_unNumCascade; ++i) {
 		m_RenderQueueCached.clear();
 		SetRenderTargets(pd3dCommandList, i);
+		BoundingFrustum xmFrsutum = m_CascadeCached[i].xmFrustum;
 
-		std::vector<std::shared_ptr<IGameObject>> frustumCulled;
+		std::vector<IGameObject*> frustumCulled;
 		{
-			const std::vector<std::shared_ptr<IGameObject>>& inputResource = RENDER->GetObjectsToRender();
-			frustumCulled.reserve(AABBCulled.size());
+			//const std::vector<std::shared_ptr<IGameObject>>& inputResource = RENDER->GetObjectsToRender();
+			frustumCulled.reserve(300);
 
-			BoundingFrustum xmFrsutum = m_CascadeCached[i].xmFrustum;
+			SpatialQueryDesc objectShadowDesc{};
+			objectShadowDesc.unLayerMask = SPATIAL_RENDERABLE | SPATIAL_CAST_SHADOW;
+			objectShadowDesc.eLayerMatchMode = SPATIAL_LAYER_MATCH_MODE::ALL;
+			objectShadowDesc.bIncludeStatic = true;
+			objectShadowDesc.bIncludeDynamic = true;
 
-			std::copy_if(AABBCulled.begin(), AABBCulled.end(), std::back_inserter(frustumCulled), [&xmFrsutum](const auto& pObj) {
-				const auto pCollider = pObj->GetComponentFromRoot<ICollider>();
-				return (pCollider) ? pCollider->IsInFrustum(xmFrsutum) : true;
-				});
+			SpatialQueryResult objectShadowCandidates = CUR_SCENE->GetWorld().GetSpatial().QueryFrustum(xmFrsutum, objectShadowDesc);
+			for (const auto& pObj : objectShadowCandidates.pObjects) {
+				pObj->AddToQueue(frustumCulled);
+			}
+
+			// Add Player
+			CUR_SCENE->GetPlayer()->AddToQueue(frustumCulled);
 		}
+
 
 		BindGeometryData(pd3dCommandList, frustumCulled, outDescHandle);
 
@@ -81,7 +74,17 @@ void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> p
 		DrawGeometry(pd3dCommandList, outDescHandle);
 
 		if (CUR_SCENE->GetTerrain() != nullptr) {
-			DrawTerrain(pd3dCommandList, i, outDescHandle);
+			SpatialQueryDesc terrainShadowDesc{};
+			terrainShadowDesc.unLayerMask = SPATIAL_TERRAIN | SPATIAL_CAST_SHADOW;
+
+			terrainShadowDesc.eLayerMatchMode = SPATIAL_LAYER_MATCH_MODE::ALL;
+			terrainShadowDesc.bIncludeStatic = true;
+			terrainShadowDesc.bIncludeDynamic = false;
+
+			SpatialQueryResult terrainShadowCandidates = CUR_SCENE->GetWorld().GetSpatial().QueryFrustum(xmFrsutum, terrainShadowDesc);
+			const auto& terrainCulled = terrainShadowCandidates.pTerrainComponents;
+
+			DrawTerrain(pd3dCommandList, terrainCulled, outDescHandle);
 		}
 	}
 }
@@ -227,7 +230,7 @@ void DirectionalCascadeShadowMapPass::SetRenderTargets(ComPtr<ID3D12GraphicsComm
 
 }
 
-void DirectionalCascadeShadowMapPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<std::shared_ptr<IGameObject>>& frustumCulled, OUT DescriptorHandle& outDescHandle) const
+void DirectionalCascadeShadowMapPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<IGameObject*>& frustumCulled, OUT DescriptorHandle& outDescHandle) const
 {
 	m_CachedData.Clear();
 
@@ -235,9 +238,9 @@ void DirectionalCascadeShadowMapPass::BindGeometryData(ComPtr<ID3D12GraphicsComm
 
 	for (const auto& pObj : frustumCulled) {
 		const auto& pMeshRenderer = pObj->GetComponent<MeshRenderer>();
-		auto [idx, bInserted] = m_CachedData.frustumCulledMap.Insert(pMeshRenderer->GetID(), { pMeshRenderer.get(), std::vector<const IGameObject*>{pObj.get()} });
+		auto [idx, bInserted] = m_CachedData.frustumCulledMap.Insert(pMeshRenderer->GetID(), { pMeshRenderer.get(), std::vector<const IGameObject*>{ pObj } });
 		if (!bInserted) {
-			m_CachedData.frustumCulledMap[idx].second.push_back(pObj.get());
+			m_CachedData.frustumCulledMap[idx].second.push_back(pObj);
 		}
 	}
 
@@ -343,7 +346,7 @@ void DirectionalCascadeShadowMapPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandL
 	}
 }
 
-void DirectionalCascadeShadowMapPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, int nCascadeIndex, OUT DescriptorHandle& outDescHandle) const
+void DirectionalCascadeShadowMapPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<TerrainComponent*>& frustumCulled, OUT DescriptorHandle& outDescHandle) const
 {
 	const auto& pTerrain = CUR_SCENE->GetTerrain();
 	const auto& pTerrainComponents = pTerrain->GetTerrainComponents();
@@ -359,7 +362,7 @@ void DirectionalCascadeShadowMapPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandLi
 	worldTransformCBuffer.WriteData(&mtxTerrainWorld);
 	pd3dCommandList->SetGraphicsRootConstantBufferView(rootParamWorldTransform, worldTransformCBuffer.GPUAddress);
 
-	for (const auto& pComponent : CUR_SCENE->GetSpacePartition().TerrainBroadPhaseFrustumCulling(m_CascadeCached[nCascadeIndex].xmFrustum)) {
+	for (const auto& pComponent : frustumCulled) {
 		const auto& terrainIndexRange = pComponent->GetIndexRange();
 		pTerrainMesh->RenderPosition(pd3dCommandList, 1, terrainIndexRange.unStartIndex, terrainIndexRange.unIndexCount);
 	}

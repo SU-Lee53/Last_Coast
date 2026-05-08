@@ -14,7 +14,7 @@ public:
 	virtual bool CheckCollision(std::shared_ptr<ICollider> pOther) const;
 
 	const BoundingOrientedBox& GetOBBWorld() const { return m_xmOBBWorld; }
-	const BoundingBox GetAABBFromOBBWorld() const;
+	virtual BoundingBox GetAABBFromOBBWorld() const;
 
 protected:
 	void MergeOBB(std::shared_ptr<IGameObject> pObj, bool bFixInWorld);
@@ -60,13 +60,15 @@ public:
 	virtual void Update() override;
 	virtual std::shared_ptr<IComponent> Copy(std::shared_ptr<IGameObject> pNewOwner)const override;
 
-	const BoundingCapsule& GetCapsuleOrigin() { return m_CapsuleOrigin; }
-	const BoundingCapsule& GetCapsuleWorld() { return m_CapsuleWorld; }
+	const BoundingCapsule& GetCapsuleOrigin() const { return m_CapsuleOrigin; }
+	const BoundingCapsule& GetCapsuleWorld() const { return m_CapsuleWorld; }
 
 	virtual bool IsInFrustum(const BoundingFrustum& xmFrustumInWorld) const override;
 	virtual bool IsInAABB(const BoundingBox& xmFrustumInWorld) const override;
 	virtual bool IsInOBB(const BoundingOrientedBox& xmFrustumInWorld) const override;
 	virtual bool CheckCollision(std::shared_ptr<ICollider> pOther) const override;
+
+	virtual BoundingBox GetAABBFromOBBWorld() const override;
 
 private:
 	BoundingCapsule m_CapsuleOrigin;

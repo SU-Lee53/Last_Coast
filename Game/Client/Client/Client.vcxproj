@@ -198,6 +198,9 @@
     <ClInclude Include="ParticleTextureCache.h" />
     <ClInclude Include="ParticleTypes.h" />
     <ClInclude Include="RayTraceUtils.h" />
+    <ClInclude Include="SpatialTraits.h" />
+    <ClInclude Include="SpatialTypes.h" />
+    <ClInclude Include="SpatialWorld.h" />
     <ClInclude Include="TextRenderer.h" />
     <ClInclude Include="GameFramework.h" />
     <ClInclude Include="GameObject.h" />
@@ -360,6 +363,7 @@
     <ClCompile Include="ParticlePass.cpp" />
     <ClCompile Include="ParticleRenderBatch.cpp" />
     <ClCompile Include="ParticleTextureCache.cpp" />
+    <ClCompile Include="SpatialWorld.cpp" />
     <ClCompile Include="TextAtlas.cpp" />
     <ClCompile Include="TextRenderer.cpp" />
     <ClCompile Include="GameFramework.cpp" />

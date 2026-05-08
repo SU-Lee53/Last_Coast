@@ -235,6 +235,36 @@ void IThirdPersonPlayer::PostUpdate()
 	m_xmOBBCollided.clear();
 }
 
+void IThirdPersonPlayer::Render()
+{
+	if (auto p = GetComponent<Skeleton>(); p) {
+		p->PrepareRenderAttached();
+	}
+
+	if (auto p = GetComponent<MeshRenderer>()) {
+		RENDER->Add(shared_from_this());
+	}
+
+	for (auto& pChild : m_pChildren) {
+		pChild->Render();
+	}
+}
+
+void IThirdPersonPlayer::AddToQueue(OUT std::vector<IGameObject*>& pRenderQueue)
+{
+	if (m_pWeaponSocket) {
+		m_pWeaponSocket->GetWeaponModel()->AddToQueue(pRenderQueue);
+	}
+
+	if (auto p = GetComponent<MeshRenderer>()) {
+		pRenderQueue.push_back(this);
+	}
+
+	for (auto& pChild : m_pChildren) {
+		pChild->AddToQueue(pRenderQueue);
+	}
+}
+
 void IThirdPersonPlayer::ApplyReplicatedState(/* const ServerSidePlayerState& state */)
 {
 	/*
