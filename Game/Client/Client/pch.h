@@ -128,6 +128,7 @@ using namespace AIDLL;
 #include "CommandListPool.h"
 #include "Typedef.h"
 #include "Defines.h"
+#include "Packets.h"
 #include "CB_Types.h"
 #include "Concepts.h"
 #include "Utility.h"

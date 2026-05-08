@@ -41,9 +41,9 @@ public:
 	// 서버에서 수신한 상태 적용:
 	//   - XZ 오차 > 임계값이면 AI agent 위치 보정
 	//   - waypoint 변경 시 MoveToPosition 재요청
-	void ApplyServerState(float serverX, float serverZ,
-	                      float waypointX, float waypointZ,
-	                      ZombieBehaviorState state);
+	//void ApplyServerState(float serverX, float serverZ,
+	//                      float waypointX, float waypointZ,
+	//                      ZombieBehaviorState state);
 
 	// 메모리 풀 인터페이스 ─────────────────────────────────────────────────────
 	// ZombiePool이 호출. 외부에서 직접 호출 금지.

@@ -281,10 +281,10 @@ void TestScene::ProcessNetworkZombies()
 		if (!pZombie || !pZombie->IsPoolActive()) continue;
 
 		ZombieServerState state;
-		if (NETWORK->GetLatestZombieState(nId, state))
-			pZombie->ApplyServerState(state.x, state.z,
-			                          state.waypointX, state.waypointZ,
-			                          state.behaviorState);
+		if (NETWORK->GetLatestZombieState(nId, state)) {}
+			//pZombie->ApplyServerState(state.x, state.z,
+			//                          state.waypointX, state.waypointZ,
+			//                          state.behaviorState);
 	}
 
 	// ── 공격 이벤트 처리 (Task 9) ─────────────────────────────────────────
