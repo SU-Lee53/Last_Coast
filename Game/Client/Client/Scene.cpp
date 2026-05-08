@@ -254,6 +254,24 @@ void Scene::PrepareRender()
 	}
 }
 
+void Scene::RemoveInvalidCollisionSet(const SpatialQueryResult& playerBroadPhaseResult)
+{
+	const auto& broadPhase = playerBroadPhaseResult.pObjects;
+	std::unordered_set<IGameObject*> validset{ broadPhase.begin(), broadPhase.end() };
+	for (auto it = m_pCollisionPairs.begin(); it != m_pCollisionPairs.end(); ++it) {
+		if (!validset.contains(it->pSelf)) {
+			it = m_pCollisionPairs.erase(it);
+		}
+		else if (!validset.contains(it->pOther)) {
+			it = m_pCollisionPairs.erase(it);
+		}
+		else {
+			++it;
+		}
+
+	}
+}
+
 void Scene::CheckCollision()
 {
 	// Broad Phase
@@ -274,13 +292,14 @@ void Scene::CheckCollision()
 	staticCollisionDesc.eLayerMatchMode = SPATIAL_LAYER_MATCH_MODE::ALL;
 	staticCollisionDesc.bIncludeStatic = true;
 	staticCollisionDesc.bIncludeDynamic = false;
-	staticCollisionDesc.v3AABBInflation = Vector3{ 5.f, 20.f, 5.f };
+	staticCollisionDesc.v3AABBInflation = Vector3{ 3_m, 3_m, 3_m };
 	SpatialQueryResult playerBroadPhaseResult = m_World.GetSpatial().QueryAABB(playerCollider->GetAABBFromOBBWorld(), staticCollisionDesc);
 	ImGui::Text("Player Collision Candidates : %d", (int)playerBroadPhaseResult.pObjects.size());
+	//RemoveInvalidCollisionSet(playerBroadPhaseResult);
 
 	// Player vs StaticObject
 	for (const auto& pObj : playerBroadPhaseResult.pObjects) {
-		const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>(); 
+		const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
 		if (!pCollider) {
 			continue;
 		}
@@ -325,13 +344,14 @@ void Scene::CheckCollision()
 
 		SpatialQueryResult zombieBroadPhaseResult = m_World.GetSpatial().QueryAABB(pZombieCollider->GetAABBFromOBBWorld(), staticCollisionDesc);
 		const PlayerCollider& zombieCollider = *pZombieCollider;
+		//RemoveInvalidCollisionSet(zombieBroadPhaseResult);
 
 		for (const auto& pObj : zombieBroadPhaseResult.pObjects) {
 			const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
 			if (!pCollider)
 				continue;
 
-			bool bResult = pCollider->CheckCollision(pZombieCollider);
+			bool bResult = zombieCollider.CheckCollision(pCollider);
 			if (bResult) {
 				CollisionResult result1(pZombie.get(), pObj);
 				CollisionResult result2(pObj, pZombie.get());
@@ -472,12 +492,12 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 			pObj->SetChild(pMeshObject);
 
 			// 콜리전 메시를 자식이 아닌 루트 StaticObject에 직접 추가
-			const auto* pCollisionInfos = MODEL->GetCollisionInfos(strMeshName);
-			if (pCollisionInfos) {
-				for (const auto& info : *pCollisionInfos) {
-					pObj->AddComponent<MeshCollider>(info);
-				}
-			}
+			//const auto* pCollisionInfos = MODEL->GetCollisionInfos(strMeshName);
+			//if (pCollisionInfos) {
+			//	for (const auto& info : *pCollisionInfos) {
+			//		pObj->AddComponent<StaticCollider>(info);
+			//	}
+			//}
 
 			//m_pGameObjects.push_back(pObj);
 			AddObject(pObj);

@@ -2,11 +2,7 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-<<<<<<< Updated upstream
-      <FullPath>C:\GitHub\Last_Coast\Game\Client\Executables\AI.dll</FullPath>
-=======
       <FullPath>C:\Users\dltmd\Documents\Final\Code\Game\Client\Executables\AI.dll</FullPath>
->>>>>>> Stashed changes
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />

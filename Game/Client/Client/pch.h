@@ -128,7 +128,6 @@ using namespace AIDLL;
 #include "CommandListPool.h"
 #include "Typedef.h"
 #include "Defines.h"
-#include "Packets.h"
 #include "CB_Types.h"
 #include "Concepts.h"
 #include "Utility.h"
@@ -139,6 +138,7 @@ using namespace AIDLL;
 #include "RandomGenerator.h"
 #include "AnimationHelper.h"
 #include "ResourceTable.h"
+#include "../../../Server/Server/protocol.h"
 
 #include "GameObject.h"
 #include "Component.h"

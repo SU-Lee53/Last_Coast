@@ -19,11 +19,11 @@ void TestScene::BuildObjects()
 	m_pPlayer = std::make_shared<LocalThirdPersonPlayer>();
 	m_pPlayer->Initialize();
 
-	for (int i = 0; i < 100; ++i) {
-		std::shared_ptr<Zombie> pObj = std::make_shared<Zombie>();
-		//m_pGameObjects.push_back(pObj);
-		AddObject<Zombie>(pObj);
-	}
+	//for (int i = 0; i < 100; ++i) {
+	//	std::shared_ptr<Zombie> pObj = std::make_shared<Zombie>();
+	//	//m_pGameObjects.push_back(pObj);
+	//	AddObject<Zombie>(pObj);
+	//}
 
 	if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 		pThirdPerson->GiveWeapon(WEAPON_TYPE::M4);
@@ -229,6 +229,7 @@ void TestScene::RemoveDeadZombies()
 void TestScene::SpawnZombie()
 {
 	auto pZombie = m_ZombiePool.Acquire();
+	AddObject(pZombie);
 	if (!pZombie) return; // 풀 고갈
 
 	pZombie->SetPosition(AI->GetNavMesh()->GetRandomPoint());

@@ -534,6 +534,7 @@
     <ClInclude Include="SpatialTraits.h">
       <Filter>02.Game\World\SpacePartition</Filter>
     </ClInclude>
+    <ClInclude Include="ZombiePool.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -899,6 +900,7 @@
     <ClCompile Include="SpatialWorld.cpp">
       <Filter>02.Game\World\SpacePartition</Filter>
     </ClCompile>
+    <ClCompile Include="ZombiePool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">

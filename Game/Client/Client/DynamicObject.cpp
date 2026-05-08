@@ -41,7 +41,6 @@ void DynamicObject::ResolveTerrain(OUT Vector3& outv3Delta, OUT TerrainHit& outH
 	const float fSnapOnAir = 0.3f;
 	const float fMaxSnapCap = 30.f;
 
-
 	Vector3 v3Floor = Vector3::Transform(m_v3FloorPosition, GetWorldMatrix());
 	Vector3 v3SampleCur = Vector3(v3Floor.x, 0.f, v3Floor.z);
 	Vector3 v3SampleNext = Vector3(v3Floor.x + outv3Delta.x, 0.f, v3Floor.z + outv3Delta.z);

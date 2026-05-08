@@ -5,13 +5,12 @@
 #include "WeaponObject.h"
 #include "Sprite.h"
 #include "TextBox.h"
-#include "Collider.h"
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 // PlayerHUD
 
-void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer& player)
+void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player)
 {
 	if (auto& pUIBoard = CUR_SCENE->GetUIBoard(); pUIBoard) {
 		pCrosshair = std::make_shared<Crosshair>();
@@ -75,9 +74,9 @@ void IThirdPersonPlayer::PlayerHUD::Update(const IThirdPersonPlayer& player)
 	if (pHealthText) {
 		pHealthText->SetText(std::to_wstring(static_cast<int32>(player.GetHP())));
 	}
-	
+
 	if (pHealthImage) {
-	
+
 	}
 
 	if (pAmmo) {
@@ -236,36 +235,6 @@ void IThirdPersonPlayer::PostUpdate()
 	m_xmOBBCollided.clear();
 }
 
-void IThirdPersonPlayer::Render()
-{
-	if (auto p = GetComponent<Skeleton>(); p) {
-		p->PrepareRenderAttached();
-	}
-
-	if (auto p = GetComponent<MeshRenderer>()) {
-		RENDER->Add(shared_from_this());
-	}
-
-	for (auto& pChild : m_pChildren) {
-		pChild->Render();
-	}
-}
-
-void IThirdPersonPlayer::AddToQueue(OUT std::vector<IGameObject*>& pRenderQueue)
-{
-	if (m_pWeaponSocket) {
-		m_pWeaponSocket->GetWeaponModel()->AddToQueue(pRenderQueue);
-	}
-
-	if (auto p = GetComponent<MeshRenderer>()) {
-		pRenderQueue.push_back(this);
-	}
-
-	for (auto& pChild : m_pChildren) {
-		pChild->AddToQueue(pRenderQueue);
-	}
-}
-
 void IThirdPersonPlayer::ApplyReplicatedState(/* const ServerSidePlayerState& state */)
 {
 	/*
@@ -294,7 +263,7 @@ void IThirdPersonPlayer::ApplyReplicatedState(/* const ServerSidePlayerState& st
 		예:
 		if (state.aiming) EnterAim();
 		else LeaveAim();
-	
+
 	*/
 }
 
@@ -577,7 +546,7 @@ void  IThirdPersonPlayer::ProcessLocalActionInput()
 				}
 			}
 		}
-		
+
 		if (m_PlayerHUD.pCrosshair && m_pWeaponSocket && m_pWeaponSocket->GetWeaponModel()) {
 			if (!m_bFiredThisFrame) {
 				m_PlayerHUD.pCrosshair->RemoveRecoil(
@@ -921,7 +890,7 @@ void IThirdPersonPlayer::ApplyDead()
 void IThirdPersonPlayer::ApplyGravity()
 {
 	if (!m_bGrounded) {
-		m_fVerticalVelocity += m_fGravity * DT; 
+		m_fVerticalVelocity += m_fGravity * DT;
 	}
 	else {
 		m_fVerticalVelocity = 0.f;
@@ -993,6 +962,27 @@ void IThirdPersonPlayer::ResolveCollision(OUT Vector3& outv3Delta)
 			break;
 		}
 	}
+}
+
+bool IThirdPersonPlayer::CheckGround(float fMaxDistance, OUT Vector3& outv3Normal)
+{
+	const BoundingCapsule& capsuleWorld = GetComponent<PlayerCollider>()->GetCapsuleWorld();
+	const float fProbe = fMaxDistance;
+
+	for (auto& xmOBB : m_xmOBBCollided) {
+		Vector3 v3Normal;
+		float fDepth;
+
+		BoundingCapsule test = capsuleWorld;
+		test.v3Center += Vector3::Down * fProbe;
+		if (test.Intersects(xmOBB, v3Normal, fDepth)) {
+			if (v3Normal.y > 0.6f) {
+				outv3Normal = v3Normal;
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 bool IThirdPersonPlayer::TryStepUp(const BoundingCapsule& capsule, const BoundingOrientedBox& box, OUT Vector3& outv3Delta)

@@ -49,9 +49,6 @@ public:
 	virtual void Update() override;
 	virtual void PostUpdate() override;
 
-	virtual void Render() override;
-	virtual void AddToQueue(OUT std::vector<IGameObject*>& pRenderQueue) override;
-
 public:
 	// Getter
 	float GetMoveSpeed() const { return m_fMoveSpeed; }
@@ -89,7 +86,7 @@ public:
 	// "플레이어 지속 상태" 패킷을 반영
 	// 위치, 회전, HP, 조준/달리기/무기상태 등의 지속적인 상태를 처리
 	virtual void ApplyReplicatedState(/* const ServerSidePlayerState& state */);
-	
+
 	// "플레이어 이벤트" 패킷을 반영
 	// 발사, 근접공격, 피격, 사망, 무기변경 등의 1회성 동작을 처리
 	virtual void ApplyReplicatedEvent(/* const ServerSidePlayerEvent& event */);
@@ -193,13 +190,13 @@ protected:
 	const float	m_fAcceleration = 10.0_cm;
 	const float	m_fFriction = 10.f;
 	const float	m_fGravity = -9.8_cm * 100;
-	
+
 	// Ground check constants
 	uint32			m_unGroundGraceFrames = 0;
 	const uint32	m_unMaxGroundGraceFrames = 4;
 	const float		m_fGroundDeadZoneY = 0.02_cm;
 	const float		m_fStepHeight = 50_cm;
-	
+
 	// Mouse input
 	const float	m_fMouseSensitivity = 0.1f;
 	POINT m_ptMouseCenterClientPos = {};

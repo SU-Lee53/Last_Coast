@@ -49,21 +49,18 @@ public:
 	virtual void OnLeaveScene() = 0;
 
 	void PostInitialize();
-
 	void PreProcessInput();
 	void PostProcessInput();
-
 	void PreUpdate();
 	void FixedUpdate();
 	void PostUpdate();
-
 	void PrepareRender();
 
-	void CheckCollision();
-
 	void GenerateSceneBound();
-
 	virtual void SyncSceneWithServer() {}
+
+	void CheckCollision();
+	void RemoveInvalidCollisionSet(const SpatialQueryResult& playerBroadPhaseResult);
 
 public:
 	//const std::vector<std::shared_ptr<IGameObject>>& GetStaticObjectsInScene() const { return m_pStaticObjects; }
