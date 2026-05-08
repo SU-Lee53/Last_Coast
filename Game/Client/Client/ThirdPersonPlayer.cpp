@@ -4,6 +4,7 @@
 #include "NodeObject.h"
 #include "Sprite.h"
 #include "Collider.h"
+#include "Sprite.h"
 
 ThirdPersonPlayer::ThirdPersonPlayer()
 {

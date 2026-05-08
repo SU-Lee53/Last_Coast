@@ -87,6 +87,7 @@ public:
 	bool					GetLatestZombieState(int zombieId, ZombieServerState& outState) const;
 
 private:
+	void					SendLoginPacket();
 	void					SendData();
 	void					ReceiveData();
 
@@ -115,6 +116,7 @@ private:
 	WSAOVERLAPPED			m_over = {};
 	WSABUF					m_wsabuf;
 	SOCKET					m_hClientSocket;
+	C2S_Move				m_SendMovePacket = {};     // SendData() overlapped 버퍼 (수명 보장)
 	char					m_Buffer[BUF_SIZE];        // WSA DMA 수신 버퍼
 	char					m_RecvBuf[BUF_SIZE * 4];   // 패킷 재조립 버퍼
 	int						m_nRecvPending = 0;        // m_RecvBuf에 누적된 유효 바이트 수

@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "ZombieManager.h"
 
 bool ZombieManager::Initialize(const std::string& strNavMeshPath)
@@ -64,8 +64,6 @@ void ZombieManager::Tick(float fDeltaTime,
 {
 	if (!m_pAIManager) return;
 
-	auto pNavMesh = m_pAIManager->GetNavMesh();
-
 	for (auto& [nId, zombie] : m_Zombies)
 	{
 		if (!zombie.bAlive || !zombie.pAgent) continue;
@@ -73,8 +71,8 @@ void ZombieManager::Tick(float fDeltaTime,
 		Vector3 v3ZombiePos = zombie.pAgent->GetPosition();
 
 		// 가장 가까운 플레이어를 타겟으로 선택
-		int    nTargetId    = -1;
-		float  fMinDistSq   = FLT_MAX;
+		int     nTargetId   = -1;
+		float   fMinDistSq  = FLT_MAX;
 		Vector3 v3TargetPos = {};
 
 		for (auto& [nPlayerId, v3PlayerPos] : playerPositions)
