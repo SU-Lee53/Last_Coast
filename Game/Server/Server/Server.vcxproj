@@ -81,10 +81,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(SolutionDir)ServerCore\;$(SolutionDir)..\Client\AI\;$(SolutionDir)..\Client\Dependencies\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)Libraries\;$(SolutionDir)..\Client\Executables\;$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)Executables\</OutDir>
+    <IntDir>$(SolutionDir)obj\$(ProjectName)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(SolutionDir)ServerCore\;$(SolutionDir)..\Client\AI\;$(SolutionDir)..\Client\Dependencies\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)Libraries\;$(SolutionDir)..\Client\Executables\;$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)Executables\</OutDir>
+    <IntDir>$(SolutionDir)obj\$(ProjectName)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

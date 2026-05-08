@@ -23,11 +23,16 @@ namespace AIDLL
 	// ─────────────────────────────────────────────────────────────────────────
 	bool NavMeshImpl::LoadFromJson(const std::string& strFileName)
 	{
-		std::string strFilePath = std::format("{}/{}.json", g_strAIBasePath, strFileName);
+		// 확장자가 이미 포함된 경로면 그대로 사용, 아니면 BasePath + 이름 + .json 조합
+		std::string strFilePath;
+		if (strFileName.size() >= 5 &&
+			strFileName.substr(strFileName.size() - 5) == ".json")
+			strFilePath = strFileName;
+		else
+			strFilePath = std::format("{}/{}.json", g_strAIBasePath, strFileName);
 
 		std::ifstream inFile{ strFilePath, std::ios::binary };
 		if (!inFile) {
-			__debugbreak();
 			return false;
 		}
 

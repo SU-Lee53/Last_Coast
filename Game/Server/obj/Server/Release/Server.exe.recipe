@@ -2,7 +2,7 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>C:\GitHub\Last_Coast\Game\Client\Executables\AI.dll</FullPath>
+      <FullPath>C:\GitHub\Last_Coast\Game\Server\Executables\Server.exe</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />

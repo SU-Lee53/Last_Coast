@@ -301,7 +301,7 @@ int main()
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(PORT);
 	server_addr.sin_addr.S_un.S_addr = INADDR_ANY;
-	bind(g_server, reinterpret_cast<sockaddr*>(&server_addr), sizeof(server_addr));
+	::bind(g_server, reinterpret_cast<sockaddr*>(&server_addr), sizeof(server_addr));
 	listen(g_server, SOMAXCONN);
 	g_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
 	CreateIoCompletionPort((HANDLE)g_server, g_iocp, -1, 0);

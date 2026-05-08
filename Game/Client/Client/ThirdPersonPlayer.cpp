@@ -3,6 +3,7 @@
 #include "ThirdPersonCamera.h"
 #include "NodeObject.h"
 #include "Collider.h"
+#include "Sprite.h"
 
 ThirdPersonPlayer::ThirdPersonPlayer()
 {

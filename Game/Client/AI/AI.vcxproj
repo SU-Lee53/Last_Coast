@@ -131,8 +131,8 @@
       <EnableUAC>false</EnableUAC>
     </Link>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>if not exist "$(ProjectDir)..\..\Server\Executables\" mkdir "$(ProjectDir)..\..\Server\Executables\"
+xcopy /Y "$(OutDir)$(TargetName)$(TargetExt)" "$(ProjectDir)..\..\Server\Executables\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -153,8 +153,8 @@
       <EnableUAC>false</EnableUAC>
     </Link>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>if not exist "$(ProjectDir)..\..\Server\Executables\" mkdir "$(ProjectDir)..\..\Server\Executables\"
+xcopy /Y "$(OutDir)$(TargetName)$(TargetExt)" "$(ProjectDir)..\..\Server\Executables\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
