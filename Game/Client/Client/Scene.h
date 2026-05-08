@@ -129,25 +129,18 @@ void Scene::AddObject(std::shared_ptr<T> pObj)
 		return;
 	}
 
-	// 1. 항상 World pool에는 넣는다.
 	m_World.Add<T>(pObj);
 
-	// 2. PostInitialize 전 초기 로딩 중이면 spatial 등록하지 않는다.
-	//    이 시점에는 collider initialize / scene bound / static grid가 아직 준비 안 됐을 수 있음.
 	if (!m_bSpatialRuntimeRegistrationEnabled) {
 		return;
 	}
 
-	// 3. 런타임 추가는 dynamic spatial object만 자동 등록한다.
-	//    StaticObject는 런타임 추가하지 않는 정책이므로 여기서 무시하거나 debugbreak.
 	if constexpr (SpatialObjectTraits<T>::bSpatial) {
 		if constexpr (SpatialObjectTraits<T>::bDynamic) {
 			m_World.RegisterSpatialObject<T>(pObj);
 			m_World.UpdateSpatial();
 		}
 		else {
-			// StaticObject는 런타임 추가하지 않는 정책.
-			// 실수 방지용으로 Debug에서만 잡아도 됨.
 			assert(false && "Runtime static spatial registration is not supported. Add static objects before PostInitialize().");
 		}
 	}

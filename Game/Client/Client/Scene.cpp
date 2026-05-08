@@ -226,14 +226,6 @@ void Scene::PostUpdate()
 
 void Scene::PrepareRender()
 {
-	/* Old xz grid space partition */
-	//if (m_pPlayer)
-	//	m_pPlayer->Render();
-	//
-	//for (auto& pObj : m_SpacePartition.ObjectBroadPhaseFrustumCulling(GetCamera()->GetFrustumWorld())) {
-	//	pObj->Render();
-	//}
-
 	m_World.UpdateSpatial();
 
 	SpatialQueryDesc desc{};
@@ -260,10 +252,6 @@ void Scene::PrepareRender()
 			pObj->Render();
 		}
 	}
-
-	//m_World.PrepareRender<NetworkRemoteThirdPersonPlayer>();
-	//m_World.PrepareRender<Zombie>();
-	//m_World.PrepareRender<WeaponObject>();
 }
 
 void Scene::CheckCollision()
