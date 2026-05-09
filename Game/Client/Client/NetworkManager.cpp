@@ -242,21 +242,22 @@ void NetworkManager::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED o
 		return;
 	}
 
-	unsigned char* p = reinterpret_cast<unsigned char*>(N->m_Buffer);
-	PACKET_TYPE type = *reinterpret_cast<PACKET_TYPE*>(&p[1]);
+	//unsigned char* p = reinterpret_cast<unsigned char*>(N->m_Buffer);
+	//PACKET_TYPE type = *reinterpret_cast<PACKET_TYPE*>(&p[1]);
 
-	switch(type) {
-		case S2C_TRANSFORM: {
-			S2C_Transform* pkt = reinterpret_cast<S2C_Transform*>(p);
-			// TODO: 해당 플레이어의 Transform을 찾아 pkt->transform 행렬 적용
-			// 예: Player* remotePlayer = FindPlayer(pkt->playerId);
-			// remotePlayer->GetTransform()->SetWorldMatrix(Matrix(reinterpret_cast<float*>(pkt->transform.m)));
-			break;
-		}
-		// ... 다른 패킷 처리 ...
-	}
+	//switch(type) {
+	//	case S2C_TRANSFORM: {
+	//		S2C_Transform* pkt = reinterpret_cast<S2C_Transform*>(p);
+	//		// TODO: 해당 플레이어의 Transform을 찾아 pkt->transform 행렬 적용
+	//		// 예: Player* remotePlayer = FindPlayer(pkt->playerId);
+	//		// remotePlayer->GetTransform()->SetWorldMatrix(Matrix(reinterpret_cast<float*>(pkt->transform.m)));
+	//		break;
+	//	}
+	//	// ... 다른 패킷 처리 ...
+	//}
 
-	// 다시 수신 대기 (핑퐁 제거, 계속해서 Recv만 돌림)
+	//// 다시 수신 대기 (핑퐁 제거, 계속해서 Recv만 돌림)
+	N->ProcessPackets(static_cast<int>(num_bytes));
 	N->m_over = *over;
 	N->ReceiveData();
 }
