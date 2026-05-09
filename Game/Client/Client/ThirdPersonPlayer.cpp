@@ -505,6 +505,8 @@ void IThirdPersonPlayer::ProcessLocalMovementInput()
 		bMoved = true;
 	}
 
+	m_bMoved = bMoved;
+
 	// Run
 	if (INPUT->GetButtonPressed(VK_LSHIFT)) {
 		m_bRunning = true;
@@ -627,7 +629,10 @@ void IThirdPersonPlayer::ApplyInputMovement()
 
 	pTransform->Move(v3Delta, 1.f);
 
-	m_bMoved = (v3Delta != Vector3::Zero);
+	float fDeltaY = std::abs(v3Delta.y);
+	m_bMoved |= (fDeltaY >= 0.1);
+
+	ImGui::Text("Moved? : %s", m_bMoved ? "T" : "F");
 
 	ApplyGravity();
 

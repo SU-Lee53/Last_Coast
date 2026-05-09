@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "NetworkManager.h"
 #include "Packets.h"
 
@@ -163,18 +163,20 @@ void NetworkManager::SendLoginPacket()
 
 void NetworkManager::SendData()
 {
-	m_SendMovePacket.size = sizeof(C2S_Move);
-	m_SendMovePacket.type = C2S_MOVE;
-	m_SendMovePacket.dir  = UP;
+	//m_SendMovePacket.size = sizeof(C2S_Move);
+	//m_SendMovePacket.type = C2S_MOVE;
+	//m_SendMovePacket.dir = UP;
 
-	if (INPUT->GetButtonDown('W')) m_SendMovePacket.dir = UP;
-	if (INPUT->GetButtonDown('S')) m_SendMovePacket.dir = DOWN;
-	if (INPUT->GetButtonDown('A')) m_SendMovePacket.dir = LEFT;
-	if (INPUT->GetButtonDown('D')) m_SendMovePacket.dir = RIGHT;
+	//if (INPUT->GetButtonDown('W')) m_SendMovePacket.dir = UP;
+	//if (INPUT->GetButtonDown('S')) m_SendMovePacket.dir = DOWN;
+	//if (INPUT->GetButtonDown('A')) m_SendMovePacket.dir = LEFT;
+	//if (INPUT->GetButtonDown('D')) m_SendMovePacket.dir = RIGHT;
 
-	m_wsabuf.buf = reinterpret_cast<char*>(&m_SendMovePacket);
-	m_wsabuf.len = sizeof(m_SendMovePacket);
-	WSASend(m_hClientSocket, &m_wsabuf, 1, 0, 0, &m_over, send_callback);
+	//m_wsabuf.buf = reinterpret_cast<char*>(&m_SendMovePacket);
+	//m_wsabuf.len = sizeof(m_SendMovePacket);
+	//WSASend(m_hClientSocket, &m_wsabuf, 1, 0, 0, &m_over, send_callback);
+}
+
 struct SendContext {
 	WSAOVERLAPPED over;
 	WSABUF wsabuf;

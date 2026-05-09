@@ -39,7 +39,6 @@ public:
 		m_recv_over.m_iotype = IO_RECV;
 		memset(&m_transform, 0, sizeof(m_transform));
 		m_prev_recv = 0;
-		m_v3Pos = {};
 	}
 	~Session()
 	{
@@ -50,22 +49,9 @@ public:
 public:
 	void		init(SOCKET s, int id, Room* room);
 	void		do_recv();									
-	void		do_send(int num_bytes, char* mess)
-	{
-		EXP_OVER* o = new EXP_OVER(IO_SEND);
-		o->m_wsa.len = num_bytes;
-		memcpy(o->m_buff, mess, num_bytes);
-		WSASend(m_client, &o->m_wsa, 1, 0, 0, &o->m_over, nullptr);
-	}
-	void		send_avatar_info()
-	{
-		S2C_AvatarInfo packet;
-		packet.size = sizeof(S2C_AvatarInfo);
-		packet.type = S2C_AVATAR_INFO;
-		packet.playerId = m_id;
-		packet.transform = m_transform;
-		do_send(packet.size, reinterpret_cast<char*>(&packet));
-	}
+	void		do_send(int num_bytes, char* mess);
+
+	void		send_avatar_info();
 	void		send_transform_packet(int mover);
 	void		send_add_player(int player_id);
 	void		send_login_success();
