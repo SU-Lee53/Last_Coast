@@ -5,8 +5,7 @@ void Session::init(SOCKET s, int id, Room* room)
 	m_client = s;
 	m_id = id;
 	m_is_connected = true;
-	m_x = 0;
-	m_y = 0;
+	memset(&m_transform, 0, sizeof(m_transform));
 	m_room = room;
 	m_prev_recv = 0;
 }
@@ -31,8 +30,7 @@ void Session::send_add_player(int player_id)
 	packet.playerId = player_id;
 	Session& pl = clients[player_id];
 	memcpy(packet.username, pl.m_username, sizeof(packet.username));
-	packet.x = pl.m_x;
-	packet.y = pl.m_y;
+	packet.transform = pl.m_transform;
 	do_send(packet.size, reinterpret_cast<char*>(&packet));
 }
 
@@ -47,19 +45,19 @@ bool Session::process_packet(unsigned char* p)
 		send_avatar_info();
 	}
 				  break;
-	case C2S_MOVE: {
-		C2S_Move* packet = reinterpret_cast<C2S_Move*>(p);
-		unsigned char dir = packet->dir;
+	case C2S_TRANSFORM: {
+		C2S_Transform* packet = reinterpret_cast<C2S_Transform*>(p);
+		m_transform = packet->transform;
 
-		if (dir & UP)    m_y++;
-		if (dir & DOWN)  m_y--;
-		if (dir & LEFT)  m_x--;
-		if (dir & RIGHT) m_x++;
+		float x = m_transform.m[3][0];
+		float y = m_transform.m[3][1];
+		float z = m_transform.m[3][2];
+		
+		std::cout << "Player[" << m_id << "] Transform Received - Pos(X: " << x << ", Y: " << y << ", Z: " << z << ")\n";
 
-		std::cout << "Player[" << m_id << "] moved to (" << m_x << ", " << m_y << ")\n";
-		send_move_packet(m_id);
+		send_transform_packet(m_id);
 	}
-				 break;
+					  break;
 	default:
 		std::cout << "Unknown packet type received from player[" << m_id << "].\n";
 		return false;
@@ -67,19 +65,19 @@ bool Session::process_packet(unsigned char* p)
 	return true;
 }
 
-void Session::send_move_packet(int mover)
+void Session::send_transform_packet(int mover)
 {
 	if (m_room == nullptr) return;
 
-	S2C_MovePlayer packet;
-	packet.size = sizeof(S2C_MovePlayer);
-	packet.type = S2C_MOVE_PLAYER;
+	S2C_Transform packet;
+	packet.size = sizeof(S2C_Transform);
+	packet.type = S2C_TRANSFORM;
 	packet.playerId = mover;
-	packet.x = clients[mover].m_x;
-	packet.y = clients[mover].m_y;
+	packet.transform = clients[mover].m_transform;
 
 	for (int p : m_room->players) {
 		if (p == -1) continue;
+		if (p == mover) continue;
 		clients[p].do_send(packet.size, reinterpret_cast<char*>(&packet));
 	}
 }

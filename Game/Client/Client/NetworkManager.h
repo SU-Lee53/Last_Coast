@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #define SERVERPORT 9000
 #include "ServerCore/Session.h"
 #include "../../../Server/Server/protocol.h"
@@ -28,8 +28,9 @@ public:
 	void					ConnectToServer();
 	void					Disconnect();
 
+public:
+	void					SendPacket(void* packet, int size);
 private:
-	void					SendData();
 	void					ReceiveData();
 
 	static void CALLBACK	send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED over, DWORD flags);

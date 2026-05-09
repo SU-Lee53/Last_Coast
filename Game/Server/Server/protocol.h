@@ -10,7 +10,18 @@ constexpr int BUF_SIZE = 200;
 
 enum IOType { IO_SEND, IO_RECV, IO_ACCEPT };
 
-enum PACKET_TYPE { C2S_LOGIN, C2S_MOVE, S2C_LOGIN_RESULT, S2C_AVATAR_INFO, S2C_ADD_PLAYER, S2C_REMOVE_PLAYER, S2C_MOVE_PLAYER };
+enum PACKET_TYPE { 
+	C2S_LOGIN, 
+	C2S_MOVE, 
+	C2S_TRANSFORM,
+	S2C_LOGIN_RESULT, 
+	S2C_AVATAR_INFO, 
+	S2C_ADD_PLAYER, 
+	S2C_REMOVE_PLAYER, 
+	S2C_MOVE_PLAYER,
+	S2C_TRANSFORM
+};
+
 enum DIRECTION {
 	UP = 1 << 0,
 	DOWN = 1 << 1,
@@ -18,7 +29,12 @@ enum DIRECTION {
 	RIGHT = 1 << 3
 };
 
-#pragma pack(push, 1) // Ensure no padding between struct members
+#pragma pack(push, 1)
+
+struct TransformData {
+	float m[4][4];
+};
+
 struct C2S_Login {
 	unsigned char size;
 	PACKET_TYPE   type;
@@ -29,6 +45,12 @@ struct C2S_Move {
 	unsigned char size;
 	PACKET_TYPE   type;
 	unsigned char dir;
+};
+
+struct C2S_Transform {
+	unsigned char size;
+	PACKET_TYPE   type;
+	TransformData transform;
 };
 
 struct S2C_LoginResult {
@@ -42,8 +64,7 @@ struct S2C_AvatarInfo {
 	unsigned char size;
 	PACKET_TYPE   type;
 	int playerId;
-	short x;
-	short y;
+	TransformData transform;
 };
 
 struct S2C_AddPlayer {
@@ -51,8 +72,7 @@ struct S2C_AddPlayer {
 	PACKET_TYPE   type;
 	int playerId;
 	char username[MAX_NAME_LEN];
-	short x;
-	short y;
+	TransformData transform;
 };
 
 struct S2C_RemovePlayer {
@@ -61,11 +81,11 @@ struct S2C_RemovePlayer {
 	int playerId;
 };
 
-struct S2C_MovePlayer {
+struct S2C_Transform {
 	unsigned char size;
 	PACKET_TYPE   type;
 	int playerId;
-	short x;
-	short y;
+	TransformData transform;
 };
-#pragma pack(pop) // Restore default packing
+
+#pragma pack(pop)

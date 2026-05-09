@@ -2,7 +2,7 @@
 #include "NetworkTestScene.h"
 #include "DebugPlayer.h"
 #include "ThirdPersonPlayer.h"
-
+#include "NetworkGameTestScene.h"
 #include "TerrainTestScene.h"
 
 void NetworkTestScene::BuildObjects()
@@ -29,14 +29,14 @@ void NetworkTestScene::Update()
 	NETWORK->ConnectToServer();
 
 	if (ImGui::Button("Change To Scene")) {
-		SCENE->ChangeScene<TerrainTestScene>();
+		SCENE->ChangeScene<NetworkGameTestScene>();
 	}
 
 	if (NETWORK->IsConnected()) {
 		ImGui::Begin("Change Scene");
 		{
 			if (ImGui::Button("Change To Scene")) {
-				SCENE->ChangeScene<TerrainTestScene>();
+				SCENE->ChangeScene<NetworkGameTestScene>();
 			}
 		}
 		ImGui::End();

@@ -37,7 +37,7 @@ public:
 		m_id = 999;
 		m_client = INVALID_SOCKET;
 		m_recv_over.m_iotype = IO_RECV;
-		m_x = 0; 		m_y = 0;
+		memset(&m_transform, 0, sizeof(m_transform));
 		m_prev_recv = 0;
 	}
 	~Session()
@@ -62,11 +62,10 @@ public:
 		packet.size = sizeof(S2C_AvatarInfo);
 		packet.type = S2C_AVATAR_INFO;
 		packet.playerId = m_id;
-		packet.x = m_x;
-		packet.y = m_y;
+		packet.transform = m_transform;
 		do_send(packet.size, reinterpret_cast<char*>(&packet));
 	}
-	void		send_move_packet(int mover);
+	void		send_transform_packet(int mover);
 	void		send_add_player(int player_id);
 	void		send_login_success()
 	{
@@ -95,5 +94,5 @@ public:
 	bool		m_is_connected;
 	int			m_prev_recv;
 	char		m_username[MAX_NAME_LEN];
-	short		m_x, m_y;
+	TransformData m_transform;
 };
