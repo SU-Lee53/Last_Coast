@@ -103,8 +103,15 @@ bool Session::process_packet(unsigned char* p)
 		strncpy_s(m_username, packet->username, MAX_NAME_LEN);
 		std::cout << "Player[" << m_id << "] logged in as " << m_username << std::endl;
 		send_avatar_info();
+
+		// 이미 스폰된 좀비 목록을 신규 클라이언트에게 전송
+		for (auto& [nZombieId, zombie] : g_ZombieManager.GetZombies())
+		{
+			if (!zombie.bAlive || !zombie.pAgent) continue;
+			send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
+		}
 	}
-				  break;
+	break;
 	case C2S_TRANSFORM: {
 		C2S_Transform* packet = reinterpret_cast<C2S_Transform*>(p);
 		m_transform = packet->transform;

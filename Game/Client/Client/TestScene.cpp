@@ -16,7 +16,12 @@ void TestScene::BuildObjects()
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize();
 
-	m_pPlayer = std::make_shared<LocalThirdPersonPlayer>();
+	if (!NETWORK->IsConnected() || NETWORK->IsOffline()) {
+		m_pPlayer = std::make_shared<LocalThirdPersonPlayer>();
+	}
+	else {
+		m_pPlayer = std::make_shared<NetworkOwnerThirdPersonPlayer>();
+	}
 	m_pPlayer->Initialize();
 
 	//for (int i = 0; i < 100; ++i) {
