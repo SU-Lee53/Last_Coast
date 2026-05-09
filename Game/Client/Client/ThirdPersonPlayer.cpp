@@ -504,8 +504,6 @@ void IThirdPersonPlayer::ProcessLocalMovementInput()
 		bMoved = true;
 	}
 
-	m_bMoved = bMoved;
-
 	// Run
 	if (INPUT->GetButtonPressed(VK_LSHIFT)) {
 		m_bRunning = true;
@@ -627,6 +625,8 @@ void IThirdPersonPlayer::ApplyInputMovement()
 	}
 
 	pTransform->Move(v3Delta, 1.f);
+
+	m_bMoved = (v3Delta != Vector3::Zero);
 
 	ApplyGravity();
 

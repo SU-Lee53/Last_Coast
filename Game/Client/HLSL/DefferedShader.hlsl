@@ -247,7 +247,7 @@ float4 PSDefferedLighting(VS_QUAD_OUTPUT input) : SV_Target0
 	
 	float3 finalColor = 0;
 	
-	[unroll(MAX_LIGHTS)]
+	[loop]
 	for (int i = 0; i < gSceneGlobal.nNumLights; ++i)
 	{
 		LightData lightData = gLightData[i];

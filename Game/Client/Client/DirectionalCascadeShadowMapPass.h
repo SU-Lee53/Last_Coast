@@ -8,8 +8,8 @@ public:
 		2048, 1024, 512, 256
 	};
 
-	constexpr static float g_fMaxShadowDistance = 200_m;
-	constexpr static float g_fLightDistanceMargin = 30.f;
+	constexpr static float g_fMaxShadowDistance = 100_m;
+	constexpr static float g_fLightDistanceMargin = 5_m;
 	constexpr static float g_fLambda = 0.7f; // 0 : Uniform / 1 : log scale
 
 public:

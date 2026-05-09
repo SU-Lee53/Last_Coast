@@ -145,9 +145,9 @@ void DirectionalCascadeShadowMapPass::CreatePipelineState()
 		d3dPipelineDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
 		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
 		d3dPipelineDesc.RasterizerState.FrontCounterClockwise = FALSE;
-		d3dPipelineDesc.RasterizerState.DepthBias = 1000;
-		d3dPipelineDesc.RasterizerState.DepthBiasClamp = 0.0f;
-		d3dPipelineDesc.RasterizerState.SlopeScaledDepthBias = 2.0f;
+		d3dPipelineDesc.RasterizerState.DepthBias = 5000;
+		d3dPipelineDesc.RasterizerState.DepthBiasClamp = 0.05f;
+		d3dPipelineDesc.RasterizerState.SlopeScaledDepthBias = 4.0f;
 		d3dPipelineDesc.RasterizerState.DepthClipEnable = TRUE;
 		d3dPipelineDesc.RasterizerState.MultisampleEnable = FALSE;
 		d3dPipelineDesc.RasterizerState.AntialiasedLineEnable = FALSE;

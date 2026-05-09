@@ -86,11 +86,8 @@ private:
 	void BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle);
 
 public:
-	//std::vector<std::shared_ptr<RenderPass>> m_pRenderPasses = {};
-	//std::shared_ptr<ForwardPass> m_pForwardPass;
 	RenderGraph m_RenderGraph;
 
-	ComPtr<ID3D12Device> m_pd3dDevice; // ref of D3DCore::m_pd3dDevice
 	
 	// Mesh
 	static ComPtr<ID3D12RootSignature> g_pd3dGlobalRootSignature;
@@ -168,6 +165,7 @@ private:
 	void ChangeSwapChainState();
 
 private:
+	ComPtr<ID3D12Device> m_pd3dDevice; // ref of D3DCore::m_pd3dDevice
 	ComPtr<IDXGISwapChain3> m_pdxgiSwapChain = nullptr;
 	const DXGI_FORMAT m_dxgiRenderTargetFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 	uint32 m_unBackBufferIndex = 0;
