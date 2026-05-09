@@ -291,23 +291,6 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		m_RemotePlayers.erase(p->playerId);
 		break;
 	}
-	case S2C_MOVE_PLAYER:
-	{
-		if (size < static_cast<int>(sizeof(S2C_MovePlayer))) return;
-		auto* p = reinterpret_cast<const S2C_MovePlayer*>(data);
-
-		NetSnapshot snap;
-		snap.pos  = Vector3(ServerToWorld(p->x), 0.f, ServerToWorld(p->y));
-		snap.time = GetNetTimeSec();
-
-		std::lock_guard<std::mutex> lock(m_Mutex);
-		auto& state = m_RemotePlayers[p->playerId];
-		state.active = true;
-		state.snapshots.push_back(snap);
-		if (state.snapshots.size() > RemotePlayerState::MAX_SNAPSHOTS)
-			state.snapshots.pop_front();
-		break;
-	}
 	case S2C_SPAWN_ZOMBIE:
 	{
 		if (size < static_cast<int>(sizeof(S2C_SpawnZombie))) return;
@@ -365,25 +348,25 @@ void NetworkManager::SetLocalPlayerInfo(const Vector3& pos, float yaw)
 
 void NetworkManager::TrySendPlayerPosition()
 {
-	if (!m_bConnected || m_bOfflineMode) return;
+	//if (!m_bConnected || m_bOfflineMode) return;
 
-	float fNow = GetNetTimeSec();
-	if (fNow - m_fLastPosSendTime < POS_SEND_INTERVAL) return;
-	m_fLastPosSendTime = fNow;
+	//float fNow = GetNetTimeSec();
+	//if (fNow - m_fLastPosSendTime < POS_SEND_INTERVAL) return;
+	//m_fLastPosSendTime = fNow;
 
-	C2S_PlayerPosition p;
-	p.size = sizeof(C2S_PlayerPosition);
-	p.type = C2S_PLAYER_POSITION;
-	p.x    = m_v3LocalPlayerPos.x;
-	p.y    = m_v3LocalPlayerPos.y;
-	p.z    = m_v3LocalPlayerPos.z;
-	p.yaw  = m_fLocalPlayerYaw;
+	//C2S_PlayerPosition p;
+	//p.size = sizeof(C2S_PlayerPosition);
+	//p.type = C2S_PLAYER_POSITION;
+	//p.x    = m_v3LocalPlayerPos.x;
+	//p.y    = m_v3LocalPlayerPos.y;
+	//p.z    = m_v3LocalPlayerPos.z;
+	//p.yaw  = m_fLocalPlayerYaw;
 
-	DWORD dwSent = 0;
-	WSABUF wsa;
-	wsa.buf = reinterpret_cast<char*>(&p);
-	wsa.len = p.size;
-	WSASend(m_hClientSocket, &wsa, 1, &dwSent, 0, nullptr, nullptr);
+	//// 소켓이 non-blocking overlapped 이므로 WSASend 사용 (nullptr overlapped = best-effort)
+	//WSABUF wsa;
+	//wsa.buf = reinterpret_cast<char*>(&p);
+	//wsa.len = p.size;
+	//WSASend(m_hClientSocket, &wsa, 1, nullptr, 0, nullptr, nullptr);
 }
 
 // -----------------------------------------------------------------------
