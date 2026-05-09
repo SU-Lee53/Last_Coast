@@ -27,7 +27,6 @@
     <ClCompile Include="main.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="ZombieManager.cpp" />
     <ClCompile Include="Session.cpp">
       <Filter>Session</Filter>
     </ClCompile>
@@ -42,7 +41,6 @@
     <ClInclude Include="protocol.h">
       <Filter>Server</Filter>
     </ClInclude>
-    <ClInclude Include="ZombieManager.h" />
     <ClInclude Include="Session.h">
       <Filter>Session</Filter>
     </ClInclude>

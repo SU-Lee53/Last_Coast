@@ -21,9 +21,31 @@ enum PACKET_TYPE {
 };
 enum IOType { IO_SEND, IO_RECV, IO_ACCEPT };
 
-enum DIRECTION { UP, DOWN, LEFT, RIGHT };
+// enum PACKET_TYPE { 
+// 	C2S_LOGIN, 
+// 	C2S_MOVE, 
+// 	C2S_TRANSFORM,
+// 	S2C_LOGIN_RESULT, 
+// 	S2C_AVATAR_INFO, 
+// 	S2C_ADD_PLAYER, 
+// 	S2C_REMOVE_PLAYER, 
+// 	S2C_MOVE_PLAYER,
+// 	S2C_TRANSFORM
+// };
 
-#pragma pack(push, 1) // Ensure no padding between struct members
+enum DIRECTION {
+	UP = 1 << 0,
+	DOWN = 1 << 1,
+	LEFT = 1 << 2,
+	RIGHT = 1 << 3
+};
+
+#pragma pack(push, 1)
+
+struct TransformData {
+	float m[4][4];
+};
+
 struct C2S_Login {
 	unsigned char size;
 	PACKET_TYPE   type;
@@ -33,7 +55,13 @@ struct C2S_Login {
 struct C2S_Move {
 	unsigned char size;
 	PACKET_TYPE   type;
-	DIRECTION    dir;
+	unsigned char dir;
+};
+
+struct C2S_Transform {
+	unsigned char size;
+	PACKET_TYPE   type;
+	TransformData transform;
 };
 
 struct S2C_LoginResult {
@@ -47,8 +75,7 @@ struct S2C_AvatarInfo {
 	unsigned char size;
 	PACKET_TYPE   type;
 	int playerId;
-	short x;
-	short y;
+	TransformData transform;
 };
 
 struct S2C_AddPlayer {
@@ -56,8 +83,7 @@ struct S2C_AddPlayer {
 	PACKET_TYPE   type;
 	int playerId;
 	char username[MAX_NAME_LEN];
-	short x;
-	short y;
+	TransformData transform;
 };
 
 struct S2C_RemovePlayer {
@@ -66,13 +92,13 @@ struct S2C_RemovePlayer {
 	int playerId;
 };
 
-struct S2C_MovePlayer {
+struct S2C_Transform {
 	unsigned char size;
 	PACKET_TYPE   type;
 	int playerId;
-	short x;
-	short y;
+	TransformData transform;
 };
+
 // ── 좀비 행동 상태 (AI.h AIBehaviorState 와 동일 순서 유지) ──────────────────
 enum ZombieBehaviorState : unsigned char {
 	ZBS_Idle        = 0,

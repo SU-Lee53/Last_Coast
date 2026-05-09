@@ -4,6 +4,7 @@
 #include "NodeObject.h"
 #include "WeaponObject.h"
 #include "Sprite.h"
+#include "NetworkManager.h"
 #include "TextBox.h"
 
 
@@ -504,8 +505,6 @@ void IThirdPersonPlayer::ProcessLocalMovementInput()
 		bMoved = true;
 	}
 
-	m_bMoved = bMoved;
-
 	// Run
 	if (INPUT->GetButtonPressed(VK_LSHIFT)) {
 		m_bRunning = true;
@@ -627,6 +626,8 @@ void IThirdPersonPlayer::ApplyInputMovement()
 	}
 
 	pTransform->Move(v3Delta, 1.f);
+
+	m_bMoved = (v3Delta != Vector3::Zero);
 
 	ApplyGravity();
 
@@ -1037,28 +1038,22 @@ void NetworkOwnerThirdPersonPlayer::ProcessInput()
 	ProcessLocalActionInput();
 
 	// 서버로 이동 패킷 전송
-	//SendLocalCommandToServer();
-
-	// 직접 이동/발사/근접공격 확정은 하지 않음.
-	// 최종 이동, 애니메이션, 피격, 무기 변경 등은 서버에서 받은 ApplyReplicatedState / ApplyReplicatedEvent 쪽에서 처리.
+	SendLocalCommandToServer();
 }
 
 void NetworkOwnerThirdPersonPlayer::SendLocalCommandToServer()
 {
-	// TODO : 서버로 이동 관련 입력을 전송
-	// - 필요한 것 (용도별)
-	//		- 이동처리:
-	//			- W/A/S/D 이동 입력 -> 행렬로 변경
-	//			- 달리기 입력 여부
-	//		- 애니메이션 + 기타 처리
-	//			- 달리기 입력 여부
-	//			- 조준 입력 여부
-	//			- 발사 입력 여부
-	//			- 근접공격 입력 여부 (아직 안해도 됨)
-	//		- 발사 처리
-	//			- 발사 처리를 위한 정보 (카메라 위치, 방향 or 발사 Ray 정보)
-	//		- 단발서 이벤트 (이번 프레임에서)
-	//			- 발사
-	//			- 근접공격 시작/끝
-	//			- 무기변경
+	// 이동이나 카메라 회전 등으로 인해 Transform 변경 가능성이 있는 경우 패킷 전송
+	if (m_bMoved) {
+		C2S_Transform packet;
+		packet.size = sizeof(C2S_Transform);
+		packet.type = C2S_TRANSFORM;
+		
+		memcpy(&packet.transform.m, &GetTransform()->GetWorldMatrix(), sizeof(float) * 16);
+		
+		NetworkManager::GetInstance()->SendPacket(&packet, packet.size);
+		
+		// 디버깅용: 전송 시도 확인
+		//OutputDebugStringA("Client: C2S_TRANSFORM SendPacket called.\n");
+	}
 }

@@ -119,7 +119,7 @@ int GetCascadeIndex(float fViewDepth)
 	return idx;
 }
 
-float Compute3x3PCF(float4 shadowPos, int nCascadeIndex)
+float Compute3x3PCF(float3 shadowPos, int nCascadeIndex)
 {
 	const float fCascadeSize[4] = { 4096, 2048, 1024, 512 };
 	float fSum = 0.f;

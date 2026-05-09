@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "NetworkManager.h"
 #include "Packets.h"
 
@@ -175,6 +175,32 @@ void NetworkManager::SendData()
 	m_wsabuf.buf = reinterpret_cast<char*>(&m_SendMovePacket);
 	m_wsabuf.len = sizeof(m_SendMovePacket);
 	WSASend(m_hClientSocket, &m_wsabuf, 1, 0, 0, &m_over, send_callback);
+struct SendContext {
+	WSAOVERLAPPED over;
+	WSABUF wsabuf;
+	char buffer[256];
+};
+
+void NetworkManager::SendPacket(void* packet, int size)
+{
+	if (!m_bConnected) return;
+
+	SendContext* ctx = new SendContext();
+	ZeroMemory(&ctx->over, sizeof(WSAOVERLAPPED));
+	memcpy(ctx->buffer, packet, size);
+	ctx->wsabuf.buf = ctx->buffer;
+	ctx->wsabuf.len = size;
+
+	int ret = WSASend(m_hClientSocket, &ctx->wsabuf, 1, nullptr, 0, &ctx->over, send_callback);
+	if (ret == SOCKET_ERROR) {
+		int err = WSAGetLastError();
+		if (err != WSA_IO_PENDING) {
+			char szError[256];
+			sprintf_s(szError, "WSASend Failed: %d\n", err);
+			OutputDebugStringA(szError);
+			delete ctx;
+		}
+	}
 }
 
 void NetworkManager::ReceiveData()
@@ -196,30 +222,41 @@ void NetworkManager::ReceiveData()
 			printf("WSARecv error: %d\n", err);
 		}
 	}
-
 }
 
 void NetworkManager::send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED over, DWORD flags)
 {
-	NetworkManager* N = NetworkManager::GetInstance();
-	N->m_over = *over;
-	memset(over, 0, sizeof(*over));
-	N->ReceiveData();
+	// WSASend를 비동기로 호출했을 때 완료 처리
+	SendContext* ctx = reinterpret_cast<SendContext*>(over);
+	delete ctx;
 }
 
 void NetworkManager::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED over, DWORD flags)
 {
 	NetworkManager* N = NetworkManager::GetInstance();
-
-	if (err != 0 || num_bytes == 0)
-	{
+	
+	if (num_bytes == 0 || err != 0) {
 		N->Disconnect();
 		return;
 	}
 
+	unsigned char* p = reinterpret_cast<unsigned char*>(N->m_Buffer);
+	PACKET_TYPE type = *reinterpret_cast<PACKET_TYPE*>(&p[1]);
+
+	switch(type) {
+		case S2C_TRANSFORM: {
+			S2C_Transform* pkt = reinterpret_cast<S2C_Transform*>(p);
+			// TODO: 해당 플레이어의 Transform을 찾아 pkt->transform 행렬 적용
+			// 예: Player* remotePlayer = FindPlayer(pkt->playerId);
+			// remotePlayer->GetTransform()->SetWorldMatrix(Matrix(reinterpret_cast<float*>(pkt->transform.m)));
+			break;
+		}
+		// ... 다른 패킷 처리 ...
+	}
+
+	// 다시 수신 대기 (핑퐁 제거, 계속해서 Recv만 돌림)
 	N->m_over = *over;
-	N->ProcessPackets(static_cast<int>(num_bytes));
-	N->SendData();
+	N->ReceiveData();
 }
 
 // -----------------------------------------------------------------------

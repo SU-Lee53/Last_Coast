@@ -125,10 +125,10 @@ std::shared_ptr<IGameObject> ModelManager::LoadFrameHierarchyFromFile(const std:
 		materialLoadInfos.push_back(materialInfo);
 	}
 
-	for (int i = 0; i < nMeshes; ++i) {
+	if (meshLoadInfos.size() != 0) {
 		pGameObject->AddComponent<MeshRenderer>(meshLoadInfos, materialLoadInfos);
 	}
-	
+
 	if (pParent) {
 		pGameObject->SetParent(pParent);
 	}
@@ -162,38 +162,38 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 	std::iota(loadIndices.begin(), loadIndices.end(), 0);
 
 	// Positions
-	const auto& positions = inJson["Positions"];
+	auto positions = inJson["Positions"].get<std::vector<float>>();
 	meshLoadInfo.v3Positions.resize(nVertices);
 	for (size_t i = 0; i < nVertices; ++i) {
 		const size_t base = i * 3;
 		meshLoadInfo.v3Positions[i] = Vector3{
-			positions[base + 0].get<float>(),
-			positions[base + 1].get<float>(),
-			positions[base + 2].get<float>()
+			positions[base + 0],
+			positions[base + 1],
+			positions[base + 2]
 		};
 	}
 
 	// Normals
-	const auto& normals = inJson["Normals"];
+	auto normals = inJson["Normals"].get<std::vector<float>>();
 	meshLoadInfo.v3Normals.resize(nVertices);
 	for (size_t i = 0; i < nVertices; ++i) {
 		const size_t base = i * 3;
 		meshLoadInfo.v3Normals[i] = Vector3{
-			normals[base + 0].get<float>(),
-			normals[base + 1].get<float>(),
-			normals[base + 2].get<float>()
+			normals[base + 0],
+			normals[base + 1],
+			normals[base + 2]
 		};
 	}
 
 	// Tangents
-	const auto& tangents = inJson["Tangents"];
+	auto tangents = inJson["Tangents"].get<std::vector<float>>();
 	meshLoadInfo.v3Tangents.resize(nVertices);
 	for (size_t i = 0; i < nVertices; ++i) {
 		const size_t base = i * 3;
 		meshLoadInfo.v3Tangents[i] = Vector3{
-			tangents[base + 0].get<float>(),
-			tangents[base + 1].get<float>(),
-			tangents[base + 2].get<float>()
+			tangents[base + 0],
+			tangents[base + 1],
+			tangents[base + 2]
 		};
 	}
 
@@ -201,13 +201,13 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 	unsigned nUVChannels = inJson["nUVChannels"].get<unsigned>();
 	if (nUVChannels != 0) {
 		const nlohmann::json& texCoordData = inJson["TexCoord0"];
-		const auto& texCoord = texCoordData["TexCoord"];
+		const auto& texCoord = texCoordData["TexCoord"].get<std::vector<float>>();
 		meshLoadInfo.v2TexCoord0.resize(nVertices);
 		for (size_t i = 0; i < nVertices; ++i) {
 			const size_t base = i * 2;
 			meshLoadInfo.v2TexCoord0[i] = Vector2{
-				texCoord[base + 0].get<float>(),
-				texCoord[base + 1].get<float>(),
+				texCoord[base + 0],
+				texCoord[base + 1],
 			};
 		}
 	}
@@ -218,28 +218,28 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 	meshLoadInfo.bIsSkinned = inJson["Skinned?"].get<bool>();
 	if (meshLoadInfo.bIsSkinned) {
 		// BlendIndices
-		const auto& blendIndices = inJson["BlendIndices"];
+		auto blendIndices = inJson["BlendIndices"].get<std::vector<uint32>>();
 		meshLoadInfo.xmun4BlendIndices.resize(nVertices);
 		for (size_t i = 0; i < nVertices; ++i) {
 			const size_t base = i * 4;
 			meshLoadInfo.xmun4BlendIndices[i] = XMUINT4{
-				blendIndices[base + 0].get<uint32>(),
-				blendIndices[base + 1].get<uint32>(),
-				blendIndices[base + 2].get<uint32>(),
-				blendIndices[base + 3].get<uint32>()
+				blendIndices[base + 0],
+				blendIndices[base + 1],
+				blendIndices[base + 2],
+				blendIndices[base + 3]
 			};
 		}
 
 		// BlendWeights
-		const auto& blendWeights = inJson["BlendWeights"];
+		auto blendWeights = inJson["BlendWeights"].get<std::vector<float>>();
 		meshLoadInfo.v4BlendWeights.resize(nVertices);
 		for (size_t i = 0; i < nVertices; ++i) {
 			const size_t base = i * 4;
 			meshLoadInfo.v4BlendWeights[i] = Vector4{
-				blendWeights[base + 0].get<float>(),
-				blendWeights[base + 1].get<float>(),
-				blendWeights[base + 2].get<float>(),
-				blendWeights[base + 3].get<float>()
+				blendWeights[base + 0],
+				blendWeights[base + 1],
+				blendWeights[base + 2],
+				blendWeights[base + 3]
 			};
 		}
 

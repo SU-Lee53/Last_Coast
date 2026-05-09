@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #define SERVERPORT 9000
 #include "ServerCore/Session.h"
 
@@ -64,6 +64,9 @@ public:
 	void					Initialize();
 	void					ConnectToServer();
 	void					Disconnect();
+
+public:
+	void					SendPacket(void* packet, int size);
 
 	// 게임 루프에서 매 프레임 호출 — 보간 위치 갱신
 	void					UpdateInterpolation();

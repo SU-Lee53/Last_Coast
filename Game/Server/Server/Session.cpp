@@ -11,8 +11,7 @@ void Session::init(SOCKET s, int id, Room* room)
 	m_client = s;
 	m_id = id;
 	m_is_connected = true;
-	m_x = 0;
-	m_y = 0;
+	memset(&m_transform, 0, sizeof(m_transform));
 	m_room = room;
 	m_prev_recv = 0;
 	m_v3Pos = {};
@@ -30,38 +29,62 @@ void Session::do_recv()
 	WSARecv(m_client, &m_recv_over.m_wsa, 1, 0, &recv_flag, &m_recv_over.m_over, nullptr);
 }
 
-void Session::do_send(int num_bytes, char* mess)
+void Session::send_add_player(int player_id)
 {
-	EXP_OVER* o = new EXP_OVER(IO_SEND);
-	o->m_wsa.len = num_bytes;
-	memcpy(o->m_buff, mess, num_bytes);
-	WSASend(m_client, &o->m_wsa, 1, 0, 0, &o->m_over, nullptr);
+	S2C_AddPlayer packet;
+	packet.size = sizeof(S2C_AddPlayer);
+	packet.type = S2C_ADD_PLAYER;
+	packet.playerId = player_id;
+	Session& pl = clients[player_id];
+	memcpy(packet.username, pl.m_username, sizeof(packet.username));
+	packet.transform = pl.m_transform;
+	do_send(packet.size, reinterpret_cast<char*>(&packet));
 }
 
 void Session::send_avatar_info()
 {
-	S2C_AvatarInfo packet;
-	packet.size = sizeof(S2C_AvatarInfo);
-	packet.type = S2C_AVATAR_INFO;
-	packet.playerId = m_id;
-	packet.x = m_x;
-	packet.y = m_y;
-	do_send(packet.size, reinterpret_cast<char*>(&packet));
+	PACKET_TYPE type = *reinterpret_cast<PACKET_TYPE*>(&p[1]);
+	switch (type) {
+	case C2S_LOGIN: {
+		C2S_Login* packet = reinterpret_cast<C2S_Login*>(p);
+		strncpy_s(m_username, packet->username, MAX_NAME_LEN);
+		std::cout << "Player[" << m_id << "] logged in as " << m_username << std::endl;
+		send_avatar_info();
+	}
+				  break;
+	case C2S_TRANSFORM: {
+		C2S_Transform* packet = reinterpret_cast<C2S_Transform*>(p);
+		m_transform = packet->transform;
+
+		float x = m_transform.m[3][0];
+		float y = m_transform.m[3][1];
+		float z = m_transform.m[3][2];
+		
+		std::cout << "Player[" << m_id << "] Transform Received - Pos(X: " << x << ", Y: " << y << ", Z: " << z << ")\n";
+
+		send_transform_packet(m_id);
+	}
+					  break;
+	default:
+		std::cout << "Unknown packet type received from player[" << m_id << "].\n";
+		return false;
+	}
+	return true;
 }
 
-void Session::send_move_packet(int mover)
+void Session::send_transform_packet(int mover)
 {
 	if (m_room == nullptr) return;
 
-	S2C_MovePlayer packet;
-	packet.size = sizeof(S2C_MovePlayer);
-	packet.type = S2C_MOVE_PLAYER;
+	S2C_Transform packet;
+	packet.size = sizeof(S2C_Transform);
+	packet.type = S2C_TRANSFORM;
 	packet.playerId = mover;
-	packet.x = clients[mover].m_x;
-	packet.y = clients[mover].m_y;
+	packet.transform = clients[mover].m_transform;
 
 	for (int p : m_room->players) {
 		if (p == -1) continue;
+		if (p == mover) continue;
 		clients[p].do_send(packet.size, reinterpret_cast<char*>(&packet));
 	}
 }
