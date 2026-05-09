@@ -3,7 +3,7 @@
 
 //#define ASSERT_WHEN_TEXTURE_NAME_IS_BLANK
 
-constexpr static UINT MAX_TEXTURE_COUNT = 200;
+constexpr static UINT MAX_TEXTURE_COUNT = 300;
 
 enum class TEXTURE_RESOURCE_TYPE {
 	SRV,

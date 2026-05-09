@@ -13,6 +13,9 @@ public:
 	virtual void ShowControllImGui() { };
 
 public:
+	Vector3		m_v3Position;
+	float       m_fRange;
+
     bool m_bEnable = true;
 };
 
@@ -28,10 +31,7 @@ public:
 	Vector3		m_v3Color;
 	float		m_fIntensity;
 
-    Vector3		m_v3Position;
     Vector3		m_v3Direction;
-
-    float       m_fRange;
     float       m_fAttenuation0;
     float       m_fAttenuation1;
     float       m_fAttenuation2;
@@ -46,10 +46,8 @@ public:
 	Vector3		m_v3Color;
 	float		m_fIntensity;
 
-    Vector3		m_v3Position;
     Vector3		m_v3Direction;
 
-    float       m_fRange;
     float       m_fFalloff;
     float       m_fAttenuation0;
     float       m_fAttenuation1;
@@ -67,6 +65,5 @@ public:
 	float		m_fIntensity;
 
     Vector3    m_v3Direction;
-    Vector3    m_v3Position;
 };
 

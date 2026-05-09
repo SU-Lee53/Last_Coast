@@ -60,7 +60,7 @@ private:
 
 	mutable struct CachedData {
 		std::vector<std::shared_ptr<IGameObject>> pObjFrustumCulled;
-		std::vector<std::shared_ptr<TerrainComponent>> pTerrainComponentFrustumCulled;
+		std::vector<TerrainComponent*> pTerrainComponentFrustumCulled;
 
 		IndexMap<MeshRenderer::ID, std::pair<const MeshRenderer*, std::vector<const IGameObject*>>> frustumCulledMap;
 		IndexMap<IMaterial::ID, MaterialData> materialMap;

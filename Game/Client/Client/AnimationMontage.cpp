@@ -273,7 +273,25 @@ void PlayerAnimationMontage::BuildMontage()
 		m_MontageSections.push_back(aimSection);
 	}
 	
-	// 1. Pistol Fire
+	// 2. Rifle Reload
+	{
+		MontageSection reloadSection{};
+		reloadSection.strName = "Rifle Reloading";
+		reloadSection.pAnimationToPlay = ANIMATION->Get("Reloading");
+		reloadSection.eEndRule = MONTAGE_SECTION_END_RULE::JUMP;
+		reloadSection.strJumpTarget = "Rifle Aiming Idle";
+		m_MontageSections.push_back(reloadSection);
+
+		MontageNotify reloadEndNotify;
+		reloadEndNotify.nSectionIndex = m_MontageSections.size() - 1;
+		reloadEndNotify.fTime = ANIMATION->Get("Reloading")->GetDuration() - 0.1f;
+		reloadEndNotify.pCallback = [](std::shared_ptr<IGameObject> pObj) {
+			std::static_pointer_cast<IThirdPersonPlayer>(pObj)->OnReloadEnd();
+		};
+		m_Notifies.push_back(reloadEndNotify);
+	}
+	
+	// 4. Pistol Fire
 	{
 		MontageSection fireSection{};
 		fireSection.strName = "Pistol Fire";
@@ -282,7 +300,7 @@ void PlayerAnimationMontage::BuildMontage()
 		m_MontageSections.push_back(fireSection);
 	}
 
-	// 2. Pistol Aim Idle
+	// 5. Pistol Aim Idle
 	{
 		MontageSection aimSection{};
 		aimSection.strName = "Pistol Aiming Idle";
@@ -291,7 +309,7 @@ void PlayerAnimationMontage::BuildMontage()
 		m_MontageSections.push_back(aimSection);
 	}
 
-	// 2. Pistol Aim Idle
+	// 6. Pistol Aim Idle
 	{
 		MontageSection meleeSection{};
 		meleeSection.strName = "Melee Attack";

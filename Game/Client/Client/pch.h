@@ -30,6 +30,8 @@
 #include <type_traits>
 #include <ranges>
 #include <concepts>
+#include <mutex>
+#include <atomic>
 #include <utility>
 #include <filesystem>
 #include <typeindex>
@@ -136,6 +138,7 @@ using namespace AIDLL;
 #include "RandomGenerator.h"
 #include "AnimationHelper.h"
 #include "ResourceTable.h"
+#include "../../../Server/Server/protocol.h"
 
 #include "GameObject.h"
 #include "Component.h"

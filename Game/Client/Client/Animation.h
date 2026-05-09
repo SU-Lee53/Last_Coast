@@ -20,6 +20,14 @@ public:
 	float GetDuration() const { return m_fDuration; }
 	float GetTicksForSecond() const { return m_fTicksPerSecond; }
 
+	float GetLoopedAnimationTime(float fTime) {
+		if (m_fDuration <= 0.0f) {
+			return 0.0f;
+		}
+
+		return std::fmod(fTime, m_fDuration);
+	}
+
 private:
 	std::string m_strName;
 	float m_fDuration;

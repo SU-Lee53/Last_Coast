@@ -1,5 +1,6 @@
 {
     "AK": {
+        "AmmoPerClip": 30,
         "Damage": 40.0,
         "FirePerSecond": 600.0,
         "MuzzlePosition": [
@@ -18,10 +19,10 @@
             -90.0
         ],
         "Recoil": 50.0,
-        "RecoilRecovery": 30.0,
-        "ReloadTime": 2.5
+        "RecoilRecovery": 30.0
     },
     "M4": {
+        "AmmoPerClip": 30,
         "Damage": 30.0,
         "FirePerSecond": 800.0,
         "MuzzlePosition": [
@@ -40,10 +41,10 @@
             -90.0
         ],
         "Recoil": 30.0,
-        "RecoilRecovery": 25.0,
-        "ReloadTime": 2.0
+        "RecoilRecovery": 25.0
     },
     "MELEE": {
+        "AmmoPerClip": 0,
         "Damage": 0.0,
         "FirePerSecond": 0.0,
         "MuzzlePosition": [
@@ -62,10 +63,10 @@
             -90.0
         ],
         "Recoil": 0.0,
-        "RecoilRecovery": 0.0,
-        "ReloadTime": 0.0
+        "RecoilRecovery": 0.0
     },
     "PISTOL": {
+        "AmmoPerClip": 10,
         "Damage": 10.0,
         "FirePerSecond": 100.0,
         "MuzzlePosition": [
@@ -84,10 +85,10 @@
             -90.0
         ],
         "Recoil": 20.0,
-        "RecoilRecovery": 10.0,
-        "ReloadTime": 1.0
+        "RecoilRecovery": 10.0
     },
     "RIFLE": {
+        "AmmoPerClip": 10,
         "Damage": 100.0,
         "FirePerSecond": 200.0,
         "MuzzlePosition": [
@@ -106,7 +107,6 @@
             -90.0
         ],
         "Recoil": 80.0,
-        "RecoilRecovery": 0.0,
-        "ReloadTime": 4.0
+        "RecoilRecovery": 20.0
     }
 }

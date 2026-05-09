@@ -1,7 +1,6 @@
 ﻿#include "pch.h"
 #include "WeaponObject.h"
 #include "MuzzleFlashEffect.h"
-#include "BloodEffect.h"
 
 #include "StaticObject.h"
 #include "Zombie.h"
@@ -33,7 +32,7 @@ void WeaponObject::Initialize()
 void WeaponObject::Update()
 {
 	m_fTimeAfterFire += DT;
-
+	
 	float fYaw = XMConvertToRadians(m_v3OffsetRotation.y);
 	float fPitch = XMConvertToRadians(m_v3OffsetRotation.x);
 	float fRoll = XMConvertToRadians(m_v3OffsetRotation.z);
@@ -44,11 +43,14 @@ void WeaponObject::Update()
 
 bool WeaponObject::TryFire()
 {
+	if (m_bInReload) return false;
+	if (m_nAmmoInClip <= 0) return false;
+
 	if (m_fTimeAfterFire >= m_fFireInterval) {
+		--m_nAmmoInClip;
 		m_fTimeAfterFire = 0.f;
 
 		const auto& pCamera = CUR_SCENE->GetCamera();
-		const auto& pPlayer = CUR_SCENE->GetPlayer();
 
 		// 네크워크 플레이어의 경우 다른 조치가 필요해보임
 		RayTraceDesc rayDesc{};
@@ -56,8 +58,8 @@ bool WeaponObject::TryFire()
 		rayDesc.v3Direction = pCamera->GetLook();
 		rayDesc.fMaxDistance = 5000.f;
 		rayDesc.fDamage = m_fDamage;
-		rayDesc.pInstigator = pPlayer;
-		rayDesc.pSourceObject = shared_from_this();
+		rayDesc.pInstigator = m_wpOwner.lock().get();
+		rayDesc.pSourceObject = this;
 
 		RayTraceHitResult hit{};
 		CUR_SCENE->GetWorld().LineTraceSingle<StaticObject, Zombie>(rayDesc, hit);
@@ -75,6 +77,25 @@ bool WeaponObject::TryFire()
 	}
 
 	return false;
+}
+
+bool WeaponObject::BeginReload()
+{
+	if (m_bInReload) return false;
+
+	m_bInReload = true;
+	m_fReloadTimer = 0.f;
+	return true;
+}
+
+bool WeaponObject::EndReload()
+{
+	if (!m_bInReload) return false;
+
+	m_nTotalAmmo -= 30 - m_nAmmoInClip;
+	m_nAmmoInClip = 30;
+	m_bInReload = false;
+	return true;
 }
 
 void WeaponObject::UpdateMuzzlePositionWorld(const Matrix& mtxWorld)
@@ -95,7 +116,7 @@ void WeaponObject::EditStat()
 	}
 	ImGui::InputFloat("Recoil", &m_fRecoil);
 	ImGui::InputFloat("Recoil Recovery", &m_fRecoilRecovery);
-	ImGui::InputFloat("ReloadTime", &m_fReloadTime);
+	ImGui::InputInt("AmmoPerClip", &m_nAmmoPerClip);
 	ImGui::DragFloat3("Offset Position", reinterpret_cast<float*>(&m_v3OffsetPosition), 0.1f);
 	ImGui::DragFloat3("Offset Rotation", reinterpret_cast<float*>(&m_v3OffsetRotation), 0.1f);
 	ImGui::DragFloat3("Muzzel Local Position", reinterpret_cast<float*>(&m_v3MuzzlePositionLocal), 0.1f);
@@ -123,7 +144,7 @@ void WeaponObject::SaveStat()
 	jStat["FirePerSecond"] = m_fFirePerSecond;
 	jStat["Recoil"] = m_fRecoil;
 	jStat["RecoilRecovery"] = m_fRecoilRecovery;
-	jStat["ReloadTime"] = m_fReloadTime;
+	jStat["AmmoPerClip"] = m_nAmmoPerClip;
 
 	const Vector3& v3MuzzlePos = m_v3MuzzlePositionLocal;
 	const Vector3& v3OffsetPos = m_v3OffsetPosition;

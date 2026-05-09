@@ -18,8 +18,8 @@ struct RayTraceDesc
 
 	float fDamage = 0.f;
 
-	std::shared_ptr<IGameObject> pInstigator = nullptr;
-	std::shared_ptr<IGameObject> pSourceObject = nullptr;
+	IGameObject* pInstigator = nullptr;
+	IGameObject* pSourceObject = nullptr;
 };
 
 struct RayTraceHitResult
@@ -37,9 +37,9 @@ struct RayTraceHitResult
 
 	float fDamage = 0.f;
 
-	std::shared_ptr<IGameObject> pInstigator = nullptr;
-	std::shared_ptr<IGameObject> pSourceObject = nullptr;
-	std::shared_ptr<IGameObject> pHitObject = nullptr;
+	IGameObject* pInstigator = nullptr;
+	IGameObject* pSourceObject = nullptr;
+	IGameObject* pHitObject = nullptr;
 };
 
 ////////////////////////////////////////////////////////////
@@ -47,11 +47,12 @@ struct RayTraceHitResult
 template<typename T>
 struct TraceHitTester
 {
-	static bool Intersects(
-		const std::shared_ptr<T>& pObj,
-		const XMVECTOR& rayOrigin,
-		const XMVECTOR& rayDir,
-		OUT float& outDist)
+	static bool Intersects(const std::shared_ptr<T>& pObj, const Vector3& rayOrigin, const Vector3& rayDir, OUT float& outDist)
+	{
+		static_assert(sizeof(T) == 0, "TraceHitTester<T> specialization required.");
+		return false;
+	}
+	static bool Intersects(T* pObj, const Vector3& rayOrigin, const Vector3& rayDir, OUT float& outDist)
 	{
 		static_assert(sizeof(T) == 0, "TraceHitTester<T> specialization required.");
 		return false;

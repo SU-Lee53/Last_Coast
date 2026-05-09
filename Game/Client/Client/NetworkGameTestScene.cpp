@@ -18,7 +18,7 @@ void NetworkGameTestScene::BuildObjects()
 	m_pTerrain->LoadFromFiles("Game");
 
 	if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
-		pThirdPerson->GiveWeapon(WEAPON_TYPE::AK);
+		pThirdPerson->GiveWeapon(WEAPON_TYPE::M4);
 	}
 
 	//LoadFromFiles("Game");
@@ -61,13 +61,6 @@ void NetworkGameTestScene::Update()
 					const auto& transform = pPlayer->GetTransform();
 					Vector3 v3PlayerPos = transform->GetPosition();
 					ImGui::Text("Player Position : (%f, %f, %f)", v3PlayerPos.x, v3PlayerPos.y, v3PlayerPos.z);
-
-					const auto& spaceDesc = GetSpacePartition();
-					ScenePartition::CellCoord cdPlayer = spaceDesc.WorldToCellXZ(v3PlayerPos);
-					int32 cellIndex = spaceDesc.CellToIndex(cdPlayer.x, cdPlayer.y);
-					ImGui::NewLine();
-					ImGui::Text("====== Space Partition ======");
-					ImGui::Text("Player is in (%d, %d) - # %d", cdPlayer.x, cdPlayer.y, cellIndex);
 
 					ImGui::Text("====== Collision Result ======");
 					for (const auto& pair : m_pCollisionPairs) {

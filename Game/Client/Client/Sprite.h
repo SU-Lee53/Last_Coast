@@ -36,7 +36,7 @@ public:
 			static_cast<float>(WinCore::g_dwClientWidth) / 2.0f,
 			static_cast<float>(WinCore::g_dwClientHeight) / 2.0f
 		};
-		m_v2Size = Vector2{ 100.f,100.f };
+		m_v2Size = Vector2{ m_fDefaultSize, m_fDefaultSize };
 
 		m_unLayer = 0;
 		m_bVisible = false;
@@ -62,8 +62,42 @@ public:
 	}
 
 private:
-	const float m_fDefaultSize = 100.f;
-	const float m_fMaxSize = 200.f;
+	const float m_fDefaultSize = 150.f;
+	const float m_fMaxSize = 250.f;
 
 
+};
+
+class HitMarker : public ImageBox {
+public:
+	HitMarker() : ImageBox("Hitmarker") {
+		m_v2Anchor = Vector2{ 0,0 };
+		m_v2Pivot = Vector2{ 0.5f, 0.5f };
+		m_v2Position = Vector2{
+			static_cast<float>(WinCore::g_dwClientWidth) / 2.0f,
+			static_cast<float>(WinCore::g_dwClientHeight) / 2.0f
+		};
+		m_v2Size = Vector2{ 30, 30 };
+
+		m_unLayer = 0;
+		m_bVisible = false;
+	}
+
+	void Show() {
+		m_fElapsedTime = 0.f;
+		m_bVisible = true;
+	}
+
+	void Update() {
+		if (m_bVisible == false) return;
+		if (m_fElapsedTime >= m_fShowTime) {
+			m_bVisible = false;
+			return;
+		}
+		m_fElapsedTime += DT;
+	}
+
+private:
+	float m_fElapsedTime = 0.f;
+	const float m_fShowTime = 0.1f;
 };

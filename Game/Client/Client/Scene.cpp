@@ -7,307 +7,6 @@
 #include <queue>
 
 /////////////////////////////////////////////////////////////////////////////
-// SpacePartitionDesc
-
-const ScenePartition::CellCoord ScenePartition::g_cdDirection[8] = {
-	{1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1}
-	// N, NE, E, SE, S, SW, W, NW
-};
-
-const GridCell* ScenePartition::GetCellData(const CellCoord& cdCell) const {
-	int32 index = CellToIndex(cdCell.x, cdCell.y);
-	if (index >= Cells.size()) {
-		return nullptr;
-	}
-
-	return &Cells[index];
-}
-
-std::vector<std::shared_ptr<IGameObject>> ScenePartition::BroadPhaseDFS(const CellCoord& cdStart, int32 nMaxDepth) const
-{
-	std::vector<std::shared_ptr<IGameObject>> pObjs;
-	pObjs.reserve(CUR_SCENE->GetWorld().SizeAll());
-	std::unordered_set<IGameObject*> pObjectsSeen;
-
-	std::vector<std::vector<bool>> visited(xmui2NumCellsXZ.y, std::vector<bool>(xmui2NumCellsXZ.x, false));
-	int32 nDepth = 0;
-
-	std::stack<std::pair<CellCoord, int32>> stack;
-	stack.emplace(cdStart, 0);
-
-	while (stack.size() != 0) {
-		auto cur = stack.top();
-		stack.pop();
-
-		CellCoord cdCur = cur.first;
-		int32 nCurDepth = cur.second;
-
-		if (!visited[cdCur.y][cdCur.x]) {
-			visited[cdCur.y][cdCur.x] = true;
-			const auto& pObjsInGrid = Cells[CellToIndex(cdCur.x, cdCur.y)].pObjectsInCell;
-			//pObjectsSeen.insert(pObjs.end(), pObjsInGrid.begin(), pObjsInGrid.end());
-			std::copy_if(pObjsInGrid.begin(), pObjsInGrid.end(), std::back_inserter(pObjs), [&pObjectsSeen](const auto& pObj) { return pObjectsSeen.insert(pObj.get()).second; });
-
-			int32 nNewDepth = nCurDepth + 1;
-			if (nNewDepth > nMaxDepth) continue;
-
-			for (auto& [x, z] : g_cdDirection) {
-				int nx = cdCur.x + x;
-				int nz = cdCur.y + z;
-				if (nx < 0 || nx > xmui2NumCellsXZ.x - 1 || nz < 0 || nz > xmui2NumCellsXZ.y - 1) continue;
-				if (!visited[nz][nx] && nNewDepth <= nMaxDepth) {
-					stack.emplace(CellCoord{nx, nz}, nNewDepth);
-				}
-			}
-		}
-	}
-
-	return pObjs;
-}
-
-std::vector<std::shared_ptr<IGameObject>> ScenePartition::ObjectBroadPhaseFrustumCulling(const BoundingFrustum& xmFrustumWorld) const
-{
-	std::vector<std::shared_ptr<IGameObject>> pObjs;
-	pObjs.reserve(CUR_SCENE->GetWorld().SizeAll());
-	std::unordered_set<IGameObject*> pObjectsSeen;
-
-	const int32 nCellsX = static_cast<int32>(xmui2NumCellsXZ.x);
-	const int32 nCellsZ = static_cast<int32>(xmui2NumCellsXZ.y);
-
-	std::vector<std::vector<bool>> visited(xmui2NumCellsXZ.y, std::vector<bool>(xmui2NumCellsXZ.x, false));
-
-	XMFLOAT3 pxmf3FrustumCorners[8];
-	xmFrustumWorld.GetCorners(pxmf3FrustumCorners);
-
-	float fMinX, fMinZ = fMinX = std::numeric_limits<float>::max();
-	float fMaxX, fMaxZ = fMaxX = -std::numeric_limits<float>::max();
-
-	for (int i = 0; i < BoundingFrustum::CORNER_COUNT; ++i) {
-		fMinX = std::min(fMinX, pxmf3FrustumCorners[i].x);
-		fMaxX = std::max(fMaxX, pxmf3FrustumCorners[i].x);
-		fMinZ = std::min(fMinZ, pxmf3FrustumCorners[i].z);
-		fMaxZ = std::max(fMaxZ, pxmf3FrustumCorners[i].z);
-	}
-
-	CellCoord cdMin = WorldToCellXZ(Vector3(fMinX, 0.f, fMinZ));
-	CellCoord cdMax = WorldToCellXZ(Vector3(fMaxX, 0.f, fMaxZ));
-	
-	cdMin.x = std::clamp(cdMin.x, 0, nCellsX - 1);
-	cdMin.y = std::clamp(cdMin.y, 0, nCellsZ - 1);
-	cdMax.x = std::clamp(cdMax.x, 0, nCellsX - 1);
-	cdMax.y = std::clamp(cdMax.y, 0, nCellsZ - 1);
-
-	std::queue<CellCoord> queue;
-	for (int32 z = cdMin.y; z <= cdMax.y; ++z) {
-		for (int32 x = cdMin.x; x <= cdMax.x; ++x) {
-			const GridCell& cell = Cells[CellToIndex(x, z)];
-
-			if (!visited[z][x] && xmFrustumWorld.Intersects(cell.xmAABB)) {
-				visited[z][x] = true;
-				queue.emplace(x, z);
-			}
-		}
-	}
-
-	while (queue.size() != 0) {
-		CellCoord cdCur = queue.front();
-		queue.pop();
-
-		const int32 x = cdCur.x;
-		const int32 z = cdCur.y;
-
-		const auto& pObjsInGrid = Cells[CellToIndex(x, z)].pObjectsInCell;
-		std::copy_if(
-			pObjsInGrid.begin(), 
-			pObjsInGrid.end(),
-			std::back_inserter(pObjs), 
-			[&pObjectsSeen](const auto& pObj) { return pObjectsSeen.insert(pObj.get()).second; });
-
-		for (auto& [dx, dz] : g_cdDirection) {
-			int nx = x + dx;
-			int nz = z + dz;
-			if (nx < 0 || nx > xmui2NumCellsXZ.x - 1 || nz < 0 || nz > xmui2NumCellsXZ.y - 1) continue;
-			if (!visited[nz][nx] && xmFrustumWorld.Intersects(Cells[CellToIndex(nx, nz)].xmAABB)) {
-				visited[nz][nx] = true;
-				queue.emplace(nx, nz);
-			}
-		}
-	}
-
-	return pObjs;
-}
-
-std::vector<std::shared_ptr<TerrainComponent>> ScenePartition::TerrainBroadPhaseFrustumCulling(const BoundingFrustum& xmFrustumWorld) const
-{
-	std::vector<std::shared_ptr<TerrainComponent>> pTerrainComponents;
-	pTerrainComponents.reserve(CUR_SCENE->GetTerrain()->GetTerrainComponents().size());
-	std::unordered_set<TerrainComponent*> pComponentsSeen;
-
-	const int32 nCellsX = static_cast<int32>(xmui2NumCellsXZ.x);
-	const int32 nCellsZ = static_cast<int32>(xmui2NumCellsXZ.y);
-
-	std::vector<std::vector<bool>> visited(xmui2NumCellsXZ.y, std::vector<bool>(xmui2NumCellsXZ.x, false));
-
-	XMFLOAT3 pxmf3FrustumCorners[8];
-	xmFrustumWorld.GetCorners(pxmf3FrustumCorners);
-
-	float fMinX, fMinZ = fMinX = std::numeric_limits<float>::max();
-	float fMaxX, fMaxZ = fMaxX = -std::numeric_limits<float>::max();
-
-	for (int i = 0; i < BoundingFrustum::CORNER_COUNT; ++i) {
-		fMinX = std::min(fMinX, pxmf3FrustumCorners[i].x);
-		fMaxX = std::max(fMaxX, pxmf3FrustumCorners[i].x);
-		fMinZ = std::min(fMinZ, pxmf3FrustumCorners[i].z);
-		fMaxZ = std::max(fMaxZ, pxmf3FrustumCorners[i].z);
-	}
-
-	CellCoord cdMin = WorldToCellXZ(Vector3(fMinX, 0.f, fMinZ));
-	CellCoord cdMax = WorldToCellXZ(Vector3(fMaxX, 0.f, fMaxZ));
-
-	cdMin.x = std::clamp(cdMin.x, 0, nCellsX - 1);
-	cdMin.y = std::clamp(cdMin.y, 0, nCellsZ - 1);
-	cdMax.x = std::clamp(cdMax.x, 0, nCellsX - 1);
-	cdMax.y = std::clamp(cdMax.y, 0, nCellsZ - 1);
-
-	std::queue<CellCoord> queue;
-	for (int32 z = cdMin.y; z <= cdMax.y; ++z) {
-		for (int32 x = cdMin.x; x <= cdMax.x; ++x) {
-			const GridCell& cell = Cells[CellToIndex(x, z)];
-
-			if (!visited[z][x] && xmFrustumWorld.Intersects(cell.xmAABB)) {
-				visited[z][x] = true;
-				queue.emplace(x, z);
-			}
-		}
-	}
-
-	while (queue.size() != 0) {
-		CellCoord cdCur = queue.front();
-		queue.pop();
-		
-		const int32 x = cdCur.x;
-		const int32 z = cdCur.y;
-
-		const auto& pTerrainsInGrid = Cells[CellToIndex(x, z)].pTerrainComponentsInCell;
-		std::copy_if(
-			pTerrainsInGrid.begin(), 
-			pTerrainsInGrid.end(), 
-			std::back_inserter(pTerrainComponents), 
-			[&pComponentsSeen](const auto& pComponent) { return pComponentsSeen.insert(pComponent.get()).second; });
-
-		for (auto& [dx, dz] : g_cdDirection) {
-			int nx = x + dx;
-			int nz = z + dz;
-			if (nx < 0 || nx > xmui2NumCellsXZ.x - 1 || nz < 0 || nz > xmui2NumCellsXZ.y - 1) continue;
-			if (!visited[nz][nx] && xmFrustumWorld.Intersects(Cells[CellToIndex(nx, nz)].xmAABB)) {
-				visited[nz][nx] = true;
-				queue.emplace(nx, nz);
-			}
-		}
-	}
-
-	return pTerrainComponents;
-}
-
-ScenePartition::CellCoord ScenePartition::WorldToCellXZ(const Vector3& v3WorldPos) const {
-	float fX = (v3WorldPos.x - v2SceneOriginXZ.x) / v2CellSizeXZ.x;
-	float fZ = (v3WorldPos.z - v2SceneOriginXZ.y) / v2CellSizeXZ.y;
-
-	CellCoord cd;
-	cd.x = (int)std::floor(fX);
-	cd.y = (int)std::floor(fZ);
-	return cd;
-}
-
-int32 ScenePartition::CellToIndex(uint32 x, uint32 z) const {
-	return z * xmui2NumCellsXZ.x + x;
-}
-
-void ScenePartition::Insert(const std::shared_ptr<IGameObject>& pObj) {
-	const BoundingOrientedBox& xmOBB = pObj->GetComponent<ICollider>()->GetOBBWorld();
-
-	auto [v3Min, v3Max] = GetMinMaxFromOBB(xmOBB);
-	CellCoord cdMin = WorldToCellXZ(v3Min);
-	CellCoord cdMax = WorldToCellXZ(v3Max);
-
-	cdMin.x = std::clamp(cdMin.x, 0, (int32)xmui2NumCellsXZ.x - 1);
-	cdMin.y = std::clamp(cdMin.y, 0, (int32)xmui2NumCellsXZ.y - 1);
-
-	cdMax.x = std::clamp(cdMax.x, 0, (int32)xmui2NumCellsXZ.x - 1);
-	cdMax.y = std::clamp(cdMax.y, 0, (int32)xmui2NumCellsXZ.y - 1);
-
-	for (uint32 x = cdMin.x; x <= cdMax.x; ++x) {
-		for (uint32 z = cdMin.y; z <= cdMax.y; ++z) {
-			Cells[CellToIndex(x, z)].pObjectsInCell.push_back(pObj);
-		}
-	}
-}
-
-void ScenePartition::Insert(const std::shared_ptr<TerrainComponent>& pTerrainComponent) 
-{
-	const BoundingBox& xmAABB = pTerrainComponent->GetBounds();
-
-	Vector3 v3Min = xmAABB.Center - xmAABB.Extents;
-	Vector3 v3Max = xmAABB.Center + xmAABB.Extents;
-	CellCoord cdMin = WorldToCellXZ(v3Min);
-	CellCoord cdMax = WorldToCellXZ(v3Max);
-
-	cdMin.x = std::clamp(cdMin.x, 0, (int32)xmui2NumCellsXZ.x - 1);
-	cdMin.y = std::clamp(cdMin.y, 0, (int32)xmui2NumCellsXZ.y - 1);
-
-	cdMax.x = std::clamp(cdMax.x, 0, (int32)xmui2NumCellsXZ.x - 1);
-	cdMax.y = std::clamp(cdMax.y, 0, (int32)xmui2NumCellsXZ.y - 1);
-
-	for (uint32 x = cdMin.x; x <= cdMax.x; ++x) {
-		for (uint32 z = cdMin.y; z <= cdMax.y; ++z) {
-			Cells[CellToIndex(x, z)].pTerrainComponentsInCell.push_back(pTerrainComponent);
-		}
-	}
-}
-
-void ScenePartition::GenerateCellBounds()
-{
-	//	for (auto& cell : Cells) {
-	//		BoundingBox xmMerged;
-	//		xmMerged = cell.pObjectsInCell.empty() ? BoundingBox{}
-	//		: cell.pObjectsInCell[0]->GetComponent<ICollider>()->GetAABBFromOBBWorld();
-	//	
-	//		for (const auto& pObj : cell.pObjectsInCell | std::views::drop(1)) {
-	//			BoundingBox xmObjBound = pObj->GetComponent<ICollider>()->GetAABBFromOBBWorld();
-	//			BoundingBox::CreateMerged(xmMerged, xmObjBound, xmMerged);
-	//		}
-	//	
-	//		for (const auto& pTerrainComponent : cell.pTerrainComponentsInCell) {
-	//			const BoundingBox& xmBounds = pTerrainComponent->GetBounds();
-	//			BoundingBox::CreateMerged(xmMerged, xmBounds, xmMerged);
-	//		}
-	//	
-	//		cell.xmAABB = xmMerged;
-	//	}
-
-	const int32 nCellsX = static_cast<int32>(xmui2NumCellsXZ.x);
-	const int32 nCellsZ = static_cast<int32>(xmui2NumCellsXZ.y);
-
-	for (int32 z = 0; z < nCellsZ; ++z) {
-		for (int32 x = 0; x < nCellsX; ++x) {
-			const float minX = v2SceneOriginXZ.x + static_cast<float>(x) * v2CellSizeXZ.x;
-			const float maxX = minX + v2CellSizeXZ.x;
-
-			const float minZ = v2SceneOriginXZ.y + static_cast<float>(z) * v2CellSizeXZ.y;
-			const float maxZ = minZ + v2CellSizeXZ.y;
-
-			const Vector3 vMin(minX, fSceneMinY, minZ);
-			const Vector3 vMax(maxX, fSceneMaxY, maxZ);
-
-			BoundingBox box;
-			BoundingBox::CreateFromPoints(box, vMin, vMax);
-
-			Cells[CellToIndex(x, z)].xmAABB = box;
-		}
-	}
-}
-
-/////////////////////////////////////////////////////////////////////////////
 // Scene
 
 
@@ -334,9 +33,10 @@ void Scene::InitializeObjects()
 
 void Scene::CleanUp()
 {
-	//m_pStaticObjects.clear();
-	//m_pDynamicObjects.clear();
-	//m_pSprites.clear();
+	m_bSpatialRuntimeRegistrationEnabled = false;
+
+	m_pCollisionPairs.clear();
+
 	m_World.ClearAll();
 	m_pLights.clear();
 
@@ -350,29 +50,95 @@ void Scene::PostInitialize()
 	InitializeObjects();
 	GenerateSceneBound();
 
-	if (m_pTerrain) {
-		Vector3 v3TerrainPos = m_pTerrain->GetComponent<Transform>()->GetPosition();
-		uint32 unComponents = std::sqrt(m_pTerrain->GetTerrainComponents().size());
-		Vector2 v2CellSize = m_pTerrain->GetTerrainComponents()[0]->GetComponentSize();
-		CellPartition(Vector2{v3TerrainPos.x, v3TerrainPos.z}, v2CellSize, unComponents, unComponents);
-	}
-	else {
-		auto [v3SceneMin, v3SceneMax] = ::GetMinMaxFromAABB(m_xmSceneBound);
-		float fSceneWidth = v3SceneMax.x - v3SceneMin.x;
-		float fSceneHeight = v3SceneMax.z - v3SceneMin.z;
+	/* Old xz grid space partition */
+	//	if (m_pTerrain) {
+	//		Vector3 v3TerrainPos = m_pTerrain->GetComponent<Transform>()->GetPosition();
+	//		uint32 unComponents = std::sqrt(m_pTerrain->GetTerrainComponents().size());
+	//		Vector2 v2CellSize = m_pTerrain->GetTerrainComponents()[0]->GetComponentSize();
+	//		CellPartition(Vector2{ v3TerrainPos.x, v3TerrainPos.z }, v2CellSize, unComponents, unComponents);
+	//	}
+	//	else {
+	//		auto [v3SceneMin, v3SceneMax] = ::GetMinMaxFromAABB(m_xmSceneBound);
+	//		float fSceneWidth = v3SceneMax.x - v3SceneMin.x;
+	//		float fSceneHeight = v3SceneMax.z - v3SceneMin.z;
+	//	
+	//		Vector2 v2SceneOriginXZ;
+	//		v2SceneOriginXZ.x = v3SceneMin.x;
+	//		v2SceneOriginXZ.y = v3SceneMin.z;
+	//	
+	//		Vector2 v2CellSizeXZ;
+	//		v2CellSizeXZ.x = fSceneWidth / 5;
+	//		v2CellSizeXZ.y = fSceneHeight / 5;
+	//	
+	//		uint32 unCellsX = std::ceil(fSceneWidth / v2CellSizeXZ.x) + 1;
+	//		uint32 unCellsZ = std::ceil(fSceneHeight / v2CellSizeXZ.y) + 1;
+	//	
+	//		CellPartition(v2SceneOriginXZ, v2CellSizeXZ, unCellsX, unCellsZ);
+	//	}
 
-		Vector2 v2SceneOriginXZ;
-		v2SceneOriginXZ.x = v3SceneMin.x;
-		v2SceneOriginXZ.y = v3SceneMin.z;
+	// Space Partition
+	{
+		m_World.RegisterSpatialObjectsByMobility<false>();
 
-		Vector2 v2CellSizeXZ;
-		v2CellSizeXZ.x = fSceneWidth / 5;
-		v2CellSizeXZ.y = fSceneHeight / 5;
+		// 3. Build Static Grid
+		SpatialGridBuildDesc gridDesc{};
 
-		uint32 unCellsX = std::ceil(fSceneWidth / v2CellSizeXZ.x) + 1;
-		uint32 unCellsZ = std::ceil(fSceneHeight / v2CellSizeXZ.y) + 1;
+		if (m_pTerrain) {
+			Vector3 v3TerrainPos = m_pTerrain->GetComponent<Transform>()->GetPosition();
+			const uint32 unComponents = static_cast<uint32>(std::sqrt(m_pTerrain->GetTerrainComponents().size()));
+			Vector2 v2CellSize = m_pTerrain->GetTerrainComponents()[0]->GetComponentSize();
 
-		CellPartition(v2SceneOriginXZ, v2CellSizeXZ, unCellsX, unCellsZ);
+			gridDesc.v2OriginXZ = Vector2{ v3TerrainPos.x, v3TerrainPos.z };
+			gridDesc.v2CellSizeXZ = v2CellSize;
+			gridDesc.xmui2NumCellsXZ = XMUINT2{ unComponents, unComponents };
+			gridDesc.fMinY = m_pTerrain->GetMinHeight();
+			gridDesc.fMaxY = m_pTerrain->GetMaxHeight();
+		}
+		else {
+			auto [v3SceneMin, v3SceneMax] = ::GetMinMaxFromAABB(m_xmSceneBound);
+
+			const float fSceneWidth = v3SceneMax.x - v3SceneMin.x;
+			const float fSceneDepth = v3SceneMax.z - v3SceneMin.z;
+
+			constexpr float fDefaultCellSize = 100_m;
+
+			const uint32 unCellsX = std::max(1u, static_cast<uint32>(std::ceil(fSceneWidth / fDefaultCellSize)));
+			const uint32 unCellsZ = std::max(1u, static_cast<uint32>(std::ceil(fSceneDepth / fDefaultCellSize)));
+
+			gridDesc.v2OriginXZ = Vector2{ v3SceneMin.x, v3SceneMin.z };
+			gridDesc.v2CellSizeXZ = Vector2{ fDefaultCellSize, fDefaultCellSize };
+			gridDesc.xmui2NumCellsXZ = XMUINT2{ unCellsX, unCellsZ };
+			gridDesc.fMinY = v3SceneMin.y;
+			gridDesc.fMaxY = v3SceneMax.y;
+		}
+
+		if (m_pTerrain) {
+			for (auto& pComponent : m_pTerrain->GetTerrainComponents()) {
+				m_World.GetSpatial().RegisterTerrain(
+					pComponent.get(),
+					SPATIAL_TERRAIN |
+					SPATIAL_COLLIDABLE |
+					SPATIAL_RAY_TARGET |
+					SPATIAL_CAST_SHADOW
+				);
+			}
+		}
+
+		for (auto& pLight : m_pLights) {
+			if (std::dynamic_pointer_cast<DirectionalLight>(pLight)) {
+				continue;
+			}
+
+			m_World.GetSpatial().RegisterLight(
+				pLight.get(),
+				SPATIAL_LIGHT,
+				true
+			);
+		}
+
+		// 2. Update Proxy bounds
+		m_World.UpdateSpatial();
+		m_World.GetSpatial().BuildStaticGrid(gridDesc);
 	}
 
 	if (m_pPlayer) {
@@ -385,6 +151,13 @@ void Scene::PostInitialize()
 		pZombie->SetTarget(m_pPlayer);  // shared_ptr 전달
 	}
 
+	// Register Spatial Dynamic
+	{
+		m_World.RegisterSpatialObjectsByMobility<true>();
+		m_World.UpdateSpatial();
+	}
+
+	m_bSpatialRuntimeRegistrationEnabled = true;
 }
 
 void Scene::PreProcessInput()
@@ -423,6 +196,7 @@ void Scene::FixedUpdate()
 	}
 
 	m_World.FixedUpdate();
+	m_World.UpdateSpatial();
 
 	CheckCollision();
 }
@@ -452,40 +226,88 @@ void Scene::PostUpdate()
 
 void Scene::PrepareRender()
 {
-	if (m_pPlayer)
-		m_pPlayer->Render();
+	m_World.UpdateSpatial();
 
-	for (auto& pObj : m_SpacePartition.ObjectBroadPhaseFrustumCulling(GetCamera()->GetFrustumWorld())) {
-		pObj->Render();
+	SpatialQueryDesc desc{};
+	desc.unLayerMask = SPATIAL_RENDERABLE;
+	desc.eLayerMatchMode = SPATIAL_LAYER_MATCH_MODE::ALL;
+	desc.bIncludeStatic = true;
+	desc.bIncludeDynamic = true;
+
+
+	SpatialQueryResult visibleGrid = m_World.GetSpatial().QueryFrustum(
+		GetCamera()->GetFrustumWorld(),
+		desc
+	);
+
+	ImGui::Text("Spatial Grid Query Result : %d", visibleGrid.pObjects.size());
+	m_World.GetSpatial().DebugPrintProxyStats();
+
+	if (m_pPlayer) {
+		m_pPlayer->Render();
 	}
 
-	m_World.PrepareRender<Zombie>();
+	for (auto* pObj : visibleGrid.pObjects) {
+		if (pObj) {
+			pObj->Render();
+		}
+	}
+}
 
+void Scene::RemoveInvalidCollisionSet(const SpatialQueryResult& playerBroadPhaseResult)
+{
+	const auto& broadPhase = playerBroadPhaseResult.pObjects;
+	std::unordered_set<IGameObject*> validset{ broadPhase.begin(), broadPhase.end() };
+	for (auto it = m_pCollisionPairs.begin(); it != m_pCollisionPairs.end(); ++it) {
+		if (!validset.contains(it->pSelf)) {
+			it = m_pCollisionPairs.erase(it);
+		}
+		else if (!validset.contains(it->pOther)) {
+			it = m_pCollisionPairs.erase(it);
+		}
+		else {
+			++it;
+		}
+
+	}
 }
 
 void Scene::CheckCollision()
 {
 	// Broad Phase
-	Vector3 v3PlayerPos = m_pPlayer->GetTransform()->GetPosition();
-	ScenePartition::CellCoord cdPlayer = m_SpacePartition.WorldToCellXZ(v3PlayerPos);
-	const GridCell* pBroadPhaseResult = m_SpacePartition.GetCellData(cdPlayer);
-	if (!pBroadPhaseResult) {
+	if (!m_pPlayer) {
 		return;
 	}
-	
+
 	const std::shared_ptr<PlayerCollider> playerCollider = m_pPlayer->GetComponent<PlayerCollider>();
 	if (!playerCollider) {
 		return;
 	}
 
+	SpatialQueryDesc staticCollisionDesc{};
+	staticCollisionDesc.unLayerMask =
+		SPATIAL_COLLIDABLE |
+		SPATIAL_STATIC;
+
+	staticCollisionDesc.eLayerMatchMode = SPATIAL_LAYER_MATCH_MODE::ALL;
+	staticCollisionDesc.bIncludeStatic = true;
+	staticCollisionDesc.bIncludeDynamic = false;
+	staticCollisionDesc.v3AABBInflation = Vector3{ 3_m, 3_m, 3_m };
+	SpatialQueryResult playerBroadPhaseResult = m_World.GetSpatial().QueryAABB(playerCollider->GetAABBFromOBBWorld(), staticCollisionDesc);
+	ImGui::Text("Player Collision Candidates : %d", (int)playerBroadPhaseResult.pObjects.size());
+	//RemoveInvalidCollisionSet(playerBroadPhaseResult);
 
 	// Player vs StaticObject
-	for (const auto& pObj : pBroadPhaseResult->pObjectsInCell) {
+	for (const auto& pObj : playerBroadPhaseResult.pObjects) {
 		const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
+		if (!pCollider) {
+			continue;
+		}
+
 		bool bResult = playerCollider->CheckCollision(pCollider);
 		if (bResult) {
-			CollisionResult result1(m_pPlayer , pObj);
-			CollisionResult result2(pObj, m_pPlayer);
+			CollisionResult result1(m_pPlayer.get(), pObj);
+			CollisionResult result2(pObj, m_pPlayer.get());
 			if (!m_pCollisionPairs.contains(result1) || !m_pCollisionPairs.contains(result2)) {
 				// Begin Overlap
 				m_pPlayer->OnBeginCollision(result1);
@@ -496,14 +318,14 @@ void Scene::CheckCollision()
 			}
 			else {
 				// While Overlap
-				m_pPlayer->OnWhileCollision(CollisionResult(m_pPlayer, pObj));
-				pObj->OnWhileCollision(CollisionResult(pObj, m_pPlayer));
+				m_pPlayer->OnWhileCollision(CollisionResult(m_pPlayer.get(), pObj));
+				pObj->OnWhileCollision(CollisionResult(pObj, m_pPlayer.get()));
 			}
 		}
 		else {
 			// End Overlap
-			CollisionResult result1(m_pPlayer, pObj);
-			CollisionResult result2(pObj, m_pPlayer);
+			CollisionResult result1(m_pPlayer.get(), pObj);
+			CollisionResult result2(pObj, m_pPlayer.get());
 			if (m_pCollisionPairs.contains(result1) || m_pCollisionPairs.contains(result2)) {
 				m_pPlayer->OnEndCollision(result1);
 				pObj->OnEndCollision(result2);
@@ -520,22 +342,19 @@ void Scene::CheckCollision()
 		if (!pZombieCollider)
 			continue;
 
-		Vector3 v3ZombiePos = pZombie->GetTransform()->GetPosition();
-		ScenePartition::CellCoord cdZombie = m_SpacePartition.WorldToCellXZ(v3ZombiePos);
-		const GridCell* pZombieBroadPhase = m_SpacePartition.GetCellData(cdZombie);
-		if (!pZombieBroadPhase)
-			continue;
-
+		SpatialQueryResult zombieBroadPhaseResult = m_World.GetSpatial().QueryAABB(pZombieCollider->GetAABBFromOBBWorld(), staticCollisionDesc);
 		const PlayerCollider& zombieCollider = *pZombieCollider;
-		for (const auto& pObj : pZombieBroadPhase->pObjectsInCell) {
+		//RemoveInvalidCollisionSet(zombieBroadPhaseResult);
+
+		for (const auto& pObj : zombieBroadPhaseResult.pObjects) {
 			const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
 			if (!pCollider)
 				continue;
 
 			bool bResult = zombieCollider.CheckCollision(pCollider);
 			if (bResult) {
-				CollisionResult result1(pZombie, pObj);
-				CollisionResult result2(pObj, pZombie);
+				CollisionResult result1(pZombie.get(), pObj);
+				CollisionResult result2(pObj, pZombie.get());
 				if (!m_pCollisionPairs.contains(result1) || !m_pCollisionPairs.contains(result2)) {
 					pZombie->OnBeginCollision(result1);
 					pObj->OnBeginCollision(result2);
@@ -543,13 +362,13 @@ void Scene::CheckCollision()
 					m_pCollisionPairs.insert(result2);
 				}
 				else {
-					pZombie->OnWhileCollision(CollisionResult(pZombie, pObj));
-					pObj->OnWhileCollision(CollisionResult(pObj, pZombie));
+					pZombie->OnWhileCollision(CollisionResult(pZombie.get(), pObj));
+					pObj->OnWhileCollision(CollisionResult(pObj, pZombie.get()));
 				}
 			}
 			else {
-				CollisionResult result1(pZombie, pObj);
-				CollisionResult result2(pObj, pZombie);
+				CollisionResult result1(pZombie.get(), pObj);
+				CollisionResult result2(pObj, pZombie.get());
 				if (m_pCollisionPairs.contains(result1) || m_pCollisionPairs.contains(result2)) {
 					pZombie->OnEndCollision(result1);
 					pObj->OnEndCollision(result2);
@@ -577,41 +396,6 @@ void Scene::GenerateSceneBound()
 			BoundingBox::CreateMerged(m_xmSceneBound, m_xmSceneBound, xmAABB);
 		}
 	}
-}
-
-void Scene::CellPartition(const Vector2& v2OriginXZ, const Vector2& v2SizePerCellXZ, uint32 unCellsX, uint32 unCellsZ)
-{
-	// 1. Generate cells (2.5D)
-	m_SpacePartition.v2SceneOriginXZ = v2OriginXZ;
-	m_SpacePartition.v2CellSizeXZ = v2SizePerCellXZ;
-	m_SpacePartition.xmui2NumCellsXZ = XMUINT2{ unCellsX, unCellsZ };
-	m_SpacePartition.Cells.resize(unCellsX * unCellsZ);
-
-	// 2. Check objects in cells
-	for (const auto& pObj : m_World.GetObjects<StaticObject>()) {
-		m_SpacePartition.Insert(pObj);
-	}
-
-	// 3. Terrain cell partition 
-	if (m_pTerrain) {
-		for (const auto& pComponent : m_pTerrain->GetTerrainComponents()) {
-			m_SpacePartition.Insert(pComponent);
-		}
-
-		m_SpacePartition.SetMinHeight(m_pTerrain->GetMinHeight());
-		m_SpacePartition.SetMaxHeight(m_pTerrain->GetMaxHeight());
-	}
-	else {
-		m_SpacePartition.SetMinHeight(g_fWorldMinY);
-		m_SpacePartition.SetMaxHeight(g_fWorldMaxY);
-	}
-
-	// 4. Generate cell bounds
-	m_SpacePartition.GenerateCellBounds();
-
-	// 4. Frustum culling on cell partition
-	
-	// TODO : 5. Light cell partition
 }
 
 std::vector<LightData> Scene::MakeLightData() const
@@ -646,6 +430,20 @@ TerrainHit Scene::QueryTerrainHit(const Vector3& v3WorldPos)
 	}
 
 	return result;
+}
+
+void Scene::RemoveCollisionPairsOf(IGameObject* pDeadObject)
+{
+	if (!pDeadObject) {
+		return;
+	}
+
+	std::erase_if(m_pCollisionPairs,
+		[pDeadObject](const CollisionResult& result)
+		{
+			return result.pSelf == pDeadObject ||
+				result.pOther == pDeadObject;
+		});
 }
 
 void Scene::BuildLights()
@@ -690,8 +488,16 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 			pObj->GetTransform()->SetWorldMatrix(mtxWorldMatrix);
 
 			std::string strMeshName = jObject["MeshName"].get<std::string>();
-			auto pMeshObject = MODEL->LoadOrGet(strMeshName)->CopyObject<NodeObject>();
+			auto pMeshObject = MODEL->LoadOrGet(strMeshName, true)->CopyObject<NodeObject>();
 			pObj->SetChild(pMeshObject);
+
+			// 콜리전 메시를 자식이 아닌 루트 StaticObject에 직접 추가
+			//const auto* pCollisionInfos = MODEL->GetCollisionInfos(strMeshName);
+			//if (pCollisionInfos) {
+			//	for (const auto& info : *pCollisionInfos) {
+			//		pObj->AddComponent<StaticCollider>(info);
+			//	}
+			//}
 
 			//m_pGameObjects.push_back(pObj);
 			AddObject(pObj);

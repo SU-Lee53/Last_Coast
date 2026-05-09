@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "TypedObjectPool.h"
 #include "RayTraceUtils.h"
+#include "SpatialWorld.h"
+#include "SpatialTraits.h"
 
 template<typename T, typename... Types>
 concept OneOf = (std::same_as<T, Types> || ...);
@@ -30,6 +32,11 @@ public:
 
 	template<typename T> requires OneOf<T, ObjTypes...>
 	void Remove(const std::shared_ptr<T>& pObj) {
+		if (!pObj) {
+			return;
+		}
+
+		m_SpatialWorld.UnregisterObject(pObj.get());
 		GetObjects<T>().Remove(pObj);
 	}
 
@@ -40,6 +47,12 @@ public:
 
 	template<typename T> requires OneOf<T, ObjTypes...>
 	void Clear() {
+		ForEachAlive<T>([this](const std::shared_ptr<T>& pObj) {
+			if (pObj) {
+				m_SpatialWorld.UnregisterObject(pObj.get());
+			}
+		});
+
 		std::get<TypedObjectPool<T>>(m_Objects).Clear();
 	}
 
@@ -50,6 +63,8 @@ public:
 			},
 			m_Objects
 		);
+
+		m_SpatialWorld.Clear();
 	}
 
 	template<typename T> requires OneOf<T, ObjTypes...>
@@ -153,7 +168,26 @@ public:
 
 	template<typename T, typename Func, typename... Args> requires OneOf<T, ObjTypes...>
 	auto RemoveIfAlive(Func&& func, Args&&... args) {
-		return GetObjects<T>().RemoveIfAlive(std::forward<Func>(func), std::forward<Args>(args)...);
+		return GetObjects<T>().RemoveIfAlive(
+			[this, &func, &args...](const std::shared_ptr<T>& pObj) -> bool
+			{
+				if (!pObj) {
+					return false;
+				}
+
+				const bool bRemove = std::invoke(
+					func,
+					std::static_pointer_cast<IGameObject>(pObj),
+					std::forward<Args>(args)...
+				);
+
+				if (bRemove) {
+					m_SpatialWorld.UnregisterObject(pObj.get());
+				}
+
+				return bRemove;
+			}
+		);
 	}
 
 public:
@@ -161,23 +195,101 @@ public:
 	template<typename... TargetTypes> requires (OneOf<TargetTypes, ObjTypes...> && ...)
 	bool LineTraceSingle(const RayTraceDesc& desc, OUT RayTraceHitResult& outHit) const;
 
+public:
+	SpatialWorld& GetSpatial()
+	{
+		return m_SpatialWorld;
+	}
+
+	const SpatialWorld& GetSpatial() const
+	{
+		return m_SpatialWorld;
+	}
+
+	template<typename T> requires OneOf<T, ObjTypes...>
+	void RegisterSpatialObject(
+		const std::shared_ptr<T>& pObj,
+		uint32 unLayerMask,
+		bool bDynamic);
+
+	template<typename T> requires OneOf<T, ObjTypes...>
+	void UnregisterSpatialObject(const std::shared_ptr<T>& pObj);
+
+	void UpdateSpatial()
+	{
+		m_SpatialWorld.UpdateDirtyProxies();
+	}
+
+	template<bool bDynamicTarget>
+	void RegisterSpatialObjectsByMobility()
+	{
+		(RegisterSpatialObjectsByMobilityImpl<ObjTypes, bDynamicTarget>(), ...);
+	}
+
+	template<typename T> requires OneOf<T, ObjTypes...>
+	void RegisterSpatialObject(const std::shared_ptr<T>& pObj)
+	{
+		if (!pObj) {
+			return;
+		}
+
+		if constexpr (SpatialObjectTraits<T>::bSpatial) {
+			m_SpatialWorld.RegisterObject<T>(
+				pObj.get(),
+				SpatialObjectTraits<T>::unLayerMask,
+				SpatialObjectTraits<T>::bDynamic
+			);
+		}
+	}
+
 private:
-	// Ray(line) trace helper
-	template<typename T>
-	void CheckTraceAgainstPool(
-		const RayTraceDesc& desc,
-		const Vector3& v3Dir,
-		const XMVECTOR& rayOrigin,
-		const XMVECTOR& rayDir,
-		OUT float& fBestDist,
-		OUT bool& bHit,
-		OUT RayTraceHitResult& outHit) const;
+
+	template<typename T> requires OneOf<T, ObjTypes...>
+	void RegisterSpatialObjects()
+	{
+		if constexpr (SpatialObjectTraits<T>::bSpatial) {
+			for (auto& pObj : GetObjects<T>()) {
+				RegisterSpatialObject<T>(pObj);
+			}
+		}
+	}
+
+	template<typename T, bool bDynamicTarget>
+	void RegisterSpatialObjectsByMobilityImpl()
+	{
+		if constexpr (OneOf<T, ObjTypes...> && SpatialObjectTraits<T>::bSpatial) {
+			if constexpr (SpatialObjectTraits<T>::bDynamic == bDynamicTarget) {
+				RegisterSpatialObjects<T>();
+			}
+		}
+	}
 
 private:
 	std::tuple<TypedObjectPool<ObjTypes>...> m_Objects;
+	SpatialWorld m_SpatialWorld;
 };
 
+template<typename... ObjTypes> requires (std::derived_from<ObjTypes, IGameObject> && ...)
+template<typename T> requires OneOf<T, ObjTypes...>
+void World<ObjTypes...>::RegisterSpatialObject(const std::shared_ptr<T>& pObj, uint32 unLayerMask, bool bDynamic)
+{
+	if (!pObj) {
+		return;
+	}
 
+	m_SpatialWorld.RegisterObject<T>(pObj.get(), unLayerMask, bDynamic);
+}
+
+template<typename... ObjTypes> requires (std::derived_from<ObjTypes, IGameObject> && ...)
+template<typename T> requires OneOf<T, ObjTypes...>
+void World<ObjTypes...>::UnregisterSpatialObject(const std::shared_ptr<T>& pObj)
+{
+	if (!pObj) {
+		return;
+	}
+
+	m_SpatialWorld.UnregisterObject(pObj.get());
+}
 
 template<typename... ObjTypes> requires (std::derived_from<ObjTypes, IGameObject> && ...)
 template<typename... TargetTypes> requires (OneOf<TargetTypes, ObjTypes...> && ...)
@@ -189,50 +301,55 @@ bool World<ObjTypes...>::LineTraceSingle(const RayTraceDesc& desc, OUT RayTraceH
 	if (v3Dir.LengthSquared() <= 1e-8f) {
 		return false;
 	}
+
 	v3Dir.Normalize();
 
 	const XMVECTOR rayOrigin = XMLoadFloat3(&desc.v3Origin);
 	const XMVECTOR rayDir = XMLoadFloat3(&v3Dir);
 
+	SpatialRayQueryDesc rayQuery{};
+	rayQuery.v3Origin = desc.v3Origin;
+	rayQuery.v3Direction = v3Dir;
+	rayQuery.fMaxDistance = desc.fMaxDistance;
+	rayQuery.unLayerMask = SPATIAL_RAY_TARGET;
+	rayQuery.eLayerMatchMode = SPATIAL_LAYER_MATCH_MODE::ALL;
+	rayQuery.bIncludeStatic = true;
+	rayQuery.bIncludeDynamic = true;
+	rayQuery.fAABBInflation = 2.f;
+
+	SpatialRayQueryResult candidates =
+		m_SpatialWorld.QueryRay(rayQuery);
+
 	bool bHit = false;
 	float fBestDist = desc.fMaxDistance;
 
-	(CheckTraceAgainstPool<TargetTypes>(
-		desc,
-		v3Dir,
-		rayOrigin,
-		rayDir,
-		fBestDist,
-		bHit,
-		outHit), ...);
+	auto testCandidate = [&]<typename T>(const SpatialObjectQueryItem & candidate)
+	{
+		static const std::type_index targetType{ typeid(T) };
 
-	if (bHit && outHit.pHitObject) {
-		outHit.pHitObject->OnTraceHit(outHit);
-	}
-
-	return bHit;
-}
-
-template<typename... ObjTypes> requires (std::derived_from<ObjTypes, IGameObject> && ...)
-template<typename T>
-void World<ObjTypes...>::CheckTraceAgainstPool(const RayTraceDesc& desc, const Vector3& v3Dir, const XMVECTOR& rayOrigin, const XMVECTOR& rayDir, OUT float& fBestDist, OUT bool& bHit, OUT RayTraceHitResult& outHit) const
-{
-	for (const auto& pObj : GetObjects<T>()) {
-		if (!pObj) {
-			continue;
+		if (candidate.objectTypeID != targetType) {
+			return;
 		}
 
-		if (pObj == desc.pInstigator || pObj == desc.pSourceObject) {
-			continue;
+		IGameObject* pCandidate = candidate.pObject;
+		if (!pCandidate) {
+			return;
 		}
+
+		if (pCandidate == desc.pInstigator ||
+			pCandidate == desc.pSourceObject) {
+			return;
+		}
+
+		T* pTyped = static_cast<T*>(pCandidate);
 
 		float fDist = 0.f;
-		if (!TraceHitTester<T>::Intersects(pObj, rayOrigin, rayDir, fDist)) {
-			continue;
+		if (!TraceHitTester<T>::Intersects(pTyped, rayOrigin, rayDir, fDist)) {
+			return;
 		}
 
 		if (fDist < 0.f || fDist > fBestDist) {
-			continue;
+			return;
 		}
 
 		fBestDist = fDist;
@@ -245,13 +362,23 @@ void World<ObjTypes...>::CheckTraceAgainstPool(const RayTraceDesc& desc, const V
 		outHit.v3Origin = desc.v3Origin;
 		outHit.v3Direction = v3Dir;
 		outHit.v3ImpactPoint = desc.v3Origin + v3Dir * fDist;
-		outHit.v3ImpactNormal = -v3Dir; // 임시
+		outHit.v3ImpactNormal = -v3Dir; // Temporary
 
 		outHit.fDamage = desc.fDamage;
 		outHit.pInstigator = desc.pInstigator;
 		outHit.pSourceObject = desc.pSourceObject;
-		outHit.pHitObject = pObj;
+		outHit.pHitObject = pCandidate;
+	};
+
+	for (const SpatialObjectQueryItem& candidate : candidates.objects) {
+		(testCandidate.template operator() < TargetTypes > (candidate), ...);
 	}
+
+	if (bHit && outHit.pHitObject) {
+		outHit.pHitObject->OnTraceHit(outHit);
+	}
+
+	return bHit;
 }
 
 template<typename... ObjTypes> requires (std::derived_from<ObjTypes, IGameObject> && ...)

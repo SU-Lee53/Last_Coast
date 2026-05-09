@@ -9,6 +9,7 @@ struct BoundingCapsule {
 	bool Intersects(const BoundingBox& box) const noexcept;
 	bool Intersects(const BoundingOrientedBox& box, OUT Vector3& outv3Normal, OUT float& outfDepth) const;
 	bool Intersects(const BoundingBox& box, OUT Vector3& outv3Normal, OUT float& outfDepth) const;
+	bool Intersects(const Vector3& v3RayOrigin, const Vector3& v3RayDir, OUT float& outDist) const;
 
 	void Transform(OUT BoundingCapsule& out, const DirectX::XMMATRIX mtxTransform) const noexcept;
 

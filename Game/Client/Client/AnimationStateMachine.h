@@ -50,6 +50,9 @@ protected:
 	float m_fLastAnimationChangedTime = 0;		// 마지막 애니메이션 전환 시점
 	float m_fCurrentTransitionTime = 0;			// 마지막 애니메이션 전환 시간
 
+	float m_fCurrentAnimationStartOffset = 0.0f;
+	float m_fBeforeAnimationTimeAtTransition = 0.0f;
+
 	// Output cache
 	std::vector<AnimationKey> m_OutputPose;
 

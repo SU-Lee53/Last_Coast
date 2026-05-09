@@ -2,6 +2,7 @@
 #include "DynamicObject.h"
 
 class IPlayer;
+class ZombiePool;
 
 class Zombie : public DynamicObject
 {
@@ -32,6 +33,23 @@ public:
 	float GetHP() const { return m_fHP; }
 	bool IsDead() const { return m_fHP <= 0.f; }
 	bool IsReadyToRemove() const { return m_bReadyToRemove; }
+
+	// 서버 ID (서버에서 할당한 좀비 식별자 — 로컬 AI 전용 좀비는 -1)
+	int  GetServerId() const { return m_nServerId; }
+	void SetServerId(int id)  { m_nServerId = id; }
+
+	// 서버에서 수신한 상태 적용:
+	//   - XZ 오차 > 임계값이면 AI agent 위치 보정
+	//   - waypoint 변경 시 MoveToPosition 재요청
+	void ApplyServerState(float serverX, float serverZ,
+	                      float waypointX, float waypointZ,
+	                      ZombieBehaviorState state);
+
+	// 메모리 풀 인터페이스 ─────────────────────────────────────────────────────
+	// ZombiePool이 호출. 외부에서 직접 호출 금지.
+	bool IsPoolActive() const { return m_bPoolActive; }
+	void PoolActivate(); // m_Free → m_Active: 상태 초기화 후 활성화
+	void PoolReset();    // m_Active → m_Free: 비활성화 (객체는 재사용 대기)
 
 	Vector3 GetPosition() const;
 
@@ -72,29 +90,42 @@ private:
 
 	bool m_bWasVisible = false;  // 이전 프레임 시야 여부 (경보 전파 rising edge 감지용)
 	float m_fMoveSpeedSqXZ = 0.f;
+	int   m_nServerId = -1;           // 서버 할당 ID (-1 = 로컬 AI 전용)
+	Vector3 m_v3LastWaypoint = {};    // 마지막으로 요청한 waypoint (중복 MoveToPosition 방지)
 	float m_fHP = 100.f;
 	bool m_bDying = false;
 	bool m_bReadyToRemove = false;
+
+	// 풀 상태. true = active(게임플레이 중), false = dormant(재사용 대기)
+	// dormant 상태에서는 Update/PostUpdate/Render가 early-return
+	bool m_bPoolActive = true;
+
+	// ZombiePool 전용 — 외부에서 직접 접근 금지
+	friend class ZombiePool;
+	ZombiePool* m_pPool        = nullptr; // 소속 풀 (back-pointer)
+	int         m_nActiveIndex = -1;      // m_Active 내 현재 인덱스 (O(1) 제거용)
 };
 
 template<>
 struct TraceHitTester<Zombie>
 {
-	static bool Intersects(
-		const std::shared_ptr<Zombie>& pZombie,
-		const XMVECTOR& rayOrigin,
-		const XMVECTOR& rayDir,
-		OUT float& outDist)
+	static bool Intersects(Zombie* pObj, Vector3 rayOrigin, Vector3 rayDir, OUT float& outDist)
 	{
-		auto pCollider = pZombie->GetComponent<PlayerCollider>();
+		if (!pObj) {
+			return false;
+		}
+
+		auto pCollider = pObj->GetComponent<PlayerCollider>();
 		if (!pCollider) {
 			return false;
 		}
 
-		BoundingBox aabb;
-		pCollider->GetCapsuleWorld().CreateAABBFromCapsule(aabb);
+		return pCollider->GetCapsuleWorld().Intersects(rayOrigin, rayDir, outDist);
+	}
 
-		return aabb.Intersects(rayOrigin, rayDir, outDist);
+	static bool Intersects(const std::shared_ptr<Zombie>& pObj, Vector3 rayOrigin, Vector3 rayDir, OUT float& outDist)
+	{
+		return Intersects(pObj.get(), rayOrigin, rayDir, outDist);
 	}
 
 	static constexpr TRACE_HIT_TYPE HitType = TRACE_HIT_TYPE::ZOMBIE;

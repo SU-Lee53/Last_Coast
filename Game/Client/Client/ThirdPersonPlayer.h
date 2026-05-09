@@ -18,7 +18,27 @@
 	NetworkRemoteThirdPersonPlayer	    X			X			 O				O			서버 상태/이벤트로 재생	   X		X
 */
 
+class Crosshair;
+class HitMarker;
+class TextBox;
+
+
 class IThirdPersonPlayer : public IPlayer {
+private:
+	struct PlayerHUD {
+		std::shared_ptr<Crosshair>	pCrosshair = nullptr;
+		std::shared_ptr<HitMarker>	pHitMarker = nullptr;
+		std::shared_ptr<TextBox>	pHealthText = nullptr;
+		std::shared_ptr<TextBox>	pHealthImage = nullptr;
+		std::shared_ptr<TextBox>	pAmmo = nullptr;
+		std::shared_ptr<TextBox>	pWeaponName = nullptr;
+		std::shared_ptr<TextBox>	pReloadAlert = nullptr;
+
+		void Initialize(const IThirdPersonPlayer& player);
+		void Update(const IThirdPersonPlayer& player);
+	};
+
+
 public:
 	IThirdPersonPlayer();
 	virtual ~IThirdPersonPlayer();
@@ -35,6 +55,9 @@ public:
 	float GetMoveSpeedXZ() const;
 	float GetMoveSpeedSqXZ() const;
 	const Vector3& GetMoveDirection() const { return m_v3MoveDirection; }
+	std::shared_ptr<WeaponObject> GetCurrentWeaponObject() const { return m_pWeaponSocket->GetWeaponModel(); }
+	WEAPON_TYPE GetCurrentWeaponType() const { return m_pWeaponSocket->GetCurrentWeaponType(); }
+
 
 	bool IsAiming() const { return m_bAiming; }
 	bool IsRunning() const { return m_bRunning; }
@@ -54,6 +77,8 @@ public:
 public:
 	// Callbacks
 	void OnMeleeEnd();
+	void OnReloadEnd();
+	void ShowHitMarker();
 
 public:
 	// Packet handling
@@ -72,7 +97,7 @@ protected:
 protected:
 	// Derived player attributes
 	virtual bool UsesLocalCamera() const { return false; }
-	virtual bool UsesCrosshair() const { return false; }
+	virtual bool UsesHUD() const { return false; }
 	virtual bool UsesInputMovement() const { return false; }
 	virtual bool UsesServerStateMovement() const { return false; }
 	virtual bool NeedsSendMovementState() const { return false; }
@@ -81,7 +106,6 @@ protected:
 	// Initializer
 	void InitializeCommonPlayer();
 	void InitializeLocalCamera();
-	void InitializeCrosshair();
 
 protected:
 	// PrecessInput() roll seperated
@@ -104,6 +128,8 @@ protected:
 	void PlayFireAction();
 	void PlayMeleeStartAction();
 	void PlayMeleeEndAction();
+	void PlayReloadStartAction();
+	void PlayReloadEndAction();
 
 	void ApplyWeaponChanged(WEAPON_TYPE eWeaponType);
 	void ApplyHitReact(float damage);
@@ -154,7 +180,8 @@ protected:
 	std::vector<BoundingOrientedBox> m_xmOBBCollided;
 
 	// Player Components
-	std::shared_ptr<class Crosshair> m_pCrosshair = nullptr;
+	//std::shared_ptr<class Crosshair> m_pCrosshair = nullptr;
+	PlayerHUD m_PlayerHUD{};
 	std::shared_ptr<WeaponSocket> m_pWeaponSocket = nullptr;
 
 protected:
@@ -162,7 +189,7 @@ protected:
 	const float	m_fMaxMoveSpeed = 1.4_m;
 	const float	m_fAcceleration = 10.0_cm;
 	const float	m_fFriction = 10.f;
-	const float	m_fGravity = -9.8_cm * 10;
+	const float	m_fGravity = -9.8_cm * 100;
 
 	// Ground check constants
 	uint32			m_unGroundGraceFrames = 0;
@@ -188,7 +215,7 @@ public:
 
 protected:
 	bool UsesLocalCamera() const override { return true; }
-	bool UsesCrosshair() const override { return true; }
+	bool UsesHUD() const override { return true; }
 	bool UsesInputMovement() const override { return true; }
 	bool UsesServerStateMovement() const override { return false; }
 	bool NeedsSendMovementState() const override { return false; }
@@ -200,7 +227,7 @@ public:
 
 protected:
 	bool UsesLocalCamera() const override { return true; }
-	bool UsesCrosshair() const override { return true; }
+	bool UsesHUD() const override { return true; }
 	bool UsesInputMovement() const override { return true; }
 	bool UsesServerStateMovement() const override { return true; }
 	bool NeedsSendMovementState() const override { return true; }
@@ -215,7 +242,7 @@ public:
 
 protected:
 	bool UsesLocalCamera() const override { return false; }
-	bool UsesCrosshair() const override { return false; }
+	bool UsesHUD() const override { return false; }
 	bool UsesInputMovement() const override { return false; }
 	bool UsesServerStateMovement() const override { return true; }
 	bool NeedsSendMovementState() const override { return false; }

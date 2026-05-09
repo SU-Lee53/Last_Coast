@@ -4,6 +4,7 @@
 class DynamicObject : public IGameObject {
 public:
 	DynamicObject() : IGameObject{ OBJECT_MOBILITY_TYPE::DYNAMIC } {}
+	virtual ~DynamicObject() {}
 
 	virtual void PreUpdate() override;
 	virtual void PostUpdate() override;

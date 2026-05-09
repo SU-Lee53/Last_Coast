@@ -72,7 +72,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LibraryPath>$(SolutionDir)Dependencies\Libraries\;$(LibraryPath)</LibraryPath>
-    <ExternalIncludePath>$(SolutionDir)AI\;$(SolutionDir)Dependencies\Includes\;$(ExternalIncludePath)</ExternalIncludePath>
+    <ExternalIncludePath>$(SolutionDir)AI\;$(SolutionDir)../../../Server/Server/;$(SolutionDir)Dependencies\Includes\;$(ExternalIncludePath)</ExternalIncludePath>
     <OutDir>$(SolutionDir)Executables\</OutDir>
     <TargetName>$(ProjectName)_dbg</TargetName>
     <IntDir>$(SolutionDir)Intermediates\</IntDir>
@@ -80,7 +80,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>$(SolutionDir)Dependencies\Libraries\;$(LibraryPath)</LibraryPath>
-    <ExternalIncludePath>$(SolutionDir)AI\;$(SolutionDir)Dependencies\Includes\;$(ExternalIncludePath)</ExternalIncludePath>
+    <ExternalIncludePath>$(SolutionDir)AI\;$(SolutionDir)../../../Server/Server/;$(SolutionDir)Dependencies\Includes\;$(ExternalIncludePath)</ExternalIncludePath>
     <OutDir>$(SolutionDir)Executables\</OutDir>
     <IntDir>$(SolutionDir)Intermediates\</IntDir>
   </PropertyGroup>
@@ -198,6 +198,9 @@
     <ClInclude Include="ParticleTextureCache.h" />
     <ClInclude Include="ParticleTypes.h" />
     <ClInclude Include="RayTraceUtils.h" />
+    <ClInclude Include="SpatialTraits.h" />
+    <ClInclude Include="SpatialTypes.h" />
+    <ClInclude Include="SpatialWorld.h" />
     <ClInclude Include="TextRenderer.h" />
     <ClInclude Include="GameFramework.h" />
     <ClInclude Include="GameObject.h" />
@@ -270,6 +273,7 @@
     <ClInclude Include="World.h" />
     <ClInclude Include="Zombie.h" />
     <ClInclude Include="ZombieAnimationController.h" />
+    <ClInclude Include="ZombiePool.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc" />
@@ -360,6 +364,7 @@
     <ClCompile Include="ParticlePass.cpp" />
     <ClCompile Include="ParticleRenderBatch.cpp" />
     <ClCompile Include="ParticleTextureCache.cpp" />
+    <ClCompile Include="SpatialWorld.cpp" />
     <ClCompile Include="TextAtlas.cpp" />
     <ClCompile Include="TextRenderer.cpp" />
     <ClCompile Include="GameFramework.cpp" />
@@ -431,6 +436,7 @@
     <ClCompile Include="World.cpp" />
     <ClCompile Include="Zombie.cpp" />
     <ClCompile Include="ZombieAnimationController.cpp" />
+    <ClCompile Include="ZombiePool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui.ini" />

@@ -18,7 +18,7 @@ public:
 
 public:
 	IGameObject(OBJECT_MOBILITY_TYPE eType);
-	~IGameObject();
+	virtual ~IGameObject();
 
 public:
 	virtual void Initialize() = 0;
@@ -29,6 +29,7 @@ public:
 	virtual void PostUpdate() = 0;
 
 	virtual void Render();
+	virtual void AddToQueue(OUT std::vector<IGameObject*>& pRenderQueue);
 
 public:
 	template<ComponentType T>

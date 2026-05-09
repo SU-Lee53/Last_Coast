@@ -83,7 +83,17 @@ void GBufferPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 	BindGeometryData(pd3dCommandList, outDescHandle);
 
 	if (CUR_SCENE->GetTerrain() != nullptr) {
-		m_CachedData.pTerrainComponentFrustumCulled = CUR_SCENE->GetSpacePartition().TerrainBroadPhaseFrustumCulling(xmFrustumWorld);
+
+		SpatialQueryDesc terrainQuerDesc{};
+		terrainQuerDesc.unLayerMask = SPATIAL_TERRAIN;
+		terrainQuerDesc.eLayerMatchMode = SPATIAL_LAYER_MATCH_MODE::ALL;
+		terrainQuerDesc.bIncludeStatic = true;
+		terrainQuerDesc.bIncludeDynamic = false;
+
+		SpatialQueryResult terrainRenderCandidates = CUR_SCENE->GetWorld().GetSpatial().QueryFrustum(xmFrustumWorld, terrainQuerDesc);
+		const auto& terrainCulled = terrainRenderCandidates.pTerrainComponents;
+
+		m_CachedData.pTerrainComponentFrustumCulled = terrainCulled;
 		BindTerrainData(pd3dCommandList, outDescHandle);
 	}
 
