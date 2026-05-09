@@ -77,6 +77,8 @@ void Zombie::PoolReset()
 	m_fVerticalVelocity = 0.f;
 	m_fMoveSpeedSqXZ    = 0.f;
 	m_bWasVisible       = false;
+	m_nServerId              = -1;
+	m_eServerBehaviorState   = ZBS_Idle;
 	m_xmOBBCollided.clear();
 	// AI 에이전트 상태는 재활성화 시 SetPosition/SetTarget으로 재설정됨
 }
@@ -125,44 +127,48 @@ void Zombie::PostUpdate()
 	}
 
 	// ── 감지 처리 + Goal 기반 AI 구동 ─────────────────────────────────────
-	Matrix  worldMatrix = Target->GetWorldMatrix();
-	Vector3 v3PlayerPos   = Vector3(worldMatrix._41, worldMatrix._42, worldMatrix._43);
-
-	Vector3 v3ZombiePos = m_pAIAgent->GetPosition();
-	float fDist = Vector3::Distance(v3ZombiePos, v3PlayerPos);
-
-	// ── FOV 시야각 체크 (전방 ±60°, 근거리 150cm 이하는 무시) ──────────────
-	Vector3 v3ToPlayerXZ(v3PlayerPos.x - v3ZombiePos.x, 0.f, v3PlayerPos.z - v3ZombiePos.z);
-	float fToPlayerXZLen = v3ToPlayerXZ.Length();
-	bool bInFOV = (fDist <= m_fCloseRange);
-	if (!bInFOV && fToPlayerXZLen > 0.001f)
-		bInFOV = m_v3Forward.Dot(v3ToPlayerXZ / fToPlayerXZLen) >= m_fFOVCosHalf;
-
-	// LOS 레이캐스트: FOV 안에 있고, 거리 안에 있고, 벽에 막히지 않으면 시야 감지
-	bool bVisible = bInFOV && (fDist <= m_fSightRange) &&
-	                AI->GetNavMesh()->IsLineOfSightClear(v3ZombiePos, v3PlayerPos);
-	bool bHeard = (fDist <= m_fHearingRange);
-
-	m_pAIAgent->UpdateSensoryStimulus(0, v3PlayerPos, bVisible, bHeard);
+	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
 
 	// 공격 애니메이션 재생 중엔 AI 상태 전환 차단
 	auto pAC = GetComponent<ZombieAnimationController>();
 	bool bAttackMontageActive = pAC && pAC->GetMontage() && pAC->GetMontage()->GetBlendWeight() > 0.f;
 
-	if (!bAttackMontageActive) {
-		m_pAIAgent->Think(0, DT, fDist);
+	if (!bOnline)
+	{
+		// 오프라인 전용: FOV/LOS 감지 + Think() + 경보 전파
+		// 온라인 모드에서는 서버가 AI를 담당하므로 이 블록 전체를 스킵
+		// (100마리 × 60fps LOS 레이캐스트 절감)
+		Matrix  worldMatrix = Target->GetWorldMatrix();
+		Vector3 v3PlayerPos   = Vector3(worldMatrix._41, worldMatrix._42, worldMatrix._43);
 
-		// GoalAttack 쿨다운 완료 시 공격 애니메이션 재생 (실제 데미지는 Notify에서)
-		if (m_pAIAgent->ConsumeAttackHit()) {
-			if (pAC && pAC->GetMontage())
-				pAC->GetMontage()->PlayMontage("Zombie Attack");
+		Vector3 v3ZombiePos = m_pAIAgent->GetPosition();
+		float fDist = Vector3::Distance(v3ZombiePos, v3PlayerPos);
+
+		Vector3 v3ToPlayerXZ(v3PlayerPos.x - v3ZombiePos.x, 0.f, v3PlayerPos.z - v3ZombiePos.z);
+		float fToPlayerXZLen = v3ToPlayerXZ.Length();
+		bool bInFOV = (fDist <= m_fCloseRange);
+		if (!bInFOV && fToPlayerXZLen > 0.001f)
+			bInFOV = m_v3Forward.Dot(v3ToPlayerXZ / fToPlayerXZLen) >= m_fFOVCosHalf;
+
+		bool bVisible = bInFOV && (fDist <= m_fSightRange) &&
+		                AI->GetNavMesh()->IsLineOfSightClear(v3ZombiePos, v3PlayerPos);
+		bool bHeard = (fDist <= m_fHearingRange);
+
+		m_pAIAgent->UpdateSensoryStimulus(0, v3PlayerPos, bVisible, bHeard);
+
+		if (!bAttackMontageActive) {
+			m_pAIAgent->Think(0, DT, fDist);
+
+			if (m_pAIAgent->ConsumeAttackHit()) {
+				if (pAC && pAC->GetMontage())
+					pAC->GetMontage()->PlayMontage("Zombie Attack");
+			}
 		}
-	}
 
-	// 최초 발견 순간(rising edge)에만 주변 좀비들에게 경보 전파
-	if (bVisible && !m_bWasVisible)
-		AI->SpreadAlert(v3ZombiePos, 0, v3PlayerPos, 500.0f);
-	m_bWasVisible = bVisible;
+		if (bVisible && !m_bWasVisible)
+			AI->SpreadAlert(v3ZombiePos, 0, v3PlayerPos, 500.0f);
+		m_bWasVisible = bVisible;
+	}
 
 	// ── 이동 delta 계산 ─────────────────────────────────────────────────────
 	// GetPosition()은 m_mtxWorld(이전 프레임 갱신 기준) → 현재 실제 월드 위치
@@ -200,12 +206,26 @@ void Zombie::PostUpdate()
 	Vector3 v3NewPos = v3CurrentPos + v3Delta;
 	m_pAIAgent->SyncPosition(v3NewPos);
 
-	// ── 이동 방향으로 좀비 회전 ─────────────────────────────────────────────
+	// ── 이동 속도 / 회전 업데이트 ──────────────────────────────────────────
 	Vector3 v3XZDelta(v3Delta.x, 0.f, v3Delta.z);
 	float fDTSafe = (DT > 0.f) ? DT : 1.f;
-	m_fMoveSpeedSqXZ = v3XZDelta.LengthSquared() / (fDTSafe * fDTSafe);
 
-	if (v3XZDelta.LengthSquared() > 0.0001f)
+	if (bOnline)
+	{
+		// 온라인: 실제 델타가 서버 틱(30Hz) 경계에서 0에 수렴해 끊기므로
+		// 서버 행동 상태로 Walk/Idle 결정
+		bool bMoving = (m_eServerBehaviorState != ZBS_Idle &&
+		                m_eServerBehaviorState != ZBS_Alert);
+		m_fMoveSpeedSqXZ = bMoving ? 1.f : 0.f;
+	}
+	else
+	{
+		m_fMoveSpeedSqXZ = v3XZDelta.LengthSquared() / (fDTSafe * fDTSafe);
+	}
+
+	// 오프라인 모드에서만 이동 방향으로 yaw 계산
+	// 온라인 모드는 ApplyServerState에서 서버 yaw를 직접 적용
+	if (!bOnline && v3XZDelta.LengthSquared() > 0.0001f)
 	{
 		float fYaw = std::atan2f(v3XZDelta.x, v3XZDelta.z);
 		GetTransform()->SetRotation(0.f, fYaw, 0.f);
@@ -301,29 +321,33 @@ void Zombie::OnTraceHit(const RayTraceHitResult& hitResult)
 	PARTICLE->Spawn<BloodEffect>(desc);
 }
 
-void Zombie::ApplyServerState(float serverX, float serverZ,
-                               float waypointX, float waypointZ,
-                               ZombieBehaviorState state)
+void Zombie::ApplyServerState(float serverX, float serverZ, float serverYaw,
+                               ZombieBehaviorState state, float receivedTime)
 {
 	if (!m_pAIAgent) return;
 
-	// ── XZ 보정 — 클라이언트 위치가 서버와 300cm 이상 벗어날 때만 스냅 ────
-	Vector3 v3AgentPos = m_pAIAgent->GetPosition();
-	float fErrSq = (v3AgentPos.x - serverX) * (v3AgentPos.x - serverX)
-	             + (v3AgentPos.z - serverZ) * (v3AgentPos.z - serverZ);
-	static constexpr float CORRECTION_THRESHOLD_SQ = 300.f * 300.f;
-	if (fErrSq > CORRECTION_THRESHOLD_SQ)
-		m_pAIAgent->SyncPosition(Vector3(serverX, v3AgentPos.y, serverZ));
+	// 이미 적용한 상태면 스킵 — 매 프레임 SetDirectPath 리셋 방지
+	if (receivedTime <= m_fLastAppliedTime) return;
+	m_fLastAppliedTime = receivedTime;
 
-	// ── waypoint 변경 시에만 MoveToPosition 재요청 (A* 폭풍 방지) ────────
-	Vector3 v3NewWaypoint(waypointX, v3AgentPos.y, waypointZ);
-	float fWaypointChangeSq = Vector3::DistanceSquared(m_v3LastWaypoint, v3NewWaypoint);
-	static constexpr float WAYPOINT_CHANGE_THRESHOLD_SQ = 50.f * 50.f;
-	if (fWaypointChangeSq > WAYPOINT_CHANGE_THRESHOLD_SQ)
-	{
-		m_v3LastWaypoint = v3NewWaypoint;
-		m_pAIAgent->MoveToPosition(v3NewWaypoint);
-	}
+	Vector3 v3AgentPos = m_pAIAgent->GetPosition();
+	Vector3 v3TargetPos(serverX, v3AgentPos.y, serverZ);
+
+	float fErrXZSq = (v3AgentPos.x - serverX) * (v3AgentPos.x - serverX)
+	               + (v3AgentPos.z - serverZ) * (v3AgentPos.z - serverZ);
+
+	// 5m 이상 벗어나면 즉시 스냅
+	static constexpr float SNAP_THRESHOLD_SQ = 500.f * 500.f;
+	if (fErrXZSq > SNAP_THRESHOLD_SQ)
+		m_pAIAgent->SyncPosition(v3TargetPos);
+	else if (fErrXZSq > 1.f)
+		m_pAIAgent->SetDirectPath(v3TargetPos);
+
+	// 서버 yaw 직접 적용
+	GetTransform()->SetRotation(0.f, serverYaw, 0.f);
+	m_v3Forward = Vector3(sinf(serverYaw), 0.f, cosf(serverYaw));
+
+	m_eServerBehaviorState = state;
 }
 
 void Zombie::TriggerAttackHit()

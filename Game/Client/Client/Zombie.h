@@ -39,11 +39,10 @@ public:
 	void SetServerId(int id)  { m_nServerId = id; }
 
 	// 서버에서 수신한 상태 적용:
-	//   - XZ 오차 > 임계값이면 AI agent 위치 보정
-	//   - waypoint 변경 시 MoveToPosition 재요청
-	void ApplyServerState(float serverX, float serverZ,
-	                      float waypointX, float waypointZ,
-	                      ZombieBehaviorState state);
+	//   - 서버 위치를 직선 목표로 추종 (클라이언트 A* 없이)
+	//   - 서버 yaw를 transform에 직접 적용
+	void ApplyServerState(float serverX, float serverZ, float serverYaw,
+	                      ZombieBehaviorState state, float receivedTime);
 
 	// 메모리 풀 인터페이스 ─────────────────────────────────────────────────────
 	// ZombiePool이 호출. 외부에서 직접 호출 금지.
@@ -90,8 +89,9 @@ private:
 
 	bool m_bWasVisible = false;  // 이전 프레임 시야 여부 (경보 전파 rising edge 감지용)
 	float m_fMoveSpeedSqXZ = 0.f;
-	int   m_nServerId = -1;           // 서버 할당 ID (-1 = 로컬 AI 전용)
-	Vector3 m_v3LastWaypoint = {};    // 마지막으로 요청한 waypoint (중복 MoveToPosition 방지)
+	int                m_nServerId = -1;           // 서버 할당 ID (-1 = 로컬 AI 전용)
+	ZombieBehaviorState m_eServerBehaviorState = ZBS_Idle; // 최근 수신된 서버 행동 상태 (온라인 애니메이션용)
+	float              m_fLastAppliedTime = -1.f;          // 마지막으로 적용한 서버 상태의 receivedTime
 	float m_fHP = 100.f;
 	bool m_bDying = false;
 	bool m_bReadyToRemove = false;

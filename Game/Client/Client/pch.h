@@ -13,6 +13,9 @@
 #undef min
 #undef max
 
+#include <concurrent_unordered_map.h>
+#include <concurrent_queue.h>
+
 // STL Essentials
 #include <iostream>
 #include <fstream>

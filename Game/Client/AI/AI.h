@@ -96,6 +96,7 @@ namespace AIDLL
 		// SetNavMesh는 내부 구현 전용이므로 인터페이스에서 제거
 		virtual void Update(float deltaTime) = 0;
 		virtual void MoveToPosition(const Vector3& target) = 0;
+		virtual void SetDirectPath(const Vector3& target) = 0;		// A* 없이 현재 위치 → target 직선 경로 즉시 설정 (서버 위치 추종용)
 		virtual void SetPosition(const Vector3& position) = 0;
 		virtual void SyncPosition(const Vector3& position) = 0;		// 경로/상태 초기화 없이 위치만 갱신 (충돌 해소 후 실제 위치 동기화용)
 		virtual void SetMoveSpeed(float fSpeed) = 0;

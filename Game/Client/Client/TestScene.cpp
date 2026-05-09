@@ -89,67 +89,60 @@ void TestScene::Update()
 			ImGui::ProgressBar(fHP / fMaxHP, ImVec2(-1.f, 0.f));
 			if (pPlayer->IsDead()) ImGui::TextColored(ImVec4(1, 0, 0, 1), "DEAD");
 
-			// ★ 좀비 위치 출력
+			// ★ 좀비 위치 출력 (서버 제어 좀비만)
 			ImGui::NewLine();
-			ImGui::Text("====== Zombie ======");
+			bool bOnlineMode = NETWORK->IsConnected() && !NETWORK->IsOffline();
+			ImGui::Text("====== Zombie [%s] (%d) ======",
+				bOnlineMode ? "Server" : "Local",
+				bOnlineMode ? (int)m_ServerZombies.size() : (int)m_World.GetObjects<Zombie>().Size());
 			int zombieIdx = 0;
-			for (const auto& pZombie : m_World.GetObjects<Zombie>()) {
-				Vector3 v3AIPos = pZombie->GetPosition(); // AIAgent 기준 위치
-				ImGui::Text("[%d] AI Agent Pos  : (%.1f, %.1f, %.1f)", zombieIdx, v3AIPos.x, v3AIPos.y, v3AIPos.z);
+			auto ShowZombieDebug = [&](const std::shared_ptr<Zombie>& pZombie, int nServerId)
+			{
+				Vector3 v3AIPos = pZombie->GetPosition();
+				ImGui::Text("[id=%d] AI Agent Pos  : (%.1f, %.1f, %.1f)", nServerId, v3AIPos.x, v3AIPos.y, v3AIPos.z);
 				Vector3 v3ZombiePos = pZombie->GetTransform()->GetPosition();
-				ImGui::Text("[%d] Transform Pos : (%.1f, %.1f, %.1f)", zombieIdx, v3ZombiePos.x, v3ZombiePos.y, v3ZombiePos.z);
-				ImGui::Text("[%d] AI State : %d", zombieIdx,
-					(int)pZombie->GetBehaviorState()); // Idle=0, PathRequested=1, Moving=2
-				ImGui::Text("[%d] HP : %.0f", zombieIdx, pZombie->GetHP());
+				ImGui::Text("[id=%d] Transform Pos : (%.1f, %.1f, %.1f)", nServerId, v3ZombiePos.x, v3ZombiePos.y, v3ZombiePos.z);
+				ImGui::Text("[id=%d] AI State : %d", nServerId, (int)pZombie->GetBehaviorState());
+				ImGui::Text("[id=%d] HP : %.0f", nServerId, pZombie->GetHP());
 				ImGui::ProgressBar(pZombie->GetHP() / 100.f, ImVec2(-1.f, 0.f));
-				if (pZombie->IsDead()) ImGui::TextColored(ImVec4(1, 0, 0, 1), "[%d] DEAD", zombieIdx);
+				if (pZombie->IsDead()) ImGui::TextColored(ImVec4(1, 0, 0, 1), "[id=%d] DEAD", nServerId);
 
-				// 경로 디버그 정보
-				// A* 경로 노드를 디버그 렌더러에 반영 (첫 번째 좀비 기준)
-				if (zombieIdx == 0 && m_pNavMeshDebugRenderer) {
+				if (zombieIdx == 0 && m_pNavMeshDebugRenderer)
 					m_pNavMeshDebugRenderer->UpdatePathNodes(pZombie->GetPathDebugInfo().Waypoints);
-				}
 
 				const auto& debugInfo = pZombie->GetPathDebugInfo();
 				ImGui::Separator();
-				ImGui::Text("[%d] Path Debug Info:", zombieIdx);
+				ImGui::Text("[id=%d] Path Debug Info:", nServerId);
 				ImGui::Text("  Start: (%.1f, %.1f, %.1f)", debugInfo.v3StartPos.x, debugInfo.v3StartPos.y, debugInfo.v3StartPos.z);
 				ImGui::Text("  End  : (%.1f, %.1f, %.1f)", debugInfo.v3EndPos.x, debugInfo.v3EndPos.y, debugInfo.v3EndPos.z);
 
 				if (!debugInfo.Waypoints.empty()) {
 					ImGui::Text("  Waypoints (%d):", (int)debugInfo.Waypoints.size());
-					for (int i = 0; i < (int)debugInfo.Waypoints.size() && i < 10; ++i) {
+					for (int i = 0; i < (int)debugInfo.Waypoints.size() && i < 5; ++i) {
 						const auto& wp = debugInfo.Waypoints[i];
 						ImGui::Text("    [%d] (%.1f, %.1f, %.1f)", i, wp.x, wp.y, wp.z);
 					}
-					if (debugInfo.Waypoints.size() > 10)
-						ImGui::Text("    ... and %d more", (int)debugInfo.Waypoints.size() - 10);
-				}
-
-				if (!debugInfo.Portals.empty()) {
-					ImGui::Text("  Portals (%d):", (int)debugInfo.Portals.size());
-					for (int i = 0; i < (int)debugInfo.Portals.size() && i < 10; ++i) {
-						const auto& p = debugInfo.Portals[i];
-						ImGui::Text("    [%d] Poly %d->%d", i, p.nPolyA, p.nPolyB);
-						ImGui::Text("        L(%.1f, %.1f)  R(%.1f, %.1f)",
-							p.v3Left.x, p.v3Left.z,
-							p.v3Right.x, p.v3Right.z);
-					}
-					if (debugInfo.Portals.size() > 10)
-						ImGui::Text("    ... and %d more", (int)debugInfo.Portals.size() - 10);
-				}
-				if (!debugInfo.PolyNodeCenters.empty()) {
-					ImGui::Text("  PolyNodeCenters (%d):", (int)debugInfo.PolyNodeCenters.size());
-					for (int i = 0; i < (int)debugInfo.PolyNodeCenters.size() && i < 10; ++i) {
-						const auto& c = debugInfo.PolyNodeCenters[i];
-						ImGui::Text("    [%d] (%.1f, %.1f, %.1f)", i, c.x, c.y, c.z);
-					}
-					if (debugInfo.PolyNodeCenters.size() > 10)
-						ImGui::Text("    ... and %d more", (int)debugInfo.PolyNodeCenters.size() - 10);
+					if (debugInfo.Waypoints.size() > 5)
+						ImGui::Text("    ... and %d more", (int)debugInfo.Waypoints.size() - 5);
 				}
 				++zombieIdx;
+			};
+
+			if (bOnlineMode)
+			{
+				for (auto& [nId, pZombie] : m_ServerZombies)
+				{
+					if (!pZombie || !pZombie->IsPoolActive()) continue;
+					ShowZombieDebug(pZombie, nId);
+				}
+				if (m_ServerZombies.empty()) ImGui::Text("No Server Zombies");
 			}
-			if (zombieIdx == 0) ImGui::Text("No Zombies");
+			else
+			{
+				for (const auto& pZombie : m_World.GetObjects<Zombie>())
+					ShowZombieDebug(pZombie, pZombie->GetServerId());
+				if (zombieIdx == 0) ImGui::Text("No Zombies");
+			}
 
 			ImGui::Text("====== Collision Result ======");
 			for (const auto& pair : m_pCollisionPairs) {
@@ -282,10 +275,9 @@ void TestScene::ProcessNetworkZombies()
 		if (!pZombie || !pZombie->IsPoolActive()) continue;
 
 		ZombieServerState state;
-		if (NETWORK->GetLatestZombieState(nId, state)) {}
-			//pZombie->ApplyServerState(state.x, state.z,
-			//                          state.waypointX, state.waypointZ,
-			//                          state.behaviorState);
+		if (NETWORK->GetLatestZombieState(nId, state))
+			pZombie->ApplyServerState(state.x, state.z, state.yaw,
+			                          state.behaviorState, state.receivedTime);
 	}
 
 	// ── 공격 이벤트 처리 (Task 9) ─────────────────────────────────────────

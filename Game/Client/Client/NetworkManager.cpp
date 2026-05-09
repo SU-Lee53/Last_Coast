@@ -146,15 +146,19 @@ void NetworkManager::Disconnect()
 // 일단 키 입력만
 void NetworkManager::SendLoginPacket()
 {
+	if (m_hClientSocket == INVALID_SOCKET || !m_bConnected)
+		return;
+
 	C2S_Login packet;
 	packet.size = sizeof(C2S_Login);
 	packet.type = C2S_LOGIN;
 	strncpy_s(packet.username, "Player", sizeof(packet.username));
 
+	DWORD dwSent = 0;
 	WSABUF wsa;
 	wsa.buf = reinterpret_cast<char*>(&packet);
 	wsa.len = packet.size;
-	WSASend(m_hClientSocket, &wsa, 1, nullptr, 0, nullptr, nullptr);
+	WSASend(m_hClientSocket, &wsa, 1, &dwSent, 0, nullptr, nullptr);
 }
 
 void NetworkManager::SendData()
@@ -308,18 +312,17 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	{
 		if (size < static_cast<int>(sizeof(S2C_SpawnZombie))) return;
 		auto* p = reinterpret_cast<const S2C_SpawnZombie*>(data);
-		SpawnEvent ev{ p->zombieId, Vector3(p->x, p->y, p->z) };
-		std::lock_guard<std::mutex> lock(m_Mutex);
-		m_PendingSpawns.push_back(ev);
+		m_PendingSpawns.push(SpawnEvent{ p->zombieId, Vector3(p->x, p->y, p->z) });
 		break;
 	}
 	case S2C_DESPAWN_ZOMBIE:
 	{
 		if (size < static_cast<int>(sizeof(S2C_DespawnZombie))) return;
 		auto* p = reinterpret_cast<const S2C_DespawnZombie*>(data);
-		std::lock_guard<std::mutex> lock(m_Mutex);
-		m_PendingDespawns.push_back(p->zombieId);
-		m_ZombieStates.erase(p->zombieId);
+		m_PendingDespawns.push(p->zombieId);
+		auto it = m_ZombieStates.find(p->zombieId);
+		if (it != m_ZombieStates.end())
+			it->second.valid = false;
 		break;
 	}
 	case S2C_ZOMBIE_STATE:
@@ -335,7 +338,6 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		state.behaviorState = p->behaviorState;
 		state.receivedTime  = GetNetTimeSec();
 		state.valid         = true;
-		std::lock_guard<std::mutex> lock(m_Mutex);
 		m_ZombieStates[p->zombieId] = state;
 		break;
 	}
@@ -343,9 +345,7 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	{
 		if (size < static_cast<int>(sizeof(S2C_ZombieAttack))) return;
 		auto* p = reinterpret_cast<const S2C_ZombieAttack*>(data);
-		AttackEvent ev{ p->zombieId, p->targetPlayerId, p->damage };
-		std::lock_guard<std::mutex> lock(m_Mutex);
-		m_PendingAttacks.push_back(ev);
+		m_PendingAttacks.push(AttackEvent{ p->zombieId, p->targetPlayerId, p->damage });
 		break;
 	}
 	default:
@@ -379,11 +379,11 @@ void NetworkManager::TrySendPlayerPosition()
 	p.z    = m_v3LocalPlayerPos.z;
 	p.yaw  = m_fLocalPlayerYaw;
 
-	// 소켓이 non-blocking overlapped 이므로 WSASend 사용 (nullptr overlapped = best-effort)
+	DWORD dwSent = 0;
 	WSABUF wsa;
 	wsa.buf = reinterpret_cast<char*>(&p);
 	wsa.len = p.size;
-	WSASend(m_hClientSocket, &wsa, 1, nullptr, 0, nullptr, nullptr);
+	WSASend(m_hClientSocket, &wsa, 1, &dwSent, 0, nullptr, nullptr);
 }
 
 // -----------------------------------------------------------------------
@@ -393,30 +393,32 @@ void NetworkManager::TrySendPlayerPosition()
 std::vector<SpawnEvent> NetworkManager::ConsumeSpawnEvents()
 {
 	std::vector<SpawnEvent> out;
-	std::lock_guard<std::mutex> lock(m_Mutex);
-	out.swap(m_PendingSpawns);
+	SpawnEvent ev;
+	while (m_PendingSpawns.try_pop(ev))
+		out.push_back(ev);
 	return out;
 }
 
 std::vector<int> NetworkManager::ConsumeDespawnEvents()
 {
 	std::vector<int> out;
-	std::lock_guard<std::mutex> lock(m_Mutex);
-	out.swap(m_PendingDespawns);
+	int id;
+	while (m_PendingDespawns.try_pop(id))
+		out.push_back(id);
 	return out;
 }
 
 std::vector<AttackEvent> NetworkManager::ConsumeAttackEvents()
 {
 	std::vector<AttackEvent> out;
-	std::lock_guard<std::mutex> lock(m_Mutex);
-	out.swap(m_PendingAttacks);
+	AttackEvent ev;
+	while (m_PendingAttacks.try_pop(ev))
+		out.push_back(ev);
 	return out;
 }
 
 bool NetworkManager::GetLatestZombieState(int zombieId, ZombieServerState& outState) const
 {
-	std::lock_guard<std::mutex> lock(m_Mutex);
 	auto it = m_ZombieStates.find(zombieId);
 	if (it == m_ZombieStates.end() || !it->second.valid) return false;
 	outState = it->second;

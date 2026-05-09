@@ -8,7 +8,7 @@ namespace AIDLL
     // ─────────────────────────────────────────────────────────────────────────
     AIManagerImpl::AIManagerImpl()
         : m_pNavMesh(std::make_shared<NavMeshImpl>())
-        , m_pPathManager(std::make_shared<PathManager>(200))    // 매 프레임 최대 200 A* 사이클을 에이전트들에게 균등 배분
+        , m_pPathManager(std::make_shared<PathManager>(2000))   // 매 프레임 최대 2000 A* 사이클 (좀비 100마리 기준 마리당 20 사이클)
     {}
 
     AIManagerImpl::~AIManagerImpl()

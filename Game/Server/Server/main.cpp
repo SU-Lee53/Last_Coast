@@ -10,10 +10,11 @@ using namespace std;
 
 // NavMesh JSON 경로 — 서버 작업 디렉터리(프로젝트 폴더) 기준 상대 경로
 static constexpr const char* NAVMESH_PATH = "../../Client/Resources/NavMesh/NavMesh.json";
-static constexpr int         INITIAL_ZOMBIES = 5;    // 서버 시작 시 스폰할 좀비 수
+static constexpr int         INITIAL_ZOMBIES = 10;    // 서버 시작 시 스폰할 좀비 수
 static constexpr float       TICK_RATE_HZ = 30.f; // 게임 틱 빈도
 static constexpr float       TICK_DT = 1.f / TICK_RATE_HZ;
 static constexpr DWORD       TICK_MS = static_cast<DWORD>(TICK_DT * 1000.f);
+static constexpr DWORD       ZOMBIE_SEND_INTERVAL_MS = 200; // 좀비 상태 정기 전송 간격 (0.2초)
 
 ZombieManager                g_ZombieManager;
 unordered_map<int, Vector3>  g_PlayerPositions; // playerId → 월드 위치 (cm)
@@ -53,8 +54,10 @@ void send_login_fail(SOCKET client, const char* message)
 	p.type = S2C_LOGIN_RESULT;
 	p.success = false;
 	strncpy_s(p.message, message, sizeof(p.message));
-	WSABUF wsa_buf{ p.size, reinterpret_cast<char*>(&p) };
-	WSASend(client, &wsa_buf, 1, 0, 0, nullptr, nullptr);
+	EXP_OVER* o = new EXP_OVER(IO_SEND);
+	o->m_wsa.len = p.size;
+	memcpy(o->m_buff, &p, p.size);
+	WSASend(client, &o->m_wsa, 1, 0, 0, &o->m_over, nullptr);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -94,19 +97,24 @@ static DWORD WINAPI GameTickThread(LPVOID)
 		{
 			lock_guard<mutex> lock(g_Mutex);
 
-			// 좀비 상태 전송
+			// 좀비 상태 전송 (1초 간격 + 상태 변화 시 즉시)
 			for (auto& [nId, zombie] : g_ZombieManager.GetZombies())
 			{
 				if (!zombie.bAlive || !zombie.pAgent) continue;
 
-				Vector3 v3Pos = zombie.pAgent->GetPosition();
-				ZombieBehaviorState state = static_cast<ZombieBehaviorState>(
-					static_cast<int>(zombie.pAgent->GetBehaviorState()));
+				int nCurState = static_cast<int>(zombie.pAgent->GetBehaviorState());
+				bool bStateChanged = (nCurState != zombie.nLastSentState);
+				bool bIntervalElapsed = (dwTickStart - zombie.dwLastSendTime >= ZOMBIE_SEND_INTERVAL_MS);
 
-				// 다음 waypoint: 경로의 마지막 웨이포인트 (없으면 현재 위치)
+				if (!bStateChanged && !bIntervalElapsed) continue;
+
+				Vector3 v3Pos = zombie.pAgent->GetPosition();
+				ZombieBehaviorState state = static_cast<ZombieBehaviorState>(nCurState);
+
 				const auto& dbg = zombie.pAgent->GetPathDebugInfo();
 				float waypointX = v3Pos.x;
 				float waypointZ = v3Pos.z;
+				//CheckList 이거 수정해야함 문제점이 많음.
 				if (!dbg.Waypoints.empty()) {
 					waypointX = dbg.Waypoints.back().x;
 					waypointZ = dbg.Waypoints.back().z;
@@ -116,6 +124,9 @@ static DWORD WINAPI GameTickThread(LPVOID)
 					cl.send_zombie_state(nId, v3Pos.x, v3Pos.z,
 						zombie.fYaw, waypointX, waypointZ, state);
 				});
+
+				zombie.dwLastSendTime = dwTickStart;
+				zombie.nLastSentState = nCurState;
 			}
 
 			// 공격 이벤트 전송

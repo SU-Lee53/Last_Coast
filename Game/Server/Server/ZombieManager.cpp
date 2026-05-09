@@ -33,7 +33,7 @@ int ZombieManager::SpawnZombie()
 		return -1;
 
 	pAgent->SetPosition(v3SpawnPos);
-	pAgent->SetMoveSpeed(110.f); // 클라이언트와 동일 (1.1m/s)
+	pAgent->SetMoveSpeed(220.f); // 클라이언트와 동일 (1.1m/s)
 
 	int nId = m_nNextId++;
 	ServerZombie& zombie  = m_Zombies[nId];
@@ -86,19 +86,20 @@ void ZombieManager::Tick(float fDeltaTime,
 			}
 		}
 
+		float fDist = (nTargetId >= 0) ? std::sqrtf(fMinDistSq) : FLT_MAX;
+
 		if (nTargetId >= 0)
 		{
-			float fDist    = std::sqrtf(fMinDistSq);
-			bool  bVisible = IsVisible(v3ZombiePos, v3TargetPos, m_fSightRange);
-			bool  bHeard   = (fDist <= m_fHearingRange);
-
+			bool bVisible = IsVisible(v3ZombiePos, v3TargetPos, m_fSightRange);
+			bool bHeard   = (fDist <= m_fHearingRange);
 			zombie.pAgent->UpdateSensoryStimulus(nTargetId, v3TargetPos, bVisible, bHeard);
-			zombie.pAgent->Think(nTargetId, fDeltaTime, fDist);
-
-			// 공격 히트 이벤트 수집
-			if (zombie.pAgent->ConsumeAttackHit())
-				outAttacks.emplace_back(nId, nTargetId);
 		}
+
+		// Think는 플레이어 유무와 무관하게 항상 호출 — SensoryMemory 감쇠 + 뇌 처리
+		zombie.pAgent->Think(nTargetId, fDeltaTime, fDist);
+
+		if (zombie.pAgent->ConsumeAttackHit() && nTargetId >= 0)
+			outAttacks.emplace_back(nId, nTargetId);
 
 		// yaw 갱신 — 이동 방향 기반
 		Vector3 v3NewPos = zombie.pAgent->GetPosition();

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 // 서버 측 좀비 1마리의 상태
 struct ServerZombie
@@ -12,6 +12,10 @@ struct ServerZombie
 	float                       fYaw        = 0.f;
 	// 이전 프레임 XZ 위치 (yaw 계산용)
 	Vector3                     v3PrevPos   = {};
+
+	// ── 네트워크 전송 스로틀링 ────────────────────────────────────────────────
+	DWORD                       dwLastSendTime   = 0;      // timeGetTime() 기준
+	int                         nLastSentState   = -1;     // 마지막 전송한 behaviorState
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -41,6 +45,8 @@ public:
 
 	// 좀비 목록 읽기 전용 접근 (틱 스레드에서 snapshot 용)
 	const std::unordered_map<int, ServerZombie>& GetZombies() const { return m_Zombies; }
+
+	std::unordered_map<int, ServerZombie>& GetZombies() { return m_Zombies; }
 
 	std::shared_ptr<IAIManager> GetAIManager() const { return m_pAIManager; }
 

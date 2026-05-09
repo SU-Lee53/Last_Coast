@@ -17,11 +17,8 @@ namespace AIDLL
         , m_fMoveSpeed(300.0f)
         , m_v3PathDir(Vector3::Zero)
     {
-        // 에이전트마다 초기 타이머 위상을 달리해 같은 프레임에 몰리지 않도록 분산
-        // 예) 3그룹, 50ms 인터벌 → 0ms / 16.7ms / 33.3ms 오프셋으로 시작
-        static int s_nNextPhase = 0;
-        const int nPhase = s_nNextPhase++ % g_nThinkGroupCount;
-        m_fAccumulatedDeltaTime = g_fThinkInterval * nPhase / g_nThinkGroupCount;
+        // 최대 LOD 인터벌(1초) 안에서 랜덤 초기 오프셋 — 1Hz 동시 폭발 방지
+        m_fAccumulatedDeltaTime = static_cast<float>(rand() % 1000) / 1000.f;
     }
 
     AIAgentImpl::~AIAgentImpl()
@@ -318,7 +315,7 @@ namespace AIDLL
         if (m_fAccumulatedDeltaTime >= fEffectiveInterval)
         {
             m_fLastDeltaTime        = m_fAccumulatedDeltaTime;
-            m_fAccumulatedDeltaTime = 0.f;
+            m_fAccumulatedDeltaTime -= fEffectiveInterval; // 초과분 이월 — 다음 사이클에도 위상 분산 유지
             m_pBrain->Process();
         }
     }

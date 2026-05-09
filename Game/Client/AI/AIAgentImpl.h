@@ -53,7 +53,7 @@ namespace AIDLL
         float          GetDeltaTime() const                 { return m_fLastDeltaTime; }
         std::shared_ptr<NavMeshImpl> GetNavMeshInternal() const { return m_wpNavMesh.lock(); }
         void           CancelPath();  // 경로 즉시 취소 (Alert/Attack 등 이동 중단 시 호출)
-        void           SetDirectPath(const Vector3& target); // A* 없이 단일 직선 경로 설정 (LOS 열린 경우 Chase에서 사용)
+        virtual void   SetDirectPath(const Vector3& target) override; // A* 없이 단일 직선 경로 설정 (서버 위치 추종 / Chase LOS용)
         void           SetAttackHitPending(bool b)          { m_bAttackHitPending = b; }
 
         // ── Flocking (AIManagerImpl에서만 호출) ─────────────────────────────
@@ -83,9 +83,6 @@ namespace AIDLL
 
         // Think() 스태거링 — 시간 기반 인터벌, 프레임레이트 무관하게 일정 주기 유지
         float m_fAccumulatedDeltaTime   = 0.f; // dt 누적 타이머 겸 뇌 실행 시 전달할 경과 시간
-
-        static constexpr float g_fThinkInterval  = 0.05f; // 뇌 실행 주기 (20Hz)
-        static constexpr int   g_nThinkGroupCount = 3;    // 스태거 그룹 수 (초기 위상 분산용)
 
         // 경로 추종 방향 (waypoint skip 판정 전용 — boids 힘 미포함)
         Vector3 m_v3PathDir;

@@ -1,7 +1,6 @@
 ﻿#pragma once
 #define SERVERPORT 9000
 #include "ServerCore/Session.h"
-#include "../../../Server/Server/protocol.h"
 
 class NetworkManager;
 
@@ -115,7 +114,7 @@ public:
 private:
 	WSAOVERLAPPED			m_over = {};
 	WSABUF					m_wsabuf;
-	SOCKET					m_hClientSocket;
+	SOCKET					m_hClientSocket = INVALID_SOCKET;
 	C2S_Move				m_SendMovePacket = {};     // SendData() overlapped 버퍼 (수명 보장)
 	char					m_Buffer[BUF_SIZE];        // WSA DMA 수신 버퍼
 	char					m_RecvBuf[BUF_SIZE * 4];   // 패킷 재조립 버퍼
@@ -144,9 +143,9 @@ private:
 	float					m_fLastPosSendTime = 0.f;
 	static constexpr float	POS_SEND_INTERVAL  = 1.f / 20.f; // 20Hz
 
-	// ── 좀비 이벤트 큐 (네트워크 스레드 쓰기 / 게임 스레드 읽기 → m_Mutex) ─
-	std::unordered_map<int, ZombieServerState> m_ZombieStates;
-	std::vector<SpawnEvent>                    m_PendingSpawns;
-	std::vector<int>                           m_PendingDespawns;
-	std::vector<AttackEvent>                   m_PendingAttacks;
+	// ── 좀비 이벤트 큐 (lock-free concurrent 자료구조) ───────────────────────
+	concurrency::concurrent_unordered_map<int, ZombieServerState> m_ZombieStates;
+	concurrency::concurrent_queue<SpawnEvent>                     m_PendingSpawns;
+	concurrency::concurrent_queue<int>                            m_PendingDespawns;
+	concurrency::concurrent_queue<AttackEvent>                    m_PendingAttacks;
 };
