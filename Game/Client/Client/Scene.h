@@ -31,6 +31,9 @@ public:
 	template<typename T> requires std::derived_from<T, IGameObject>
 	void AddObject(std::shared_ptr<T> pObj);
 
+	template<typename T> requires std::derived_from<T, IGameObject>
+	void RemoveObject(std::shared_ptr<T> pObj);
+
 	template<typename... Objs, 
 		typename = std::enable_if_t<(std::is_same_v<Objs, std::shared_ptr<IGameObject>> && ...)>>
 	void AddObjects(Objs... pObjs) {
@@ -57,10 +60,11 @@ public:
 	void PrepareRender();
 
 	void GenerateSceneBound();
-	virtual void SyncSceneWithServer() {}
 
 	void CheckCollision();
 	void RemoveInvalidCollisionSet(const SpatialQueryResult& playerBroadPhaseResult);
+
+	virtual void SyncSceneWithServer() {}
 
 public:
 	//const std::vector<std::shared_ptr<IGameObject>>& GetStaticObjectsInScene() const { return m_pStaticObjects; }
@@ -99,6 +103,9 @@ protected:
 	std::unique_ptr<UIBoard> m_pUIBoard{};
 	std::unordered_set<CollisionResult> m_pCollisionPairs;
 	Vector4 m_v4GlobalAmbient;
+
+	std::unordered_map<int, std::shared_ptr<NetworkRemoteThirdPersonPlayer>> m_RemotePlayers;
+
 
 private:
 	bool m_bSpatialRuntimeRegistrationEnabled = false;
@@ -141,5 +148,22 @@ void Scene::AddObject(std::shared_ptr<T> pObj)
 			assert(false && "Runtime static spatial registration is not supported. Add static objects before PostInitialize().");
 		}
 	}
+}
+
+template<typename T> requires std::derived_from<T, IGameObject>
+void Scene::RemoveObject(std::shared_ptr<T> pObj)
+{
+	if (!pObj) {
+		return;
+	}
+
+	if constexpr (SpatialObjectTraits<T>::bSpatial) {
+		if constexpr (SpatialObjectTraits<T>::bDynamic) {
+			m_World.UnregisterSpatialObject<T>(pObj);
+			// m_World.UpdateSpatial(); // UpdateSpatial is typically called once per frame, not on every remove.
+		}
+	}
+
+	m_World.Remove<T>(pObj);
 }
 

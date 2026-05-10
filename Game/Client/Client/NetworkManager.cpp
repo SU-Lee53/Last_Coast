@@ -304,16 +304,14 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	{
 		if (size < static_cast<int>(sizeof(S2C_AddPlayer))) return;
 		auto* p = reinterpret_cast<const S2C_AddPlayer*>(data);
-		std::lock_guard<std::mutex> lock(m_Mutex);
-		m_RemotePlayers[p->playerId].active = true;
+		m_PendingPlayerJoins.push(PlayerJoinEvent{ p->playerId, p->transform });
 		break;
 	}
 	case S2C_REMOVE_PLAYER:
 	{
 		if (size < static_cast<int>(sizeof(S2C_RemovePlayer))) return;
 		auto* p = reinterpret_cast<const S2C_RemovePlayer*>(data);
-		std::lock_guard<std::mutex> lock(m_Mutex);
-		m_RemotePlayers.erase(p->playerId);
+		m_PendingPlayerLeaves.push(p->playerId);
 		break;
 	}
 	case S2C_SPAWN_ZOMBIE:
@@ -357,12 +355,10 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		break;
 	}
 	case S2C_TRANSFORM: {
-		//		S2C_Transform* pkt = reinterpret_cast<S2C_Transform*>(p);
-		//		// TODO: 해당 플레이어의 Transform을 찾아 pkt->transform 행렬 적용
-		//		// 예: Player* remotePlayer = FindPlayer(pkt->playerId);
-		//		// remotePlayer->GetTransform()->SetWorldMatrix(Matrix(reinterpret_cast<float*>(pkt->transform.m)));
-		//		break;
-		//
+		if (size < static_cast<int>(sizeof(S2C_Transform))) return;
+		auto* p = reinterpret_cast<const S2C_Transform*>(data);
+		m_PendingPlayerTransforms.push(PlayerTransformEvent{ p->playerId, p->transform });
+		break;
 	}
 	default:
 		break;
@@ -429,6 +425,33 @@ std::vector<AttackEvent> NetworkManager::ConsumeAttackEvents()
 	std::vector<AttackEvent> out;
 	AttackEvent ev;
 	while (m_PendingAttacks.try_pop(ev))
+		out.push_back(ev);
+	return out;
+}
+
+std::vector<PlayerJoinEvent> NetworkManager::ConsumePlayerJoins()
+{
+	std::vector<PlayerJoinEvent> out;
+	PlayerJoinEvent ev;
+	while (m_PendingPlayerJoins.try_pop(ev))
+		out.push_back(ev);
+	return out;
+}
+
+std::vector<int> NetworkManager::ConsumePlayerLeaves()
+{
+	std::vector<int> out;
+	int id;
+	while (m_PendingPlayerLeaves.try_pop(id))
+		out.push_back(id);
+	return out;
+}
+
+std::vector<PlayerTransformEvent> NetworkManager::ConsumePlayerTransforms()
+{
+	std::vector<PlayerTransformEvent> out;
+	PlayerTransformEvent ev;
+	while (m_PendingPlayerTransforms.try_pop(ev))
 		out.push_back(ev);
 	return out;
 }

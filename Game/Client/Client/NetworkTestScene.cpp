@@ -30,14 +30,14 @@ void NetworkTestScene::Update()
 	NETWORK->ConnectToServer();
 
 	if (ImGui::Button("Change To Scene")) {
-		SCENE->ChangeScene<TestScene>();
+		SCENE->ChangeScene<NetworkGameTestScene>();
 	}
 
 	if (NETWORK->IsConnected()) {
 		ImGui::Begin("Change Scene");
 		{
 			if (ImGui::Button("Change To Scene")) {
-				SCENE->ChangeScene<TestScene>();
+				SCENE->ChangeScene<NetworkGameTestScene>();
 			}
 		}
 		ImGui::End();
