@@ -17,7 +17,7 @@ enum LUT_DIRTY_FLAG : uint8 {
 
 class ToneMappingVolume {
 private:
-	inline const static std::string g_strSavePath = "../Resources/ToneMappings";
+	inline const static std::string g_strSavePath = "../Resources/ToneMappings/";
 	const char* m_cstrModeName[4] = {
 		"AgX", "ACES", "UC2", "GT"
 	};
@@ -25,6 +25,8 @@ private:
 public:
 	ToneMappingVolume();
 	void Update();
+
+	void LoadFromFiles(const std::string& strFilename);
 
 public:
 	TONE_MAPPING_MODE GetCurrentToneMapper() const { return m_eCurrentToneMapper; }
@@ -38,23 +40,13 @@ public:
 public:
 	void ShowDebugOptions();
 
-#pragma region SERIALIZATION
 private:
 	void SetDefaultParameters(TONE_MAPPING_MODE eModeBefore, TONE_MAPPING_MODE eModeAfter);
 
-	void SaveParametersToJson() const;
-	void SaveGrading() const;
-	void SaveAgX() const;
-	void SaveGT() const;
-	void SaveUC2() const;
-	void SaveACES() const;
-
-	void LoadParametersFromJson();
-	void LoadGrading();
-	void LoadAgX();
-	void LoadGT();
-	void LoadUC2();
-	void LoadACES();
+#pragma region SERIALIZATION
+private:
+	void SaveParametersToBinary(const std::string& strFilename) const;
+	void LoadParametersFromBinary(const std::string& strFilename);
 
 #pragma endregion 
 

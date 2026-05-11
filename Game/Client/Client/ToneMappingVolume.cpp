@@ -9,6 +9,11 @@ ToneMappingVolume::ToneMappingVolume()
 	m_Parameters.AgX = ToneMappingParameter::g_DefaultAgXParameters;
 }
 
+void ToneMappingVolume::LoadFromFiles(const std::string& strFilename)
+{
+	LoadParametersFromBinary(strFilename);
+}
+
 void ToneMappingVolume::Update()
 {
 	if (m_bSkipThisFrame) {
@@ -108,22 +113,16 @@ void ToneMappingVolume::ShowDebugOptions()
 
 	ImGui::InputText("Save/Load name", &m_strSaveName);
 
-	if (ImGui::Button(std::format("Save {} Parameters", m_cstrModeName[unMode]).c_str())) {
-		SaveParametersToJson();
+	if (ImGui::Button("Save Parameters To Binary")) {
+		SaveParametersToBinary(m_strSaveName);
 	}
 
 	ImGui::SameLine();
-	if (ImGui::Button(std::format("Load {} Parameters", m_cstrModeName[unMode]).c_str())) {
-		LoadParametersFromJson();
-	}
+	if (ImGui::Button("Load Parameters From Binary")) {
+		LoadParametersFromBinary(m_strSaveName);
 
-	if (ImGui::Button(std::format("Save Grading Parameters", m_cstrModeName[unMode]).c_str())) {
-		SaveGrading();
-	}
-
-	ImGui::SameLine();
-	if (ImGui::Button(std::format("Load Grading Parameters", m_cstrModeName[unMode]).c_str())) {
-		LoadGrading();
+		m_bSkipThisFrame |= true;
+		SetDirtyFlag((LUT_DIRTY_FLAG::TONE_MAPPER | LUT_DIRTY_FLAG::GRADING), true);
 	}
 
 	//ImGui::Text("Last ToneMap LUT Updated : %f", m_fLastToneLUTUpdated);
@@ -294,411 +293,19 @@ void ToneMappingVolume::SetDefaultParameters(TONE_MAPPING_MODE eModeBefore, TONE
 
 
 
-
-
-
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Save / Load
 
-void ToneMappingVolume::SaveParametersToJson() const
+void ToneMappingVolume::SaveParametersToBinary(const std::string& strFilename) const
 {
-	switch (m_eCurrentToneMapper)
-	{
-	case TONE_MAPPING_MODE::AGX:
-	{
-		SaveAgX();
-		break;
-	}
-	case TONE_MAPPING_MODE::ACES:
-	{
-		SaveACES();
-		break;
-	}
-	case TONE_MAPPING_MODE::UC2:
-	{
-		SaveUC2();
-		break;
-	}
-	case TONE_MAPPING_MODE::GT:
-	{
-		SaveGT();
-		break;
-	}
-	default:
-		std::unreachable();
-		break;
-	}
+	std::ofstream out{ g_strSavePath + strFilename + ".bin", std::ios::binary};
+	out << m_Parameters;
 }
 
-void ToneMappingVolume::SaveGrading() const
+void ToneMappingVolume::LoadParametersFromBinary(const std::string& strFilename)
 {
-	using namespace nlohmann;
-	namespace fs = std::filesystem;
-
-	json j;
-
-	// GradingParameters
-	j["fTemperature"] = m_Parameters.Grading.fTemperature;
-	j["fTint"] = m_Parameters.Grading.fTint;
-	j["fColorFilterStrength"] = m_Parameters.Grading.fColorFilterStrength;
-	j["fContrast"] = m_Parameters.Grading.fContrast;
-	j["fContrastPivot"] = m_Parameters.Grading.fContrastPivot;
-	j["fSaturation"] = m_Parameters.Grading.fSaturation;
-	j["fDensity"] = m_Parameters.Grading.fDensity;
-	j["fShadowWeight"] = m_Parameters.Grading.fShadowWeight;
-	j["fMidtoneWeight"] = m_Parameters.Grading.fMidtoneWeight;
-	j["fHighlightWeight"] = m_Parameters.Grading.fHighlightWeight;
-	j["fBlackLift"] = m_Parameters.Grading.fBlackLift;
-
-
-	j["v3Slope"] = { m_Parameters.Grading.v3Slope.x, m_Parameters.Grading.v3Slope.y, m_Parameters.Grading.v3Slope.z };
-	j["v3Offset"] = { m_Parameters.Grading.v3Offset.x, m_Parameters.Grading.v3Offset.y, m_Parameters.Grading.v3Offset.z };
-	j["v3Power"] = { m_Parameters.Grading.v3Power.x, m_Parameters.Grading.v3Power.y, m_Parameters.Grading.v3Power.z };
-	j["v3ShadowTint"] = { m_Parameters.Grading.v3ShadowTint.x, m_Parameters.Grading.v3ShadowTint.y, m_Parameters.Grading.v3ShadowTint.z };
-	j["v3MidtoneTint"] = { m_Parameters.Grading.v3MidtoneTint.x, m_Parameters.Grading.v3MidtoneTint.y, m_Parameters.Grading.v3MidtoneTint.z };
-	j["v3HighlightTint"] = { m_Parameters.Grading.v3HighlightTint.x, m_Parameters.Grading.v3HighlightTint.y, m_Parameters.Grading.v3HighlightTint.z };
-	j["v3ColorFilter"] = { m_Parameters.Grading.v3ColorFilter.x, m_Parameters.Grading.v3ColorFilter.y, m_Parameters.Grading.v3ColorFilter.z };
-
-	std::string strSavePath = std::format("{}/Grading_{}.bin", g_strSavePath, m_strSaveName);
-	if (!fs::exists(strSavePath)) {
-		fs::path p = strSavePath;
-		fs::create_directories(p.parent_path());
-	}
-
-	std::ofstream out{ strSavePath, std::ios::binary };
-	if (!out) {
-		return;
-	}
-
-	std::vector<uint8_t> bson = nlohmann::json::to_bson(j);
-	out.write(reinterpret_cast<const char*>(bson.data()), bson.size());
-}
-
-void ToneMappingVolume::SaveAgX() const
-{
-	using namespace nlohmann;
-	namespace fs = std::filesystem;
-
-	json j;
-	j["fExposure"] = m_Parameters.Common.fExposure;
-	j["fGamma"] = m_Parameters.Common.fGamma;
-
-	j["fSaturation"] = m_Parameters.Common.fPostSaturation;
-	j["fInputScale"] = m_Parameters.Common.fInputScale;
-	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
-	j["fLookStrength"] = m_Parameters.Common.fGradingStrength;
-
-	// AgXParameters
-	j["fAgXWhite"] = m_Parameters.AgX.fAgXWhite;
-	j["fAgXBlack"] = m_Parameters.AgX.fAgXBlack;
-	j["fAgXContrast"] = m_Parameters.AgX.fAgXContrast;
-	j["fAgXMinEV"] = m_Parameters.AgX.fAgXMinEV;
-	j["fAgXMaxEV"] = m_Parameters.AgX.fAgXMaxEV;
-
-	std::string strSavePath = std::format("{}/AgX_{}.bin", g_strSavePath, m_strSaveName);
-	if (!fs::exists(strSavePath)) {
-		fs::path p = strSavePath;
-		fs::create_directories(p.parent_path());
-	}
-
-	std::ofstream out{ strSavePath, std::ios::binary };
-	if (!out) {
-		return;
-	}
-
-	std::vector<uint8_t> bson = nlohmann::json::to_bson(j);
-	out.write(reinterpret_cast<const char*>(bson.data()), bson.size());
-}
-
-void ToneMappingVolume::SaveGT() const
-{
-	using namespace nlohmann;
-	namespace fs = std::filesystem;
-
-	json j;
-	j["fExposure"] = m_Parameters.Common.fExposure;
-	j["fGamma"] = m_Parameters.Common.fGamma;
-
-	j["fSaturation"] = m_Parameters.Common.fPostSaturation;
-	j["fInputScale"] = m_Parameters.Common.fInputScale;
-	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
-	j["fLookStrength"] = m_Parameters.Common.fGradingStrength;
-
-	// GTParameters
-	j["fGTMaxBrightness"] = m_Parameters.GT.fGTMaxBrightness;
-	j["fGTContrast"] = m_Parameters.GT.fGTContrast;
-	j["fGTLinearStart"] = m_Parameters.GT.fGTLinearStart;
-	j["fGTLinearLength"] = m_Parameters.GT.fGTLinearLength;
-	j["fGTBlack"] = m_Parameters.GT.fGTBlack;
-	j["fGTPedestal"] = m_Parameters.GT.fGTPedestal;
-
-	std::string strSavePath = std::format("{}/GT_{}.bin", g_strSavePath, m_strSaveName);
-	if (!fs::exists(strSavePath)) {
-		fs::path p = strSavePath;
-		fs::create_directories(p.parent_path());
-	}
-
-	std::ofstream out{ strSavePath, std::ios::binary };
-
-	std::vector<uint8_t> bson = nlohmann::json::to_bson(j);
-	out.write(reinterpret_cast<const char*>(bson.data()), bson.size());
-}
-
-void ToneMappingVolume::SaveUC2() const
-{
-	using namespace nlohmann;
-	namespace fs = std::filesystem;
-
-	json j;
-	j["fExposure"] = m_Parameters.Common.fExposure;
-	j["fGamma"] = m_Parameters.Common.fGamma;
-
-	j["fSaturation"] = m_Parameters.Common.fPostSaturation;
-	j["fInputScale"] = m_Parameters.Common.fInputScale;
-	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
-	j["fLookStrength"] = m_Parameters.Common.fGradingStrength;
-
-	// GTParameters
-	j["fUC2A"] = m_Parameters.UC2.fUC2A;
-	j["fUC2B"] = m_Parameters.UC2.fUC2B;
-	j["fUC2C"] = m_Parameters.UC2.fUC2C;
-	j["fUC2D"] = m_Parameters.UC2.fUC2D;
-	j["fUC2E"] = m_Parameters.UC2.fUC2E;
-	j["fUC2F"] = m_Parameters.UC2.fUC2F;
-	j["fUC2WhitePoint"] = m_Parameters.UC2.fUC2WhitePoint;
-	j["fUC2ExposureBias"] = m_Parameters.UC2.fUC2ExposureBias;
-
-	std::string strSavePath = std::format("{}/UC2_{}.bin", g_strSavePath, m_strSaveName);
-	if (!fs::exists(strSavePath)) {
-		fs::path p = strSavePath;
-		fs::create_directories(p.parent_path());
-	}
-
-	std::ofstream out{ strSavePath, std::ios::binary };
-
-	std::vector<uint8_t> bson = nlohmann::json::to_bson(j);
-	out.write(reinterpret_cast<const char*>(bson.data()), bson.size());
-}
-
-void ToneMappingVolume::SaveACES() const
-{
-	using namespace nlohmann;
-	namespace fs = std::filesystem;
-
-	json j;
-	j["fExposure"] = m_Parameters.Common.fExposure;
-	j["fGamma"] = m_Parameters.Common.fGamma;
-
-	j["fSaturation"] = m_Parameters.Common.fPostSaturation;
-	j["fInputScale"] = m_Parameters.Common.fInputScale;
-	j["fOutputScale"] = m_Parameters.Common.fOutputScale;
-	j["fLookStrength"] = m_Parameters.Common.fGradingStrength;
-
-	// GTParameters
-	j["fACESExposureBias"] = m_Parameters.ACES.fACESExposureBias;
-	j["fACESPreSaturation"] = m_Parameters.ACES.fACESPreSaturation;
-	j["fACESPostSaturation"] = m_Parameters.ACES.fACESPostSaturation;
-	j["fACESHighlightDesaturation"] = m_Parameters.ACES.fACESHighlightDesaturation;
-	j["fACESCoreOutputScale"] = m_Parameters.ACES.fACESCoreOutputScale;
-
-	std::string strSavePath = std::format("{}/ACES_{}.bin", g_strSavePath, m_strSaveName);
-	if (!fs::exists(strSavePath)) {
-		fs::path p = strSavePath;
-		fs::create_directories(p.parent_path());
-	}
-
-	std::ofstream out{ strSavePath, std::ios::binary };
-
-	std::vector<uint8_t> bson = nlohmann::json::to_bson(j);
-	out.write(reinterpret_cast<const char*>(bson.data()), bson.size());
-}
-
-void ToneMappingVolume::LoadParametersFromJson()
-{
-	switch (m_eCurrentToneMapper)
-	{
-	case TONE_MAPPING_MODE::AGX:
-	{
-		LoadAgX();
-		break;
-	}
-	case TONE_MAPPING_MODE::GT:
-	{
-		LoadGT();
-		break;
-	}
-	case TONE_MAPPING_MODE::UC2:
-	{
-		LoadUC2();
-		break;
-	}
-	case TONE_MAPPING_MODE::ACES:
-	{
-		LoadACES();
-		break;
-	}
-	default:
-		std::unreachable();
-		break;
-	}
-
-	SetDirtyFlag(LUT_DIRTY_FLAG::TONE_MAPPER, true);
-	//m_bToneMapLUTDirtyFlags[std::to_underlying(m_eMode)] = true;
-}
-
-void ToneMappingVolume::LoadGrading()
-{
-	std::string strParametersPath = std::format("{}/Grading_{}.bin", g_strSavePath, m_strSaveName);
-	std::ifstream inFile{ strParametersPath, std::ios::binary };
-	if (!inFile) {
-		return;
-	}
-
-	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
-	nlohmann::json inJson = nlohmann::json::from_bson(bson);;
-
-	m_Parameters.Grading.fTemperature = inJson["fTemperature"].get<float>();
-	m_Parameters.Grading.fTint = inJson["fTint"].get<float>();
-	m_Parameters.Grading.fColorFilterStrength = inJson["fColorFilterStrength"].get<float>();
-	m_Parameters.Grading.fContrast = inJson["fContrast"].get<float>();
-	m_Parameters.Grading.fContrastPivot = inJson["fContrastPivot"].get<float>();
-	m_Parameters.Grading.fSaturation = inJson["fSaturation"].get<float>();
-	m_Parameters.Grading.fDensity = inJson["fDensity"].get<float>();
-	m_Parameters.Grading.fShadowWeight = inJson["fShadowWeight"].get<float>();
-	m_Parameters.Grading.fMidtoneWeight = inJson["fMidtoneWeight"].get<float>();
-	m_Parameters.Grading.fHighlightWeight = inJson["fHighlightWeight"].get<float>();
-	m_Parameters.Grading.fBlackLift = inJson["fBlackLift"].get<float>();
-
-	std::vector<float> f;
-
-	f = inJson["v3Slope"].get<std::vector<float>>();
-	m_Parameters.Grading.v3Slope = Vector3(f.data());
-
-	f = inJson["v3Offset"].get<std::vector<float>>();
-	m_Parameters.Grading.v3Offset = Vector3(f.data());
-
-	f = inJson["v3Power"].get<std::vector<float>>();
-	m_Parameters.Grading.v3Power = Vector3(f.data());
-
-	f = inJson["v3ShadowTint"].get<std::vector<float>>();
-	m_Parameters.Grading.v3ShadowTint = Vector3(f.data());
-
-	f = inJson["v3MidtoneTint"].get<std::vector<float>>();
-	m_Parameters.Grading.v3MidtoneTint = Vector3(f.data());
-
-	f = inJson["v3HighlightTint"].get<std::vector<float>>();
-	m_Parameters.Grading.v3HighlightTint = Vector3(f.data());
-
-	f = inJson["v3ColorFilter"].get<std::vector<float>>();
-	m_Parameters.Grading.v3ColorFilter = Vector3(f.data());
-
-	SetDirtyFlag(LUT_DIRTY_FLAG::GRADING, true);
-	//m_bGradingLUTDirtyFlag = true;
-}
-
-void ToneMappingVolume::LoadAgX()
-{
-	std::string strParametersPath = std::format("{}/AgX_{}.bin", g_strSavePath, m_strSaveName);
-	std::ifstream inFile{ strParametersPath, std::ios::binary };
-	if (!inFile) {
-		return;
-	}
-
-	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
-	nlohmann::json inJson = nlohmann::json::from_bson(bson);;
-
-	m_Parameters.Common.fExposure = inJson["fExposure"].get<float>();
-	m_Parameters.Common.fGamma = inJson["fGamma"].get<float>();
-	m_Parameters.Common.fPostSaturation = inJson["fSaturation"].get<float>();
-	m_Parameters.Common.fInputScale = inJson["fInputScale"].get<float>();
-	m_Parameters.Common.fOutputScale = inJson["fOutputScale"].get<float>();
-	m_Parameters.Common.fGradingStrength = inJson["fLookStrength"].get<float>();
-
-	m_Parameters.AgX.fAgXWhite = inJson["fAgXWhite"].get<float>();
-	m_Parameters.AgX.fAgXBlack = inJson["fAgXBlack"].get<float>();
-	m_Parameters.AgX.fAgXContrast = inJson["fAgXContrast"].get<float>();
-	m_Parameters.AgX.fAgXMinEV = inJson["fAgXMinEV"].get<float>();
-	m_Parameters.AgX.fAgXMaxEV = inJson["fAgXMaxEV"].get<float>();
-}
-
-void ToneMappingVolume::LoadGT()
-{
-	std::string strParametersPath = std::format("{}/GT_{}.bin", g_strSavePath, m_strSaveName);
-	std::ifstream inFile{ strParametersPath, std::ios::binary };
-	if (!inFile) {
-		return;
-	}
-
-	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
-	nlohmann::json inJson = nlohmann::json::from_bson(bson);;
-
-	m_Parameters.Common.fExposure = inJson["fExposure"].get<float>();
-	m_Parameters.Common.fGamma = inJson["fGamma"].get<float>();
-	m_Parameters.Common.fPostSaturation = inJson["fSaturation"].get<float>();
-	m_Parameters.Common.fInputScale = inJson["fInputScale"].get<float>();
-	m_Parameters.Common.fOutputScale = inJson["fOutputScale"].get<float>();
-	m_Parameters.Common.fGradingStrength = inJson["fLookStrength"].get<float>();
-
-	m_Parameters.GT.fGTMaxBrightness = inJson["fGTMaxBrightness"].get<float>();
-	m_Parameters.GT.fGTContrast = inJson["fGTContrast"].get<float>();
-	m_Parameters.GT.fGTLinearStart = inJson["fGTLinearStart"].get<float>();
-	m_Parameters.GT.fGTLinearLength = inJson["fGTLinearLength"].get<float>();
-	m_Parameters.GT.fGTBlack = inJson["fGTBlack"].get<float>();
-	m_Parameters.GT.fGTPedestal = inJson["fGTPedestal"].get<float>();
-}
-
-void ToneMappingVolume::LoadUC2()
-{
-	std::string strParametersPath = std::format("{}/UC2_{}.bin", g_strSavePath, m_strSaveName);
-	std::ifstream inFile{ strParametersPath, std::ios::binary };
-	if (!inFile) {
-		return;
-	}
-
-	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
-	nlohmann::json inJson = nlohmann::json::from_bson(bson);;
-
-	m_Parameters.Common.fExposure = inJson["fExposure"].get<float>();
-	m_Parameters.Common.fGamma = inJson["fGamma"].get<float>();
-	m_Parameters.Common.fPostSaturation = inJson["fSaturation"].get<float>();
-	m_Parameters.Common.fInputScale = inJson["fInputScale"].get<float>();
-	m_Parameters.Common.fOutputScale = inJson["fOutputScale"].get<float>();
-	m_Parameters.Common.fGradingStrength = inJson["fLookStrength"].get<float>();
-
-	m_Parameters.UC2.fUC2A = inJson["fUC2A"].get<float>();
-	m_Parameters.UC2.fUC2B = inJson["fUC2B"].get<float>();
-	m_Parameters.UC2.fUC2C = inJson["fUC2C"].get<float>();
-	m_Parameters.UC2.fUC2D = inJson["fUC2D"].get<float>();
-	m_Parameters.UC2.fUC2E = inJson["fUC2E"].get<float>();
-	m_Parameters.UC2.fUC2F = inJson["fUC2F"].get<float>();
-	m_Parameters.UC2.fUC2WhitePoint = inJson["fUC2WhitePoint"].get<float>();
-	m_Parameters.UC2.fUC2ExposureBias = inJson["fUC2ExposureBias"].get<float>();
-}
-
-void ToneMappingVolume::LoadACES()
-{
-	std::string strParametersPath = std::format("{}/ACES_{}.bin", g_strSavePath, m_strSaveName);
-	std::ifstream inFile{ strParametersPath, std::ios::binary };
-	if (!inFile) {
-		return;
-	}
-
-	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
-	nlohmann::json inJson = nlohmann::json::from_bson(bson);;
-
-	m_Parameters.Common.fExposure = inJson["fExposure"].get<float>();
-	m_Parameters.Common.fGamma = inJson["fGamma"].get<float>();
-	m_Parameters.Common.fPostSaturation = inJson["fSaturation"].get<float>();
-	m_Parameters.Common.fInputScale = inJson["fInputScale"].get<float>();
-	m_Parameters.Common.fOutputScale = inJson["fOutputScale"].get<float>();
-	m_Parameters.Common.fGradingStrength = inJson["fLookStrength"].get<float>();
-
-	m_Parameters.ACES.fACESExposureBias = inJson["fACESExposureBias"].get<float>();
-	m_Parameters.ACES.fACESPreSaturation = inJson["fACESPreSaturation"].get<float>();
-	m_Parameters.ACES.fACESPostSaturation = inJson["fACESPostSaturation"].get<float>();
-	m_Parameters.ACES.fACESHighlightDesaturation = inJson["fACESHighlightDesaturation"].get<float>();
-	m_Parameters.ACES.fACESCoreOutputScale = inJson["fACESCoreOutputScale"].get<float>();
+	std::ifstream in{ g_strSavePath + strFilename + ".bin", std::ios::binary };
+	in >> m_Parameters;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////

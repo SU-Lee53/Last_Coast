@@ -156,6 +156,17 @@ struct ToneMappingParameter {
 		.v3ColorFilter = Vector3(1.f),
 		.fBlackLift = 0.f,
 	};
+
+	friend std::ifstream& operator>>(std::ifstream& in, ToneMappingParameter& params) {
+		in.read((char*)(&params), sizeof(ToneMappingParameter));
+		return in;
+	}
+
+	friend std::ofstream& operator<<(std::ofstream& out, const ToneMappingParameter& params) {
+		out.write((char*)&params, sizeof(ToneMappingParameter));
+		return out;
+	}
+
 };
 
 struct CB_TONE_MAPPING_LUT_DATA {
