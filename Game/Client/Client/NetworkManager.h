@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #define SERVERPORT 9000
 #include "ServerCore/Session.h"
 
@@ -88,6 +88,9 @@ public:
 	// 최신 서버 좀비 상태 조회. 존재하지 않으면 false.
 	bool					GetLatestZombieState(int zombieId, ZombieServerState& outState) const;
 
+	// 앱 시작 기준 단조 시간(초) — 네트워크 스레드/게임 스레드 양쪽에서 사용
+	static float			GetNetTimeSec();
+
 private:
 	void					SendLoginPacket();
 	void					SendData();
@@ -99,8 +102,6 @@ private:
 
 	// 서버 좌표(short, 1unit = 1m) → 월드 좌표(cm)
 	static float			ServerToWorld(short v) { return static_cast<float>(v) * 100.f; }
-	// 앱 시작 기준 단조 시간(초) — 네트워크 스레드/게임 스레드 양쪽에서 사용
-	static float			GetNetTimeSec();
 
 	static void CALLBACK	send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED over, DWORD flags);
 	static void CALLBACK	recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED over, DWORD flags);

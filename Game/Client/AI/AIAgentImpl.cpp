@@ -187,7 +187,7 @@ namespace AIDLL
 
 		// ── 2. 경로 위 look-ahead 점 계산 ────────────────────────────────────
 		//  현재 위치에서 경로를 따라 kLookAheadDist만큼 앞에 있는 점을 목표로 삼는다.
-		
+
 
 		Vector3 v3LookAheadPoint = m_v3Position;
 		float fRemaining = g_fLookAheadDist;

@@ -107,6 +107,9 @@ void TestScene::Update()
 				ImGui::Text("[id=%d] AI Agent Pos  : (%.1f, %.1f, %.1f)", nServerId, v3AIPos.x, v3AIPos.y, v3AIPos.z);
 				Vector3 v3ZombiePos = pZombie->GetTransform()->GetPosition();
 				ImGui::Text("[id=%d] Transform Pos : (%.1f, %.1f, %.1f)", nServerId, v3ZombiePos.x, v3ZombiePos.y, v3ZombiePos.z);
+				auto pCapsuleCollider = pZombie->GetComponent<PlayerCollider>();
+				if (pCapsuleCollider)
+					ImGui::Text("[id=%d] Capsule Radius : %.1f cm", nServerId, pCapsuleCollider->GetCapsuleWorld().fRadius);
 				ImGui::Text("[id=%d] AI State : %d", nServerId, (int)pZombie->GetBehaviorState());
 				ImGui::Text("[id=%d] HP : %.0f", nServerId, pZombie->GetHP());
 				ImGui::ProgressBar(pZombie->GetHP() / 100.f, ImVec2(-1.f, 0.f));

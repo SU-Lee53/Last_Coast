@@ -38,9 +38,7 @@ public:
 	int  GetServerId() const { return m_nServerId; }
 	void SetServerId(int id)  { m_nServerId = id; }
 
-	// 서버에서 수신한 상태 적용:
-	//   - 서버 위치를 직선 목표로 추종 (클라이언트 A* 없이)
-	//   - 서버 yaw를 transform에 직접 적용
+	// 서버에서 수신한 상태 적용 (스냅샷 저장 → PostUpdate에서 보간)
 	void ApplyServerState(float serverX, float serverZ, float serverYaw,
 	                      ZombieBehaviorState state, float receivedTime);
 
@@ -91,7 +89,19 @@ private:
 	float m_fMoveSpeedSqXZ = 0.f;
 	int                m_nServerId = -1;           // 서버 할당 ID (-1 = 로컬 AI 전용)
 	ZombieBehaviorState m_eServerBehaviorState = ZBS_Idle; // 최근 수신된 서버 행동 상태 (온라인 애니메이션용)
-	float              m_fLastAppliedTime = -1.f;          // 마지막으로 적용한 서버 상태의 receivedTime
+	float              m_fLastAppliedTime = -1.f;          // 마지막 적용한 서버 상태의 receivedTime (중복 방지)
+	float              m_fCurrentYaw      = 0.f;           // 현재 보간 중인 yaw (rad)
+	float              m_fTargetYaw       = 0.f;           // 서버에서 수신한 목표 yaw (rad)
+
+	// 서버 위치 스냅샷 기반 보간
+	struct ZombieSnapshot {
+		Vector3 v3Pos;    // XZ 위치 (Y는 클라이언트 중력)
+		float   fYaw;
+		float   fTime;    // 수신 시각 (GetNetTimeSec 기준)
+	};
+	static constexpr size_t MAX_SNAPSHOTS = 8;
+	std::deque<ZombieSnapshot> m_Snapshots;
+	float m_fInterpDelay = 0.1f;  // 서버 전송 간격에 맞춰 자동 조절
 	float m_fHP = 100.f;
 	bool m_bDying = false;
 	bool m_bReadyToRemove = false;

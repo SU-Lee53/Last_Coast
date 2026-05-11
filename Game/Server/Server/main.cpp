@@ -10,7 +10,7 @@ using namespace std;
 
 // NavMesh JSON 경로 — 서버 작업 디렉터리(프로젝트 폴더) 기준 상대 경로
 static constexpr const char* NAVMESH_PATH = "../../Client/Resources/NavMesh/NavMesh.json";
-static constexpr int         INITIAL_ZOMBIES = 10;    // 서버 시작 시 스폰할 좀비 수
+static constexpr int         INITIAL_ZOMBIES = 100;    // 서버 시작 시 스폰할 좀비 수
 static constexpr float       TICK_RATE_HZ = 30.f; // 게임 틱 빈도
 static constexpr float       TICK_DT = 1.f / TICK_RATE_HZ;
 static constexpr DWORD       TICK_MS = static_cast<DWORD>(TICK_DT * 1000.f);

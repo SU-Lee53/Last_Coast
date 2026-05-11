@@ -79,6 +79,11 @@ void Zombie::PoolReset()
 	m_bWasVisible       = false;
 	m_nServerId              = -1;
 	m_eServerBehaviorState   = ZBS_Idle;
+	m_fLastAppliedTime       = -1.f;
+	m_fCurrentYaw            = 0.f;
+	m_fTargetYaw             = 0.f;
+	m_fInterpDelay           = 0.1f;
+	m_Snapshots.clear();
 	m_xmOBBCollided.clear();
 	// AI 에이전트 상태는 재활성화 시 SetPosition/SetTarget으로 재설정됨
 }
@@ -171,16 +176,119 @@ void Zombie::PostUpdate()
 	}
 
 	// ── 이동 delta 계산 ─────────────────────────────────────────────────────
-	// GetPosition()은 m_mtxWorld(이전 프레임 갱신 기준) → 현재 실제 월드 위치
+	// GetPosition() = m_mtxWorld, SetPosition/Move = m_mtxTransform
+	// 루트 좀비: m_mtxFrameRelative = identity → m_mtxWorld = m_mtxTransform
+	// 따라서 GetPosition()과 Move/SetPosition은 같은 좌표계
 	Vector3 v3CurrentPos = GetTransform()->GetPosition();
-	Vector3 v3AgentPos   = m_pAIAgent->GetPosition();
-
 	Vector3 v3Delta;
-	v3Delta.x = v3AgentPos.x - v3CurrentPos.x;   // AI가 계산한 XZ 이동량
-	v3Delta.z = v3AgentPos.z - v3CurrentPos.z;
-	v3Delta.y = m_fVerticalVelocity * DT;     // 중력에 의한 수직 이동
 
-	// ── 충돌/지형 해소 ──────────────────────────────────────────────────────
+	float fInterpYaw = m_fCurrentYaw;
+
+	// 디버그용
+	int    nDbgSnapCount  = 0;
+	float  fDbgRenderTime = 0.f;
+	float  fDbgFrontTime  = 0.f;
+	float  fDbgBackTime   = 0.f;
+	int    nDbgMode       = 0; // 0=no snap, 1=bracket, 2=before, 3=extrap, 4=single
+	float  fDbgT          = 0.f;
+	Vector3 v3DbgInterpPos = Vector3::Zero;
+	Vector3 v3DbgDelta     = Vector3::Zero;
+
+	if (bOnline)
+	{
+		// ── 온라인: 스냅샷 시간 기반 보간 ────────────────────────────────────
+		Vector3 v3InterpPos = v3CurrentPos;
+
+		nDbgSnapCount = static_cast<int>(m_Snapshots.size());
+
+		if (!m_Snapshots.empty())
+		{
+			float fRenderTime = NetworkManager::GetNetTimeSec() - m_fInterpDelay;
+			fDbgRenderTime = fRenderTime;
+			fDbgFrontTime  = m_Snapshots.front().fTime;
+			fDbgBackTime   = m_Snapshots.back().fTime;
+
+			bool bFound = false;
+			for (int i = static_cast<int>(m_Snapshots.size()) - 1; i >= 1; --i)
+			{
+				const auto& s0 = m_Snapshots[i - 1];
+				const auto& s1 = m_Snapshots[i];
+				if (s0.fTime <= fRenderTime && fRenderTime <= s1.fTime)
+				{
+					float fSpan = s1.fTime - s0.fTime;
+					float t = (fSpan > 0.f) ? (fRenderTime - s0.fTime) / fSpan : 1.f;
+					v3InterpPos = Vector3::Lerp(s0.v3Pos, s1.v3Pos, t);
+
+					float fYawDiff = s1.fYaw - s0.fYaw;
+					fYawDiff = std::fmodf(fYawDiff + XM_PI, XM_2PI) - XM_PI;
+					fInterpYaw = s0.fYaw + fYawDiff * t;
+
+					bFound = true;
+					nDbgMode = 1;
+					fDbgT = t;
+					break;
+				}
+			}
+
+			if (!bFound)
+			{
+				if (fRenderTime < m_Snapshots.front().fTime)
+				{
+					v3InterpPos = m_Snapshots.front().v3Pos;
+					fInterpYaw  = m_Snapshots.front().fYaw;
+					nDbgMode = 2;
+				}
+				else if (m_Snapshots.size() >= 2)
+				{
+					const auto& s0 = m_Snapshots[m_Snapshots.size() - 2];
+					const auto& s1 = m_Snapshots.back();
+					float fSpan = s1.fTime - s0.fTime;
+					if (fSpan > 0.f)
+					{
+						Vector3 v3Vel = (s1.v3Pos - s0.v3Pos) * (1.f / fSpan);
+						float fExtrap = std::min(fRenderTime - s1.fTime, 0.5f);
+						v3InterpPos = s1.v3Pos + v3Vel * fExtrap;
+					}
+					else
+					{
+						v3InterpPos = s1.v3Pos;
+					}
+					fInterpYaw = s1.fYaw;
+					nDbgMode = 3;
+				}
+				else
+				{
+					v3InterpPos = m_Snapshots.back().v3Pos;
+					fInterpYaw  = m_Snapshots.back().fYaw;
+					nDbgMode = 4;
+				}
+			}
+		}
+
+		v3DbgInterpPos = v3InterpPos;
+
+		// XZ: 보간, Y: 중력
+		v3Delta.x = v3InterpPos.x - v3CurrentPos.x;
+		v3Delta.z = v3InterpPos.z - v3CurrentPos.z;
+		v3Delta.y = m_fVerticalVelocity * DT;
+
+		v3DbgDelta = v3Delta;
+
+		// 애니메이션
+		bool bMoving = (m_eServerBehaviorState != ZBS_Idle &&
+		                m_eServerBehaviorState != ZBS_Alert);
+		m_fMoveSpeedSqXZ = bMoving ? 1.f : 0.f;
+	}
+	else
+	{
+		// ── 오프라인: AI agent 경로 시스템 ────────────────────────────────────
+		Vector3 v3AgentPos = m_pAIAgent->GetPosition();
+		v3Delta.x = v3AgentPos.x - v3CurrentPos.x;
+		v3Delta.z = v3AgentPos.z - v3CurrentPos.z;
+		v3Delta.y = m_fVerticalVelocity * DT;
+	}
+
+	// ── 충돌/지형 해소 (온라인·오프라인 공통) ────────────────────────────────
 	const bool bWasGrounded = m_bGrounded;
 	m_bGrounded = false;
 
@@ -201,41 +309,57 @@ void Zombie::PostUpdate()
 	// ── Transform 이동 적용 ─────────────────────────────────────────────────
 	GetTransform()->Move(v3Delta, 1.f);
 
-	// ── AI 에이전트 위치를 실제 이동 결과와 동기화 (경로 유지) ─────────────
-	// Move()는 m_mtxTransform에 쓰므로 새 위치를 수동 계산
+	// ── AI 에이전트 위치 동기화 ──────────────────────────────────────────────
 	Vector3 v3NewPos = v3CurrentPos + v3Delta;
 	m_pAIAgent->SyncPosition(v3NewPos);
 
-	// ── 이동 속도 / 회전 업데이트 ──────────────────────────────────────────
-	Vector3 v3XZDelta(v3Delta.x, 0.f, v3Delta.z);
-	float fDTSafe = (DT > 0.f) ? DT : 1.f;
-
+	// ── 회전 ────────────────────────────────────────────────────────────────
 	if (bOnline)
 	{
-		// 온라인: 실제 델타가 서버 틱(30Hz) 경계에서 0에 수렴해 끊기므로
-		// 서버 행동 상태로 Walk/Idle 결정
-		bool bMoving = (m_eServerBehaviorState != ZBS_Idle &&
-		                m_eServerBehaviorState != ZBS_Alert);
-		m_fMoveSpeedSqXZ = bMoving ? 1.f : 0.f;
+		m_fCurrentYaw = fInterpYaw;
+		GetTransform()->SetRotation(0.f, m_fCurrentYaw, 0.f);
+		m_v3Forward = Vector3(sinf(m_fCurrentYaw), 0.f, cosf(m_fCurrentYaw));
 	}
 	else
 	{
+		Vector3 v3XZDelta(v3Delta.x, 0.f, v3Delta.z);
+		float fDTSafe = (DT > 0.f) ? DT : 1.f;
 		m_fMoveSpeedSqXZ = v3XZDelta.LengthSquared() / (fDTSafe * fDTSafe);
-	}
 
-	// 오프라인 모드에서만 이동 방향으로 yaw 계산
-	// 온라인 모드는 ApplyServerState에서 서버 yaw를 직접 적용
-	if (!bOnline && v3XZDelta.LengthSquared() > 0.0001f)
-	{
-		float fYaw = std::atan2f(v3XZDelta.x, v3XZDelta.z);
-		GetTransform()->SetRotation(0.f, fYaw, 0.f);
-		m_v3Forward = Vector3(sinf(fYaw), 0.f, cosf(fYaw));
+		if (v3XZDelta.LengthSquared() > 0.0001f)
+		{
+			float fYaw = std::atan2f(v3XZDelta.x, v3XZDelta.z);
+			GetTransform()->SetRotation(0.f, fYaw, 0.f);
+			m_v3Forward = Vector3(sinf(fYaw), 0.f, cosf(fYaw));
+		}
 	}
 
 	m_xmOBBCollided.clear();
 
 	// ── 컴포넌트/자식 업데이트 → Transform::Update()로 m_mtxWorld 갱신 ────
 	DynamicObject::PostUpdate();
+
+	// ── 디버그 ImGui (첫 번째 서버 좀비만) ───────────────────────────────────
+	if (bOnline && m_nServerId == 0)
+	{
+		static const char* sModes[] = { "NoSnap", "Bracket", "Before", "Extrap", "Single" };
+		ImGui::Begin("Zombie Interp Debug");
+		ImGui::Text("Snapshots: %d", nDbgSnapCount);
+		ImGui::Text("RenderTime: %.4f", fDbgRenderTime);
+		ImGui::Text("Front time: %.4f", fDbgFrontTime);
+		ImGui::Text("Back  time: %.4f", fDbgBackTime);
+		ImGui::Text("Gap (back-front): %.4f", fDbgBackTime - fDbgFrontTime);
+		ImGui::Text("Delay (back-render): %.4f", fDbgBackTime - fDbgRenderTime);
+		ImGui::Text("InterpDelay: %.4f", m_fInterpDelay);
+		ImGui::Text("Mode: %s", sModes[nDbgMode]);
+		ImGui::Text("Lerp t: %.4f", fDbgT);
+		ImGui::Separator();
+		ImGui::Text("CurrentPos: %.1f, %.1f, %.1f", v3CurrentPos.x, v3CurrentPos.y, v3CurrentPos.z);
+		ImGui::Text("InterpPos:  %.1f, %.1f, %.1f", v3DbgInterpPos.x, v3DbgInterpPos.y, v3DbgInterpPos.z);
+		ImGui::Text("Delta:      %.2f, %.2f, %.2f", v3DbgDelta.x, v3DbgDelta.y, v3DbgDelta.z);
+		ImGui::Text("DeltaXZ:    %.2f", sqrtf(v3DbgDelta.x*v3DbgDelta.x + v3DbgDelta.z*v3DbgDelta.z));
+		ImGui::End();
+	}
 }
 
 Vector3 Zombie::GetPosition() const
@@ -262,6 +386,8 @@ void Zombie::ResolveCollision(Vector3& outv3Delta)
 
 	const BoundingCapsule& capsuleWorld = pCollider->GetCapsuleWorld();
 	const float fSkin = 0.5f;
+	const float fGround = 0.7f;
+	const float fSnapDistance = 1.0f;
 
 	for (auto& xmOBB : m_xmOBBCollided)
 	{
@@ -272,9 +398,33 @@ void Zombie::ResolveCollision(Vector3& outv3Delta)
 		if (fDepth < fSkin)
 			continue;
 
-		float fProjected = outv3Delta.Dot(v3Normal);
-		if (fProjected < 0.f)
-			outv3Delta -= v3Normal * fProjected;
+		if (v3Normal.y > fGround && outv3Delta.y <= 0.f)
+		{
+			// 바닥 접촉 확정
+			m_bGrounded = true;
+
+			if (m_fVerticalVelocity < 0.f)
+				m_fVerticalVelocity = 0.f;
+
+			// Penetration Correction
+			if (fDepth > fSnapDistance)
+			{
+				float fPush = std::min(fDepth + fSkin, 5.f);
+				outv3Delta += v3Normal * fPush;
+			}
+
+			// Slope Projection
+			float fProjected = outv3Delta.Dot(v3Normal);
+			if (fProjected < 0.f)
+				outv3Delta -= v3Normal * fProjected;
+		}
+		else
+		{
+			// 벽/천장 충돌 — 이동 방향만 차단
+			float fProjected = outv3Delta.Dot(v3Normal);
+			if (fProjected < 0.f)
+				outv3Delta -= v3Normal * fProjected;
+		}
 	}
 }
 
@@ -326,26 +476,31 @@ void Zombie::ApplyServerState(float serverX, float serverZ, float serverYaw,
 {
 	if (!m_pAIAgent) return;
 
-	// 이미 적용한 상태면 스킵 — 매 프레임 SetDirectPath 리셋 방지
-	if (receivedTime <= m_fLastAppliedTime) return;
+	// 이미 저장한 스냅샷이면 스킵 (매 프레임 동일 상태 반복 방지)
+	if (!m_Snapshots.empty() && receivedTime <= m_fLastAppliedTime)
+		return;
 	m_fLastAppliedTime = receivedTime;
 
-	Vector3 v3AgentPos = m_pAIAgent->GetPosition();
-	Vector3 v3TargetPos(serverX, v3AgentPos.y, serverZ);
+	// 스냅샷 저장 — 메인 스레드 현재 시간 기준 (PostUpdate와 동일 시간축)
+	float fNow = NetworkManager::GetNetTimeSec();
 
-	float fErrXZSq = (v3AgentPos.x - serverX) * (v3AgentPos.x - serverX)
-	               + (v3AgentPos.z - serverZ) * (v3AgentPos.z - serverZ);
+	// 서버 전송 간격 측정 → 보간 딜레이 자동 조절
+	if (!m_Snapshots.empty())
+	{
+		float fInterval = fNow - m_Snapshots.back().fTime;
+		if (fInterval > 0.01f)
+			m_fInterpDelay = fInterval * 1.5f; // 간격의 1.5배로 여유
+	}
 
-	// 5m 이상 벗어나면 즉시 스냅
-	static constexpr float SNAP_THRESHOLD_SQ = 500.f * 500.f;
-	if (fErrXZSq > SNAP_THRESHOLD_SQ)
-		m_pAIAgent->SyncPosition(v3TargetPos);
-	else if (fErrXZSq > 1.f)
-		m_pAIAgent->SetDirectPath(v3TargetPos);
+	float fY = m_pAIAgent->GetPosition().y;
+	ZombieSnapshot snap;
+	snap.v3Pos = Vector3(serverX, fY, serverZ);
+	snap.fYaw  = serverYaw;
+	snap.fTime = fNow;
 
-	// 서버 yaw 직접 적용
-	GetTransform()->SetRotation(0.f, serverYaw, 0.f);
-	m_v3Forward = Vector3(sinf(serverYaw), 0.f, cosf(serverYaw));
+	m_Snapshots.push_back(snap);
+	while (m_Snapshots.size() > MAX_SNAPSHOTS)
+		m_Snapshots.pop_front();
 
 	m_eServerBehaviorState = state;
 }
