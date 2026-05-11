@@ -137,9 +137,6 @@
     <Filter Include="02.Game\GameObject\Weapons">
       <UniqueIdentifier>{37e57477-68bc-4529-92f5-1c9ae9080c9f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="02.Game\World">
-      <UniqueIdentifier>{797f8f39-2e7a-4dba-865c-788ca86b7314}</UniqueIdentifier>
-    </Filter>
     <Filter Include="02.Game\Particle">
       <UniqueIdentifier>{e2bb6ddc-61cd-4a1e-9e3c-f2f258257a5a}</UniqueIdentifier>
     </Filter>
@@ -149,8 +146,14 @@
     <Filter Include="02.Game\Particle\Particles">
       <UniqueIdentifier>{01128195-ef50-498f-80da-aeac1b01fc76}</UniqueIdentifier>
     </Filter>
-    <Filter Include="02.Game\World\SpacePartition">
+    <Filter Include="02.Game\Scene\World">
+      <UniqueIdentifier>{797f8f39-2e7a-4dba-865c-788ca86b7314}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Game\Scene\World\SpacePartition">
       <UniqueIdentifier>{6954c5ca-c491-4c64-8aac-2b2eeeabac6a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Game\Scene\Post-Processing">
+      <UniqueIdentifier>{82d96368-f749-46c9-b03f-a18b5e0d48d0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -478,10 +481,10 @@
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClInclude>
     <ClInclude Include="TypedObjectPool.h">
-      <Filter>02.Game\World</Filter>
+      <Filter>02.Game\Scene\World</Filter>
     </ClInclude>
     <ClInclude Include="World.h">
-      <Filter>02.Game\World</Filter>
+      <Filter>02.Game\Scene\World</Filter>
     </ClInclude>
     <ClInclude Include="GameContext.h">
       <Filter>02.Game</Filter>
@@ -526,15 +529,24 @@
       <Filter>02.Game\Scene\Test</Filter>
     </ClInclude>
     <ClInclude Include="SpatialWorld.h">
-      <Filter>02.Game\World\SpacePartition</Filter>
+      <Filter>02.Game\Scene\World\SpacePartition</Filter>
     </ClInclude>
     <ClInclude Include="SpatialTypes.h">
-      <Filter>02.Game\World\SpacePartition</Filter>
+      <Filter>02.Game\Scene\World\SpacePartition</Filter>
     </ClInclude>
     <ClInclude Include="SpatialTraits.h">
-      <Filter>02.Game\World\SpacePartition</Filter>
+      <Filter>02.Game\Scene\World\SpacePartition</Filter>
     </ClInclude>
     <ClInclude Include="ZombiePool.h" />
+    <ClInclude Include="PostProcessingVolume.h">
+      <Filter>02.Game\Scene\Post-Processing</Filter>
+    </ClInclude>
+    <ClInclude Include="ToneMappingVolume.h">
+      <Filter>02.Game\Scene\Post-Processing</Filter>
+    </ClInclude>
+    <ClInclude Include="ToneMappingTypes.h">
+      <Filter>02.Game\Scene\Post-Processing</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -856,10 +868,10 @@
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClCompile>
     <ClCompile Include="TypedObjectPool.cpp">
-      <Filter>02.Game\World</Filter>
+      <Filter>02.Game\Scene\World</Filter>
     </ClCompile>
     <ClCompile Include="World.cpp">
-      <Filter>02.Game\World</Filter>
+      <Filter>02.Game\Scene\World</Filter>
     </ClCompile>
     <ClCompile Include="GameContext.cpp">
       <Filter>02.Game</Filter>
@@ -898,9 +910,15 @@
       <Filter>02.Game\Scene\Test</Filter>
     </ClCompile>
     <ClCompile Include="SpatialWorld.cpp">
-      <Filter>02.Game\World\SpacePartition</Filter>
+      <Filter>02.Game\Scene\World\SpacePartition</Filter>
     </ClCompile>
     <ClCompile Include="ZombiePool.cpp" />
+    <ClCompile Include="PostProcessingVolume.cpp">
+      <Filter>02.Game\Scene\Post-Processing</Filter>
+    </ClCompile>
+    <ClCompile Include="ToneMappingVolume.cpp">
+      <Filter>02.Game\Scene\Post-Processing</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">

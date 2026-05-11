@@ -60,8 +60,8 @@ GameFramework::~GameFramework()
 void GameFramework::Update()
 {
 	TIME->Tick();
-	GUI->Update();
 	SOUND->Update();
+	GUI->Update();
 
 	//UI->Clear();
 

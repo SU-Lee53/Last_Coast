@@ -407,21 +407,21 @@ void AssimpConverter::SerializeModel(const std::string& strPath, const std::stri
 
 		hierarchyJson["Bones"].push_back(bone);
 	}
-
-<<<<<<< Updated upstream
-	// Collision meshes (UCX_ / UBX_ / USP_ / UCP_)
-	nlohmann::ordered_json collisionArray = nlohmann::ordered_json::array();
-	GatherCollisionNodes(m_pRootNode, collisionArray);
-	hierarchyJson["nCollisions"] = collisionArray.size();
-	hierarchyJson["Collisions"] = collisionArray;
-
-	if (!collisionArray.empty()) {
-		DisplayText("Found %d collision mesh(es)\r\n", (int)collisionArray.size());
-	}
-
-=======
-	std::string strSaveJson = std::format("{}\\Models\\{}.json", m_strSavePath, strName);
->>>>>>> Stashed changes
+//
+//<<<<<<< Updated upstream
+//	// Collision meshes (UCX_ / UBX_ / USP_ / UCP_)
+//	nlohmann::ordered_json collisionArray = nlohmann::ordered_json::array();
+//	GatherCollisionNodes(m_pRootNode, collisionArray);
+//	hierarchyJson["nCollisions"] = collisionArray.size();
+//	hierarchyJson["Collisions"] = collisionArray;
+//
+//	if (!collisionArray.empty()) {
+//		DisplayText("Found %d collision mesh(es)\r\n", (int)collisionArray.size());
+//	}
+//
+//=======
+//	std::string strSaveJson = std::format("{}\\Models\\{}.json", m_strSavePath, strName);
+//>>>>>>> Stashed changes
 	strSave = std::format("{}\\Models\\{}.bin", m_strSavePath, strName);
 
 	//std::ofstream out{ strSaveJson };
