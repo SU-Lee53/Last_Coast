@@ -102,4 +102,39 @@ void NetworkGameTestScene::Update()
 
 	}
 	ImGui::End();
+
+	SyncSceneWithServer();
+}
+
+void NetworkGameTestScene::SyncSceneWithServer()
+{
+	if (!NETWORK->IsConnected() || NETWORK->IsOffline()) return;
+
+	for (auto& ev : NETWORK->ConsumePlayerJoins()) {
+
+		if (m_RemotePlayers.contains(ev.playerId)) continue;
+
+		auto remotePlayer = std::make_shared<NetworkRemoteThirdPersonPlayer>();
+		remotePlayer->Initialize();
+
+		remotePlayer->GetTransform()->SetWorldMatrix(reinterpret_cast<Matrix&>(ev.initialTransform.m));
+		
+		AddObject(remotePlayer);
+		m_RemotePlayers[ev.playerId] = remotePlayer;
+	}
+
+	for (auto id : NETWORK->ConsumePlayerLeaves()) {
+		auto it = m_RemotePlayers.find(id);
+		if (it != m_RemotePlayers.end()) {
+			RemoveObject(it->second);
+			m_RemotePlayers.erase(it);
+		}
+	}
+
+	for (auto& ev : NETWORK->ConsumePlayerTransforms()) {
+		auto it = m_RemotePlayers.find(ev.playerId);
+		if (it != m_RemotePlayers.end()) {
+			it->second->GetTransform()->SetWorldMatrix(reinterpret_cast<Matrix&>(ev.transform.m));
+		}
+	}
 }

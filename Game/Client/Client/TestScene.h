@@ -22,6 +22,8 @@ private:
 	// 서버에서 수신한 사격 결과를 소비하고 이펙트 출력.
 	void ProcessShootResults();
 
+	void SyncSceneWithServer() override;
+
 private:
 	ZombiePool m_ZombiePool;
 	std::unique_ptr<NavMeshDebugRenderer> m_pNavMeshDebugRenderer;

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #define SERVERPORT 9000
 #include "ServerCore/Session.h"
 
@@ -21,6 +21,16 @@ struct OverEx {
 struct NetSnapshot {
 	Vector3 pos;
 	float   time; // GetNetTimeSec() 기준 수신 시각
+};
+
+struct PlayerJoinEvent {
+	int           playerId;
+	TransformData initialTransform;
+};
+
+struct PlayerTransformEvent {
+	int           playerId;
+	TransformData transform;
 };
 
 // 원격 플레이어 1명의 보간 상태
@@ -101,6 +111,11 @@ public:
 	void SendPlayerShoot(const Vector3& v3Origin, const Vector3& v3Direction, const Vector3& v3MuzzlePos);
 	std::vector<ShootResultEvent> ConsumeShootResults();
 
+	// ── 플레이어 이벤트 소비 (Task: Remote Player Sync) ─────────────────────────
+	std::vector<PlayerJoinEvent>      ConsumePlayerJoins();
+	std::vector<int>                  ConsumePlayerLeaves();
+	std::vector<PlayerTransformEvent> ConsumePlayerTransforms();
+
 	// 최신 서버 좀비 상태 조회. 존재하지 않으면 false.
 	bool					GetLatestZombieState(int zombieId, ZombieServerState& outState) const;
 
@@ -169,4 +184,9 @@ private:
 	concurrency::concurrent_queue<int>                            m_PendingDespawns;
 	concurrency::concurrent_queue<AttackEvent>                    m_PendingAttacks;
 	concurrency::concurrent_queue<ShootResultEvent>               m_PendingShootResults;
+
+	// ── 플레이어 이벤트 큐 ───────────────────────────────────────────────────
+	concurrency::concurrent_queue<PlayerJoinEvent>                m_PendingPlayerJoins;
+	concurrency::concurrent_queue<int>                            m_PendingPlayerLeaves;
+	concurrency::concurrent_queue<PlayerTransformEvent>           m_PendingPlayerTransforms;
 };
