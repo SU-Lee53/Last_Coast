@@ -50,32 +50,6 @@ void Scene::PostInitialize()
 	InitializeObjects();
 	GenerateSceneBound();
 
-	/* Old xz grid space partition */
-	//	if (m_pTerrain) {
-	//		Vector3 v3TerrainPos = m_pTerrain->GetComponent<Transform>()->GetPosition();
-	//		uint32 unComponents = std::sqrt(m_pTerrain->GetTerrainComponents().size());
-	//		Vector2 v2CellSize = m_pTerrain->GetTerrainComponents()[0]->GetComponentSize();
-	//		CellPartition(Vector2{ v3TerrainPos.x, v3TerrainPos.z }, v2CellSize, unComponents, unComponents);
-	//	}
-	//	else {
-	//		auto [v3SceneMin, v3SceneMax] = ::GetMinMaxFromAABB(m_xmSceneBound);
-	//		float fSceneWidth = v3SceneMax.x - v3SceneMin.x;
-	//		float fSceneHeight = v3SceneMax.z - v3SceneMin.z;
-	//	
-	//		Vector2 v2SceneOriginXZ;
-	//		v2SceneOriginXZ.x = v3SceneMin.x;
-	//		v2SceneOriginXZ.y = v3SceneMin.z;
-	//	
-	//		Vector2 v2CellSizeXZ;
-	//		v2CellSizeXZ.x = fSceneWidth / 5;
-	//		v2CellSizeXZ.y = fSceneHeight / 5;
-	//	
-	//		uint32 unCellsX = std::ceil(fSceneWidth / v2CellSizeXZ.x) + 1;
-	//		uint32 unCellsZ = std::ceil(fSceneHeight / v2CellSizeXZ.y) + 1;
-	//	
-	//		CellPartition(v2SceneOriginXZ, v2CellSizeXZ, unCellsX, unCellsZ);
-	//	}
-
 	// Space Partition
 	{
 		m_World.RegisterSpatialObjectsByMobility<false>();
@@ -141,9 +115,9 @@ void Scene::PostInitialize()
 		m_World.GetSpatial().BuildStaticGrid(gridDesc);
 	}
 
-	if (m_pPlayer) {
-		m_pPlayer->GetTransform()->SetPosition(m_xmSceneBound.Center);
-	}
+	//if (m_pPlayer) {
+	//	m_pPlayer->GetTransform()->SetPosition(m_xmSceneBound.Center);
+	//}
 
 	for (auto& pZombie : m_World.GetObjects<Zombie>()) {
 		pZombie->SetPosition(AI->GetNavMesh()->GetRandomPoint()); // Transform + AIAgent 동시에
