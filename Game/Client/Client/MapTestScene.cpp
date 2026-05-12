@@ -26,7 +26,7 @@ void MapTestScene::BuildObjects()
 	m_pFPSText->SetAnchor(Vector2{ 0,0 });
 	m_pFPSText->SetPivot(Vector2{ 0,0 });
 	m_pFPSText->SetPosition(Vector2{ 0,50 });
-	m_pFPSText->SetSize(Vector2{ 100,50 });
+	m_pFPSText->SetSizePerLetter(Vector2{ 10,50 });
 
 	m_pTimeText = std::make_shared<TextBox>(L"Malgun Gothic");
 	m_pTimeText->SetText(L"Test");
@@ -34,7 +34,7 @@ void MapTestScene::BuildObjects()
 	m_pTimeText->SetAnchor(Vector2{ 0,0 });
 	m_pTimeText->SetPivot(Vector2{ 0,0 });
 	m_pTimeText->SetPosition(Vector2{ 200,50 });
-	m_pTimeText->SetSize(Vector2{ 100,50 });
+	m_pTimeText->SetSizePerLetter(Vector2{ 10,50 });
 
 	m_pKoreanText = std::make_shared<TextButton>(L"Malgun Gothic");
 	m_pKoreanText->SetText(L"클릭하면 글자색이 바뀜");

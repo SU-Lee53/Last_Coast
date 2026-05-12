@@ -7,7 +7,7 @@ public:
 	IText(const std::wstring& wstrFontname);
 
 	void SetFontID(Font::ID fontID);
-	void SetText(const std::wstring& wstrText);
+	virtual void SetText(const std::wstring& wstrText);
 
 	const std::wstring& GetText() const { return m_wstrText; }
 	Font::ID GetFontID() const { return m_fontID; }
@@ -29,8 +29,15 @@ public:
 	TextBox(Font::ID font) : IText{ font } {}
 	TextBox(const std::wstring& wstrFontname) : IText{ wstrFontname } {}
 
+	void SetSize(const Vector2& v2Size) = delete;
+	void SetSizePerLetter(const Vector2& v2Size) { m_v2SizePerLetter = v2Size; };
+
 	virtual void Update() override;
 	virtual UIRectData MakeSBData() const override;
+
+private:
+	//size_t m_unMaxLength = 0;
+	Vector2 m_v2SizePerLetter = Vector2::Zero;
 };
 
 class TextButton : public IUIButtonComponent, public IText {

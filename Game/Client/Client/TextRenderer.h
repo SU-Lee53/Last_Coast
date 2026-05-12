@@ -10,7 +10,7 @@ struct FontDesc {
 };
 
 struct Font {
-	constexpr static float g_fFontSize = 24.f;
+	constexpr static float g_fFontSize = 64.f;
 	using ID = uint64_t;
 
 	FontDesc desc;

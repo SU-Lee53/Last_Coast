@@ -39,7 +39,7 @@ void GameScene::BuildObjects()
 	pText->SetAnchor(Vector2{ 0,0 });
 	pText->SetPivot(Vector2{ 0,0 });
 	pText->SetPosition(Vector2{ 10,150 });
-	pText->SetSize(Vector2{ 250,50 });
+	pText->SetSizePerLetter(Vector2{ 15,50 });
 	m_pUIBoard->InsertUI(pText);
 
 }

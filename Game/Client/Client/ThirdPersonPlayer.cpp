@@ -26,7 +26,7 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pHealthText->SetAnchor(Vector2{ 1, 1 });
 		pHealthText->SetPivot(Vector2{ 1,1 });
 		pHealthText->SetPosition(Vector2{ -50, -100 });
-		pHealthText->SetSize(Vector2{ 80,50 });
+		pHealthText->SetSizePerLetter(Vector2{ 30,50 });
 		pUIBoard->InsertUI(pHealthText);
 
 		//pHealthImage
@@ -37,7 +37,7 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pAmmo->SetAnchor(Vector2{ 1, 1 });
 		pAmmo->SetPivot(Vector2{ 1,1 });
 		pAmmo->SetPosition(Vector2{ -50, -40 });
-		pAmmo->SetSize(Vector2{ 80,50 });
+		pAmmo->SetSizePerLetter(Vector2{ 15,50 });
 		pUIBoard->InsertUI(pAmmo);
 
 		pWeaponName = std::make_shared<TextBox>(L"Malgun Gothic");
@@ -45,8 +45,8 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pWeaponName->SetLayer(0);
 		pWeaponName->SetAnchor(Vector2{ 1, 1 });
 		pWeaponName->SetPivot(Vector2{ 1,1 });
-		pWeaponName->SetPosition(Vector2{ -170, -40 });
-		pWeaponName->SetSize(Vector2{ 50,50 });
+		pWeaponName->SetPosition(Vector2{ -200, -40 });
+		pWeaponName->SetSizePerLetter(Vector2{ 20,50 });
 		pUIBoard->InsertUI(pWeaponName);
 
 		pReloadAlert = std::make_shared<TextBox>(L"Malgun Gothic");
@@ -55,7 +55,7 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pReloadAlert->SetAnchor(Vector2{ 0.5, 0.5 });
 		pReloadAlert->SetPivot(Vector2{ 0,0.5 });
 		pReloadAlert->SetPosition(Vector2{ 100, 0 });
-		pReloadAlert->SetSize(Vector2{ 70,40 });
+		pReloadAlert->SetSizePerLetter(Vector2{ 10,40 });
 		pReloadAlert->SetVisible(false);
 		pUIBoard->InsertUI(pReloadAlert);
 	}
@@ -73,7 +73,9 @@ void IThirdPersonPlayer::PlayerHUD::Update(const IThirdPersonPlayer& player)
 	}
 
 	if (pHealthText) {
-		pHealthText->SetText(std::to_wstring(static_cast<int32>(player.GetHP())));
+		auto wstrHP = std::to_wstring(static_cast<int32>(player.GetHP()));
+		//pHealthText->SetSize(Vector2(wstrHP.length() * 30, 50));
+		pHealthText->SetText(wstrHP);
 	}
 
 	if (pHealthImage) {
@@ -96,7 +98,7 @@ void IThirdPersonPlayer::PlayerHUD::Update(const IThirdPersonPlayer& player)
 		if (pWeapon) {
 			if (pWeapon->IsInReloading()) {
 				pReloadAlert->SetVisible(true);
-				pReloadAlert->SetSize(Vector2{ 100,40 });
+				//pReloadAlert->SetSize(Vector2{ 100,40 });
 				pReloadAlert->SetText(L"Reloading");
 			}
 			else {
@@ -104,7 +106,7 @@ void IThirdPersonPlayer::PlayerHUD::Update(const IThirdPersonPlayer& player)
 				const int32 nCurrentAmmo = pWeapon->GetAmmoInClip();
 				if (nCurrentAmmo <= nMaxAmmo * 0.2) {
 					pReloadAlert->SetVisible(true);
-					pReloadAlert->SetSize(Vector2{ 70,40 });
+					//pReloadAlert->SetSize(Vector2{ 70,40 });
 					pReloadAlert->SetText(L"Reload");
 				}
 				else {
@@ -538,7 +540,7 @@ void IThirdPersonPlayer::ProcessLocalMovementInput()
 	}
 }
 
-void  IThirdPersonPlayer::ProcessLocalActionInput()
+void IThirdPersonPlayer::ProcessLocalActionInput()
 {
 	auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
 	auto pAnimationCtrl = static_pointer_cast<PlayerAnimationController>(GetComponent<AnimationController>());
