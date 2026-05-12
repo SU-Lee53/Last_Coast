@@ -19,6 +19,8 @@ private:
 
 	// 서버에서 수신한 좀비 이벤트(스폰/디스폰/상태/공격)를 매 프레임 처리.
 	void ProcessNetworkZombies();
+	// 서버에서 수신한 사격 결과를 소비하고 이펙트 출력.
+	void ProcessShootResults();
 
 private:
 	ZombiePool m_ZombiePool;

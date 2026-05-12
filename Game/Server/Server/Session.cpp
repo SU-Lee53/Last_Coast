@@ -1,10 +1,11 @@
 ﻿#include "pch.h"
 #include "Session.h"
 #include "ZombieManager.h"
+#include "ServerSpatialGrid.h"
 
 extern ZombieManager                g_ZombieManager;
-extern std::unordered_map<int, Vector3> g_PlayerPositions;
-extern std::mutex                   g_Mutex;
+extern ServerSpatialGrid            g_SpatialGrid;
+extern concurrency::concurrent_unordered_map<int, Vector3> g_PlayerPositions;
 
 void Session::init(SOCKET s, int id, Room* room)
 {
@@ -120,11 +121,110 @@ bool Session::process_packet(unsigned char* p)
 		float y = m_transform.m[3][1];
 		float z = m_transform.m[3][2];
 
-		std::cout << "Player[" << m_id << "] Transform Received - Pos(X: " << x << ", Y: " << y << ", Z: " << z << ")\n";
+		// 좀비 AI용 플레이어 위치 갱신
+		g_PlayerPositions[m_id] = Vector3{ x, y, z };
+		//std::cout << "[Transform] Player[" << m_id << "] pos(" << x << "," << y << "," << z << ")\n";
 
 		send_transform_packet(m_id);
 	}
 					  break;
+	case C2S_PLAYER_SHOOT: {
+		C2S_PlayerShoot* packet = reinterpret_cast<C2S_PlayerShoot*>(p);
+
+		Vector3 v3Origin{ packet->originX, packet->originY, packet->originZ };
+		Vector3 v3Dir{ packet->dirX, packet->dirY, packet->dirZ };
+		v3Dir.Normalize();
+
+		std::cout << "[Shoot] Player[" << m_id << "] origin("
+		          << v3Origin.x << "," << v3Origin.y << "," << v3Origin.z
+		          << ") dir(" << v3Dir.x << "," << v3Dir.y << "," << v3Dir.z << ")\n";
+
+		constexpr float fMaxDist = 5000.f;
+		constexpr float fDamage  = 25.f;
+
+		// ── 1. 좀비 히트 검사 (BoundingSphere) ──────────────────────────────
+		int   nHitZombieId = -1;
+		float fZombieDist  = fMaxDist;
+		g_ZombieManager.RayTestZombies(v3Origin, v3Dir, fMaxDist, nHitZombieId, fZombieDist);
+
+		// ── 2. 정적 오브젝트 히트 검사 (OBB 그리드) ─────────────────────────
+		ServerRayHitResult staticHit;
+		g_SpatialGrid.RayTestStatics(v3Origin, v3Dir, fMaxDist, staticHit);
+
+		std::cout << "[Shoot] zombieHit=" << nHitZombieId
+		          << " zombieDist=" << fZombieDist
+		          << " staticHit=" << staticHit.bHit
+		          << " staticDist=" << staticHit.fDistance << "\n";
+
+		// ── 3. 가장 가까운 히트 채택 ────────────────────────────────────────
+		S2C_ShootResult result{};
+		result.size = sizeof(S2C_ShootResult);
+		result.type = S2C_SHOOT_RESULT;
+		result.shooterPlayerId = m_id;
+		result.hitZombieId = -1;
+		result.damage = 0.f;
+		result.bHit = 0;
+		result.muzzleX  = packet->muzzleX;
+		result.muzzleY  = packet->muzzleY;
+		result.muzzleZ  = packet->muzzleZ;
+		result.shootDirX = v3Dir.x;
+		result.shootDirY = v3Dir.y;
+		result.shootDirZ = v3Dir.z;
+
+		bool bZombieCloser = (nHitZombieId >= 0) &&
+			(!staticHit.bHit || fZombieDist <= staticHit.fDistance);
+
+		if (bZombieCloser)
+		{
+			// 좀비와 사격자 사이에 벽이 있는지 추가 차폐 체크
+			Vector3 v3ZombieHitPoint = v3Origin + v3Dir * fZombieDist;
+			bool bBlocked = g_SpatialGrid.IsLineOfSightBlocked(v3Origin, v3ZombieHitPoint);
+
+			if (!bBlocked)
+			{
+				result.bHit = 2; // zombie
+				result.hitX = v3Origin.x + v3Dir.x * fZombieDist;
+				result.hitY = v3Origin.y + v3Dir.y * fZombieDist;
+				result.hitZ = v3Origin.z + v3Dir.z * fZombieDist;
+				result.hitNormalX = -v3Dir.x;
+				result.hitNormalY = -v3Dir.y;
+				result.hitNormalZ = -v3Dir.z;
+				result.hitZombieId = nHitZombieId;
+				result.damage = fDamage;
+
+				// 데미지 적용 (사망 시 bAlive=false로 AI 중단, despawn은 보내지 않음)
+				// 클라이언트가 TakeDamage → 사망 몽타주 → 자체 제거 처리
+				g_ZombieManager.ApplyDamageToZombie(nHitZombieId, fDamage);
+			}
+			else if (staticHit.bHit)
+			{
+				// 벽에 차폐된 경우 → 벽 히트로 처리
+				result.bHit = 1; // static
+				result.hitX = staticHit.v3HitPoint.x;
+				result.hitY = staticHit.v3HitPoint.y;
+				result.hitZ = staticHit.v3HitPoint.z;
+				result.hitNormalX = staticHit.v3HitNormal.x;
+				result.hitNormalY = staticHit.v3HitNormal.y;
+				result.hitNormalZ = staticHit.v3HitNormal.z;
+			}
+		}
+		else if (staticHit.bHit)
+		{
+			result.bHit = 1; // static
+			result.hitX = staticHit.v3HitPoint.x;
+			result.hitY = staticHit.v3HitPoint.y;
+			result.hitZ = staticHit.v3HitPoint.z;
+			result.hitNormalX = staticHit.v3HitNormal.x;
+			result.hitNormalY = staticHit.v3HitNormal.y;
+			result.hitNormalZ = staticHit.v3HitNormal.z;
+		}
+
+		// ── 4. 전체 클라이언트에 결과 브로드캐스트 ──────────────────────────
+		for (auto& cl : clients)
+			if (cl.m_is_connected)
+				cl.send_shoot_result(result);
+	}
+	break;
 	default:
 		std::cout << "Unknown packet type received from player[" << m_id << "].\n";
 		return false;
@@ -166,6 +266,11 @@ void Session::send_zombie_state(int nZombieId, float x, float z, float yaw, floa
 	p.waypointZ = waypointZ;
 	p.behaviorState = state;
 	do_send(p.size, reinterpret_cast<char*>(&p));
+}
+
+void Session::send_shoot_result(const S2C_ShootResult& result)
+{
+	do_send(result.size, const_cast<char*>(reinterpret_cast<const char*>(&result)));
 }
 
 void Session::send_zombie_attack(int nZombieId, int nTargetPlayerId, float fDamage)

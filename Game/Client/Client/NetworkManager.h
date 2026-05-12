@@ -55,6 +55,18 @@ struct AttackEvent {
 	float damage;
 };
 
+// 사격 결과 이벤트
+struct ShootResultEvent {
+	int           shooterPlayerId;
+	unsigned char bHit;              // 0=miss, 1=static, 2=zombie
+	Vector3       v3HitPoint;
+	Vector3       v3HitNormal;
+	int           hitZombieId;       // -1 = 미히트
+	float         damage;
+	Vector3       v3MuzzlePos;       // 발사자 총구 위치
+	Vector3       v3ShootDir;        // 발사 방향
+};
+
 class NetworkManager {
 
 	DECLARE_SINGLE(NetworkManager)
@@ -84,6 +96,10 @@ public:
 	std::vector<SpawnEvent>  ConsumeSpawnEvents();
 	std::vector<int>         ConsumeDespawnEvents();
 	std::vector<AttackEvent> ConsumeAttackEvents();
+
+	// ── 사격 송수신 ──────────────────────────────────────────────────────────
+	void SendPlayerShoot(const Vector3& v3Origin, const Vector3& v3Direction, const Vector3& v3MuzzlePos);
+	std::vector<ShootResultEvent> ConsumeShootResults();
 
 	// 최신 서버 좀비 상태 조회. 존재하지 않으면 false.
 	bool					GetLatestZombieState(int zombieId, ZombieServerState& outState) const;
@@ -152,4 +168,5 @@ private:
 	concurrency::concurrent_queue<SpawnEvent>                     m_PendingSpawns;
 	concurrency::concurrent_queue<int>                            m_PendingDespawns;
 	concurrency::concurrent_queue<AttackEvent>                    m_PendingAttacks;
+	concurrency::concurrent_queue<ShootResultEvent>               m_PendingShootResults;
 };

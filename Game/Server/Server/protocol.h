@@ -11,6 +11,7 @@ constexpr int BUF_SIZE = 512;
 enum PACKET_TYPE {
 	C2S_LOGIN, C2S_MOVE,
 	C2S_TRANSFORM,
+	C2S_PLAYER_SHOOT,                             // 클라이언트 → 서버: 사격 요청
 	S2C_LOGIN_RESULT, S2C_AVATAR_INFO,
 	S2C_ADD_PLAYER, S2C_REMOVE_PLAYER,
 	S2C_TRANSFORM,
@@ -18,6 +19,7 @@ enum PACKET_TYPE {
 	S2C_DESPAWN_ZOMBIE,                           // 서버 → 클라이언트: 좀비 디스폰
 	S2C_ZOMBIE_STATE,                             // 서버 → 클라이언트: 매 틱 위치/방향/행동상태
 	S2C_ZOMBIE_ATTACK,                            // 서버 → 클라이언트: 좀비 공격 히트 이벤트
+	S2C_SHOOT_RESULT,                             // 서버 → 클라이언트: 사격 판정 결과
 };
 enum IOType { IO_SEND, IO_RECV, IO_ACCEPT };
 
@@ -151,6 +153,31 @@ struct S2C_ZombieAttack {
 	int           zombieId;
 	int           targetPlayerId;
 	float         damage;
+};
+
+// ── 사격 패킷 ───────────────────────────────────────────────────────────────
+
+// 클라이언트 → 서버: 사격 요청 (카메라 위치 + 조준 방향 + 총구 위치)
+struct C2S_PlayerShoot {
+	unsigned char size;
+	PACKET_TYPE   type;
+	float         originX, originY, originZ;  // 카메라 위치 (cm)
+	float         dirX, dirY, dirZ;           // 조준 방향 (정규화)
+	float         muzzleX, muzzleY, muzzleZ;  // 총구 월드 위치 (cm)
+};
+
+// 서버 → 클라이언트: 사격 판정 결과
+struct S2C_ShootResult {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           shooterPlayerId;
+	unsigned char bHit;                       // 0=miss, 1=static, 2=zombie
+	float         hitX, hitY, hitZ;           // 탄착점 (cm)
+	float         hitNormalX, hitNormalY, hitNormalZ;
+	int           hitZombieId;                // 좀비 히트 시 ID, 아니면 -1
+	float         damage;
+	float         muzzleX, muzzleY, muzzleZ;  // 발사자 총구 위치 (cm)
+	float         shootDirX, shootDirY, shootDirZ; // 발사 방향
 };
 
 #pragma pack(pop) // Restore default packing

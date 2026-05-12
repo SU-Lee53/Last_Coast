@@ -276,7 +276,8 @@ void Zombie::PostUpdate()
 
 		// 애니메이션
 		bool bMoving = (m_eServerBehaviorState != ZBS_Idle &&
-		                m_eServerBehaviorState != ZBS_Alert);
+		                m_eServerBehaviorState != ZBS_Alert &&
+		                m_eServerBehaviorState != ZBS_Attacking);
 		m_fMoveSpeedSqXZ = bMoving ? 1.f : 0.f;
 	}
 	else
@@ -343,7 +344,14 @@ void Zombie::PostUpdate()
 	if (bOnline && m_nServerId == 0)
 	{
 		static const char* sModes[] = { "NoSnap", "Bracket", "Before", "Extrap", "Single" };
+		static const char* sStates[] = { "Idle", "Wandering", "Alert", "Investigating", "Chasing", "Attacking" };
+		bool bMontageActive = pAC && pAC->GetMontage() && pAC->GetMontage()->GetBlendWeight() > 0.f;
 		ImGui::Begin("Zombie Interp Debug");
+		ImGui::Text("ServerState: %s", (m_eServerBehaviorState < 6) ? sStates[m_eServerBehaviorState] : "???");
+		ImGui::Text("Montage: %s (%.2f)", bMontageActive ? "PLAYING" : "off",
+		            pAC && pAC->GetMontage() ? pAC->GetMontage()->GetBlendWeight() : 0.f);
+		ImGui::Text("MoveSpeedSq: %.4f", m_fMoveSpeedSqXZ);
+		ImGui::Separator();
 		ImGui::Text("Snapshots: %d", nDbgSnapCount);
 		ImGui::Text("RenderTime: %.4f", fDbgRenderTime);
 		ImGui::Text("Front time: %.4f", fDbgFrontTime);
@@ -491,6 +499,16 @@ void Zombie::ApplyServerState(float serverX, float serverZ, float serverYaw,
 		if (fInterval > 0.01f)
 			m_fInterpDelay = fInterval * 1.5f; // 간격의 1.5배로 여유
 	}
+
+	// 정지→이동 전환 시 보간 딜레이 축소 (과거 스냅샷 지연으로 멈춰 보이는 현상 방지)
+	bool bWasStationary = (m_eServerBehaviorState == ZBS_Attacking ||
+	                       m_eServerBehaviorState == ZBS_Idle ||
+	                       m_eServerBehaviorState == ZBS_Alert);
+	bool bNowMoving     = (state == ZBS_Wandering ||
+	                       state == ZBS_Investigating ||
+	                       state == ZBS_Chasing);
+	if (bWasStationary && bNowMoving)
+		m_fInterpDelay = 0.05f;
 
 	float fY = m_pAIAgent->GetPosition().y;
 	ZombieSnapshot snap;

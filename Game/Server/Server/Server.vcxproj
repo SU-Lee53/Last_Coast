@@ -162,14 +162,23 @@
     </ClCompile>
     <ClCompile Include="Room.cpp" />
     <ClCompile Include="Session.cpp" />
+    <ClCompile Include="SimpleMath.cpp" />
     <ClCompile Include="ZombieManager.cpp" />
+    <ClCompile Include="ServerSpatialGrid.cpp" />
+    <ClCompile Include="ServerBoundingCapsule.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="protocol.h" />
     <ClInclude Include="Room.h" />
     <ClInclude Include="Session.h" />
+    <ClInclude Include="SimpleMath.h" />
     <ClInclude Include="ZombieManager.h" />
+    <ClInclude Include="ServerSpatialGrid.h" />
+    <ClInclude Include="ServerBoundingCapsule.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="SimpleMath.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

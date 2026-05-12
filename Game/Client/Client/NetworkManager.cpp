@@ -356,6 +356,22 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		m_PendingAttacks.push(AttackEvent{ p->zombieId, p->targetPlayerId, p->damage });
 		break;
 	}
+	case S2C_SHOOT_RESULT:
+	{
+		if (size < static_cast<int>(sizeof(S2C_ShootResult))) return;
+		auto* p = reinterpret_cast<const S2C_ShootResult*>(data);
+		ShootResultEvent ev;
+		ev.shooterPlayerId = p->shooterPlayerId;
+		ev.bHit            = p->bHit;
+		ev.v3HitPoint      = Vector3{ p->hitX, p->hitY, p->hitZ };
+		ev.v3HitNormal     = Vector3{ p->hitNormalX, p->hitNormalY, p->hitNormalZ };
+		ev.hitZombieId     = p->hitZombieId;
+		ev.damage          = p->damage;
+		ev.v3MuzzlePos     = Vector3{ p->muzzleX, p->muzzleY, p->muzzleZ };
+		ev.v3ShootDir      = Vector3{ p->shootDirX, p->shootDirY, p->shootDirZ };
+		m_PendingShootResults.push(ev);
+		break;
+	}
 	case S2C_TRANSFORM: {
 		//		S2C_Transform* pkt = reinterpret_cast<S2C_Transform*>(p);
 		//		// TODO: 해당 플레이어의 Transform을 찾아 pkt->transform 행렬 적용
@@ -381,25 +397,28 @@ void NetworkManager::SetLocalPlayerInfo(const Vector3& pos, float yaw)
 
 void NetworkManager::TrySendPlayerPosition()
 {
-	//if (!m_bConnected || m_bOfflineMode) return;
+	if (!m_bConnected || m_bOfflineMode) return;
 
-	//float fNow = GetNetTimeSec();
-	//if (fNow - m_fLastPosSendTime < POS_SEND_INTERVAL) return;
-	//m_fLastPosSendTime = fNow;
+	float fNow = GetNetTimeSec();
+	if (fNow - m_fLastPosSendTime < POS_SEND_INTERVAL) return;
+	m_fLastPosSendTime = fNow;
 
-	//C2S_PlayerPosition p;
-	//p.size = sizeof(C2S_PlayerPosition);
-	//p.type = C2S_PLAYER_POSITION;
-	//p.x    = m_v3LocalPlayerPos.x;
-	//p.y    = m_v3LocalPlayerPos.y;
-	//p.z    = m_v3LocalPlayerPos.z;
-	//p.yaw  = m_fLocalPlayerYaw;
+	// C2S_TRANSFORM으로 위치 전송 (서버가 플레이어 위치를 좀비 AI에 사용)
+	C2S_Transform p;
+	p.size = sizeof(C2S_Transform);
+	p.type = C2S_TRANSFORM;
+	memset(&p.transform, 0, sizeof(p.transform));
 
-	//// 소켓이 non-blocking overlapped 이므로 WSASend 사용 (nullptr overlapped = best-effort)
-	//WSABUF wsa;
-	//wsa.buf = reinterpret_cast<char*>(&p);
-	//wsa.len = p.size;
-	//WSASend(m_hClientSocket, &wsa, 1, nullptr, 0, nullptr, nullptr);
+	// 단위 행렬 + 위치만 설정 (서버는 m[3][0..2]만 사용)
+	p.transform.m[0][0] = 1.f;
+	p.transform.m[1][1] = 1.f;
+	p.transform.m[2][2] = 1.f;
+	p.transform.m[3][3] = 1.f;
+	p.transform.m[3][0] = m_v3LocalPlayerPos.x;
+	p.transform.m[3][1] = m_v3LocalPlayerPos.y;
+	p.transform.m[3][2] = m_v3LocalPlayerPos.z;
+
+	SendPacket(&p, p.size);
 }
 
 // -----------------------------------------------------------------------
@@ -429,6 +448,34 @@ std::vector<AttackEvent> NetworkManager::ConsumeAttackEvents()
 	std::vector<AttackEvent> out;
 	AttackEvent ev;
 	while (m_PendingAttacks.try_pop(ev))
+		out.push_back(ev);
+	return out;
+}
+
+void NetworkManager::SendPlayerShoot(const Vector3& v3Origin, const Vector3& v3Direction, const Vector3& v3MuzzlePos)
+{
+	if (!m_bConnected || m_bOfflineMode) return;
+
+	C2S_PlayerShoot p;
+	p.size    = sizeof(C2S_PlayerShoot);
+	p.type    = C2S_PLAYER_SHOOT;
+	p.originX = v3Origin.x;
+	p.originY = v3Origin.y;
+	p.originZ = v3Origin.z;
+	p.dirX    = v3Direction.x;
+	p.dirY    = v3Direction.y;
+	p.dirZ    = v3Direction.z;
+	p.muzzleX = v3MuzzlePos.x;
+	p.muzzleY = v3MuzzlePos.y;
+	p.muzzleZ = v3MuzzlePos.z;
+	SendPacket(&p, p.size);
+}
+
+std::vector<ShootResultEvent> NetworkManager::ConsumeShootResults()
+{
+	std::vector<ShootResultEvent> out;
+	ShootResultEvent ev;
+	while (m_PendingShootResults.try_pop(ev))
 		out.push_back(ev);
 	return out;
 }

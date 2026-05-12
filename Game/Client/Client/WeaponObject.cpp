@@ -51,19 +51,30 @@ bool WeaponObject::TryFire()
 		m_fTimeAfterFire = 0.f;
 
 		const auto& pCamera = CUR_SCENE->GetCamera();
+		Vector3 v3CamPos = pCamera->GetPosition();
+		Vector3 v3CamDir = pCamera->GetLook();
 
-		// 네크워크 플레이어의 경우 다른 조치가 필요해보임
-		RayTraceDesc rayDesc{};
-		rayDesc.v3Origin = pCamera->GetPosition();
-		rayDesc.v3Direction = pCamera->GetLook();
-		rayDesc.fMaxDistance = 5000.f;
-		rayDesc.fDamage = m_fDamage;
-		rayDesc.pInstigator = m_wpOwner.lock().get();
-		rayDesc.pSourceObject = this;
+		bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
 
-		RayTraceHitResult hit{};
-		CUR_SCENE->GetWorld().LineTraceSingle<StaticObject, Zombie>(rayDesc, hit);
+		if (bOnline) {
+			// 온라인: 서버에 사격 요청만 전송. 판정은 서버가 처리.
+			NETWORK->SendPlayerShoot(v3CamPos, v3CamDir, m_v3MuzzlePositionWorld);
+		}
+		else {
+			// 오프라인: 기존 로컬 레이트레이스 판정
+			RayTraceDesc rayDesc{};
+			rayDesc.v3Origin = v3CamPos;
+			rayDesc.v3Direction = v3CamDir;
+			rayDesc.fMaxDistance = 5000.f;
+			rayDesc.fDamage = m_fDamage;
+			rayDesc.pInstigator = m_wpOwner.lock().get();
+			rayDesc.pSourceObject = this;
 
+			RayTraceHitResult hit{};
+			CUR_SCENE->GetWorld().LineTraceSingle<StaticObject, Zombie>(rayDesc, hit);
+		}
+
+		// 총구 이펙트는 항상 즉시 출력
 		ParticleEffectSpawnDesc particleDesc;
 		{
 			particleDesc.v3Position = m_v3MuzzlePositionWorld;

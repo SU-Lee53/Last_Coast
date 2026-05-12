@@ -62,13 +62,14 @@ public:
 	void send_despawn_zombie(int nZombieId);
 	void send_zombie_state(int nZombieId, float x, float z, float yaw, float waypointX, float waypointZ, ZombieBehaviorState state);
 	void send_zombie_attack(int nZombieId, int nTargetPlayerId, float fDamage);
+	void send_shoot_result(const S2C_ShootResult& result);
 
 public:
 	SOCKET		m_client;
 	EXP_OVER	m_recv_over;
 	Room*		m_room;
 	int			m_id;
-	bool		m_is_connected;
+	std::atomic<bool> m_is_connected;
 	int			m_prev_recv;
 	char		m_username[MAX_NAME_LEN];
 	TransformData m_transform;

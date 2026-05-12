@@ -8,6 +8,9 @@
 #include "ThirdPersonCamera.h"
 #include "Collider.h"
 #include "MapTestScene.h"
+#include "BulletImpactEffect.h"
+#include "BloodEffect.h"
+#include "MuzzleFlashEffect.h"
 
 void TestScene::BuildObjects()
 {
@@ -175,6 +178,7 @@ void TestScene::Update()
 
 	//ProcessPlayerShoot();
 	ProcessNetworkZombies();
+	ProcessShootResults();
 	RemoveDeadZombies();
 }
 
@@ -220,6 +224,12 @@ void TestScene::RemoveDeadZombies()
 		}
 
 		RemoveCollisionPairsOf(pZombie.get());
+
+		// 온라인 좀비면 서버 맵에서도 제거
+		int nServerId = pZombie->GetServerId();
+		if (nServerId >= 0)
+			m_ServerZombies.erase(nServerId);
+
 		return true;
 	});
 
@@ -291,18 +301,95 @@ void TestScene::ProcessNetworkZombies()
 	// ── 공격 이벤트 처리 (Task 9) ─────────────────────────────────────────
 	for (auto& ev : NETWORK->ConsumeAttackEvents())
 	{
-		// 나 자신이 타겟인 경우에만 데미지 적용
-		if (ev.targetPlayerId != NETWORK->GetPlayerID()) continue;
-
-		m_pPlayer->TakeDamage(ev.damage);
-
-		// 공격한 좀비의 애니메이션 재생
-		auto it = m_ServerZombies.find(ev.zombieId);
-		if (it != m_ServerZombies.end() && it->second)
+		// damage=0: 모션 시작 이벤트 (몽타주만 재생)
+		// damage>0: 데미지 발동 이벤트 (Notify 딜레이 후)
+		if (ev.damage <= 0.f)
 		{
-			auto pAC = it->second->GetComponent<ZombieAnimationController>();
-			if (pAC && pAC->GetMontage())
-				pAC->GetMontage()->PlayMontage("Zombie Attack");
+			// 공격 몽타주는 모든 클라이언트에서 재생
+			auto it = m_ServerZombies.find(ev.zombieId);
+			if (it != m_ServerZombies.end() && it->second)
+			{
+				auto pAC = it->second->GetComponent<ZombieAnimationController>();
+				if (pAC && pAC->GetMontage())
+					pAC->GetMontage()->PlayMontage("Zombie Attack");
+			}
+		}
+		else
+		{
+			// 데미지는 나 자신이 타겟인 경우에만 적용
+			if (ev.targetPlayerId == NETWORK->GetPlayerID())
+				m_pPlayer->TakeDamage(ev.damage);
+		}
+	}
+}
+
+void TestScene::ProcessShootResults()
+{
+	if (!NETWORK->IsConnected() || NETWORK->IsOffline()) return;
+
+	auto pPlayer = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer);
+
+	for (auto& ev : NETWORK->ConsumeShootResults())
+	{
+		// ── 벽 히트: BulletImpactEffect (먼지) ──────────────────────────────
+		if (ev.bHit == 1)
+		{
+			Vector3 v3Normal = ev.v3HitNormal;
+			v3Normal.Normalize();
+
+			ParticleEffectSpawnDesc desc{};
+			desc.v3Position  = ev.v3HitPoint;
+			desc.v3Direction = v3Normal;
+			desc.v3Normal    = v3Normal;
+			desc.mtxWorld    = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, Vector3::Up);
+
+			PARTICLE->Spawn<BulletImpactEffect>(desc);
+		}
+
+		// ── 좀비 히트: BloodEffect + 데미지 + HitMarker ─────────────────────
+		if (ev.bHit == 2 && ev.hitZombieId >= 0)
+		{
+			auto it = m_ServerZombies.find(ev.hitZombieId);
+			if (it != m_ServerZombies.end() && it->second)
+			{
+				auto& pZombie = it->second;
+
+				// 데미지 적용 (→ PostUpdate에서 IsDead() → 사망 몽타주 → 풀 반환)
+				pZombie->TakeDamage(ev.damage);
+
+				// 피 이펙트
+				Vector3 v3Dir = ev.v3HitNormal;
+				if (v3Dir.LengthSquared() > 1e-8f)
+					v3Dir.Normalize();
+
+				ParticleEffectSpawnDesc desc{};
+				desc.v3Position  = ev.v3HitPoint;
+				desc.v3Direction = -v3Dir;
+				desc.v3Normal    = ev.v3HitNormal;
+				desc.mtxWorld    = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
+
+				PARTICLE->Spawn<BloodEffect>(desc);
+			}
+
+			// 히트마커 (내가 쏜 총인 경우만)
+			if (pPlayer && ev.shooterPlayerId == NETWORK->GetPlayerID())
+				pPlayer->ShowHitMarker();
+		}
+
+		// ── 다른 플레이어의 총구 이펙트 ─────────────────────────────────────
+		if (ev.shooterPlayerId != NETWORK->GetPlayerID())
+		{
+			Vector3 v3MuzzleDir = ev.v3ShootDir;
+			if (v3MuzzleDir.LengthSquared() > 1e-8f)
+				v3MuzzleDir.Normalize();
+
+			ParticleEffectSpawnDesc desc{};
+			desc.v3Position  = ev.v3MuzzlePos;
+			desc.v3Direction = v3MuzzleDir;
+			desc.v3Normal    = Vector3::Up;
+			desc.mtxWorld    = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
+
+			PARTICLE->Spawn<MuzzleFlashEffect>(desc);
 		}
 	}
 }

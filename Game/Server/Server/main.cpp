@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 
 #include "ZombieManager.h"
+#include "ServerSpatialGrid.h"
 #include "Session.h"
 #include "Room.h"
 
@@ -9,16 +10,19 @@
 using namespace std;
 
 // NavMesh JSON 경로 — 서버 작업 디렉터리(프로젝트 폴더) 기준 상대 경로
-static constexpr const char* NAVMESH_PATH = "../../Client/Resources/NavMesh/NavMesh.json";
+static constexpr const char* NAVMESH_PATH      = "../../Client/Resources/NavMesh/NavMesh.json";
+static constexpr const char* SCENE_JSON_PATH   = "../../Client/Resources/Scenes/TEST1.json";
+static constexpr const char* MODEL_DIRECTORY   = "../../Client/Resources/Models";
+static constexpr const char* ATTACK_ANIM_PATH  = "../../Client/Resources/Animations/Zombie Attack.bin";
 static constexpr int         INITIAL_ZOMBIES = 100;    // 서버 시작 시 스폰할 좀비 수
 static constexpr float       TICK_RATE_HZ = 30.f; // 게임 틱 빈도
 static constexpr float       TICK_DT = 1.f / TICK_RATE_HZ;
 static constexpr DWORD       TICK_MS = static_cast<DWORD>(TICK_DT * 1000.f);
-static constexpr DWORD       ZOMBIE_SEND_INTERVAL_MS = 200; // 좀비 상태 정기 전송 간격 (0.2초)
+static constexpr DWORD       ZOMBIE_SEND_INTERVAL_MS = 100; // 좀비 상태 정기 전송 간격 (0.2초)
 
 ZombieManager                g_ZombieManager;
-unordered_map<int, Vector3>  g_PlayerPositions; // playerId → 월드 위치 (cm)
-mutex                        g_Mutex;           // g_PlayerPositions + clients 브로드캐스트 보호
+ServerSpatialGrid            g_SpatialGrid;     // 정적 OBB 공간 분할 (사격 차폐 판정)
+concurrency::concurrent_unordered_map<int, Vector3>  g_PlayerPositions; // playerId → 월드 위치 (cm) (lock-free)
 volatile bool                g_bRunning = true;
 
 std::array<Session, MAX_PLAYERS> clients;
@@ -77,65 +81,80 @@ static void BroadcastAll(Fn fn)
 static DWORD WINAPI GameTickThread(LPVOID)
 {
 	timeBeginPeriod(1); // 1ms 정밀도 타이머 활성화
+	DWORD dwPrevTickTime = timeGetTime();
 
 	while (g_bRunning)
 	{
 		DWORD dwTickStart = timeGetTime();
 
-		// ── 플레이어 위치 스냅샷 ─────────────────────────────────────────────
+		// 실제 경과 시간 측정 (서버-클라이언트 시간 동기화)
+		float fActualDT = (dwTickStart - dwPrevTickTime) * 0.001f;
+		fActualDT = std::clamp(fActualDT, 0.001f, 0.1f); // 1ms~100ms 범위 제한
+		dwPrevTickTime = dwTickStart;
+
+		// ── 플레이어 위치 스냅샷 (clients 배열에서 직접 읽기) ────────────────
 		unordered_map<int, Vector3> playerSnapshots;
-		{
-			lock_guard<mutex> lock(g_Mutex);
-			playerSnapshots = g_PlayerPositions;
+		for (int i = 0; i < MAX_PLAYERS; ++i) {
+			if (clients[i].m_is_connected) {
+				float x = clients[i].m_transform.m[3][0];
+				float y = clients[i].m_transform.m[3][1];
+				float z = clients[i].m_transform.m[3][2];
+				playerSnapshots[i] = Vector3{ x, y, z };
+			}
 		}
 
-		// ── AI Tick (락 밖에서 실행 — AIManager 자체 스레드 안전) ───────────
-		vector<pair<int, int>> attacks; // (zombieId, targetPlayerId)
-		g_ZombieManager.Tick(TICK_DT, playerSnapshots, attacks);
+		// ── AI Tick ──────────────────────────────────────────────────────────
+		vector<pair<int, int>> attacks;     // 데미지 발동 (Notify 딜레이 후)
+		vector<pair<int, int>> attackAnims; // 공격 모션 시작 (즉시)
+		g_ZombieManager.Tick(fActualDT, playerSnapshots, attacks, attackAnims);
 
-		// ── 결과 브로드캐스트 ────────────────────────────────────────────────
+		// 좀비 상태 전송 (상태 변화 + 위치 변화 시 즉시, 아니면 100ms 간격)
+		for (auto& [nId, zombie] : g_ZombieManager.GetZombies())
 		{
-			lock_guard<mutex> lock(g_Mutex);
+			if (!zombie.bAlive || !zombie.pAgent) continue;
 
-			// 좀비 상태 전송 (1초 간격 + 상태 변화 시 즉시)
-			for (auto& [nId, zombie] : g_ZombieManager.GetZombies())
-			{
-				if (!zombie.bAlive || !zombie.pAgent) continue;
+			int nCurState = static_cast<int>(zombie.pAgent->GetBehaviorState());
+			Vector3 v3Pos = zombie.pAgent->GetPosition();
 
-				int nCurState = static_cast<int>(zombie.pAgent->GetBehaviorState());
-				bool bStateChanged = (nCurState != zombie.nLastSentState);
-				bool bIntervalElapsed = (dwTickStart - zombie.dwLastSendTime >= ZOMBIE_SEND_INTERVAL_MS);
+			bool bStateChanged = (nCurState != zombie.nLastSentState);
+			bool bIntervalElapsed = (dwTickStart - zombie.dwLastSendTime >= ZOMBIE_SEND_INTERVAL_MS);
 
-				if (!bStateChanged && !bIntervalElapsed) continue;
+			if (!bStateChanged && !bIntervalElapsed) continue;
 
-				Vector3 v3Pos = zombie.pAgent->GetPosition();
-				ZombieBehaviorState state = static_cast<ZombieBehaviorState>(nCurState);
+			ZombieBehaviorState state = static_cast<ZombieBehaviorState>(nCurState);
 
-				const auto& dbg = zombie.pAgent->GetPathDebugInfo();
-				float waypointX = v3Pos.x;
-				float waypointZ = v3Pos.z;
-				//CheckList 이거 수정해야함 문제점이 많음.
-				if (!dbg.Waypoints.empty()) {
-					waypointX = dbg.Waypoints.back().x;
-					waypointZ = dbg.Waypoints.back().z;
-				}
-
-				BroadcastAll([&](Session& cl) {
-					cl.send_zombie_state(nId, v3Pos.x, v3Pos.z,
-						zombie.fYaw, waypointX, waypointZ, state);
-				});
-
-				zombie.dwLastSendTime = dwTickStart;
-				zombie.nLastSentState = nCurState;
+			const auto& dbg = zombie.pAgent->GetPathDebugInfo();
+			float waypointX = v3Pos.x;
+			float waypointZ = v3Pos.z;
+			//CheckList 이거 수정해야함 문제점이 많음.
+			if (!dbg.Waypoints.empty()) {
+				waypointX = dbg.Waypoints.back().x;
+				waypointZ = dbg.Waypoints.back().z;
 			}
 
-			// 공격 이벤트 전송
-			for (auto& [nZombieId, nTargetId] : attacks)
-			{
-				BroadcastAll([&](Session& cl) {
-					cl.send_zombie_attack(nZombieId, nTargetId, 10.f);
-				});
-			}
+			BroadcastAll([&](Session& cl) {
+				cl.send_zombie_state(nId, v3Pos.x, v3Pos.z,
+					zombie.fYaw, waypointX, waypointZ, state);
+			});
+
+			zombie.dwLastSendTime = dwTickStart;
+			zombie.nLastSentState = nCurState;
+		}
+
+		// 공격 모션 시작 (즉시 — 몽타주 재생용, 데미지 0)
+		for (auto& [nZombieId, nTargetId] : attackAnims)
+		{
+			BroadcastAll([&](Session& cl) {
+				cl.send_zombie_attack(nZombieId, nTargetId, 0.f);
+			});
+		}
+
+		// 공격 데미지 발동 (Notify 딜레이 후 — 실제 데미지)
+		for (auto& [nZombieId, nTargetId] : attacks)
+		{
+			BroadcastAll([&](Session& cl) {
+				cl.send_zombie_attack(nZombieId, nTargetId, 10.f);
+			});
 		}
 
 		// ── 다음 틱까지 대기 ─────────────────────────────────────────────────
@@ -215,6 +234,11 @@ void worker_thread()
 				else {
 					room->add_player(player_index);
 					CreateIoCompletionPort((HANDLE)exp_over->m_client_socket, g_iocp, player_index, 0);
+
+					// Nagle 비활성화 — 작은 패킷 즉시 전송 (좀비 상태 패킷 지연 방지)
+					BOOL bNoDelay = TRUE;
+					setsockopt(exp_over->m_client_socket, IPPROTO_TCP, TCP_NODELAY,
+					           reinterpret_cast<const char*>(&bNoDelay), sizeof(bNoDelay));
 
 					clients[player_index].init(exp_over->m_client_socket, player_index, room);
 					clients[player_index].send_login_success();
@@ -299,6 +323,15 @@ int main()
 	{
 		for (int i = 0; i < INITIAL_ZOMBIES; ++i)
 			g_ZombieManager.SpawnZombie();
+	}
+
+	// ── 공격 애니메이션 길이 로드 ────────────────────────────────────────────
+	g_ZombieManager.LoadAttackAnimDuration(ATTACK_ANIM_PATH);
+
+	// ── 정적 OBB 공간 분할 초기화 (사격 차폐 판정용) ────────────────────────
+	if (!g_SpatialGrid.LoadFromSceneFile(SCENE_JSON_PATH, MODEL_DIRECTORY))
+	{
+		std::cout << "[Server] SpatialGrid 초기화 실패. 씬/모델 경로 확인.\n";
 	}
 
 	// ── 게임 틱 스레드 시작 (30Hz) ───────────────────────────────────────────

@@ -116,8 +116,9 @@ private:
 	nlohmann::ordered_json StoreNodeToJson(const aiNode* pNode) const;
 	nlohmann::ordered_json StoreMeshToJson(const aiMesh* pMesh) const;
 	nlohmann::ordered_json StoreMaterialToJson(const aiMaterial* pMaterial) const;
-	void GatherCollisionNodes(const aiNode* pNode, nlohmann::ordered_json& outCollisions) const;
-	nlohmann::ordered_json StoreCollisionMeshToJson(const aiMesh* pMesh, const std::string& strNodeName) const;
+	//void GatherCollisionNodes(const aiNode* pNode, nlohmann::ordered_json& outCollisions) const;
+	//nlohmann::ordered_json StoreCollisionMeshToJson(const aiMesh* pMesh, const std::string& strNodeName) const;
+	void GatherTransformedPositions(const aiNode* pNode, const XMMATRIX& xmmtxParentAccum, std::vector<XMFLOAT3>& outPositions) const;
 	nlohmann::ordered_json StoreAnimationToJson(const aiAnimation* pAnimation) const;
 	nlohmann::ordered_json StoreNodeAnimToJson(const aiNodeAnim* pNodeAnim, double dTicksPerSecond) const;
 
