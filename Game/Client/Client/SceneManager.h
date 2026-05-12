@@ -19,7 +19,10 @@ public:
 	void ProcessInput();
 	void Update();
 	void PrepareRender();
-	
+
+public:
+	void ShowDebugOptions();
+
 private:
 	std::unique_ptr<Scene> m_upCurrentScene;
 

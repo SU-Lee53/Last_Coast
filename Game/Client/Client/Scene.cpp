@@ -198,6 +198,8 @@ void Scene::FixedUpdate()
 	m_World.FixedUpdate();
 	m_World.UpdateSpatial();
 
+	m_ToneMappingVolume.Update();
+
 	CheckCollision();
 }
 
@@ -234,14 +236,10 @@ void Scene::PrepareRender()
 	desc.bIncludeStatic = true;
 	desc.bIncludeDynamic = true;
 
-
 	SpatialQueryResult visibleGrid = m_World.GetSpatial().QueryFrustum(
 		GetCamera()->GetFrustumWorld(),
 		desc
 	);
-
-	ImGui::Text("Spatial Grid Query Result : %d", visibleGrid.pObjects.size());
-	m_World.GetSpatial().DebugPrintProxyStats();
 
 	if (m_pPlayer) {
 		m_pPlayer->Render();
@@ -294,7 +292,7 @@ void Scene::CheckCollision()
 	staticCollisionDesc.bIncludeDynamic = false;
 	staticCollisionDesc.v3AABBInflation = Vector3{ 3_m, 3_m, 3_m };
 	SpatialQueryResult playerBroadPhaseResult = m_World.GetSpatial().QueryAABB(playerCollider->GetAABBFromOBBWorld(), staticCollisionDesc);
-	ImGui::Text("Player Collision Candidates : %d", (int)playerBroadPhaseResult.pObjects.size());
+	//ImGui::Text("Player Collision Candidates : %d", (int)playerBroadPhaseResult.pObjects.size());
 	//RemoveInvalidCollisionSet(playerBroadPhaseResult);
 
 	// Player vs StaticObject
@@ -579,4 +577,109 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 		}
 	}
 
+}
+
+void Scene::ShowDebugOptions()
+{
+	if (ImGui::BeginTabBar("Scene Options")) {
+		if(ImGui::BeginTabItem("World")){
+			m_World.GetSpatial().DebugPrintProxyStats();
+			ImGui::EndTabItem();		
+		}
+		if(ImGui::BeginTabItem("Tone Mapping Volume")){
+			m_ToneMappingVolume.ShowDebugOptions();
+			ImGui::EndTabItem();		
+		}
+		if(ImGui::BeginTabItem("Post Processing Volume")){
+			
+			ImGui::EndTabItem();		
+		}
+		if(ImGui::BeginTabItem("Lights")){
+			ImGui::Text("Elapsed TIme : %f", TIME->GetTimeElapsed());
+			ImGui::Text("Total TIme : %f", TIME->GetTotalTime());
+
+			float fAmbient = m_v4GlobalAmbient.x;
+			ImGui::DragFloat("GlobalAmbient", (float*)&fAmbient, 0.001f, 0.f, 1.f);
+			m_v4GlobalAmbient = XMVectorReplicate(fAmbient);
+			ImGui::Text("NumLights : %d", m_pLights.size());
+			for (uint32 i = 0; i < m_pLights.size(); ++i) {
+				if (ImGui::TreeNode(std::format("Index : {}", i).c_str())) {
+					m_pLights[i]->ShowControllImGui();
+					ImGui::TreePop();
+				}
+			}
+			ImGui::EndTabItem();		
+		}
+		if(ImGui::BeginTabItem("Player")){
+			if (auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
+				m_pPlayer->ShowControlImGui();
+
+				ImGui::Text("Press `(~) to use mouse control");
+				ImGui::Text("Mouse : %s", pPlayer->IsMouseOn() ? "ON" : "OFF");
+
+				ImGui::Text("Move Speed : %f\n", pPlayer->GetMoveSpeed());
+
+				const Vector3& v3PlayerMoveDirection = pPlayer->GetMoveDirection();
+				ImGui::Text("Move Direction : (%f, %f, %f)", v3PlayerMoveDirection.x, v3PlayerMoveDirection.y, v3PlayerMoveDirection.z);
+
+				const auto& transform = pPlayer->GetTransform();
+				Vector3 v3PlayerPos = transform->GetPosition();
+				ImGui::Text("Player Position : (%f, %f, %f)", v3PlayerPos.x, v3PlayerPos.y, v3PlayerPos.z);
+
+				ImGui::Text("====== Collision Result ======");
+				for (const auto& pair : m_pCollisionPairs) {
+					ImGui::Text("Collision {%s : %s}", pair.pSelf->GetName().c_str(), pair.pOther->GetName().c_str());
+				}
+
+				ImGui::Text("====== Weapon Test ======");
+				const auto eWeaponType = pPlayer->GetCurrentWeaponType();
+				auto nWeaponIdx = std::to_underlying(eWeaponType);
+				const auto& strWeaponNames = GameContext::g_strWeaponName;
+				if (ImGui::BeginCombo("Weapons", strWeaponNames[nWeaponIdx].c_str())) {
+					for (int i = 0; i < strWeaponNames.size(); ++i) {
+						bool bSelected = (nWeaponIdx == i);
+						if (ImGui::Selectable(strWeaponNames[i].c_str(), bSelected)) {
+							nWeaponIdx = i;
+							if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
+								pThirdPerson->GiveWeapon(static_cast<WEAPON_TYPE>(nWeaponIdx));
+							}
+						}
+
+						if (bSelected) {
+							ImGui::SetItemDefaultFocus();
+						}
+
+					}
+
+					ImGui::EndCombo();
+				}
+
+				if (ImGui::TreeNode("Weapon Options")) {
+					pPlayer->GetCurrentWeaponObject()->ShowControlImGui();
+					ImGui::TreePop();
+				}
+			}
+
+			ImGui::EndTabItem();		
+		}
+
+		if(ImGui::BeginTabItem("Terrain")){
+			ImGui::Text("No Options");
+			ImGui::EndTabItem();		
+		}
+
+		if(ImGui::BeginTabItem("Skybox")){
+			if (m_pSkybox) {
+				m_pSkybox->ShowControllImGui();
+			}
+			else {
+				ImGui::Text("NULL Skybox");
+			}
+			ImGui::EndTabItem();		
+		}
+
+		ImGui::EndTabBar();
+	}
+
+	
 }

@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "World.h"
 #include "GameObject.h"
+#include "ToneMappingVolume.h"
+#include "PostProcessingVolume.h"
 
 #include "StaticObject.h"
 #include "Zombie.h"
@@ -75,6 +77,9 @@ public:
 	const Vector4& GetGlobalAmbient() const { return m_v4GlobalAmbient; }
 	const std::unique_ptr<UIBoard>& GetUIBoard() const { return m_pUIBoard; }
 
+	const ToneMappingVolume& GetToneMappingVolume() const { return m_ToneMappingVolume; }
+	const PostProcessingVolume& GetPostProcessingVolume() const { return m_PostProcessingVolume; }
+
 	std::vector<LightData> MakeLightData() const;
 
 	TerrainHit QueryTerrainHit(const Vector3& v3WorldPos);
@@ -85,9 +90,15 @@ protected:
 private:
 	void InitializeObjects();
 
+private:
+	void ShowDebugOptions();
+
 
 protected:
 	WorldType m_World;
+	ToneMappingVolume m_ToneMappingVolume{};
+	PostProcessingVolume m_PostProcessingVolume{};
+
 
 	std::vector<std::shared_ptr<Light>>			m_pLights = {};
 	

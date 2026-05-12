@@ -227,6 +227,7 @@ bool PlayerAnimationStateMachine::IdleCallback(std::shared_ptr<IGameObject> pObj
 	
 	auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(pObj);
 	return pPlayer->GetMoveSpeedSqXZ() < std::numeric_limits<float>::epsilon();
+	//return !pPlayer->IsMoving();
 }
 
 bool PlayerAnimationStateMachine::WalkCallback(std::shared_ptr<IGameObject> pObj)
@@ -236,6 +237,7 @@ bool PlayerAnimationStateMachine::WalkCallback(std::shared_ptr<IGameObject> pObj
 	
 	auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(pObj);
 	return pPlayer->GetMoveSpeedSqXZ() > std::numeric_limits<float>::epsilon() && !pPlayer->IsRunning();
+	//return pPlayer->IsMoving() && !pPlayer->IsRunning();
 }
 
 bool PlayerAnimationStateMachine::RunCallback(std::shared_ptr<IGameObject> pObj)
@@ -245,4 +247,5 @@ bool PlayerAnimationStateMachine::RunCallback(std::shared_ptr<IGameObject> pObj)
 	
 	auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(pObj);
 	return pPlayer->GetMoveSpeedSqXZ() > std::numeric_limits<float>::epsilon() && pPlayer->IsRunning();
+	//return pPlayer->IsMoving() && pPlayer->IsRunning();
 }

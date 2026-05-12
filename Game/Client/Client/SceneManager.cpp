@@ -9,7 +9,7 @@
 
 void SceneManager::Initialize()
 {
-	m_upCurrentScene = std::make_unique<NetworkTestScene>();
+	m_upCurrentScene = std::make_unique<TestScene>();
 	m_upCurrentScene->BuildLights();
 	m_upCurrentScene->BuildObjects();
 	m_upCurrentScene->PostInitialize();
@@ -40,4 +40,11 @@ void SceneManager::Update()
 void SceneManager::PrepareRender()
 {
 	m_upCurrentScene->PrepareRender();
+}
+
+void SceneManager::ShowDebugOptions()
+{
+	ImGui::Begin("Scene");
+	m_upCurrentScene->ShowDebugOptions();
+	ImGui::End();
 }

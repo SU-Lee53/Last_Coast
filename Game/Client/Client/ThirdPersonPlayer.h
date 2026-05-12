@@ -48,6 +48,7 @@ public:
 	virtual void ProcessInput() override = 0;
 	virtual void Update() override;
 	virtual void PostUpdate() override;
+	virtual void AddToQueue(OUT std::vector<IGameObject*>& pRenderQueue) override;
 
 public:
 	// Getter
@@ -60,6 +61,7 @@ public:
 
 
 	bool IsAiming() const { return m_bAiming; }
+	bool IsMoving() const { return m_bMoved; }
 	bool IsRunning() const { return m_bRunning; }
 	bool IsMouseOn() const { return m_bMouseInUse; }
 	bool ConsumeFire() { bool b = m_bFiredThisFrame; m_bFiredThisFrame = false; return b; }

@@ -236,6 +236,21 @@ void IThirdPersonPlayer::PostUpdate()
 	m_xmOBBCollided.clear();
 }
 
+void IThirdPersonPlayer::AddToQueue(OUT std::vector<IGameObject*>& pRenderQueue)
+{
+	if (auto p = GetCurrentWeaponObject()) {
+		p->AddToQueue(pRenderQueue);
+	}
+
+	if (auto p = GetComponent<MeshRenderer>()) {
+		pRenderQueue.push_back(this);
+	}
+
+	for (auto& pChild : m_pChildren) {
+		pChild->AddToQueue(pRenderQueue);
+	}
+}
+
 void IThirdPersonPlayer::ApplyReplicatedState(/* const ServerSidePlayerState& state */)
 {
 	/*
@@ -632,7 +647,7 @@ void IThirdPersonPlayer::ApplyInputMovement()
 	float fDeltaY = std::abs(v3Delta.y);
 	m_bMoved |= (fDeltaY >= 0.1);
 
-	ImGui::Text("Moved? : %s", m_bMoved ? "T" : "F");
+	//ImGui::Text("Moved? : %s", m_bMoved ? "T" : "F");
 
 	ApplyGravity();
 
@@ -773,9 +788,7 @@ void IThirdPersonPlayer::PlayFireAction()
 
 	m_bFiredThisFrame = true;
 
-	auto pAnimationCtrl =
-		std::static_pointer_cast<PlayerAnimationController>(
-			GetComponent<AnimationController>());
+	auto pAnimationCtrl = std::static_pointer_cast<PlayerAnimationController>(GetComponent<AnimationController>());
 
 	if (m_pWeaponSocket->GetCurrentWeaponType() != WEAPON_TYPE::PISTOL) {
 		pAnimationCtrl->GetMontage()->JumpToSection("Rifle Fire");

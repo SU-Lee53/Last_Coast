@@ -197,6 +197,7 @@
     <ClInclude Include="ParticleRenderBatch.h" />
     <ClInclude Include="ParticleTextureCache.h" />
     <ClInclude Include="ParticleTypes.h" />
+    <ClInclude Include="PostProcessingVolume.h" />
     <ClInclude Include="RayTraceUtils.h" />
     <ClInclude Include="SpatialTraits.h" />
     <ClInclude Include="SpatialTypes.h" />
@@ -259,6 +260,8 @@
     <ClInclude Include="ThirdPersonCamera.h" />
     <ClInclude Include="ThirdPersonPlayer.h" />
     <ClInclude Include="ToneMappingPass.h" />
+    <ClInclude Include="ToneMappingTypes.h" />
+    <ClInclude Include="ToneMappingVolume.h" />
     <ClInclude Include="Transform.h" />
     <ClInclude Include="TransparentForwardLightingPass.h" />
     <ClInclude Include="Typedef.h" />
@@ -364,6 +367,7 @@
     <ClCompile Include="ParticlePass.cpp" />
     <ClCompile Include="ParticleRenderBatch.cpp" />
     <ClCompile Include="ParticleTextureCache.cpp" />
+    <ClCompile Include="PostProcessingVolume.cpp" />
     <ClCompile Include="SpatialWorld.cpp" />
     <ClCompile Include="TextAtlas.cpp" />
     <ClCompile Include="TextRenderer.cpp" />
@@ -424,6 +428,7 @@
     <ClCompile Include="ThirdPersonCamera.cpp" />
     <ClCompile Include="ThirdPersonPlayer.cpp" />
     <ClCompile Include="ToneMappingPass.cpp" />
+    <ClCompile Include="ToneMappingVolume.cpp" />
     <ClCompile Include="Transform.cpp" />
     <ClCompile Include="TransparentForwardLightingPass.cpp" />
     <ClCompile Include="TypedObjectPool.cpp" />
