@@ -7,6 +7,11 @@
 #include "Skybox.h"
 #include "MapTestScene.h"
 #include "TextBox.h"
+#include "BloodEffect.h"
+#include "MuzzleFlashEffect.h"
+#include "ZombieAnimationController.h"
+#include "ThirdPersonCamera.h"
+#include "BulletImpactEffect.h"
 
 void GameScene::BuildObjects()
 {
@@ -28,8 +33,17 @@ void GameScene::BuildObjects()
 	m_pTerrain = std::make_shared<TerrainObject>();
 	m_pTerrain->LoadFromFiles("Game");
 
+	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
+	if (!bOnline) {
+		for (auto& pZombie : m_ZombiePool.Initialize(100, bOnline))
+			AddObject(pZombie);
+	}
+	else {
+		m_ZombiePool.Initialize(100, true);
+	}
+
 	auto begin = high_resolution_clock::now();
-	LoadFromFiles("Game");
+	LoadFromFiles("DEMO");
 	auto end = high_resolution_clock::now();
 	long long llLoadTime = duration_cast<milliseconds>(end - begin).count();
 
@@ -156,4 +170,286 @@ void GameScene::Update()
 	}
 	ImGui::End();
 
+	// ── 좀비 네트워크 디버그 ────────────────────────────────────────────────
+	ImGui::Begin("Zombie Network Debug");
+	{
+		bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
+		ImGui::Text("Online: %s", bOnline ? "YES" : "NO");
+		ImGui::Text("Connected: %s", NETWORK->IsConnected() ? "YES" : "NO");
+		ImGui::Text("Offline: %s", NETWORK->IsOffline() ? "YES" : "NO");
+		ImGui::Text("Pool Active: %d / Free: %d", m_ZombiePool.GetActiveCount(), m_ZombiePool.GetFreeCount());
+		ImGui::Text("ServerZombies map: %d", (int)m_ServerZombies.size());
+		for (auto& [nId, pZ] : m_ServerZombies)
+		{
+			if (!pZ) continue;
+			Vector3 v3Pos = pZ->GetTransform()->GetPosition();
+			ImGui::Text("  [%d] pos(%.0f, %.0f, %.0f) active=%d hp=%.0f",
+				nId, v3Pos.x, v3Pos.y, v3Pos.z, pZ->IsPoolActive() ? 1 : 0, pZ->GetHP());
+		}
+	}
+	ImGui::End();
+
+	SyncSceneWithServer();
+	ProcessNetworkZombies();
+	ProcessShootResults();
+	RemoveDeadZombies();
+}
+
+
+void GameScene::ProcessPlayerShoot()
+{
+	auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer);
+	if (!pPlayer || !pPlayer->ConsumeFire())
+		return;
+
+	auto pCamera = std::static_pointer_cast<ThirdPersonCamera>(pPlayer->GetCamera());
+	Vector3 v3RayOrigin = pCamera->GetPosition();
+	Vector3 v3RayDir = pCamera->GetLook();
+
+	float fMinDist = std::numeric_limits<float>::max();
+	std::shared_ptr<Zombie> pHitZombie;
+
+	for (const auto& pZombie : m_World.GetObjects<Zombie>()) {
+		auto pCollider = pZombie->GetComponent<PlayerCollider>();
+		if (!pCollider) continue;
+
+		BoundingBox aabb;
+		pCollider->GetCapsuleWorld().CreateAABBFromCapsule(aabb);
+
+		float fDist = 0.f;
+		if (aabb.Intersects(XMLoadFloat3(&v3RayOrigin), XMLoadFloat3(&v3RayDir), fDist)) {
+			if (fDist < fMinDist) {
+				fMinDist = fDist;
+				pHitZombie = pZombie;
+			}
+		}
+	}
+
+	if (pHitZombie)
+		pHitZombie->TakeDamage(25.f);
+}
+
+void GameScene::RemoveDeadZombies()
+{
+	m_World.RemoveIfAlive<Zombie>([&](const std::shared_ptr<IGameObject>& obj) {
+		auto pZombie = std::dynamic_pointer_cast<Zombie>(obj);
+		if (!pZombie || !pZombie->IsReadyToRemove()) {
+			return false;
+		}
+
+		RemoveCollisionPairsOf(pZombie.get());
+
+		// 온라인 좀비면 서버 맵에서도 제거
+		int nServerId = pZombie->GetServerId();
+		if (nServerId >= 0)
+			m_ServerZombies.erase(nServerId);
+
+		return true;
+		});
+
+	// 죽은 좀비를 풀로 반환 (swap-with-last O(1), 소멸자 호출 없음)
+	m_ZombiePool.Collect();
+}
+
+void GameScene::SpawnZombie()
+{
+	auto pZombie = m_ZombiePool.Acquire();
+	if (!pZombie) return; // 풀 고갈
+
+	pZombie->Initialize();
+	AddObject(pZombie);
+
+	pZombie->SetPosition(AI->GetNavMesh()->GetRandomPoint());
+	pZombie->SetTarget(m_pPlayer);
+}
+
+void GameScene::ProcessNetworkZombies()
+{
+	// 오프라인이거나 미연결 시 서버 이벤트 처리 생략
+	if (!NETWORK->IsConnected() || NETWORK->IsOffline()) return;
+
+	// ── 플레이어 위치 전송 (20Hz 스로틀링은 내부 처리) ─────────────────────
+	{
+		const Vector3& v3Pos = m_pPlayer->GetTransform()->GetPosition();
+		// yaw: Transform에서 Y 회전을 추출 (플레이어가 SetRotation(0,yaw,0) 사용)
+		Matrix mtxWorld = m_pPlayer->GetWorldMatrix();
+		float fYaw = std::atan2f(mtxWorld._31, mtxWorld._33);
+		NETWORK->SetLocalPlayerInfo(v3Pos, fYaw);
+		NETWORK->TrySendPlayerPosition();
+	}
+
+	// ── 스폰 이벤트 처리 (Task 6) ─────────────────────────────────────────
+	for (auto& ev : NETWORK->ConsumeSpawnEvents())
+	{
+		// 이미 해당 ID로 스폰된 좀비가 있으면 무시
+		if (m_ServerZombies.count(ev.zombieId)) continue;
+
+		auto pZombie = m_ZombiePool.Acquire();
+		if (!pZombie) break; // 풀 고갈
+
+		pZombie->Initialize();
+
+		pZombie->SetServerId(ev.zombieId);
+		pZombie->SetPosition(ev.pos);
+		pZombie->SetTarget(m_pPlayer);
+
+		// world matrix 즉시 계산 → AddObject의 Spatial 등록 시 올바른 바운드
+		pZombie->GetTransform()->Update();
+		if (auto pCol = pZombie->GetComponent<PlayerCollider>())
+			pCol->Update();
+
+		AddObject(pZombie);
+		m_ServerZombies[ev.zombieId] = pZombie;
+	}
+
+	// ── 디스폰 이벤트 처리 (Task 6) ──────────────────────────────────────
+	for (int nId : NETWORK->ConsumeDespawnEvents())
+	{
+		auto it = m_ServerZombies.find(nId);
+		if (it == m_ServerZombies.end()) continue;
+
+		auto pZombie = it->second;       // erase 전에 복사
+		m_ZombiePool.MarkForRelease(pZombie);
+		m_ServerZombies.erase(it);
+		//RemoveObject(pZombie);
+	}
+
+	// ── 좀비 상태 적용 (Task 7) ───────────────────────────────────────────
+	for (auto& [nId, pZombie] : m_ServerZombies)
+	{
+		if (!pZombie || !pZombie->IsPoolActive()) continue;
+
+		ZombieServerState state;
+		if (NETWORK->GetLatestZombieState(nId, state))
+			pZombie->ApplyServerState(state.x, state.z, state.yaw,
+				state.behaviorState, state.receivedTime);
+	}
+
+	// ── 공격 이벤트 처리 (Task 9) ─────────────────────────────────────────
+	for (auto& ev : NETWORK->ConsumeAttackEvents())
+	{
+		// damage=0: 모션 시작 이벤트 (몽타주만 재생)
+		// damage>0: 데미지 발동 이벤트 (Notify 딜레이 후)
+		if (ev.damage <= 0.f)
+		{
+			// 공격 몽타주는 모든 클라이언트에서 재생
+			auto it = m_ServerZombies.find(ev.zombieId);
+			if (it != m_ServerZombies.end() && it->second)
+			{
+				auto pAC = it->second->GetComponent<ZombieAnimationController>();
+				if (pAC && pAC->GetMontage())
+					pAC->GetMontage()->PlayMontage("Zombie Attack");
+			}
+		}
+		else
+		{
+			// 데미지는 나 자신이 타겟인 경우에만 적용
+			if (ev.targetPlayerId == NETWORK->GetPlayerID())
+				m_pPlayer->TakeDamage(ev.damage);
+		}
+	}
+}
+
+void GameScene::ProcessShootResults()
+{
+	if (!NETWORK->IsConnected() || NETWORK->IsOffline()) return;
+
+	auto pPlayer = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer);
+
+	for (auto& ev : NETWORK->ConsumeShootResults())
+	{
+		// ── 벽 히트: BulletImpactEffect (먼지) ──────────────────────────────
+		if (ev.bHit == 1)
+		{
+			Vector3 v3Normal = ev.v3HitNormal;
+			v3Normal.Normalize();
+
+			ParticleEffectSpawnDesc desc{};
+			desc.v3Position = ev.v3HitPoint;
+			desc.v3Direction = v3Normal;
+			desc.v3Normal = v3Normal;
+			desc.mtxWorld = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, Vector3::Up);
+
+			PARTICLE->Spawn<BulletImpactEffect>(desc);
+		}
+
+		// ── 좀비 히트: BloodEffect + 데미지 + HitMarker ─────────────────────
+		if (ev.bHit == 2 && ev.hitZombieId >= 0)
+		{
+			auto it = m_ServerZombies.find(ev.hitZombieId);
+			if (it != m_ServerZombies.end() && it->second)
+			{
+				auto& pZombie = it->second;
+
+				// 데미지 적용 (→ PostUpdate에서 IsDead() → 사망 몽타주 → 풀 반환)
+				pZombie->TakeDamage(ev.damage);
+
+				// 피 이펙트
+				Vector3 v3Dir = ev.v3HitNormal;
+				if (v3Dir.LengthSquared() > 1e-8f)
+					v3Dir.Normalize();
+
+				ParticleEffectSpawnDesc desc{};
+				desc.v3Position = ev.v3HitPoint;
+				desc.v3Direction = -v3Dir;
+				desc.v3Normal = ev.v3HitNormal;
+				desc.mtxWorld = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
+
+				PARTICLE->Spawn<BloodEffect>(desc);
+			}
+
+			// 히트마커 (내가 쏜 총인 경우만)
+			if (pPlayer && ev.shooterPlayerId == NETWORK->GetPlayerID())
+				pPlayer->ShowHitMarker();
+		}
+
+		// ── 다른 플레이어의 총구 이펙트 ─────────────────────────────────────
+		if (ev.shooterPlayerId != NETWORK->GetPlayerID())
+		{
+			Vector3 v3MuzzleDir = ev.v3ShootDir;
+			if (v3MuzzleDir.LengthSquared() > 1e-8f)
+				v3MuzzleDir.Normalize();
+
+			ParticleEffectSpawnDesc desc{};
+			desc.v3Position = ev.v3MuzzlePos;
+			desc.v3Direction = v3MuzzleDir;
+			desc.v3Normal = Vector3::Up;
+			desc.mtxWorld = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
+
+			PARTICLE->Spawn<MuzzleFlashEffect>(desc);
+		}
+	}
+}
+
+void GameScene::SyncSceneWithServer()
+{
+	if (!NETWORK->IsConnected() || NETWORK->IsOffline()) return;
+
+	for (auto& ev : NETWORK->ConsumePlayerJoins()) {
+
+		if (m_RemotePlayers.contains(ev.playerId)) continue;
+
+		auto remotePlayer = std::make_shared<NetworkRemoteThirdPersonPlayer>();
+		remotePlayer->Initialize();
+
+		remotePlayer->GetTransform()->SetWorldMatrix(reinterpret_cast<Matrix&>(ev.initialTransform.m));
+
+		AddObject(remotePlayer);
+		m_RemotePlayers[ev.playerId] = remotePlayer;
+	}
+
+	for (auto id : NETWORK->ConsumePlayerLeaves()) {
+		auto it = m_RemotePlayers.find(id);
+		if (it != m_RemotePlayers.end()) {
+			RemoveObject(it->second);
+			m_RemotePlayers.erase(it);
+		}
+	}
+
+	for (auto& ev : NETWORK->ConsumePlayerTransforms()) {
+		auto it = m_RemotePlayers.find(ev.playerId);
+		if (it != m_RemotePlayers.end()) {
+			it->second->GetTransform()->SetWorldMatrix(reinterpret_cast<Matrix&>(ev.transform.m));
+		}
+	}
 }

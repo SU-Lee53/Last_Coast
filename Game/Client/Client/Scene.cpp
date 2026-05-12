@@ -4,7 +4,6 @@
 #include "NodeObject.h"
 #include "Collider.h"
 #include "Skybox.h"
-#include <queue>
 
 /////////////////////////////////////////////////////////////////////////////
 // Scene
@@ -683,3 +682,4 @@ void Scene::ShowDebugOptions()
 
 	
 }
+

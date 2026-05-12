@@ -82,6 +82,7 @@ private:
 	static constexpr float m_fFOVHalfAngleDeg = 60.0f;   // 전방 ±60° → 총 120°
 	static constexpr float m_fFOVCosHalf      = 0.5f;    // cos(60°) — dot product 임계값
 	static constexpr float m_fCloseRange      = 150.0f;  // 이 거리 이하는 시야각 무시 (공격 거리)
+	const float		m_fStepHeight = 50_cm;
 
 	Vector3 m_v3Forward = { 0.f, 0.f, 1.f };  // 좀비 전방 벡터 (매 프레임 이동 방향으로 갱신)
 
@@ -92,6 +93,7 @@ private:
 	float              m_fLastAppliedTime = -1.f;          // 마지막 적용한 서버 상태의 receivedTime (중복 방지)
 	float              m_fCurrentYaw      = 0.f;           // 현재 보간 중인 yaw (rad)
 	float              m_fTargetYaw       = 0.f;           // 서버에서 수신한 목표 yaw (rad)
+
 
 	// 서버 위치 스냅샷 기반 보간
 	struct ZombieSnapshot {
@@ -114,6 +116,14 @@ private:
 	friend class ZombiePool;
 	ZombiePool* m_pPool        = nullptr; // 소속 풀 (back-pointer)
 	int         m_nActiveIndex = -1;      // m_Active 내 현재 인덱스 (O(1) 제거용)
+
+protected:
+	bool TryStepUp(
+		const BoundingCapsule& capsule,
+		const BoundingOrientedBox& box,
+		OUT Vector3& outv3Delta);
+	uint32			m_unGroundGraceFrames = 0;
+	const uint32	m_unMaxGroundGraceFrames = 4;
 };
 
 template<>

@@ -10,15 +10,17 @@
 using namespace std;
 
 // NavMesh JSON 경로 — 서버 작업 디렉터리(프로젝트 폴더) 기준 상대 경로
-static constexpr const char* NAVMESH_PATH      = "../../Client/Resources/NavMesh/NavMesh.json";
-static constexpr const char* SCENE_JSON_PATH   = "../../Client/Resources/Scenes/TEST1.json";
+static constexpr const char* NAVMESH_PATH      = "../../Client/Resources/NavMesh/DEMO.json";
+static constexpr const char* SCENE_JSON_PATH   = "../../Client/Resources/Scenes/DEMO.json";
 static constexpr const char* MODEL_DIRECTORY   = "../../Client/Resources/Models";
 static constexpr const char* ATTACK_ANIM_PATH  = "../../Client/Resources/Animations/Zombie Attack.bin";
 static constexpr int         INITIAL_ZOMBIES = 100;    // 서버 시작 시 스폰할 좀비 수
 static constexpr float       TICK_RATE_HZ = 30.f; // 게임 틱 빈도
 static constexpr float       TICK_DT = 1.f / TICK_RATE_HZ;
+static constexpr Vector3 m_v3SpawnPosition = { 50600.f, -3590.f, 22000.f }; // NavMesh → 월드 좌표 오프셋 (cm)
 static constexpr DWORD       TICK_MS = static_cast<DWORD>(TICK_DT * 1000.f);
 static constexpr DWORD       ZOMBIE_SEND_INTERVAL_MS = 100; // 좀비 상태 정기 전송 간격 (0.2초)
+static constexpr DWORD       ZOMBIE_SPAWN_INTERVAL_MS = 4000; // 좀비 스폰 간격
 
 ZombieManager                g_ZombieManager;
 ServerSpatialGrid            g_SpatialGrid;     // 정적 OBB 공간 분할 (사격 차폐 판정)
@@ -82,7 +84,7 @@ static DWORD WINAPI GameTickThread(LPVOID)
 {
 	timeBeginPeriod(1); // 1ms 정밀도 타이머 활성화
 	DWORD dwPrevTickTime = timeGetTime();
-
+	DWORD dwLastSpawnTime = dwPrevTickTime;
 	while (g_bRunning)
 	{
 		DWORD dwTickStart = timeGetTime();
@@ -139,6 +141,23 @@ static DWORD WINAPI GameTickThread(LPVOID)
 
 			zombie.dwLastSendTime = dwTickStart;
 			zombie.nLastSentState = nCurState;
+		}
+
+		bool bSpawnElapsed = (dwTickStart - dwLastSpawnTime >= ZOMBIE_SPAWN_INTERVAL_MS);
+
+		if(bSpawnElapsed){
+			if(g_ZombieManager.GetZombies().size() >= INITIAL_ZOMBIES) {
+				std::cout << "[Server] 최대 좀비 수 도달. 추가 스폰 생략.\n";
+				dwLastSpawnTime = dwTickStart;
+			}
+			else {
+				int nZombieId = g_ZombieManager.SpawnZombie(m_v3SpawnPosition);
+				dwLastSpawnTime = dwTickStart;
+				auto& zombie = g_ZombieManager.GetZombies()[nZombieId];
+				BroadcastAll([&](Session& cl) {
+					cl.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
+					});
+			}
 		}
 
 		// 공격 모션 시작 (즉시 — 몽타주 재생용, 데미지 0)
@@ -322,7 +341,7 @@ int main()
 	else
 	{
 		for (int i = 0; i < INITIAL_ZOMBIES; ++i)
-			g_ZombieManager.SpawnZombie();
+			g_ZombieManager.SpawnZombie(Vector3::Zero);
 	}
 
 	// ── 공격 애니메이션 길이 로드 ────────────────────────────────────────────

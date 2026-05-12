@@ -45,7 +45,7 @@ public:
 	bool LoadAttackAnimDuration(const std::string& strAnimBinPath);
 
 	// 좀비를 스폰. NavMesh 위 임의 위치에 배치. 반환값: 새 좀비 ID (-1 = 실패)
-	int  SpawnZombie();
+	int  SpawnZombie(Vector3 SpawnPos);
 
 	// 특정 ID 좀비를 디스폰
 	void DespawnZombie(int nId);
@@ -84,7 +84,7 @@ private:
 	std::unordered_map<int, ServerZombie> m_Zombies;
 	int                                  m_nNextId = 0;
 
-	static constexpr float m_fSightRange       = 800.f;  // cm
+	static constexpr float m_fSightRange       = 1000000.f;  // cm
 	static constexpr float m_fHearingRange     = 0.f;
 	// 좀비 히트 캡슐 파라미터 (클라이언트 PlayerCollider 캡슐과 유사)
 	static constexpr float m_fZombieCapsuleRadius     = 30.f;   // 반지름 (cm)
@@ -95,4 +95,5 @@ private:
 	static constexpr float m_fBlendOutTime            = 0.2f;  // 몽타주 BlendOut 시간
 	float                  m_fAttackAnimDuration      = 0.0f;  // 런타임에 애니메이션 파일에서 읽음
 	static constexpr float m_fTargetLockDuration      = 10.f;  // 타겟 고정 시간 (초)
+
 };

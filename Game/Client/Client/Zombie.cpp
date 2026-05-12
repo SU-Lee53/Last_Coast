@@ -32,6 +32,10 @@ void Zombie::Initialize()
 
 		// AnimationController
 		AddComponent<ZombieAnimationController>();
+
+
+
+		m_bInitialized = true;
 	}
 
 	for (auto& component : m_pComponents) {
@@ -44,8 +48,10 @@ void Zombie::Initialize()
 		pChild->Initialize();
 	}
 
-	AddComponent<PlayerCollider>();
-	GetComponent<PlayerCollider>()->Initialize();
+	if (!GetComponent<PlayerCollider>()) {
+		AddComponent<PlayerCollider>();
+		GetComponent<PlayerCollider>()->Initialize();
+	}
 }
 
 void Zombie::ProcessInput()
@@ -393,47 +399,105 @@ void Zombie::ResolveCollision(Vector3& outv3Delta)
 		return;
 
 	const BoundingCapsule& capsuleWorld = pCollider->GetCapsuleWorld();
+	const uint32 unPassCount = 2;
 	const float fSkin = 0.5f;
 	const float fGround = 0.7f;
 	const float fSnapDistance = 1.0f;
 
-	for (auto& xmOBB : m_xmOBBCollided)
-	{
-		Vector3 v3Normal;
-		float fDepth;
-		if (!capsuleWorld.Intersects(xmOBB, v3Normal, fDepth))
-			continue;
-		if (fDepth < fSkin)
-			continue;
+	for (uint32 pass = 0; pass < unPassCount; ++pass) {
+		bool bAnyHit = false;
 
-		if (v3Normal.y > fGround && outv3Delta.y <= 0.f)
-		{
-			// 바닥 접촉 확정
-			m_bGrounded = true;
-
-			if (m_fVerticalVelocity < 0.f)
-				m_fVerticalVelocity = 0.f;
-
-			// Penetration Correction
-			if (fDepth > fSnapDistance)
-			{
-				float fPush = std::min(fDepth + fSkin, 5.f);
-				outv3Delta += v3Normal * fPush;
+		for (auto& xmOBB : m_xmOBBCollided) {
+			Vector3 v3Normal;
+			float fDepth;
+			if (!capsuleWorld.Intersects(xmOBB, v3Normal, fDepth)) {
+				continue;
 			}
 
-			// Slope Projection
-			float fProjected = outv3Delta.Dot(v3Normal);
-			if (fProjected < 0.f)
-				outv3Delta -= v3Normal * fProjected;
+			if (fDepth < fSkin) {
+				continue;
+			}
+
+			if (v3Normal.y > fGround && outv3Delta.y <= 0.f) {
+				// 바닥 접촉 확정
+				m_bGrounded = true;
+				m_unGroundGraceFrames = m_unMaxGroundGraceFrames;
+
+				if (m_fVerticalVelocity < 0.f) {
+					m_fVerticalVelocity = 0.f;
+				}
+
+				// Penetration Correction
+				if (fDepth > fSnapDistance) {
+					float fPush = std::min(fDepth + fSkin, 5.f);
+					outv3Delta += v3Normal * fPush;
+				}
+
+				// Slope Projection
+				float fProjected = outv3Delta.Dot(v3Normal);
+				if (fProjected < 0.f) {
+					outv3Delta -= v3Normal * fProjected;
+				}
+
+				continue;
+			}
+
+			float fProjectedAmount = outv3Delta.Dot(v3Normal);
+			if (fProjectedAmount < 0.f) {
+				// Step
+				if (TryStepUp(capsuleWorld, xmOBB, outv3Delta)) {
+					bAnyHit = true;
+					continue;
+				}
+
+				// Wall
+				outv3Delta -= v3Normal * fProjectedAmount;
+				bAnyHit = true;
+			}
 		}
-		else
-		{
-			// 벽/천장 충돌 — 이동 방향만 차단
-			float fProjected = outv3Delta.Dot(v3Normal);
-			if (fProjected < 0.f)
-				outv3Delta -= v3Normal * fProjected;
+
+		if (!bAnyHit) {
+			break;
 		}
 	}
+
+	//for (auto& xmOBB : m_xmOBBCollided)
+	//{
+	//	Vector3 v3Normal;
+	//	float fDepth;
+	//	if (!capsuleWorld.Intersects(xmOBB, v3Normal, fDepth))
+	//		continue;
+	//	if (fDepth < fSkin)
+	//		continue;
+
+	//	if (v3Normal.y > fGround && outv3Delta.y <= 0.f)
+	//	{
+	//		// 바닥 접촉 확정
+	//		m_bGrounded = true;
+
+	//		if (m_fVerticalVelocity < 0.f)
+	//			m_fVerticalVelocity = 0.f;
+
+	//		// Penetration Correction
+	//		if (fDepth > fSnapDistance)
+	//		{
+	//			float fPush = std::min(fDepth + fSkin, 5.f);
+	//			outv3Delta += v3Normal * fPush;
+	//		}
+
+	//		// Slope Projection
+	//		float fProjected = outv3Delta.Dot(v3Normal);
+	//		if (fProjected < 0.f)
+	//			outv3Delta -= v3Normal * fProjected;
+	//	}
+	//	else
+	//	{
+	//		// 벽/천장 충돌 — 이동 방향만 차단
+	//		float fProjected = outv3Delta.Dot(v3Normal);
+	//		if (fProjected < 0.f)
+	//			outv3Delta -= v3Normal * fProjected;
+	//	}
+	//}
 }
 
 void Zombie::OnBeginCollision(const CollisionResult& collisionResult)
@@ -535,4 +599,26 @@ void Zombie::TriggerAttackHit()
 	float fDist = Vector3::Distance(m_pAIAgent->GetPosition(), v3TargetPos);
 	if (fDist <= m_fCloseRange)
 		pTarget->TakeDamage(10.f);
+}
+
+
+bool Zombie::TryStepUp(const BoundingCapsule& capsule, const BoundingOrientedBox& box, OUT Vector3& outv3Delta)
+{
+	// Try move up
+	Vector3 v3Up = Vector3(0.f, m_fStepHeight, 0.f);
+	Vector3 v3StepDelta = outv3Delta + v3Up;
+
+	BoundingCapsule testCapsule = capsule;
+	testCapsule.v3Center += v3StepDelta;
+
+	// Collision Check
+	Vector3 v3Normal;
+	float fDepth;
+	if (testCapsule.Intersects(box, v3Normal, fDepth)) {
+		return false;	// Cannot Step up
+	}
+
+	v3StepDelta.y -= m_fStepHeight;
+	outv3Delta = v3StepDelta;
+	return true;
 }

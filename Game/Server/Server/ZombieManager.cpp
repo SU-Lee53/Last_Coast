@@ -46,7 +46,7 @@ bool ZombieManager::Initialize(const std::string& strNavMeshPath)
 	return true;
 }
 
-int ZombieManager::SpawnZombie()
+int ZombieManager::SpawnZombie(Vector3 SpawnPos)
 {
 	if (!m_pAIManager)
 		return -1;
@@ -54,8 +54,13 @@ int ZombieManager::SpawnZombie()
 	auto pNavMesh = m_pAIManager->GetNavMesh();
 	if (!pNavMesh)
 		return -1;
-
-	Vector3 v3SpawnPos = pNavMesh->GetRandomPoint();
+	Vector3 v3SpawnPos;
+	if (SpawnPos == Vector3::Zero) {
+		v3SpawnPos = pNavMesh->GetRandomPoint();
+	}
+	else {
+		v3SpawnPos = SpawnPos;
+	}
 
 	auto pAgent = m_pAIManager->CreateAgent();
 	if (!pAgent)
