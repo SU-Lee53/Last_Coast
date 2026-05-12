@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "NetworkGameTestScene.h"
 #include "Skybox.h"
 #include "TerrainObject.h"
@@ -74,6 +74,17 @@ void NetworkGameTestScene::Update()
 				}
 				ImGui::EndTabItem();
 			}
+
+			if (ImGui::BeginTabItem("Remote Players")) {
+				for (auto& [id, player] : m_RemotePlayers) {
+					ImGui::Text("Player ID: %d", id);
+					ImGui::Text(" - Speed: %.2f", player->GetMoveSpeed());
+					ImGui::Text(" - Moved: %s", player->IsMoving() ? "TRUE" : "FALSE");
+					ImGui::Separator();
+				}
+				ImGui::EndTabItem();
+			}
+
 			if (ImGui::BeginTabItem("Lights")) {
 				ImGui::Text("Elapsed TIme : %f", TIME->GetTimeElapsed());
 				ImGui::Text("Total TIme : %f", TIME->GetTotalTime());
@@ -108,7 +119,13 @@ void NetworkGameTestScene::Update()
 
 void NetworkGameTestScene::SyncSceneWithServer()
 {
-	if (!NETWORK->IsConnected() || NETWORK->IsOffline()) return;
+	for (auto& [id, player] : m_RemotePlayers) {
+		if (auto remote = std::dynamic_pointer_cast<NetworkRemoteThirdPersonPlayer>(player)) {
+			if (TIME->GetTotalTime() - remote->GetLastPacketTime() > 0.1f) {
+				remote->ResetMovementState();
+			}
+		}
+	}
 
 	for (auto& ev : NETWORK->ConsumePlayerJoins()) {
 
@@ -117,8 +134,8 @@ void NetworkGameTestScene::SyncSceneWithServer()
 		auto remotePlayer = std::make_shared<NetworkRemoteThirdPersonPlayer>();
 		remotePlayer->Initialize();
 
-		remotePlayer->GetTransform()->SetWorldMatrix(reinterpret_cast<Matrix&>(ev.initialTransform.m));
-		
+		remotePlayer->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.initialTransform.m), ev.bRunning, ev.bAiming, ev.fAimPitch);
+		remotePlayer->GiveWeapon(WEAPON_TYPE::AK);
 		AddObject(remotePlayer);
 		m_RemotePlayers[ev.playerId] = remotePlayer;
 	}
@@ -134,7 +151,15 @@ void NetworkGameTestScene::SyncSceneWithServer()
 	for (auto& ev : NETWORK->ConsumePlayerTransforms()) {
 		auto it = m_RemotePlayers.find(ev.playerId);
 		if (it != m_RemotePlayers.end()) {
-			it->second->GetTransform()->SetWorldMatrix(reinterpret_cast<Matrix&>(ev.transform.m));
+			it->second->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.transform.m), ev.bRunning, ev.bAiming, ev.fAimPitch);
+		}
+	}
+
+	for (auto id : NETWORK->ConsumePlayerReloads()) {
+		auto it = m_RemotePlayers.find(id);
+		if (it != m_RemotePlayers.end()) {
+			std::cout << "[Scene] Playing Reload for Remote Player " << id << std::endl;
+			it->second->PlayReloadStartAction();
 		}
 	}
 }

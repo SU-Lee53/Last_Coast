@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Player.h"
 #include "BoundingCapsule.h"
 
@@ -61,6 +61,7 @@ public:
 
 
 	bool IsAiming() const { return m_bAiming; }
+	float GetAimPitch() const { return m_fAimPitch; }
 	bool IsMoving() const { return m_bMoved; }
 	bool IsRunning() const { return m_bRunning; }
 	bool IsMouseOn() const { return m_bMouseInUse; }
@@ -123,6 +124,11 @@ protected:
 	void ApplyServerMovementXZ();
 
 protected:
+public:
+	void PlayReloadStartAction();
+	void PlayReloadEndAction();
+
+protected:
 	// Player action
 	void EnterAim();
 	void LeaveAim();
@@ -130,8 +136,6 @@ protected:
 	void PlayFireAction();
 	void PlayMeleeStartAction();
 	void PlayMeleeEndAction();
-	void PlayReloadStartAction();
-	void PlayReloadEndAction();
 
 	void ApplyWeaponChanged(WEAPON_TYPE eWeaponType);
 	void ApplyHitReact(float damage);
@@ -173,6 +177,7 @@ protected:
 	bool m_bAiming = false;
 	bool m_bRunning = false;
 	bool m_bFiredThisFrame = false;
+	float m_fAimPitch = 0.f;
 
 	WEAPON_TYPE m_eWeaponTypeBeforeMelee = WEAPON_TYPE::UNDEFINED;
 	bool m_bInMeleeAttack = false;
@@ -240,12 +245,24 @@ protected:
 
 class NetworkRemoteThirdPersonPlayer final : public IThirdPersonPlayer {
 public:
-	void ProcessInput() override {}	// 입력 처리 받지 않음
+	void ProcessInput() override {}
+	void UpdateNetworkTransform(const Matrix& mtxWorld, bool bRunning, bool bAiming, float fAimPitch);
+
+	void ResetMovementState() {
+		m_bMoved = false;
+		m_fMoveSpeed = 0.f;
+		m_bRunning = false;
+	}
+
+	float GetLastPacketTime() const { return m_fLastPacketTime; }
 
 protected:
 	bool UsesLocalCamera() const override { return false; }
 	bool UsesHUD() const override { return false; }
 	bool UsesInputMovement() const override { return false; }
-	bool UsesServerStateMovement() const override { return true; }
+	bool UsesServerStateMovement() const override { return false; }
 	bool NeedsSendMovementState() const override { return false; }
+
+private:
+	float m_fLastPacketTime = 0.f;
 };

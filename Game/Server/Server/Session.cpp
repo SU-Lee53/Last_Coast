@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Session.h"
 #include "ZombieManager.h"
 #include "ServerSpatialGrid.h"
@@ -46,6 +46,9 @@ void Session::send_add_player(int player_id)
 	Session& pl = clients[player_id];
 	memcpy(packet.username, pl.m_username, sizeof(packet.username));
 	packet.transform = pl.m_transform;
+	packet.bRunning = pl.m_bRunning;
+	packet.bAiming = pl.m_bAiming;
+	packet.fAimPitch = pl.m_fAimPitch;
 	do_send(packet.size, reinterpret_cast<char*>(&packet));
 }
 
@@ -68,6 +71,9 @@ void Session::send_transform_packet(int mover)
 	packet.type = S2C_TRANSFORM;
 	packet.playerId = mover;
 	packet.transform = clients[mover].m_transform;
+	packet.bRunning = clients[mover].m_bRunning;
+	packet.bAiming = clients[mover].m_bAiming;
+	packet.fAimPitch = clients[mover].m_fAimPitch;
 
 	for (int p : m_room->players) {
 		if (p == -1) continue;
@@ -95,6 +101,15 @@ void Session::send_remove_player(int player_id)
 	do_send(packet.size, reinterpret_cast<char*>(&packet));
 }
 
+void Session::send_player_reload(int player_id)
+{
+	S2C_PlayerReload packet;
+	packet.size = sizeof(S2C_PlayerReload);
+	packet.type = S2C_PLAYER_RELOAD;
+	packet.playerId = player_id;
+	do_send(packet.size, reinterpret_cast<char*>(&packet));
+}
+
 bool Session::process_packet(unsigned char* p)
 {
 	PACKET_TYPE type = *reinterpret_cast<PACKET_TYPE*>(&p[1]);
@@ -116,6 +131,9 @@ bool Session::process_packet(unsigned char* p)
 	case C2S_TRANSFORM: {
 		C2S_Transform* packet = reinterpret_cast<C2S_Transform*>(p);
 		m_transform = packet->transform;
+		m_bRunning = packet->bRunning;
+		m_bAiming = packet->bAiming;
+		m_fAimPitch = packet->fAimPitch;
 
 		float x = m_transform.m[3][0];
 		float y = m_transform.m[3][1];
@@ -223,6 +241,14 @@ bool Session::process_packet(unsigned char* p)
 		for (auto& cl : clients)
 			if (cl.m_is_connected)
 				cl.send_shoot_result(result);
+	}
+	case C2S_PLAYER_RELOAD: {
+		std::cout << "[Reload] Player[" << m_id << "] requested reload\n";
+		for (auto& cl : clients) {
+			if (cl.m_is_connected) {
+				cl.send_player_reload(m_id);
+			}
+		}
 	}
 	break;
 	default:

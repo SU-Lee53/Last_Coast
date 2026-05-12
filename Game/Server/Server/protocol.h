@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 constexpr short PORT = 9000;
 //constexpr int WORLD_WIDTH = 8;
@@ -20,6 +20,8 @@ enum PACKET_TYPE {
 	S2C_ZOMBIE_STATE,                             // 서버 → 클라이언트: 매 틱 위치/방향/행동상태
 	S2C_ZOMBIE_ATTACK,                            // 서버 → 클라이언트: 좀비 공격 히트 이벤트
 	S2C_SHOOT_RESULT,                             // 서버 → 클라이언트: 사격 판정 결과
+	C2S_PLAYER_RELOAD,                            // 클라이언트 → 서버: 재장전 요청
+	S2C_PLAYER_RELOAD,                            // 서버 → 클라이언트: 재장전 알림
 };
 enum IOType { IO_SEND, IO_RECV, IO_ACCEPT };
 
@@ -64,6 +66,9 @@ struct C2S_Transform {
 	unsigned char size;
 	PACKET_TYPE   type;
 	TransformData transform;
+	bool          bRunning;
+	bool          bAiming;
+	float         fAimPitch;
 };
 
 struct S2C_LoginResult {
@@ -86,6 +91,9 @@ struct S2C_AddPlayer {
 	int playerId;
 	char username[MAX_NAME_LEN];
 	TransformData transform;
+	bool          bRunning;
+	bool          bAiming;
+	float         fAimPitch;
 };
 
 struct S2C_RemovePlayer {
@@ -99,6 +107,9 @@ struct S2C_Transform {
 	PACKET_TYPE   type;
 	int playerId;
 	TransformData transform;
+	bool          bRunning;
+	bool          bAiming;
+	float         fAimPitch;
 };
 
 // ── 좀비 행동 상태 (AI.h AIBehaviorState 와 동일 순서 유지) ──────────────────
@@ -178,6 +189,17 @@ struct S2C_ShootResult {
 	float         damage;
 	float         muzzleX, muzzleY, muzzleZ;  // 발사자 총구 위치 (cm)
 	float         shootDirX, shootDirY, shootDirZ; // 발사 방향
+};
+
+struct C2S_PlayerReload {
+	unsigned char size;
+	PACKET_TYPE   type;
+};
+
+struct S2C_PlayerReload {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           playerId;
 };
 
 #pragma pack(pop) // Restore default packing

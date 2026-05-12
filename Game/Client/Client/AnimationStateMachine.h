@@ -1,4 +1,5 @@
 ﻿#pragma once
+
 #include "Animation.h"
 
 struct AnimationState;
@@ -13,11 +14,11 @@ struct AnimationState {
 	std::shared_ptr<Animation> pAnimationToPlay;
 	UINT eAnimationPlayType;
 
-	std::function<bool(std::shared_ptr<IGameObject>)> fnStateTransitionCallback;
 	std::vector<TransitionEdges> pConnectedEdges;
+	std::function<bool(std::shared_ptr<IGameObject>)> fnStateTransitionCallback;
 
 	void Connect(std::shared_ptr<AnimationState> pState, double dTransitionTime) {
-		assert(*this != *pState);
+		assert(this != pState.get());
 		pConnectedEdges.push_back({ dTransitionTime, pState });
 	}
 
@@ -29,6 +30,7 @@ struct AnimationState {
 class AnimationStateMachine {
 public:
 	AnimationStateMachine();
+	virtual ~AnimationStateMachine() {}
 
 	void Initialize(std::shared_ptr<IGameObject> pOwner, float fInitialTime);
 	void Update();
@@ -45,6 +47,7 @@ protected:
 	std::shared_ptr<AnimationState> m_pBeforeState = nullptr;
 	std::shared_ptr<AnimationState> m_pCurrentState = nullptr;
 	std::weak_ptr<IGameObject> m_wpOwner;
+	std::vector<AnimationKey> m_OutputPose;
 
 	float m_fTotalAnimationTime = 0;			// 초기화부터 총 흐른시간
 	float m_fLastAnimationChangedTime = 0;		// 마지막 애니메이션 전환 시점
@@ -52,10 +55,6 @@ protected:
 
 	float m_fCurrentAnimationStartOffset = 0.0f;
 	float m_fBeforeAnimationTimeAtTransition = 0.0f;
-
-	// Output cache
-	std::vector<AnimationKey> m_OutputPose;
-
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -68,8 +67,4 @@ public:
 	static bool IdleCallback(std::shared_ptr<IGameObject> pObj);
 	static bool WalkCallback(std::shared_ptr<IGameObject> pObj);
 	static bool RunCallback(std::shared_ptr<IGameObject> pObj);
-
-
 };
-
-

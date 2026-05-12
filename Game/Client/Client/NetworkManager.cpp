@@ -304,7 +304,7 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	{
 		if (size < static_cast<int>(sizeof(S2C_AddPlayer))) return;
 		auto* p = reinterpret_cast<const S2C_AddPlayer*>(data);
-		m_PendingPlayerJoins.push(PlayerJoinEvent{ p->playerId, p->transform });
+		m_PendingPlayerJoins.push(PlayerJoinEvent{ p->playerId, p->transform, p->bRunning, p->bAiming, p->fAimPitch });
 		break;
 	}
 	case S2C_REMOVE_PLAYER:
@@ -373,7 +373,14 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	case S2C_TRANSFORM: {
 		if (size < static_cast<int>(sizeof(S2C_Transform))) return;
 		auto* p = reinterpret_cast<const S2C_Transform*>(data);
-		m_PendingPlayerTransforms.push(PlayerTransformEvent{ p->playerId, p->transform });
+		m_PendingPlayerTransforms.push(PlayerTransformEvent{ p->playerId, p->transform, p->bRunning, p->bAiming, p->fAimPitch });
+		break;
+	}
+	case S2C_PLAYER_RELOAD: {
+		if (size < static_cast<int>(sizeof(S2C_PlayerReload))) return;
+		auto* p = reinterpret_cast<const S2C_PlayerReload*>(data);
+		std::cout << "[Network] Received S2C_PLAYER_RELOAD for player " << p->playerId << std::endl;
+		m_PendingPlayerReloads.push(p->playerId);
 		break;
 	}
 	default:
@@ -473,6 +480,25 @@ std::vector<ShootResultEvent> NetworkManager::ConsumeShootResults()
 	ShootResultEvent ev;
 	while (m_PendingShootResults.try_pop(ev))
 		out.push_back(ev);
+	return out;
+}
+
+void NetworkManager::SendPlayerReload()
+{
+	if (!m_bConnected || m_bOfflineMode) return;
+
+	C2S_PlayerReload p;
+	p.size = sizeof(C2S_PlayerReload);
+	p.type = C2S_PLAYER_RELOAD;
+	SendPacket(&p, p.size);
+}
+
+std::vector<int> NetworkManager::ConsumePlayerReloads()
+{
+	std::vector<int> out;
+	int playerId;
+	while (m_PendingPlayerReloads.try_pop(playerId))
+		out.push_back(playerId);
 	return out;
 }
 

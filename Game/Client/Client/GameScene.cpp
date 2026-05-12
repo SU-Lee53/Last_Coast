@@ -13,7 +13,7 @@ void GameScene::BuildObjects()
 	using namespace std::chrono;
 
 	m_pUIBoard = std::make_unique<UIBoard>();
-	m_pPlayer = std::make_shared<LocalThirdPersonPlayer>();
+	m_pPlayer = std::make_shared<NetworkOwnerThirdPersonPlayer>();
 	m_pPlayer->Initialize();
 	if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 		pThirdPerson->GiveWeapon(WEAPON_TYPE::AK);
@@ -156,4 +156,44 @@ void GameScene::Update()
 	}
 	ImGui::End();
 
+	SyncSceneWithServer();
+}
+
+void GameScene::SyncSceneWithServer()
+{
+	for (auto& [id, player] : m_RemotePlayers) {
+		if (auto remote = std::dynamic_pointer_cast<NetworkRemoteThirdPersonPlayer>(player)) {
+			if (TIME->GetTotalTime() - remote->GetLastPacketTime() > 0.1f) {
+				remote->ResetMovementState();
+			}
+		}
+	}
+
+	for (auto& ev : NETWORK->ConsumePlayerJoins()) {
+
+		if (m_RemotePlayers.contains(ev.playerId)) continue;
+
+		auto remotePlayer = std::make_shared<NetworkRemoteThirdPersonPlayer>();
+		remotePlayer->Initialize();
+
+		remotePlayer->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.initialTransform.m), ev.bRunning, ev.bAiming, ev.fAimPitch);
+		remotePlayer->GiveWeapon(WEAPON_TYPE::AK);
+		AddObject(remotePlayer);
+		m_RemotePlayers[ev.playerId] = remotePlayer;
+	}
+
+	for (auto id : NETWORK->ConsumePlayerLeaves()) {
+		auto it = m_RemotePlayers.find(id);
+		if (it != m_RemotePlayers.end()) {
+			RemoveObject(it->second);
+			m_RemotePlayers.erase(it);
+		}
+	}
+
+	for (auto& ev : NETWORK->ConsumePlayerTransforms()) {
+		auto it = m_RemotePlayers.find(ev.playerId);
+		if (it != m_RemotePlayers.end()) {
+			it->second->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.transform.m), ev.bRunning, ev.bAiming, ev.fAimPitch);
+		}
+	}
 }

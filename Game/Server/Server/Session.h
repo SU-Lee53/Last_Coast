@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "pch.h"
 #include "Room.h"
 #include "protocol.h"
@@ -63,6 +63,7 @@ public:
 	void send_zombie_state(int nZombieId, float x, float z, float yaw, float waypointX, float waypointZ, ZombieBehaviorState state);
 	void send_zombie_attack(int nZombieId, int nTargetPlayerId, float fDamage);
 	void send_shoot_result(const S2C_ShootResult& result);
+	void send_player_reload(int player_id);
 
 public:
 	SOCKET		m_client;
@@ -73,4 +74,7 @@ public:
 	int			m_prev_recv;
 	char		m_username[MAX_NAME_LEN];
 	TransformData m_transform;
+	bool          m_bRunning = false;
+	bool          m_bAiming = false;
+	float         m_fAimPitch = 0.f;
 };
