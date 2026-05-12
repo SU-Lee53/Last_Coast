@@ -20,6 +20,8 @@ private:
 	// 서버에서 수신한 좀비 이벤트(스폰/디스폰/상태/공격)를 매 프레임 처리.
 	void ProcessNetworkZombies();
 
+	void SyncSceneWithServer() override;
+
 private:
 	ZombiePool m_ZombiePool;
 	std::unique_ptr<NavMeshDebugRenderer> m_pNavMeshDebugRenderer;
