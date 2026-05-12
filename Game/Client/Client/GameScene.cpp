@@ -20,6 +20,7 @@ void GameScene::BuildObjects()
 	m_pUIBoard = std::make_unique<UIBoard>();
 	m_pPlayer = std::make_shared<LocalThirdPersonPlayer>();
 	m_pPlayer->Initialize();
+	m_pPlayer->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
 	if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 		pThirdPerson->GiveWeapon(WEAPON_TYPE::AK);
 	}
@@ -53,7 +54,7 @@ void GameScene::BuildObjects()
 	pText->SetAnchor(Vector2{ 0,0 });
 	pText->SetPivot(Vector2{ 0,0 });
 	pText->SetPosition(Vector2{ 10,150 });
-	pText->SetSize(Vector2{ 250,50 });
+	pText->SetSizePerLetter(Vector2{ 15,50 });
 	m_pUIBoard->InsertUI(pText);
 
 }

@@ -1,6 +1,9 @@
 ﻿#include "pch.h"
 #include "TextBox.h"
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// IText
+
 IText::IText(Font::ID font)
 {
 	m_fontID = font;
@@ -54,8 +57,12 @@ void IText::RefreshTextHandle()
 
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// TextBox
+
 void TextBox::Update()
 {
+	m_v2Size = Vector2(m_v2SizePerLetter.x * m_wstrText.length(), m_v2SizePerLetter.y);
 	RefreshTextHandle();
 }
 
