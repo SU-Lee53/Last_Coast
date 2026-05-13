@@ -9,7 +9,7 @@ bool ZombieManager::LoadAttackAnimDuration(const std::string& strAnimBinPath)
 {
 	std::ifstream in(strAnimBinPath, std::ios::binary);
 	if (!in) {
-		std::cout << "[ZombieManager] Attack anim not found: " << strAnimBinPath << "\n";
+		// std::cout << "[ZombieManager] Attack anim not found: " << strAnimBinPath << "\n";
 		return false;
 	}
 
@@ -24,9 +24,9 @@ bool ZombieManager::LoadAttackAnimDuration(const std::string& strAnimBinPath)
 	float fDuration = j["Animations"][0]["Duration"].get<float>();
 	m_fAttackAnimDuration = fDuration + m_fBlendOutTime;
 
-	std::cout << "[ZombieManager] Attack anim duration=" << fDuration
-	          << "s + blendOut=" << m_fBlendOutTime
-	          << "s = " << m_fAttackAnimDuration << "s\n";
+	// std::cout << "[ZombieManager] Attack anim duration=" << fDuration
+	//          << "s + blendOut=" << m_fBlendOutTime
+	//          << "s = " << m_fAttackAnimDuration << "s\n";
 	return true;
 }
 
@@ -38,11 +38,11 @@ bool ZombieManager::Initialize(const std::string& strNavMeshPath)
 
 	if (!m_pAIManager->LoadNavMesh(strNavMeshPath))
 	{
-		std::cout << "[ZombieManager] NavMesh 로드 실패: " << strNavMeshPath << "\n";
+		// std::cout << "[ZombieManager] NavMesh 로드 실패: " << strNavMeshPath << "\n";
 		return false;
 	}
 
-	std::cout << "[ZombieManager] NavMesh 로드 완료: " << strNavMeshPath << "\n";
+	// std::cout << "[ZombieManager] NavMesh 로드 완료: " << strNavMeshPath << "\n";
 	return true;
 }
 
@@ -78,8 +78,7 @@ int ZombieManager::SpawnZombie(Vector3 SpawnPos)
 	zombie.v3PrevPos      = v3SpawnPos;
 	zombie.fYaw           = 0.f;
 
-	std::cout << "[ZombieManager] 좀비 스폰 id=" << nId
-	          << " pos=(" << v3SpawnPos.x << "," << v3SpawnPos.z << ")\n";
+	// std::cout << "[ZombieManager] 좀비 스폰 id=" << nId << " pos=(" << v3SpawnPos.x << "," << v3SpawnPos.z << ")\n";
 	return nId;
 }
 
@@ -89,7 +88,7 @@ void ZombieManager::DespawnZombie(int nId)
 	if (it == m_Zombies.end()) return;
 
 	m_Zombies.erase(it);
-	std::cout << "[ZombieManager] 좀비 디스폰 id=" << nId << "\n";
+	// std::cout << "[ZombieManager] 좀비 디스폰 id=" << nId << "\n";
 }
 
 void ZombieManager::Tick(float fDeltaTime,
@@ -103,8 +102,8 @@ void ZombieManager::Tick(float fDeltaTime,
 	bool bDebugPrint = (++nDebugCounter % 150 == 0); // 5초마다 (30Hz * 5)
 
 	if (bDebugPrint)
-		std::cout << "[ZombieTick] players=" << playerPositions.size()
-		          << " zombies=" << m_Zombies.size() << "\n";
+		// std::cout << "[ZombieTick] players=" << playerPositions.size()
+		//          << " zombies=" << m_Zombies.size() << "\n";
 
 	for (auto& [nId, zombie] : m_Zombies)
 	{
@@ -161,11 +160,11 @@ void ZombieManager::Tick(float fDeltaTime,
 			bool bHeard   = (fDist <= m_fHearingRange);
 			zombie.pAgent->UpdateSensoryStimulus(0, v3TargetPos, bVisible, bHeard);
 
-			if (bDebugPrint && nId == 0)
-				std::cout << "  zombie[0] dist=" << fDist
-				          << " visible=" << bVisible
-				          << " heard=" << bHeard
-				          << " state=" << (int)zombie.pAgent->GetBehaviorState() << "\n";
+			//if (bDebugPrint && nId == 0)
+			//	std::cout << "  zombie[0] dist=" << fDist
+			//	         << " visible=" << bVisible
+			//	         << " heard=" << bHeard
+			//	         << " state=" << (int)zombie.pAgent->GetBehaviorState() << "\n";
 		}
 
 		// 공격 데미지 딜레이 처리 (애니메이션 Notify 타이밍 모사)
@@ -194,9 +193,9 @@ void ZombieManager::Tick(float fDeltaTime,
 
 			if (nId == 0 && nPrevState != nNewState) {
 				static const char* sNames[] = {"Idle","Wander","Alert","Invest","Chase","Attack"};
-				std::cout << "[Z0] " << sNames[nPrevState] << " -> " << sNames[nNewState]
-				          << " dist=" << fDist
-				          << " pathState=" << static_cast<int>(zombie.pAgent->GetPathState()) << "\n";
+				// std::cout << "[Z0] " << sNames[nPrevState] << " -> " << sNames[nNewState]
+				//          << " dist=" << fDist
+				//          << " pathState=" << static_cast<int>(zombie.pAgent->GetPathState()) << "\n";
 			}
 
 			if (zombie.pAgent->ConsumeAttackHit() && nTargetId >= 0) {

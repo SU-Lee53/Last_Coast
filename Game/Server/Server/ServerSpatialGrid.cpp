@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "ServerSpatialGrid.h"
 
 #define JSON_HAS_RANGES 0
@@ -12,7 +12,7 @@ bool ServerSpatialGrid::LoadMergedBounds(const std::string& strModelBinPath,
 {
 	std::ifstream in(strModelBinPath, std::ios::binary);
 	if (!in) {
-		std::cout << "  [LoadMergedBounds] File not found: " << strModelBinPath << "\n";
+		// std::cout << "  [LoadMergedBounds] File not found: " << strModelBinPath << "\n";
 		return false;
 	}
 
@@ -22,7 +22,7 @@ bool ServerSpatialGrid::LoadMergedBounds(const std::string& strModelBinPath,
 	nlohmann::json j = nlohmann::json::from_bson(buf);
 
 	if (!j.contains("MergedBounds")) {
-		std::cout << "  [LoadMergedBounds] No MergedBounds in: " << strModelBinPath << "\n";
+		// std::cout << "  [LoadMergedBounds] No MergedBounds in: " << strModelBinPath << "\n";
 		return false;
 	}
 
@@ -47,7 +47,7 @@ bool ServerSpatialGrid::LoadFromSceneFile(const std::string& strSceneJsonPath,
 {
 	std::ifstream sceneIn(strSceneJsonPath);
 	if (!sceneIn) {
-		std::cout << "[ServerSpatialGrid] Failed to open scene: " << strSceneJsonPath << "\n";
+		// std::cout << "[ServerSpatialGrid] Failed to open scene: " << strSceneJsonPath << "\n";
 		return false;
 	}
 
@@ -100,7 +100,7 @@ bool ServerSpatialGrid::LoadFromSceneFile(const std::string& strSceneJsonPath,
 	}
 
 	if (m_Proxies.empty()) {
-		std::cout << "[ServerSpatialGrid] No static objects loaded.\n";
+		// std::cout << "[ServerSpatialGrid] No static objects loaded.\n";
 		return false;
 	}
 
@@ -118,8 +118,8 @@ bool ServerSpatialGrid::LoadFromSceneFile(const std::string& strSceneJsonPath,
 
 	BuildGrid(desc);
 
-	std::cout << "[ServerSpatialGrid] Loaded " << m_Proxies.size()
-	          << " static OBBs, grid " << desc.nCellsX << "x" << desc.nCellsZ << "\n";
+	// std::cout << "[ServerSpatialGrid] Loaded " << m_Proxies.size()
+	//          << " static OBBs, grid " << desc.nCellsX << "x" << desc.nCellsZ << "\n";
 
 	return true;
 }

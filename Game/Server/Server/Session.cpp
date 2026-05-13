@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "Session.h"
 #include "ZombieManager.h"
 #include "ServerSpatialGrid.h"
@@ -117,7 +117,7 @@ bool Session::process_packet(unsigned char* p)
 	case C2S_LOGIN: {
 		C2S_Login* packet = reinterpret_cast<C2S_Login*>(p);
 		strncpy_s(m_username, packet->username, MAX_NAME_LEN);
-		std::cout << "Player[" << m_id << "] logged in as " << m_username << std::endl;
+		// std::cout << "Player[" << m_id << "] logged in as " << m_username << std::endl;
 		send_avatar_info();
 
 		// 이미 스폰된 좀비 목록을 신규 클라이언트에게 전송
@@ -141,7 +141,7 @@ bool Session::process_packet(unsigned char* p)
 
 		// 좀비 AI용 플레이어 위치 갱신
 		g_PlayerPositions[m_id] = Vector3{ x, y, z };
-		//std::cout << "[Transform] Player[" << m_id << "] pos(" << x << "," << y << "," << z << ")\n";
+		//// std::cout << "[Transform] Player[" << m_id << "] pos(" << x << "," << y << "," << z << ")\n";
 
 		send_transform_packet(m_id);
 	}
@@ -153,9 +153,9 @@ bool Session::process_packet(unsigned char* p)
 		Vector3 v3Dir{ packet->dirX, packet->dirY, packet->dirZ };
 		v3Dir.Normalize();
 
-		std::cout << "[Shoot] Player[" << m_id << "] origin("
-		          << v3Origin.x << "," << v3Origin.y << "," << v3Origin.z
-		          << ") dir(" << v3Dir.x << "," << v3Dir.y << "," << v3Dir.z << ")\n";
+		// std::cout << "[Shoot] Player[" << m_id << "] origin("
+		//          << v3Origin.x << "," << v3Origin.y << "," << v3Origin.z
+		//          << ") dir(" << v3Dir.x << "," << v3Dir.y << "," << v3Dir.z << ")\n";
 
 		constexpr float fMaxDist = 5000.f;
 		constexpr float fDamage  = 25.f;
@@ -169,10 +169,10 @@ bool Session::process_packet(unsigned char* p)
 		ServerRayHitResult staticHit;
 		g_SpatialGrid.RayTestStatics(v3Origin, v3Dir, fMaxDist, staticHit);
 
-		std::cout << "[Shoot] zombieHit=" << nHitZombieId
-		          << " zombieDist=" << fZombieDist
-		          << " staticHit=" << staticHit.bHit
-		          << " staticDist=" << staticHit.fDistance << "\n";
+		// std::cout << "[Shoot] zombieHit=" << nHitZombieId
+		//          << " zombieDist=" << fZombieDist
+		//          << " staticHit=" << staticHit.bHit
+		//          << " staticDist=" << staticHit.fDistance << "\n";
 
 		// ── 3. 가장 가까운 히트 채택 ────────────────────────────────────────
 		S2C_ShootResult result{};
@@ -244,7 +244,7 @@ bool Session::process_packet(unsigned char* p)
 		break;
 	}
 	case C2S_PLAYER_RELOAD: {
-		std::cout << "[Reload] Player[" << m_id << "] requested reload\n";
+		// std::cout << "[Reload] Player[" << m_id << "] requested reload\n";
 		for (auto& cl : clients) {
 			if (cl.m_is_connected) {
 				cl.send_player_reload(m_id);
@@ -253,7 +253,7 @@ bool Session::process_packet(unsigned char* p)
 	}
 	break;
 	default:
-		std::cout << "Unknown packet type received from player[" << m_id << "].\n";
+		// std::cout << "Unknown packet type received from player[" << m_id << "].\n";
 		return false;
 	}
 	return true;
