@@ -347,7 +347,7 @@ void Zombie::PostUpdate()
 	DynamicObject::PostUpdate();
 
 	// ── 디버그 ImGui (첫 번째 서버 좀비만) ───────────────────────────────────
-	if (bOnline && m_nServerId == 0)
+	/*if (bOnline && m_nServerId == 0)
 	{
 		static const char* sModes[] = { "NoSnap", "Bracket", "Before", "Extrap", "Single" };
 		static const char* sStates[] = { "Idle", "Wandering", "Alert", "Investigating", "Chasing", "Attacking" };
@@ -373,7 +373,7 @@ void Zombie::PostUpdate()
 		ImGui::Text("Delta:      %.2f, %.2f, %.2f", v3DbgDelta.x, v3DbgDelta.y, v3DbgDelta.z);
 		ImGui::Text("DeltaXZ:    %.2f", sqrtf(v3DbgDelta.x*v3DbgDelta.x + v3DbgDelta.z*v3DbgDelta.z));
 		ImGui::End();
-	}
+	}*/
 }
 
 Vector3 Zombie::GetPosition() const
