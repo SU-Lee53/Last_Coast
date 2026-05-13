@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Player.h"
 #include "BoundingCapsule.h"
 
@@ -128,12 +128,13 @@ public:
 	void PlayReloadStartAction();
 	void PlayReloadEndAction();
 
+public:
+	void PlayFireAction();
+
 protected:
 	// Player action
 	void EnterAim();
 	void LeaveAim();
-
-	void PlayFireAction();
 	void PlayMeleeStartAction();
 	void PlayMeleeEndAction();
 

@@ -269,16 +269,6 @@ void GameScene::ProcessNetworkZombies()
 	// 오프라인이거나 미연결 시 서버 이벤트 처리 생략
 	if (!NETWORK->IsConnected() || NETWORK->IsOffline()) return;
 
-	// ── 플레이어 위치 전송 (20Hz 스로틀링은 내부 처리) ─────────────────────
-	{
-		const Vector3& v3Pos = m_pPlayer->GetTransform()->GetPosition();
-		// yaw: Transform에서 Y 회전을 추출 (플레이어가 SetRotation(0,yaw,0) 사용)
-		Matrix mtxWorld = m_pPlayer->GetWorldMatrix();
-		float fYaw = std::atan2f(mtxWorld._31, mtxWorld._33);
-		NETWORK->SetLocalPlayerInfo(v3Pos, fYaw);
-		NETWORK->TrySendPlayerPosition();
-	}
-
 	// ── 스폰 이벤트 처리 (Task 6) ─────────────────────────────────────────
 	for (auto& ev : NETWORK->ConsumeSpawnEvents())
 	{
@@ -404,9 +394,14 @@ void GameScene::ProcessShootResults()
 				pPlayer->ShowHitMarker();
 		}
 
-		// ── 다른 플레이어의 총구 이펙트 ─────────────────────────────────────
+		// ── 다른 플레이어의 총구 이펙트 + 발사 애니메이션 ────────────────────
 		if (ev.shooterPlayerId != NETWORK->GetPlayerID())
 		{
+			auto it = m_RemotePlayers.find(ev.shooterPlayerId);
+			if (it != m_RemotePlayers.end()) {
+				it->second->PlayFireAction();
+			}
+
 			Vector3 v3MuzzleDir = ev.v3ShootDir;
 			if (v3MuzzleDir.LengthSquared() > 1e-8f)
 				v3MuzzleDir.Normalize();

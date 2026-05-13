@@ -216,9 +216,6 @@ void IThirdPersonPlayer::PostUpdate()
 {
 	if (UsesInputMovement()) {
 		ApplyInputMovement();
-		if (NeedsSendMovementState()) {
-			SendLocalCommandToServer();
-		}
 	}
 	else if (UsesServerStateMovement()) {
 		ApplyServerMovementXZ();
@@ -231,6 +228,11 @@ void IThirdPersonPlayer::PostUpdate()
 		Vector3 v3LookDirection = pThirdPersonCamera->GetForwardXZ();
 		float fYaw = std::atan2f(v3LookDirection.x, v3LookDirection.z);
 		GetTransform()->SetRotation(0.f, fYaw, 0.f);
+	}
+
+	// 에임 회전 적용 후 전송 (회전값이 패킷에 반영되도록)
+	if (NeedsSendMovementState()) {
+		SendLocalCommandToServer();
 	}
 
 	IPlayer::PostUpdate();
@@ -1078,7 +1080,7 @@ void NetworkOwnerThirdPersonPlayer::SendLocalCommandToServer()
 	// 상태 변화 체크 (또는 움직임 체크)
 	bool bStateChanged = (bLastAiming != m_bAiming) || (bLastRunning != m_bRunning);
 	
-	if (m_bMoved || bStateChanged) {
+	if (m_bMoved || bStateChanged || m_bAiming) {
 		C2S_Transform packet;
 		packet.size = sizeof(C2S_Transform);
 		packet.type = C2S_TRANSFORM;
@@ -1101,39 +1103,8 @@ void NetworkOwnerThirdPersonPlayer::SendLocalCommandToServer()
 void NetworkRemoteThirdPersonPlayer::UpdateNetworkTransform(const Matrix& mtxWorld, bool bRunning, bool bAiming, float fAimPitch)
 {
 	auto pTransform = GetTransform();
-	Vector3 v3PrevPos = pTransform->GetPosition();
-	Vector3 v3NewPos = mtxWorld.Translation();
 
-	float fCurrentTime = TIME->GetTotalTime();
-	float fActualDT = fCurrentTime - m_fLastPacketTime;
-
-	// 패킷 지터 방지
-	if (fActualDT < 0.01f) {
-		pTransform->SetWorldMatrix(mtxWorld);
-		return;
-	}
-
-	m_fLastPacketTime = fCurrentTime;
-
-	Vector3 v3Delta = v3NewPos - v3PrevPos;
-	v3Delta.y = 0.f;
-
-	float fDistSq = v3Delta.LengthSquared();
-
-	if (fDistSq > 0.000001f) {
-		m_bMoved = true;
-		m_v3MoveDirection = v3Delta;
-		m_v3MoveDirection.Normalize();
-		
-		// 속도는 애니메이션 블렌딩을 위해 계산 유지
-		m_fMoveSpeed = std::sqrt(fDistSq) / fActualDT;
-	}
-	else {
-		m_bMoved = false;
-		m_fMoveSpeed = 0.f;
-	}
-
-	// 패킷에서 받은 상태를 직접 적용
+	// 상태 플래그는 지터 필터와 무관하게 항상 최신값 적용
 	m_bRunning = bRunning;
 	m_fAimPitch = fAimPitch;
 
@@ -1145,4 +1116,31 @@ void NetworkRemoteThirdPersonPlayer::UpdateNetworkTransform(const Matrix& mtxWor
 	}
 
 	pTransform->SetWorldMatrix(mtxWorld);
+
+	// 이동 속도 계산은 지터 필터 적용
+	float fCurrentTime = TIME->GetTotalTime();
+	float fActualDT = fCurrentTime - m_fLastPacketTime;
+
+	if (fActualDT < 0.01f) {
+		return;
+	}
+
+	m_fLastPacketTime = fCurrentTime;
+
+	Vector3 v3PrevPos = pTransform->GetPosition();
+	Vector3 v3Delta = mtxWorld.Translation() - v3PrevPos;
+	v3Delta.y = 0.f;
+
+	float fDistSq = v3Delta.LengthSquared();
+
+	if (fDistSq > 0.000001f) {
+		m_bMoved = true;
+		m_v3MoveDirection = v3Delta;
+		m_v3MoveDirection.Normalize();
+		m_fMoveSpeed = std::sqrt(fDistSq) / fActualDT;
+	}
+	else {
+		m_bMoved = false;
+		m_fMoveSpeed = 0.f;
+	}
 }
