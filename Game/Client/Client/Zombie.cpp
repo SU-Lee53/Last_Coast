@@ -349,30 +349,30 @@ void Zombie::PostUpdate()
 	// ── 디버그 ImGui (첫 번째 서버 좀비만) ───────────────────────────────────
 	if (bOnline && m_nServerId == 0)
 	{
-		static const char* sModes[] = { "NoSnap", "Bracket", "Before", "Extrap", "Single" };
-		static const char* sStates[] = { "Idle", "Wandering", "Alert", "Investigating", "Chasing", "Attacking" };
-		bool bMontageActive = pAC && pAC->GetMontage() && pAC->GetMontage()->GetBlendWeight() > 0.f;
-		ImGui::Begin("Zombie Interp Debug");
-		ImGui::Text("ServerState: %s", (m_eServerBehaviorState < 6) ? sStates[m_eServerBehaviorState] : "???");
-		ImGui::Text("Montage: %s (%.2f)", bMontageActive ? "PLAYING" : "off",
-		            pAC && pAC->GetMontage() ? pAC->GetMontage()->GetBlendWeight() : 0.f);
-		ImGui::Text("MoveSpeedSq: %.4f", m_fMoveSpeedSqXZ);
-		ImGui::Separator();
-		ImGui::Text("Snapshots: %d", nDbgSnapCount);
-		ImGui::Text("RenderTime: %.4f", fDbgRenderTime);
-		ImGui::Text("Front time: %.4f", fDbgFrontTime);
-		ImGui::Text("Back  time: %.4f", fDbgBackTime);
-		ImGui::Text("Gap (back-front): %.4f", fDbgBackTime - fDbgFrontTime);
-		ImGui::Text("Delay (back-render): %.4f", fDbgBackTime - fDbgRenderTime);
-		ImGui::Text("InterpDelay: %.4f", m_fInterpDelay);
-		ImGui::Text("Mode: %s", sModes[nDbgMode]);
-		ImGui::Text("Lerp t: %.4f", fDbgT);
-		ImGui::Separator();
-		ImGui::Text("CurrentPos: %.1f, %.1f, %.1f", v3CurrentPos.x, v3CurrentPos.y, v3CurrentPos.z);
-		ImGui::Text("InterpPos:  %.1f, %.1f, %.1f", v3DbgInterpPos.x, v3DbgInterpPos.y, v3DbgInterpPos.z);
-		ImGui::Text("Delta:      %.2f, %.2f, %.2f", v3DbgDelta.x, v3DbgDelta.y, v3DbgDelta.z);
-		ImGui::Text("DeltaXZ:    %.2f", sqrtf(v3DbgDelta.x*v3DbgDelta.x + v3DbgDelta.z*v3DbgDelta.z));
-		ImGui::End();
+		//static const char* sModes[] = { "NoSnap", "Bracket", "Before", "Extrap", "Single" };
+		//static const char* sStates[] = { "Idle", "Wandering", "Alert", "Investigating", "Chasing", "Attacking" };
+		//bool bMontageActive = pAC && pAC->GetMontage() && pAC->GetMontage()->GetBlendWeight() > 0.f;
+		//ImGui::Begin("Zombie Interp Debug");
+		//ImGui::Text("ServerState: %s", (m_eServerBehaviorState < 6) ? sStates[m_eServerBehaviorState] : "???");
+		//ImGui::Text("Montage: %s (%.2f)", bMontageActive ? "PLAYING" : "off",
+		//            pAC && pAC->GetMontage() ? pAC->GetMontage()->GetBlendWeight() : 0.f);
+		//ImGui::Text("MoveSpeedSq: %.4f", m_fMoveSpeedSqXZ);
+		//ImGui::Separator();
+		//ImGui::Text("Snapshots: %d", nDbgSnapCount);
+		//ImGui::Text("RenderTime: %.4f", fDbgRenderTime);
+		//ImGui::Text("Front time: %.4f", fDbgFrontTime);
+		//ImGui::Text("Back  time: %.4f", fDbgBackTime);
+		//ImGui::Text("Gap (back-front): %.4f", fDbgBackTime - fDbgFrontTime);
+		//ImGui::Text("Delay (back-render): %.4f", fDbgBackTime - fDbgRenderTime);
+		//ImGui::Text("InterpDelay: %.4f", m_fInterpDelay);
+		//ImGui::Text("Mode: %s", sModes[nDbgMode]);
+		//ImGui::Text("Lerp t: %.4f", fDbgT);
+		//ImGui::Separator();
+		//ImGui::Text("CurrentPos: %.1f, %.1f, %.1f", v3CurrentPos.x, v3CurrentPos.y, v3CurrentPos.z);
+		//ImGui::Text("InterpPos:  %.1f, %.1f, %.1f", v3DbgInterpPos.x, v3DbgInterpPos.y, v3DbgInterpPos.z);
+		//ImGui::Text("Delta:      %.2f, %.2f, %.2f", v3DbgDelta.x, v3DbgDelta.y, v3DbgDelta.z);
+		//ImGui::Text("DeltaXZ:    %.2f", sqrtf(v3DbgDelta.x*v3DbgDelta.x + v3DbgDelta.z*v3DbgDelta.z));
+		//ImGui::End();
 	}
 }
 
