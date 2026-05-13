@@ -450,7 +450,7 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 
 		// 6. Add z-margin
 		float fMargin = 50.0f;
-		//fMinZ -= fMargin;
+		fMinZ -= fMargin;
 		fMaxZ += fMargin;
 
 		// 7. off-center orthographic project
