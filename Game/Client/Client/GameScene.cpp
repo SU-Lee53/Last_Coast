@@ -163,7 +163,7 @@ void GameScene::SyncSceneWithServer()
 {
 	for (auto& [id, player] : m_RemotePlayers) {
 		if (auto remote = std::dynamic_pointer_cast<NetworkRemoteThirdPersonPlayer>(player)) {
-			if (TIME->GetTotalTime() - remote->GetLastPacketTime() > 0.1f) {
+			if (TIME->GetTotalTime() - remote->GetLastPacketTime() > 0.3f) {
 				remote->ResetMovementState();
 			}
 		}
@@ -194,6 +194,14 @@ void GameScene::SyncSceneWithServer()
 		auto it = m_RemotePlayers.find(ev.playerId);
 		if (it != m_RemotePlayers.end()) {
 			it->second->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.transform.m), ev.bRunning, ev.bAiming, ev.fAimPitch);
+		}
+	}
+
+	for (auto id : NETWORK->ConsumePlayerReloads()) {
+		auto it = m_RemotePlayers.find(id);
+		if (it != m_RemotePlayers.end()) {
+			std::cout << "[Scene] Playing Reload for Remote Player " << id << std::endl;
+			it->second->PlayReloadStartAction();
 		}
 	}
 }

@@ -1062,9 +1062,6 @@ void NetworkOwnerThirdPersonPlayer::ProcessInput()
 	ProcessLocalCameraInput();
 	ProcessLocalMovementInput();
 	ProcessLocalActionInput();
-	
-	// 서버로 이동 패킷 전송
-	SendLocalCommandToServer();
 }
 
 void NetworkOwnerThirdPersonPlayer::SendLocalCommandToServer()

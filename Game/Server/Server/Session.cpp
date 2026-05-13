@@ -241,6 +241,7 @@ bool Session::process_packet(unsigned char* p)
 		for (auto& cl : clients)
 			if (cl.m_is_connected)
 				cl.send_shoot_result(result);
+		break;
 	}
 	case C2S_PLAYER_RELOAD: {
 		std::cout << "[Reload] Player[" << m_id << "] requested reload\n";

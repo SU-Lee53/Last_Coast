@@ -118,8 +118,15 @@ void PlayerAnimationController::ComputeAnimation()
 		m_pBlendMachine->Blend(ownerBones, basePose, blendPose, m_mtxCachedLocalBoneTransforms, fMontageBlendWeight);
 
 		// 조준 허리 회전
-		float fCameraPitch = m_wpPlayerCamera.lock()->GetPitch();
-		Quaternion v4CameraPitch = Quaternion::CreateFromYawPitchRoll(0.f, 0.f, -XMConvertToRadians(fCameraPitch));
+		float fPitch = 0.f;
+		auto pCamera = m_wpPlayerCamera.lock();
+		if (pCamera) {
+			fPitch = pCamera->GetPitch();
+		}
+		else {
+			fPitch = std::static_pointer_cast<IThirdPersonPlayer>(m_wpOwner.lock())->GetAimPitch();
+		}
+		Quaternion v4CameraPitch = Quaternion::CreateFromYawPitchRoll(0.f, 0.f, -XMConvertToRadians(fPitch));
 
 		std::vector<Matrix> mtxComponentSpace;
 		AnimationHepler::LocalToComponent(ownerBones, m_mtxCachedLocalBoneTransforms, mtxComponentSpace);
