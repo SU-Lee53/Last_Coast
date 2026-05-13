@@ -18,7 +18,7 @@ void GameScene::BuildObjects()
 	using namespace std::chrono;
 
 	m_pUIBoard = std::make_unique<UIBoard>();
-	m_pPlayer = std::make_shared<LocalThirdPersonPlayer>();
+	m_pPlayer = std::make_shared<NetworkOwnerThirdPersonPlayer>();
 	m_pPlayer->Initialize();
 	m_pPlayer->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
 	if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
@@ -425,6 +425,13 @@ void GameScene::ProcessShootResults()
 void GameScene::SyncSceneWithServer()
 {
 	if (!NETWORK->IsConnected() || NETWORK->IsOffline()) return;
+	for (auto& [id, player] : m_RemotePlayers) {
+		if (auto remote = std::dynamic_pointer_cast<NetworkRemoteThirdPersonPlayer>(player)) {
+			if (TIME->GetTotalTime() - remote->GetLastPacketTime() > 0.3f) {
+				remote->ResetMovementState();
+			}
+		}
+	}
 
 	for (auto& ev : NETWORK->ConsumePlayerJoins()) {
 
@@ -433,8 +440,8 @@ void GameScene::SyncSceneWithServer()
 		auto remotePlayer = std::make_shared<NetworkRemoteThirdPersonPlayer>();
 		remotePlayer->Initialize();
 
-		remotePlayer->GetTransform()->SetWorldMatrix(reinterpret_cast<Matrix&>(ev.initialTransform.m));
-
+		remotePlayer->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.initialTransform.m), ev.bRunning, ev.bAiming, ev.fAimPitch);
+		remotePlayer->GiveWeapon(WEAPON_TYPE::AK);
 		AddObject(remotePlayer);
 		m_RemotePlayers[ev.playerId] = remotePlayer;
 	}
@@ -450,7 +457,15 @@ void GameScene::SyncSceneWithServer()
 	for (auto& ev : NETWORK->ConsumePlayerTransforms()) {
 		auto it = m_RemotePlayers.find(ev.playerId);
 		if (it != m_RemotePlayers.end()) {
-			it->second->GetTransform()->SetWorldMatrix(reinterpret_cast<Matrix&>(ev.transform.m));
+			it->second->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.transform.m), ev.bRunning, ev.bAiming, ev.fAimPitch);
+		}
+	}
+
+	for (auto id : NETWORK->ConsumePlayerReloads()) {
+		auto it = m_RemotePlayers.find(id);
+		if (it != m_RemotePlayers.end()) {
+			std::cout << "[Scene] Playing Reload for Remote Player " << id << std::endl;
+			it->second->PlayReloadStartAction();
 		}
 	}
 }

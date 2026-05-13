@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 enum class MONTAGE_SECTION_END_RULE {
 	NEXT,	// 다음 Section 으로
@@ -45,6 +45,7 @@ public:
 	const std::vector<AnimationKey>& GetOutputPose() const { return m_OutputPose; }
 	float GetBlendWeight() const { return m_fBlendWeight; }
 	bool IsFreezed() const { return m_bFreezed; }
+	bool IsPlaying() const { return m_bPlaying; }
 
 protected:
 	virtual void BuildMontage() {}

@@ -26,11 +26,17 @@ struct NetSnapshot {
 struct PlayerJoinEvent {
 	int           playerId;
 	TransformData initialTransform;
+	bool          bRunning;
+	bool          bAiming;
+	float         fAimPitch;
 };
 
 struct PlayerTransformEvent {
 	int           playerId;
 	TransformData transform;
+	bool          bRunning;
+	bool          bAiming;
+	float         fAimPitch;
 };
 
 // 원격 플레이어 1명의 보간 상태
@@ -111,6 +117,9 @@ public:
 	void SendPlayerShoot(const Vector3& v3Origin, const Vector3& v3Direction, const Vector3& v3MuzzlePos);
 	std::vector<ShootResultEvent> ConsumeShootResults();
 
+	void SendPlayerReload();
+	std::vector<int> ConsumePlayerReloads();
+
 	// ── 플레이어 이벤트 소비 (Task: Remote Player Sync) ─────────────────────────
 	std::vector<PlayerJoinEvent>      ConsumePlayerJoins();
 	std::vector<int>                  ConsumePlayerLeaves();
@@ -189,4 +198,5 @@ private:
 	concurrency::concurrent_queue<PlayerJoinEvent>                m_PendingPlayerJoins;
 	concurrency::concurrent_queue<int>                            m_PendingPlayerLeaves;
 	concurrency::concurrent_queue<PlayerTransformEvent>           m_PendingPlayerTransforms;
+	concurrency::concurrent_queue<int>                            m_PendingPlayerReloads;
 };

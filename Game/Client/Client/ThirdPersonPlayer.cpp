@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "ThirdPersonPlayer.h"
 #include "ThirdPersonCamera.h"
 #include "NodeObject.h"
@@ -846,15 +846,23 @@ void IThirdPersonPlayer::PlayReloadStartAction()
 	auto pWeapon = GetCurrentWeaponObject();
 	if (pWeapon->IsInReloading() == true) return;
 
+	std::cout << ">>> [Player] PlayReloadStartAction called (Local: " << (GetCamera() ? "YES" : "NO") << ") <<<\n";
+
+	// 로컬 플레이어라면 서버에 재장전 알림
+	if (GetCamera()) {
+		NetworkManager::GetInstance()->SendPlayerReload();
+	}
+
 	auto pAnimationCtrl =
 		std::static_pointer_cast<PlayerAnimationController>(
 			GetComponent<AnimationController>());
 
-	if (m_bAiming) {
-		pAnimationCtrl->GetMontage()->JumpToSection("Rifle Reloading");
+	auto pMontage = pAnimationCtrl->GetMontage().get();
+	if (m_bAiming && pMontage->IsPlaying()) {
+		pMontage->JumpToSection("Rifle Reloading");
 	}
 	else {
-		pAnimationCtrl->GetMontage()->PlayMontage("Rifle Reloading");
+		pMontage->PlayMontage("Rifle Reloading");
 	}
 	pWeapon->BeginReload();
 }
@@ -1056,24 +1064,85 @@ void NetworkOwnerThirdPersonPlayer::ProcessInput()
 	ProcessLocalCameraInput();
 	ProcessLocalMovementInput();
 	ProcessLocalActionInput();
-
-	// 서버로 이동 패킷 전송
-	SendLocalCommandToServer();
 }
 
 void NetworkOwnerThirdPersonPlayer::SendLocalCommandToServer()
 {
-	// 이동이나 카메라 회전 등으로 인해 Transform 변경 가능성이 있는 경우 패킷 전송
-	if (m_bMoved) {
+	// 이동, 조준, 달리기 상태가 변경되었을 때 패킷 전송
+	// 매 프레임 호출되므로 상태 변화가 있을 때만 보내는 것이 효율적이지만, 
+	// 여기서는 단순함을 위해 m_bMoved 조건에 m_bAiming 등을 추가하거나 항상 보내도록 수정
+	
+	static bool bLastAiming = false;
+	static bool bLastRunning = false;
+	
+	// 상태 변화 체크 (또는 움직임 체크)
+	bool bStateChanged = (bLastAiming != m_bAiming) || (bLastRunning != m_bRunning);
+	
+	if (m_bMoved || bStateChanged) {
 		C2S_Transform packet;
 		packet.size = sizeof(C2S_Transform);
 		packet.type = C2S_TRANSFORM;
 		
 		memcpy(&packet.transform.m, &GetTransform()->GetWorldMatrix(), sizeof(float) * 16);
+		packet.bRunning = m_bRunning;
+		packet.bAiming = m_bAiming;
 		
+		auto pCamera = std::static_pointer_cast<ThirdPersonCamera>(GetCamera());
+		if (pCamera) packet.fAimPitch = pCamera->GetPitch();
+		else packet.fAimPitch = 0.f;
+
 		NetworkManager::GetInstance()->SendPacket(&packet, packet.size);
 		
-		// 디버깅용: 전송 시도 확인
-		//OutputDebugStringA("Client: C2S_TRANSFORM SendPacket called.\n");
+		bLastAiming = m_bAiming;
+		bLastRunning = m_bRunning;
 	}
+}
+
+void NetworkRemoteThirdPersonPlayer::UpdateNetworkTransform(const Matrix& mtxWorld, bool bRunning, bool bAiming, float fAimPitch)
+{
+	auto pTransform = GetTransform();
+	Vector3 v3PrevPos = pTransform->GetPosition();
+	Vector3 v3NewPos = mtxWorld.Translation();
+
+	float fCurrentTime = TIME->GetTotalTime();
+	float fActualDT = fCurrentTime - m_fLastPacketTime;
+
+	// 패킷 지터 방지
+	if (fActualDT < 0.01f) {
+		pTransform->SetWorldMatrix(mtxWorld);
+		return;
+	}
+
+	m_fLastPacketTime = fCurrentTime;
+
+	Vector3 v3Delta = v3NewPos - v3PrevPos;
+	v3Delta.y = 0.f;
+
+	float fDistSq = v3Delta.LengthSquared();
+
+	if (fDistSq > 0.000001f) {
+		m_bMoved = true;
+		m_v3MoveDirection = v3Delta;
+		m_v3MoveDirection.Normalize();
+		
+		// 속도는 애니메이션 블렌딩을 위해 계산 유지
+		m_fMoveSpeed = std::sqrt(fDistSq) / fActualDT;
+	}
+	else {
+		m_bMoved = false;
+		m_fMoveSpeed = 0.f;
+	}
+
+	// 패킷에서 받은 상태를 직접 적용
+	m_bRunning = bRunning;
+	m_fAimPitch = fAimPitch;
+
+	if (bAiming) {
+		EnterAim();
+	}
+	else {
+		LeaveAim();
+	}
+
+	pTransform->SetWorldMatrix(mtxWorld);
 }

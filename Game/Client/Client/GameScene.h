@@ -9,6 +9,7 @@ public:
 	void OnLeaveScene() override;
 	void ProcessInput() override;
 	void Update() override;
+	void SyncSceneWithServer() override;
 
 private:
 	Vector3 v3TerrainPos;
