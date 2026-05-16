@@ -50,7 +50,15 @@ HRESULT TextAtlas::Initialize(uint32 unWidth, uint32 unHeight, uint32 unPadding 
 	m_unHeight = unHeight;
 	m_unPadding = unPadding;
 
-	m_RenderTarget = TEXTURE->LoadRenderTargetTexture("font_atlas", m_unWidth, m_unHeight, DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_B8G8R8A8_UNORM, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	float clearValue[4] = { 0.f, 0.f, 0.f, 0.f };
+	m_RenderTarget = TEXTURE->LoadRenderTargetTexture(
+		"font_atlas", 
+		m_unWidth,
+		m_unHeight, 
+		DXGI_FORMAT_B8G8R8A8_UNORM, 
+		DXGI_FORMAT_B8G8R8A8_UNORM, 
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		clearValue);
 	const auto& texResource = m_RenderTarget.GetResource();
 
 	m_srvCPUHandle = texResource->GetSRVHandle();

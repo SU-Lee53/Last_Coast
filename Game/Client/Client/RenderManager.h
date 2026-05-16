@@ -13,18 +13,25 @@ enum class ROOT_PARAMETER : uint32 {
 	SHADOW_MAPS								= 2,
 	G_BUFFER								= 3,
 	HDR_RESULT								= 4,
-	TONE_MAPPING_DATA						= 5,
-	FOG_DATA								= 6,
-	PER_PASS_BUFFERS						= 7,
-	PER_PASS_TEXTURES						= 8,
-	PER_INSTANCE_DATA						= 9,
-	BONE_TRANSFORM_OFFSETS					= 10,
-	LIGHT_CAMERA_DATA						= 11,
-	TERRAIN_LAYER							= 12,
-	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 13,
-	TERRAIN_WORLD_TRANSFORM					= 14,
-	UI_DATA									= 15,
-	PARTICLE_DATA							= 16,
+	BLOOM_RESULT							= 5,
+	TONE_MAPPING_DATA						= 6,
+	FOG_DATA								= 7,
+	PER_PASS_BUFFERS						= 8,
+	PER_PASS_TEXTURES						= 9,
+	PER_INSTANCE_DATA						= 10,
+	BONE_TRANSFORM_OFFSETS					= 11,
+	LIGHT_CAMERA_DATA						= 12,
+	TERRAIN_LAYER							= 13,
+	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 14,
+	TERRAIN_WORLD_TRANSFORM					= 15,
+	UI_DATA									= 16,
+	PARTICLE_DATA							= 17,
+};
+
+enum class COMPUTE_ROOT_PARAMETER : uint32 {
+	INPUT_SRV	= 0,
+	OUTPUT_UAV	= 1,
+	BLOOM_DATA	= 2,
 };
 
 struct GBuffer {
@@ -34,6 +41,22 @@ struct GBuffer {
 
 	void Initialize(uint32 nPendingFrameIndex);
 
+};
+
+struct PostProcessingResources {
+	// Bloom Downsample
+	std::array<TextureRef<RWRenderTargetTexture>, 2> BloomHalfBuffer;
+	std::array<TextureRef<RWRenderTargetTexture>, 2> BloomQuaterBuffer;
+	std::array<TextureRef<RWRenderTargetTexture>, 2> BloomEighthBuffer;
+
+	// SSAO
+	TextureRef<RWRenderTargetTexture> SSAOBuffer;
+	TextureRef<RWRenderTargetTexture> SSAOBlurBuffer;
+
+	// Shaft
+	TextureRef<RWRenderTargetTexture> ShaftBuffer;
+
+	void Initialize();
 };
 
 constexpr UINT DESCRIPTOR_PER_DRAW = 100'000;
@@ -49,7 +72,6 @@ public:
 
 public:
 	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
-	void CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice);
 	void BuildRenderGraph();
 	void Render();
 	void ShowDebugOptions();
@@ -60,6 +82,14 @@ public:
 
 	const std::shared_ptr<IMesh> GetQuadMesh() const { return m_pQuadMesh; }
 	TextRenderer& GetTextRenderer() { return m_TextRenderer; }
+
+public:
+	void CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice);
+	void CreateComputeRootSignature(ComPtr<ID3D12Device> pd3dDevice);
+
+	void SetGlobalRootSignature(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
+	void SetComputeRootSignature(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
+
 
 public:
 	DescriptorHeap& GetDescriptorHeap() { return m_DescriptorHeapForDraw[m_unCurrentContextIndex]; }
@@ -78,24 +108,39 @@ public:
 	}
 
 public:
+	// Render Resources
+	const TextureRef<RenderTargetTexture>& GetCurrentBackBuffer() const;
+	const TextureRef<DepthStencilTexture>& GetDepthStencilBuffer() const;
+
+	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferHandle() const;
+	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetDepthStencilBufferHandle() const;
+
+	const GBuffer& GetGBuffer() const;
+	const PostProcessingResources& GetPostProcessingResources() const;
+
+	const TextureRef<RenderTargetTexture>& GetHDRBuffer(int nIndex) const;
+	const TextureRef<RenderTargetTexture>& GetLDRBuffer() const;
+
+	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetHDRBufferHandle(int nIndex) const;
+	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetLDRBufferHandle() const;
+
+public:
 	// Renderable Items Getter
 	const auto& GetObjectsToRender() const { return m_pObjectsToRender; }
 	const auto& GetTransparentObjectsToRender() const { return m_pTransparentObjectsToRender; }
+
 
 private:
 	void BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle);
 
 public:
 	RenderGraph m_RenderGraph;
-
 	
-	// Mesh
 	static ComPtr<ID3D12RootSignature> g_pd3dGlobalRootSignature;
+	static ComPtr<ID3D12RootSignature> g_pd3dComputeRootSignature;
 	
 	// TextRenderer
 	TextRenderer m_TextRenderer;
-
-
 
 private:
 	// Objects Ready-To-Draw
@@ -110,28 +155,15 @@ private:
 	ConstantBufferPool		m_ConstantBufferPool[g_unMaxPendingFrames];
 	StructuredBufferPool	m_StructuredBufferPool[g_unMaxPendingFrames];
 
-	GBuffer									m_GBuffers[g_unMaxPendingFrames];
-	TextureRef<RenderTargetTexture>			m_HDRRenderTargetIDs[2][g_unMaxPendingFrames];
-	TextureRef<RenderTargetTexture>			m_LDRRenderTargetIDs[g_unMaxPendingFrames];
+	GBuffer									m_GBuffers;
+	PostProcessingResources					m_PostProcessingResources;
+	TextureRef<RenderTargetTexture>			m_HDRRenderTargetIDs[2];
+	TextureRef<RenderTargetTexture>			m_LDRRenderTargetIDs;
 
 
 #pragma region D3D
 public:
 	uint32 GetCurrentContextIndex() const { return m_unCurrentContextIndex; }
-
-	const TextureRef<RenderTargetTexture>& GetCurrentBackBuffer() const;
-	const TextureRef<DepthStencilTexture>& GetDepthStencilBuffer() const;
-	
-	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferHandle() const;
-	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetDepthStencilBufferHandle() const;
-
-	const GBuffer& GetCurrentGBuffer() const;
-
-	const TextureRef<RenderTargetTexture>& GetCurrentHDRBuffer(int nIndex) const;
-	const TextureRef<RenderTargetTexture>& GetCurrentLDRBuffer() const;
-
-	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentHDRBufferHandle(int nIndex) const;
-	const CD3DX12_CPU_DESCRIPTOR_HANDLE GetCurrentLDRBufferHandle() const;
 
 	const ComPtr<ID3D12GraphicsCommandList>& GetCommandList() const { return m_ppd3dCommandList[m_unCurrentContextIndex]; }
 	const ComPtr<ID3D12CommandQueue>& GetCommandQueue() const { return m_pd3dCommandQueue; }
@@ -175,7 +207,6 @@ private:
 	ComPtr<ID3D12GraphicsCommandList>	m_ppd3dCommandList[g_unMaxPendingFrames] = {};
 
 	CommandListAllocator m_ImmediateTransitionCmdLists;
-
 
 	ComPtr<ID3D12Fence> m_pd3dFence							= nullptr;
 	HANDLE m_hFenceEvent									= nullptr;

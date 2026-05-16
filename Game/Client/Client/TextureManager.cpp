@@ -133,12 +133,12 @@ TextureRef<Texture> TextureManager::LoadTextureArray(const std::string& strTextu
 	return { findHandle };
 }
 
-TextureRef<RenderTargetTexture> TextureManager::LoadRenderTargetTexture(const std::string& strTextureName, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat, D3D12_RESOURCE_STATES d3dInitialState)
+TextureRef<RenderTargetTexture> TextureManager::LoadRenderTargetTexture(const std::string& strTextureName, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat, D3D12_RESOURCE_STATES d3dInitialState, float* pfClearValue)
 {
 	TextureHandle SRVFindHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!SRVFindHandle.IsValid()) {
 		std::shared_ptr<RenderTargetTexture> pTexture = std::make_shared<RenderTargetTexture>();
-		bool bResult = pTexture->Initialize(unWidth, unHeight, dxgiSRVFormat, dxgiRTVFormat, d3dInitialState);
+		bool bResult = pTexture->Initialize(unWidth, unHeight, dxgiSRVFormat, dxgiRTVFormat, d3dInitialState, pfClearValue);
 		if (!bResult) {
 			return { {}, {} };
 		}
@@ -372,6 +372,97 @@ TextureRef<UnorderedAccessTexture> TextureManager::LoadUnorderedAccessTexture(co
 	TextureHandle UAVFindHandle = m_UAVTextureTable.GetHandle(strTextureName);
 
 	return { SRVFindHandle, UAVFindHandle };
+}
+
+TextureRef<RWRenderTargetTexture> TextureManager::LoadRWRenderTargetTexture(const std::string& strTextureName, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat, DXGI_FORMAT dxgiUAVFormat)
+{
+	TextureHandle SRVFindHandle = m_SRVTextureTable.GetHandle(strTextureName);
+	if (!SRVFindHandle.IsValid()) {
+		std::shared_ptr<RWRenderTargetTexture> pTexture = std::make_shared<RWRenderTargetTexture>();
+		bool bResult = pTexture->Initialize(unWidth, unHeight, dxgiSRVFormat, dxgiRTVFormat, dxgiUAVFormat);
+		if (!bResult) {
+			return { {}, {} };
+		}
+
+
+		// SRV
+		TextureHandle SRVHandle;
+		{
+			TextureTable::ResourceDesc srvDesc;
+			srvDesc.eType = TextureTable::ResourceDesc::TYPE::SRV;
+			srvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
+			SRVHandle = m_SRVTextureTable.Register(
+				strTextureName,
+				pTexture,
+				&srvDesc,
+				&dxgiSRVFormat,
+				sizeof(DXGI_FORMAT));
+
+			if (!SRVHandle.IsValid()) {
+				OutputDebugStringA(std::format("Failed to load texture SRV : {}", strTextureName).c_str());
+				return { {}, {} };
+			}
+
+			pTexture->m_d3dSRVDesc = srvDesc.srv;
+			pTexture->m_un64RuntimeSRVID = SRVHandle.GetID();
+			pTexture->m_d3dSRVHandle = m_SRVTextureTable.GetCPUHandleByHandle(SRVHandle);
+		}
+
+
+		// RTV
+		TextureHandle RTVHandle;
+		{
+			TextureTable::ResourceDesc rtvDesc;
+			rtvDesc.eType = TextureTable::ResourceDesc::TYPE::RTV;
+			rtvDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
+			RTVHandle = m_RTVTextureTable.Register(
+				strTextureName,
+				pTexture,
+				&rtvDesc,
+				&dxgiRTVFormat,
+				sizeof(DXGI_FORMAT));
+
+			if (!RTVHandle.IsValid()) {
+				OutputDebugStringA(std::format("Failed to load texture RTV : {}", strTextureName).c_str());
+				return { {}, {} };
+			}
+
+			pTexture->m_d3dRTVDesc = rtvDesc.rtv;
+			pTexture->m_un64RuntimeRTVID = RTVHandle.GetID();
+			pTexture->m_d3dRTVHandle = m_RTVTextureTable.GetCPUHandleByHandle(RTVHandle);
+		}
+
+		// UAV
+		TextureHandle UAVHandle;
+		{
+			TextureTable::ResourceDesc uavDesc;
+			uavDesc.eType = TextureTable::ResourceDesc::TYPE::UAV;
+			uavDesc.eDimension = TextureTable::ResourceDesc::DIMENSION::TEXTURE2D;
+
+			UAVHandle = m_UAVTextureTable.Register(
+				strTextureName,
+				pTexture,
+				&uavDesc,
+				&dxgiUAVFormat,
+				sizeof(DXGI_FORMAT));
+
+			if (!UAVHandle.IsValid()) {
+				OutputDebugStringA(std::format("Failed to load texture UAV : {}", strTextureName).c_str());
+				return { {}, {} };
+			}
+
+			pTexture->m_d3dUAVDesc = uavDesc.uav;
+			pTexture->m_un64RuntimeUAVID = UAVHandle.GetID();
+			pTexture->m_d3dUAVHandle = m_UAVTextureTable.GetCPUHandleByHandle(UAVHandle);
+		}
+
+		return { SRVHandle, RTVHandle, UAVHandle };
+	}
+
+	TextureHandle RTVFindHandle = m_RTVTextureTable.GetHandle(strTextureName);
+	TextureHandle UAVFindHandle = m_UAVTextureTable.GetHandle(strTextureName);
+
+	return { SRVFindHandle, RTVFindHandle, UAVFindHandle };
 }
 
 std::shared_ptr<Texture> TextureManager::GetTextureByName(const std::string& strTextureName, TEXTURE_RESOURCE_TYPE eResourceType) const

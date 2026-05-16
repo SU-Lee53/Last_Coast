@@ -12,7 +12,7 @@ void DeferredFogPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 	// Update Height Fog base height
 
 	// Set Render Targets
-	auto pHDRRenderTarget = std::static_pointer_cast<RenderTargetTexture>(RENDER->GetCurrentHDRBuffer(1).GetResource());
+	auto pHDRRenderTarget = std::static_pointer_cast<RenderTargetTexture>(RENDER->GetHDRBuffer(1).GetResource());
 	pHDRRenderTarget->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	// Clear Render Targets

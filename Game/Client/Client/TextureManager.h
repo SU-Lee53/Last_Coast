@@ -32,7 +32,8 @@ public:
 		uint32 unHeight,
 		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN,
 		DXGI_FORMAT dxgiRTVFormat = DXGI_FORMAT_UNKNOWN,
-		D3D12_RESOURCE_STATES d3dInitialState = D3D12_RESOURCE_STATE_PRESENT);
+		D3D12_RESOURCE_STATES d3dInitialState = D3D12_RESOURCE_STATE_PRESENT,
+		float* pfClearValue = nullptr);
 	
 	TextureRef<RenderTargetTexture> LoadRenderTargetTexture(
 		ComPtr<ID3D12Resource> pd3dRTVResourceFromSwapChain,
@@ -53,6 +54,15 @@ public:
 		uint32 unHeight,
 		uint32 unDepth = 0,
 		DXGI_FORMAT dxgiSRVUAVFormat = DXGI_FORMAT_UNKNOWN);
+	
+	
+	TextureRef<RWRenderTargetTexture> LoadRWRenderTargetTexture(
+		const std::string& strTextureName,
+		uint32 unWidth,
+		uint32 unHeight,
+		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT dxgiRTVFormat = DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT dxgiUAVFormat = DXGI_FORMAT_UNKNOWN);
 	
 	std::shared_ptr<Texture> GetTextureByName(const std::string& strTextureName, TEXTURE_RESOURCE_TYPE eResourceType) const;
 	std::shared_ptr<Texture> GetTextureByHandle(const TextureHandle& handle, TEXTURE_RESOURCE_TYPE eResourceType) const;

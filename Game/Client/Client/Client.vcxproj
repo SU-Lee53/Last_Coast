@@ -164,6 +164,7 @@
     <ClInclude Include="AnimationMontage.h" />
     <ClInclude Include="AnimationStateMachine.h" />
     <ClInclude Include="BloodEffect.h" />
+    <ClInclude Include="BloomPass.h" />
     <ClInclude Include="BoundingCapsule.h" />
     <ClInclude Include="BulletImpactEffect.h" />
     <ClInclude Include="Camera.h" />
@@ -336,6 +337,7 @@
     <ClCompile Include="AnimationMontage.cpp" />
     <ClCompile Include="AnimationStateMachine.cpp" />
     <ClCompile Include="BloodEffect.cpp" />
+    <ClCompile Include="BloomPass.cpp" />
     <ClCompile Include="BoundingCapsule.cpp" />
     <ClCompile Include="BulletImpactEffect.cpp" />
     <ClCompile Include="Camera.cpp" />
@@ -449,6 +451,10 @@
     <None Include="TextAtlas.h" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="..\HLSL\Bloom.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="..\HLSL\DefferedShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -482,6 +488,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="..\HLSL\Particle.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\PostProcessingCommon.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>

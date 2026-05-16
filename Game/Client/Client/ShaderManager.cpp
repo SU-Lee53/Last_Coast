@@ -233,13 +233,15 @@ void ShaderManager::CompileShaders()
 	Compile("DefferedFogPS", L"HDRPostProcessing.hlsl", L"PSDefferedFog", SHADER_TYPE::PS);
 
 
-
-
 	// Compute
 	Compile("HDRIToCubeMapCS", L"HDRIToCubeMap.hlsl", L"CSHDRIToCubeMap", SHADER_TYPE::CS);
 
 	Compile("ToneMapLUTCS", L"LUTBaking.hlsl", L"CSToneMapLUT", SHADER_TYPE::CS);
 	Compile("GradingLUTCS", L"LUTBaking.hlsl", L"CSGradingLUT", SHADER_TYPE::CS);
+
+	Compile("BloomBrightExtractCS", L"Bloom.hlsl", L"CSBrightExtractDownsample", SHADER_TYPE::CS);
+	Compile("BloomBlurHorzCS", L"Bloom.hlsl", L"CSBloomBlurHorizontal", SHADER_TYPE::CS);
+	Compile("BloomBlurVertCS", L"Bloom.hlsl", L"CSBloomBlurVertical", SHADER_TYPE::CS);
 
 
 

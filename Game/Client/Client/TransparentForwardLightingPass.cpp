@@ -41,7 +41,7 @@ void TransparentForwardLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandLis
 	BindGeometryData(pd3dCommandList, pFrustumCulled, outDescHandle);
 
 	// Set Render Target
-	auto pHDRRenderTarget = static_pointer_cast<RenderTargetTexture>(RENDER->GetCurrentHDRBuffer(1).GetResource());
+	auto pHDRRenderTarget = static_pointer_cast<RenderTargetTexture>(RENDER->GetHDRBuffer(1).GetResource());
 	auto pDSV = static_pointer_cast<DepthStencilTexture>(RENDER->GetDepthStencilBuffer().GetResource());
 
 	pHDRRenderTarget->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);

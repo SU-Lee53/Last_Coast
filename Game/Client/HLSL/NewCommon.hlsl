@@ -217,10 +217,11 @@ Texture2D gtxtShadowss[4] : register(t5, space0);						// t5, t6, t7, t8
 Texture2D gtxtGBuffer[3] : register(t9, space0);	// t9, t10, t11
 Texture2D gtxtGBufferDepth : register(t12, space0);
 Texture2D gtxtHDRResult : register(t13, space0);
+Texture2D gtxtBloomResult : register(t14, space0);
 
 // Tone mapping LUT
-Texture3D gtxtToneMapLUT : register(t14, space0);
-Texture3D gtxtGradingLUT : register(t15, space0);
+Texture3D gtxtToneMapLUT : register(t15, space0);
+Texture3D gtxtGradingLUT : register(t16, space0);
 
 // ============ Samplers ============
 SamplerState gSkyboxSamplerState : register(s0, space0);

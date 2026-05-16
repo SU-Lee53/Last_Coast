@@ -508,7 +508,7 @@ CD3DX12_RESOURCE_BARRIER Texture::GetResourceBarrier(D3D12_RESOURCE_STATES d3dAf
 	return d3dResourceBarrier;
 }
 
-bool RenderTargetTexture::Initialize(uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat, D3D12_RESOURCE_STATES d3dInitialState)
+bool RenderTargetTexture::Initialize(uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat, D3D12_RESOURCE_STATES d3dInitialState, float* pfClearValue)
 {
 	D3D12_RESOURCE_DESC d3dRTTextureDesc;
 	{
@@ -525,10 +525,16 @@ bool RenderTargetTexture::Initialize(uint32 unWidth, uint32 unHeight, DXGI_FORMA
 		d3dRTTextureDesc.MipLevels = 1;
 	}
 
-	float pfClearColor[4] = { 0.f, 0.f, 0.f, 1.f };
 	D3D12_CLEAR_VALUE clearValue = {};
-	clearValue.Format = d3dRTTextureDesc.Format;
-	::memcpy(clearValue.Color, pfClearColor, 4 * sizeof(float));
+	if (pfClearValue) {
+		clearValue.Format = d3dRTTextureDesc.Format;
+		::memcpy(clearValue.Color, pfClearValue, 4 * sizeof(float));
+	}
+	else {
+		float pfClearColor[4] = { 0.f, 0.f, 0.f, 1.f };
+		clearValue.Format = d3dRTTextureDesc.Format;
+		::memcpy(clearValue.Color, pfClearColor, 4 * sizeof(float));
+	}
 	
 	DEVICE->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
@@ -686,6 +692,64 @@ bool UnorderedAccessTexture::InitializeArray(UINT nArraySize, UINT nWidth, UINT 
 		&d3dResourceDesc,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		nullptr,
+		IID_PPV_ARGS(m_pd3dResource.GetAddressOf())
+	);
+
+	if (FAILED(hr)) {
+		__debugbreak();
+		return false;
+	}
+
+	m_d3dCurrentState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+	return true;
+}
+
+bool RWRenderTargetTexture::Initialize(UINT nWidth, UINT nHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat, DXGI_FORMAT dxgiUAVFormat)
+{
+	if (nWidth == 0 || nHeight == 0) {
+		__debugbreak();
+		return false;
+	}
+
+	if (dxgiRTVFormat == DXGI_FORMAT_UNKNOWN) {
+		dxgiRTVFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	}
+
+	if (dxgiSRVFormat == DXGI_FORMAT_UNKNOWN) {
+		dxgiSRVFormat = dxgiRTVFormat;
+	}
+
+	if (dxgiUAVFormat == DXGI_FORMAT_UNKNOWN) {
+		dxgiUAVFormat = dxgiRTVFormat;
+	}
+
+	D3D12_RESOURCE_DESC d3dResourceDesc{};
+	{
+		d3dResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		d3dResourceDesc.Alignment = 0;
+		d3dResourceDesc.Width = nWidth;
+		d3dResourceDesc.Height = nHeight;
+		d3dResourceDesc.DepthOrArraySize = 1;
+		d3dResourceDesc.MipLevels = 1;
+		d3dResourceDesc.Format = dxgiRTVFormat;
+		d3dResourceDesc.SampleDesc.Count = 1;
+		d3dResourceDesc.SampleDesc.Quality = 0;
+		d3dResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		d3dResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	}
+
+	float pfClearColor[4] = { 0.f, 0.f, 0.f, 1.f };
+
+	D3D12_CLEAR_VALUE d3dClearValue{};
+	d3dClearValue.Format = dxgiRTVFormat;
+	::memcpy(d3dClearValue.Color, pfClearColor, sizeof(pfClearColor));
+
+	HRESULT hr = DEVICE->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&d3dResourceDesc,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		&d3dClearValue,
 		IID_PPV_ARGS(m_pd3dResource.GetAddressOf())
 	);
 

@@ -7,6 +7,7 @@
 #include "ToneMappingPass.h"
 #include "SkyboxPass.h"
 #include "ParticlePass.h"
+#include "BloomPass.h"
 #include "DeferredFogPass.h"
 #include "UIPass.h"
 #include <queue>
@@ -56,6 +57,10 @@ void RenderGraph::BuildGraph()
 	pParticlePass->Initialize();
 	m_pAdjLists.push_back(pParticlePass);
 
+	std::shared_ptr<BloomPass> pBloomPass = std::make_shared<BloomPass>();
+	pBloomPass->Initialize();
+	m_pAdjLists.push_back(pBloomPass);
+
 	std::shared_ptr<IRenderPass> pSkyboxPass = std::make_shared<SkyboxPass>();
 	pSkyboxPass->Initialize();
 	m_pAdjLists.push_back(pSkyboxPass);
@@ -78,6 +83,10 @@ void RenderGraph::BuildGraph()
 		5. Forward Lighting pass
 		6. Skybox pass
 		7. Particle pass
+		
+		+ 2026.05.16
+		+ Bloom
+
 		8. Tone Mapping & Grading pass
 		9. UI pass
 	*/
@@ -88,7 +97,8 @@ void RenderGraph::BuildGraph()
 	pDefferedFogPass->Connect(pTransparentForwardPass);
 	pTransparentForwardPass->Connect(pSkyboxPass);
 	pSkyboxPass->Connect(pParticlePass);
-	pParticlePass->Connect(pToneMappingPass);
+	pParticlePass->Connect(pBloomPass);
+	pBloomPass->Connect(pToneMappingPass);
 	pToneMappingPass->Connect(pUIPass);
 
 	m_unEntryNodeIndex = 0;

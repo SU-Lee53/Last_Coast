@@ -29,7 +29,7 @@ void GBufferPass::SetRenderTargets(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 {
 	// Set Render Targets
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
-	const auto& currentGBuffer = RENDER->GetCurrentGBuffer();
+	const auto& currentGBuffer = RENDER->GetGBuffer();
 
 	for (auto& gBuffer : currentGBuffer.GBuffers) {
 		gBuffer.GetResource()->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -350,7 +350,7 @@ void GBufferPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 void GBufferPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
-	const auto& currentGBuffer = RENDER->GetCurrentGBuffer();
+	const auto& currentGBuffer = RENDER->GetGBuffer();
 	auto depthHandle = RENDER->GetDepthStencilBuffer();
 
 	for (auto& gBuffer : currentGBuffer.GBuffers) {

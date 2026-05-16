@@ -10,7 +10,7 @@ void DeferredLightingPass::Initialize()
 void DeferredLightingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	// Set Render Targets
-	auto pHDRRenderTarget = std::static_pointer_cast<RenderTargetTexture>(RENDER->GetCurrentHDRBuffer(0).GetResource());
+	auto pHDRRenderTarget = std::static_pointer_cast<RenderTargetTexture>(RENDER->GetHDRBuffer(0).GetResource());
 	pHDRRenderTarget->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);	
 
 	// Clear Render Targets
@@ -37,7 +37,7 @@ void DeferredLightingPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCo
 {
 	// Fog 를 위해 HDR Result 에 HDR0 을 Bind
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
-	auto pRTV = RENDER->GetCurrentHDRBuffer(0).GetResource();
+	auto pRTV = RENDER->GetHDRBuffer(0).GetResource();
 	pRTV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
 	// Set HDR result

@@ -9,7 +9,7 @@ void SkyboxPass::Initialize()
 
 void SkyboxPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
-	auto pRTV = static_pointer_cast<RenderTargetTexture>(RENDER->GetCurrentHDRBuffer(1).GetResource());
+	auto pRTV = static_pointer_cast<RenderTargetTexture>(RENDER->GetHDRBuffer(1).GetResource());
 	auto pDSV = static_pointer_cast<DepthStencilTexture>(RENDER->GetDepthStencilBuffer().GetResource());
 
 	pDSV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_DEPTH_WRITE);	
@@ -31,7 +31,7 @@ void SkyboxPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const
 void SkyboxPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	//const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
-	//auto pRTV = RENDER->GetCurrentHDRBuffer(1).GetResource();
+	//auto pRTV = RENDER->GetHDRBuffer(1).GetResource();
 	//pRTV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
 	//// Set HDR result

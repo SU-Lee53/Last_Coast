@@ -114,9 +114,9 @@ void Scene::PostInitialize()
 		m_World.GetSpatial().BuildStaticGrid(gridDesc);
 	}
 
-	//if (m_pPlayer) {
-	//	m_pPlayer->GetTransform()->SetPosition(m_xmSceneBound.Center);
-	//}
+	if (m_pPlayer) {
+		m_pPlayer->GetTransform()->SetPosition(m_xmSceneBound.Center);
+	}
 
 	for (auto& pZombie : m_World.GetObjects<Zombie>()) {
 		pZombie->SetPosition(AI->GetNavMesh()->GetRandomPoint()); // Transform + AIAgent 동시에
@@ -564,7 +564,7 @@ void Scene::ShowDebugOptions()
 			ImGui::EndTabItem();		
 		}
 		if(ImGui::BeginTabItem("Post Processing Volume")){
-			
+			m_PostProcessingVolume.ShowDebugOptions();
 			ImGui::EndTabItem();		
 		}
 		if(ImGui::BeginTabItem("Lights")){

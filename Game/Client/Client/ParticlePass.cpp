@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "ParticlePass.h"
+#include "BloomPass.h"
 
 void ParticlePass::Initialize()
 {
@@ -28,7 +29,7 @@ void ParticlePass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, con
 void ParticlePass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
-	auto pRTV = RENDER->GetCurrentHDRBuffer(1).GetResource();
+	auto pRTV = RENDER->GetHDRBuffer(1).GetResource();
 	pRTV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
 	// Set HDR result
@@ -53,7 +54,7 @@ void ParticlePass::ShowDebugInfo()
 
 void ParticlePass::SetRenderTargets(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList) const
 {
-	auto pRTV = static_pointer_cast<RenderTargetTexture>(RENDER->GetCurrentHDRBuffer(1).GetResource());
+	auto pRTV = static_pointer_cast<RenderTargetTexture>(RENDER->GetHDRBuffer(1).GetResource());
 	auto pDSV = static_pointer_cast<DepthStencilTexture>(RENDER->GetDepthStencilBuffer().GetResource());
 
 	pDSV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_DEPTH_WRITE);			// 이전 G-Buffer Pass 에서 ALL_SHADER_RESOURCE 로 바꾸었으므로 한번 전환이 필요함
