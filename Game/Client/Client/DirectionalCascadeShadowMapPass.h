@@ -79,7 +79,7 @@ private:
 	ComPtr<ID3D12PipelineState> m_pd3dAnimatedPipelineState;
 	ComPtr<ID3D12PipelineState> m_pd3dTerrainPipelineState;
 
-	TextureRef<DepthStencilTexture> m_ShadowMapRef[RenderManager::g_unMaxPendingFrames][g_unNumCascade];
+	TextureRef<DepthStencilTexture> m_ShadowMapRefs[g_unNumCascade];
 	mutable bool m_bShowShadowMaps;
 
 	mutable struct CachedData {

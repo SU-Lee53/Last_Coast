@@ -33,7 +33,7 @@ void MuzzleFlashEffect::CreateCoreEmitter()
 	);
 
 	emitter.AddInitializeModule<InitColorModule>(
-		Vector4(1.0f, 0.85f, 0.35f, 1.0f),
+		Vector4(1.0f, 0.85f, 0.35f, 1.0f) * 5,
 		Vector4(1.0f, 0.25f, 0.04f, 0.0f)
 	);
 
@@ -69,7 +69,7 @@ void MuzzleFlashEffect::CreateShapeEmitter()
 	);
 
 	emitter.AddInitializeModule<InitColorModule>(
-		Vector4(1.0f, 0.70f, 0.25f, 0.85f),
+		Vector4(1.0f, 0.70f, 0.25f, 0.85f) * 3,
 		Vector4(1.0f, 0.18f, 0.02f, 0.0f)
 	);
 

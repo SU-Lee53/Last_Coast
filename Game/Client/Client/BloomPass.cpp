@@ -19,8 +19,13 @@ void BloomPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, c
 void BloomPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	auto pHDRResult = RENDER->GetHDRBuffer(1).GetResource();
-	const auto pBloomHalfBufferA = RENDER->GetPostProcessingResources().BloomHalfBuffer[0].GetResource();
-	const auto pBloomHalfBufferB = RENDER->GetPostProcessingResources().BloomHalfBuffer[1].GetResource();
+
+	const auto& volume = CUR_SCENE->GetPostProcessingVolume();
+
+	const auto& pBloomHalfBuffers =		RENDER->GetPostProcessingResources().BloomHalfBuffer;
+	const auto& pBloomQuaterBuffers =	RENDER->GetPostProcessingResources().BloomQuaterBuffer;
+	const auto& pBloomEighthBuffers =	RENDER->GetPostProcessingResources().BloomEighthBuffer;
+
 	auto nDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
 
 	constexpr auto rootParamInputTexture = std::to_underlying(COMPUTE_ROOT_PARAMETER::INPUT_SRV);
@@ -30,8 +35,8 @@ void BloomPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const 
 	const uint32 unFullW = WinCore::g_dwClientWidth;
 	const uint32 unFullH = WinCore::g_dwClientHeight;
 
-	const uint32 unHalfW = unFullW / 2;
-	const uint32 unHalfH = unFullH / 2;
+	const uint32 unTargetWidths[4] = { unFullW, unFullW / 2, unFullW / 4, unFullW / 8 };
+	const uint32 unTargetHeights[4] = { unFullH, unFullH / 2, unFullH / 4, unFullH / 8 };
 
 	// 1. Bloom Extract
 	{
@@ -39,61 +44,134 @@ void BloomPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const 
 		auto cpuHandle = outDescHandle.cpuHandle;
 		auto gpuHandle = outDescHandle.gpuHandle;
 
-		pHDRResult->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);			// input
-		pBloomHalfBufferA->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);		// output
+		// Half
+		{
+			auto& pInput = pHDRResult;
+			auto& pOutput = pBloomHalfBuffers[0].GetResource();
 
-		DEVICE->CopyDescriptorsSimple(1, cpuHandle, pHDRResult->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		DEVICE->CopyDescriptorsSimple(1, cpuHandle.Offset(1, nDescriptorInc), pBloomHalfBufferA->GetUAVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			pInput->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);			// input
+			pOutput->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);		// output
 
-		pd3dCommandList->SetComputeRootDescriptorTable(rootParamInputTexture, gpuHandle);
-		pd3dCommandList->SetComputeRootDescriptorTable(rootParamOutputTexture, gpuHandle.Offset(1, nDescriptorInc));
-		outDescHandle.cpuHandle.Offset(2, nDescriptorInc);
-		outDescHandle.gpuHandle.Offset(2, nDescriptorInc);
+			DEVICE->CopyDescriptorsSimple(1, cpuHandle, pInput->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			DEVICE->CopyDescriptorsSimple(1, cpuHandle.Offset(1, nDescriptorInc), pOutput->GetUAVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-		// Set bloom data
-		const auto& volume = CUR_SCENE->GetPostProcessingVolume();
-		auto bloomData = volume.GetBloomCBData(XMINT2(unFullW, unFullH), XMINT2(unHalfW, unHalfH));
-		auto cBuffer = RENDER->AllocCBuffer<CB_BLOOM_DATA>();
-		cBuffer.WriteData(&bloomData);
-		pd3dCommandList->SetComputeRootConstantBufferView(rootParamBloomData, cBuffer.GPUAddress);
+			pd3dCommandList->SetComputeRootDescriptorTable(rootParamInputTexture, gpuHandle);
+			pd3dCommandList->SetComputeRootDescriptorTable(rootParamOutputTexture, gpuHandle.Offset(1, nDescriptorInc));
+			outDescHandle.cpuHandle.Offset(2, nDescriptorInc);
+			outDescHandle.gpuHandle.Offset(2, nDescriptorInc);
 
-		pd3dCommandList->Dispatch(
-			CeilDiv(unHalfW, BLOOM_EXTRACT_THREAD_X),
-			CeilDiv(unHalfH, BLOOM_EXTRACT_THREAD_Y),
-			1
-		);
+			// Set bloom data
+			auto bloomData = volume.GetBloomCBData(XMINT2(unFullW, unFullH), XMINT2(unTargetWidths[1], unTargetHeights[1]));
+			auto cBuffer = RENDER->AllocCBuffer<CB_BLOOM_DATA>();
+			cBuffer.WriteData(&bloomData);
+			pd3dCommandList->SetComputeRootConstantBufferView(rootParamBloomData, cBuffer.GPUAddress);
+
+			pd3dCommandList->Dispatch(
+				CeilDiv(unTargetWidths[1], BLOOM_EXTRACT_THREAD_X),
+				CeilDiv(unTargetHeights[1], BLOOM_EXTRACT_THREAD_Y),
+				1
+			);
+		}
+
+		// Quater
+		{
+			auto& pInput = pBloomHalfBuffers[0].GetResource();
+			auto& pOutput = pBloomQuaterBuffers[0].GetResource();
+
+			pInput->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);			// input
+			pOutput->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);		// output
+
+			DEVICE->CopyDescriptorsSimple(1, cpuHandle, pInput->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			DEVICE->CopyDescriptorsSimple(1, cpuHandle.Offset(1, nDescriptorInc), pOutput->GetUAVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+			pd3dCommandList->SetComputeRootDescriptorTable(rootParamInputTexture, gpuHandle);
+			pd3dCommandList->SetComputeRootDescriptorTable(rootParamOutputTexture, gpuHandle.Offset(1, nDescriptorInc));
+			outDescHandle.cpuHandle.Offset(2, nDescriptorInc);
+			outDescHandle.gpuHandle.Offset(2, nDescriptorInc);
+
+			// Set bloom data
+			auto bloomData = volume.GetBloomCBData(XMINT2(unTargetWidths[1], unTargetHeights[1]), XMINT2(unTargetWidths[2], unTargetHeights[2]));
+			auto cBuffer = RENDER->AllocCBuffer<CB_BLOOM_DATA>();
+			cBuffer.WriteData(&bloomData);
+			pd3dCommandList->SetComputeRootConstantBufferView(rootParamBloomData, cBuffer.GPUAddress);
+
+			pd3dCommandList->Dispatch(
+				CeilDiv(unTargetWidths[2], BLOOM_EXTRACT_THREAD_X),
+				CeilDiv(unTargetHeights[2], BLOOM_EXTRACT_THREAD_Y),
+				1
+			);
+		}
+
+		// Eighth
+		{
+			auto& pInput = pBloomQuaterBuffers[0].GetResource();
+			auto& pOutput = pBloomEighthBuffers[0].GetResource();
+
+			pInput->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);			// input
+			pOutput->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);		// output
+
+			DEVICE->CopyDescriptorsSimple(1, cpuHandle, pInput->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			DEVICE->CopyDescriptorsSimple(1, cpuHandle.Offset(1, nDescriptorInc), pOutput->GetUAVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+			pd3dCommandList->SetComputeRootDescriptorTable(rootParamInputTexture, gpuHandle);
+			pd3dCommandList->SetComputeRootDescriptorTable(rootParamOutputTexture, gpuHandle.Offset(1, nDescriptorInc));
+			outDescHandle.cpuHandle.Offset(2, nDescriptorInc);
+			outDescHandle.gpuHandle.Offset(2, nDescriptorInc);
+
+			// Set bloom data
+			auto bloomData = volume.GetBloomCBData(XMINT2(unTargetWidths[2], unTargetHeights[2]), XMINT2(unTargetWidths[3], unTargetHeights[3]));
+			auto cBuffer = RENDER->AllocCBuffer<CB_BLOOM_DATA>();
+			cBuffer.WriteData(&bloomData);
+			pd3dCommandList->SetComputeRootConstantBufferView(rootParamBloomData, cBuffer.GPUAddress);
+
+			pd3dCommandList->Dispatch(
+				CeilDiv(unTargetWidths[3], BLOOM_EXTRACT_THREAD_X),
+				CeilDiv(unTargetHeights[3], BLOOM_EXTRACT_THREAD_Y),
+				1
+			);
+		}
+		
 	}
 
 	// 2. Bloom H
 	// BloomA -> BloomB
 	{
 		pd3dCommandList->SetPipelineState(m_pd3dBlurHPipelineState.Get());
-		auto cpuHandle = outDescHandle.cpuHandle;
-		auto gpuHandle = outDescHandle.gpuHandle;
+		for (int i = 0; i < 3; ++i) {
+			auto cpuHandle = outDescHandle.cpuHandle;
+			auto gpuHandle = outDescHandle.gpuHandle;
 
-		pBloomHalfBufferA->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);	// input
-		pBloomHalfBufferB->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);		// output
+			auto& pInput = (i == 0) ? pBloomHalfBuffers[0].GetResource() 
+									: (i == 1) ? pBloomQuaterBuffers[0].GetResource() 
+											   : pBloomEighthBuffers[0].GetResource();
 
-		DEVICE->CopyDescriptorsSimple(1, cpuHandle, pBloomHalfBufferA->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		DEVICE->CopyDescriptorsSimple(1, cpuHandle.Offset(1, nDescriptorInc), pBloomHalfBufferB->GetUAVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			auto& pOutput = (i == 0) ? pBloomHalfBuffers[1].GetResource()
+									 : (i == 1) ? pBloomQuaterBuffers[1].GetResource() 
+											    : pBloomEighthBuffers[1].GetResource();
 
-		pd3dCommandList->SetComputeRootDescriptorTable(rootParamInputTexture, gpuHandle);
-		pd3dCommandList->SetComputeRootDescriptorTable(rootParamOutputTexture, gpuHandle.Offset(1, nDescriptorInc));
-		outDescHandle.cpuHandle.Offset(2, nDescriptorInc);
-		outDescHandle.gpuHandle.Offset(2, nDescriptorInc);
+			pInput->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);	// input
+			pOutput->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);		// output
 
-		// Set bloom data
-		const auto& volume = CUR_SCENE->GetPostProcessingVolume();
-		auto bloomData = volume.GetBloomCBData(XMINT2(unHalfW, unHalfW), XMINT2(unHalfW, unHalfH));
-		auto cBuffer = RENDER->AllocCBuffer<CB_BLOOM_DATA>();
-		cBuffer.WriteData(&bloomData);
-		pd3dCommandList->SetComputeRootConstantBufferView(rootParamBloomData, cBuffer.GPUAddress);
+			DEVICE->CopyDescriptorsSimple(1, cpuHandle, pInput->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			DEVICE->CopyDescriptorsSimple(1, cpuHandle.Offset(1, nDescriptorInc), pOutput->GetUAVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-		pd3dCommandList->Dispatch(
-			CeilDiv(unHalfW, BLOOM_BLUR_THREAD_X),
-			CeilDiv(unHalfH, BLOOM_BLUR_THREAD_Y),
-			1
-		);
+			pd3dCommandList->SetComputeRootDescriptorTable(rootParamInputTexture, gpuHandle);
+			pd3dCommandList->SetComputeRootDescriptorTable(rootParamOutputTexture, gpuHandle.Offset(1, nDescriptorInc));
+			outDescHandle.cpuHandle.Offset(2, nDescriptorInc);
+			outDescHandle.gpuHandle.Offset(2, nDescriptorInc);
+
+			// Set bloom data
+			auto bloomData = volume.GetBloomCBData(XMINT2(unTargetWidths[i+1], unTargetHeights[i + 1]), XMINT2(unTargetWidths[i + 1], unTargetHeights[i + 1]));
+			auto cBuffer = RENDER->AllocCBuffer<CB_BLOOM_DATA>();
+			cBuffer.WriteData(&bloomData);
+			pd3dCommandList->SetComputeRootConstantBufferView(rootParamBloomData, cBuffer.GPUAddress);
+
+			pd3dCommandList->Dispatch(
+				CeilDiv(unTargetWidths[i + 1], BLOOM_BLUR_THREAD_X),
+				CeilDiv(unTargetHeights[i + 1], BLOOM_BLUR_THREAD_Y),
+				1
+			);
+		}
 	}
 
 	// 3. Bloom V
@@ -103,44 +181,65 @@ void BloomPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const 
 		auto cpuHandle = outDescHandle.cpuHandle;
 		auto gpuHandle = outDescHandle.gpuHandle;
 
-		pBloomHalfBufferB->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);	// input
-		pBloomHalfBufferA->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);		// output
+		for (int i = 0; i < 3; ++i) {
+			auto cpuHandle = outDescHandle.cpuHandle;
+			auto gpuHandle = outDescHandle.gpuHandle;
 
-		DEVICE->CopyDescriptorsSimple(1, cpuHandle, pBloomHalfBufferB->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		DEVICE->CopyDescriptorsSimple(1, cpuHandle.Offset(1, nDescriptorInc), pBloomHalfBufferA->GetUAVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			auto& pInput = (i == 0) ? pBloomHalfBuffers[1].GetResource()
+									: (i == 1) ? pBloomQuaterBuffers[1].GetResource()
+											   : pBloomEighthBuffers[1].GetResource();
 
-		pd3dCommandList->SetComputeRootDescriptorTable(rootParamInputTexture, gpuHandle);
-		pd3dCommandList->SetComputeRootDescriptorTable(rootParamOutputTexture, gpuHandle.Offset(1, nDescriptorInc));
-		outDescHandle.cpuHandle.Offset(2, nDescriptorInc);
-		outDescHandle.gpuHandle.Offset(2, nDescriptorInc);
+			auto& pOutput = (i == 0) ? pBloomHalfBuffers[0].GetResource()
+									 : (i == 1) ? pBloomQuaterBuffers[0].GetResource()
+												: pBloomEighthBuffers[0].GetResource();
 
-		// Bloom data reusable. no set.
+			pInput->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);	// input
+			pOutput->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);		// output
 
-		pd3dCommandList->Dispatch(
-			CeilDiv(unHalfW, BLOOM_BLUR_THREAD_X),
-			CeilDiv(unHalfH, BLOOM_BLUR_THREAD_Y),
-			1
-		);
+			DEVICE->CopyDescriptorsSimple(1, cpuHandle, pInput->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			DEVICE->CopyDescriptorsSimple(1, cpuHandle.Offset(1, nDescriptorInc), pOutput->GetUAVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+			pd3dCommandList->SetComputeRootDescriptorTable(rootParamInputTexture, gpuHandle);
+			pd3dCommandList->SetComputeRootDescriptorTable(rootParamOutputTexture, gpuHandle.Offset(1, nDescriptorInc));
+			outDescHandle.cpuHandle.Offset(2, nDescriptorInc);
+			outDescHandle.gpuHandle.Offset(2, nDescriptorInc);
+
+			// Set bloom data
+			auto bloomData = volume.GetBloomCBData(XMINT2(unTargetWidths[i + 1], unTargetHeights[i + 1]), XMINT2(unTargetWidths[i + 1], unTargetHeights[i + 1]));
+			auto cBuffer = RENDER->AllocCBuffer<CB_BLOOM_DATA>();
+			cBuffer.WriteData(&bloomData);
+			pd3dCommandList->SetComputeRootConstantBufferView(rootParamBloomData, cBuffer.GPUAddress);
+
+			pd3dCommandList->Dispatch(
+				CeilDiv(unTargetWidths[i + 1], BLOOM_BLUR_THREAD_X),
+				CeilDiv(unTargetHeights[i + 1], BLOOM_BLUR_THREAD_Y),
+				1
+			);
+		}
 	}
 }
 
 void BloomPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	// Set Bloom Result
-	const auto& pBloomHalfBufferA = RENDER->GetPostProcessingResources().BloomHalfBuffer[0].GetResource();
-	pBloomHalfBufferA->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);		// last output
+	const auto& pFinalOutputHalf = RENDER->GetPostProcessingResources().BloomHalfBuffer[0].GetResource();
+	const auto& pFinalOutputQuater = RENDER->GetPostProcessingResources().BloomQuaterBuffer[0].GetResource();
+	const auto& pFinalOutputEighth = RENDER->GetPostProcessingResources().BloomEighthBuffer[0].GetResource();
+	pFinalOutputHalf->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);		// last half output
+	pFinalOutputQuater->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);		// last quater output
+	pFinalOutputEighth->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);		// last eighth output
 
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle = outDescHandle.cpuHandle;
 	constexpr uint32 rootParamBloom = std::to_underlying(ROOT_PARAMETER::BLOOM_RESULT);
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtSRVHandle = pBloomHalfBufferA->GetSRVHandle();
-	DEVICE->CopyDescriptorsSimple(1, cpuHandle, rtSRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	cpuHandle.Offset(1, unDescriptorInc);
+	DEVICE->CopyDescriptorsSimple(1, cpuHandle, pFinalOutputHalf->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	DEVICE->CopyDescriptorsSimple(1, cpuHandle.Offset(1, unDescriptorInc), pFinalOutputQuater->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	DEVICE->CopyDescriptorsSimple(1, cpuHandle.Offset(1, unDescriptorInc), pFinalOutputEighth->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamBloom, outDescHandle.gpuHandle);
-	outDescHandle.cpuHandle.Offset(1, unDescriptorInc);
-	outDescHandle.gpuHandle.Offset(1, unDescriptorInc);
+	outDescHandle.cpuHandle.Offset(3, unDescriptorInc);
+	outDescHandle.gpuHandle.Offset(3, unDescriptorInc);
 
 	// Reset root signature
 	RENDER->SetGlobalRootSignature(pd3dCommandList.Get());

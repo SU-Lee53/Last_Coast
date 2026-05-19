@@ -63,11 +63,15 @@ float3 ApplyLUTCoordScaleBias(float3 uvw)
 float4 PSToneMapping(VS_QUAD_OUTPUT input) : SV_Target0
 {
 	float3 hdrColor = gtxtHDRResult.Sample(gSamplerState, input.uv).rgb;
-	float3 bloomColor = gtxtBloomResult.SampleLevel(gSamplerState, input.uv, 0.0f).rgb;
+	float3 bloomColorHalf = gtxtBloomResult[0].SampleLevel(gSamplerState, input.uv, 0.0f).rgb;
+	float3 bloomColorQuater = gtxtBloomResult[1].SampleLevel(gSamplerState, input.uv, 0.0f).rgb;
+	float3 bloomColorEighth = gtxtBloomResult[2].SampleLevel(gSamplerState, input.uv, 0.0f).rgb;
+	float3 bloomColor = bloomColorHalf * 0.75 + bloomColorQuater * 0.20 + bloomColorEighth * 0.05;
 	
-	hdrColor += bloomColor;
-	hdrColor *= gfExposure;
-	hdrColor *= gfInputScale;
+    hdrColor += bloomColor;
+
+    hdrColor *= gfExposure;
+    hdrColor *= gfInputScale;
 
 	
 	float3 uvw = HDRToLUTUVW(hdrColor);

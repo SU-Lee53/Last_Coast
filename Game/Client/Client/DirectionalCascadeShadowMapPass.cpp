@@ -4,17 +4,15 @@
 
 void DirectionalCascadeShadowMapPass::Initialize()
 {
-	for (uint32 i = 0; i < RenderManager::g_unMaxPendingFrames; ++i) {
-		for (uint32 j = 0; j < g_unNumCascade; ++j) {
-			uint32 unShadowMapSize = g_unCascadeShadowMapSize[j];
-			m_ShadowMapRef[i][j] = TEXTURE->LoadDepthStencilTexture(
-				std::format("Cascade_{}_{}", i, j),
-				unShadowMapSize,
-				unShadowMapSize,
-				DXGI_FORMAT_R32_FLOAT,
-				DXGI_FORMAT_D32_FLOAT
-			);
-		}
+	for (uint32 i = 0; i < g_unNumCascade; ++i) {
+		uint32 unShadowMapSize = g_unCascadeShadowMapSize[i];
+		m_ShadowMapRefs[i] = TEXTURE->LoadDepthStencilTexture(
+			std::format("Cascade_{}", i),
+			unShadowMapSize,
+			unShadowMapSize,
+			DXGI_FORMAT_R32_FLOAT,
+			DXGI_FORMAT_D32_FLOAT
+		);
 	}
 
 	CreatePipelineState();
@@ -27,7 +25,7 @@ void DirectionalCascadeShadowMapPass::OnPreRender(ComPtr<ID3D12GraphicsCommandLi
 	std::vector<CD3DX12_RESOURCE_BARRIER> d3dResourceBarriers;
 	d3dResourceBarriers.reserve(g_unNumCascade);
 	for (int i = 0; i < g_unNumCascade; ++i) {
-		auto pTex = m_ShadowMapRef[unCurrentContext][i].GetResource();
+		auto pTex = m_ShadowMapRefs[i].GetResource();
 		pTex->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	}
 
@@ -93,7 +91,7 @@ void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandL
 {
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
 
-	for (const auto& texRef : m_ShadowMapRef[unCurrentContext]) {
+	for (const auto& texRef : m_ShadowMapRefs) {
 		texRef.GetResource()->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 	}
 
@@ -111,7 +109,7 @@ void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandL
 	DEVICE->CopyDescriptorsSimple(1, bindHandle, toShadowCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	bindHandle.Offset(1, unDescriptorInc);
 
-	for (const auto& texRef : m_ShadowMapRef[unCurrentContext]) {
+	for (const auto& texRef : m_ShadowMapRefs) {
 		CD3DX12_CPU_DESCRIPTOR_HANDLE dsSRVHandle = texRef.GetResource()->GetSRVHandle();
 		DEVICE->CopyDescriptorsSimple(1, bindHandle, dsSRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		bindHandle.Offset(1, unDescriptorInc);
@@ -202,7 +200,7 @@ void DirectionalCascadeShadowMapPass::SetRenderTargets(ComPtr<ID3D12GraphicsComm
 {
 	auto unCurrentContext = RENDER->GetCurrentContextIndex();
 
-	auto dsvRef = m_ShadowMapRef[unCurrentContext][unCascade];
+	auto dsvRef = m_ShadowMapRefs[unCascade];
 	auto pDSV = static_pointer_cast<DepthStencilTexture>(dsvRef.GetResource());
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dDSVHandle = pDSV->GetDSVHandle();

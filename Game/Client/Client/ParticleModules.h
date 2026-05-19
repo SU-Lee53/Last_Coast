@@ -160,6 +160,13 @@ public:
 		const ParticleModuleContext& context) override;
 };
 
+class UpdateGlowOverLifeModule : public IParticleUpdateModule {
+public:
+	virtual void Update(
+		Particle& particle,
+		const ParticleModuleContext& context) override;
+};
+
 class UpdateRotationModule : public IParticleUpdateModule {
 public:
 	virtual void Update(

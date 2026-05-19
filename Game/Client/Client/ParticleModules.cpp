@@ -183,6 +183,24 @@ void UpdateColorOverLifeModule::Update(Particle& particle, const ParticleModuleC
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// UpdateGlowOverLifeModule Modules
+
+void UpdateGlowOverLifeModule::Update(Particle& particle, const ParticleModuleContext& context)
+{
+	const float t = std::clamp(
+		particle.fAge / std::max(particle.fLifetime, 0.0001f),
+		0.f,
+		1.f
+	);
+
+	particle.v4Color = Vector4::Lerp(
+		particle.v4StartColor,
+		particle.v4EndColor,
+		t
+	);
+}
+
+///////////////////////////////////////////////////////////////////////////
 // UpdateRotationModule Modules
 
 void UpdateRotationModule::Update(Particle& particle, const ParticleModuleContext& context)
