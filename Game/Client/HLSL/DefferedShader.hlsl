@@ -206,48 +206,26 @@ PS_GBUFFER_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Deffered Lighting
 
-struct VS_QUAD_INPUT
-{
-	float3 position : POSITION;
-	float2 uv : TEXCOORD0;
-};
-
-struct VS_QUAD_OUTPUT
-{
-	float4 position : SV_POSITION;
-	float2 uv : TEXCOORD0;
-};
-
-VS_QUAD_OUTPUT VSDefferedLighting(VS_QUAD_INPUT input)
-{
-	VS_QUAD_OUTPUT output = (VS_QUAD_OUTPUT) 0;
-	
-	output.position = float4(input.position.xy, 0.f, 1.f);
-	output.uv = input.uv;
-	
-	return output;
-}
-
 float4 PSDefferedLighting(VS_QUAD_OUTPUT input) : SV_Target0
 {
 	int2 pixelPos = int2(input.position.xy);
-	float2 uv = (input.position.xy) / float2(gnScreenSize);
-	
+	float2 uv = input.position.xy / float2(gnScreenSize);
+
 	GBufferData g = LoadGBuffer(pixelPos);
-	
+
 	float3 worldPos = ReconstructWorldPos(uv, g.depth);
 	float3 viewDir = normalize(gCamera.v3CameraPosition - worldPos);
-	
+
 	float specularIntensity = g.specular;
-	
+
 	float gloss = 1.0f - saturate(g.roughness);
 	float specularPower = lerp(8.f, 256.f, gloss * gloss);
-	
+
 	float fShadow = ComputeCascadeShadow(worldPos);
-	
-	float3 finalColor = 0;
-	
-	[loop]
+
+	float3 directLighting = 0.0f;
+
+    [loop]
 	for (int i = 0; i < gSceneGlobal.nNumLights; ++i)
 	{
 		LightData lightData = gLightData[i];
@@ -255,28 +233,30 @@ float4 PSDefferedLighting(VS_QUAD_OUTPUT input) : SV_Target0
 		{
 			continue;
 		}
-		
+
 		switch (lightData.nType)
 		{
 			case POINT_LIGHT:
-				finalColor += PointLight(worldPos, g.normalW, viewDir, g.albedo, specularPower, specularIntensity, i);
+				directLighting += PointLight(worldPos, g.normalW, viewDir, g.albedo, specularPower, specularIntensity, i);
 				break;
-		
+
 			case SPOT_LIGHT:
-				finalColor += SpotLight(worldPos, g.normalW, viewDir, g.albedo, specularPower, specularIntensity, i);
+				directLighting += SpotLight(worldPos, g.normalW, viewDir, g.albedo, specularPower, specularIntensity, i);
 				break;
-			
+
 			case DIRECTIONAL_LIGHT:
-				finalColor += DirectionalLight(worldPos, g.normalW, viewDir, g.albedo, specularPower, specularIntensity, i) * fShadow;
+				directLighting += DirectionalLight(worldPos, g.normalW, viewDir, g.albedo, specularPower, specularIntensity, i) * fShadow;
 				break;
 		}
 	}
-	
-	finalColor *= g.ao;
-	//finalColor += g.emissive;
-	finalColor += gSceneGlobal.v4GlobalAmbient.rgb;
-	
-	//return float4(g.albedo, 1.0f);
-	//return float4(g.normalW, 1.0f);
+
+	float ssao = gtxtSSAOBlur.SampleLevel(gSamplerState, uv, 0.0f).r;
+	ssao = saturate(ssao);
+
+	//float ao = saturate(g.ao * ssao);
+
+	float3 ambient = gSceneGlobal.v4GlobalAmbient.rgb * g.albedo * ssao;
+	float3 finalColor = directLighting * lerp(1.0f, ssao, 0.25f) + ambient;
+
 	return float4(finalColor, 1.0f);
 }

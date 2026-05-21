@@ -55,7 +55,19 @@ public:
 private:
 	bool CreateTextureFromFile(const std::wstring& wstrTexturePath, bool bCheckTransparent);
 	bool CreateTextureArrayFromFile(const std::wstring& wstrTexturePath);
-	bool CreateTextureFromRawFile(const std::wstring& wstrTexturePath, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM);
+
+	bool CreateTextureFromRawFile(
+		const std::wstring& wstrTexturePath, 
+		uint32 unWidth,
+		uint32 unHeight,
+		DXGI_FORMAT dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM);
+	
+	bool CreateTextureFromRawData(
+		const std::wstring& wstrTexturePath, 
+		const std::vector<Vector4> data,
+		uint32 unWidth, 
+		uint32 unHeight, 
+		DXGI_FORMAT dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM);
 	
 	[[nodiscard]] 
 	HRESULT LoadFromDDSFile(

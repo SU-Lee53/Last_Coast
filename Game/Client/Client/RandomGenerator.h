@@ -30,6 +30,15 @@ public:
 		return XMFLOAT3(r, g, b);
 	}
 
+	static XMFLOAT3 GenerateRandomVector3(float fMin, float fMax) {
+		std::uniform_real_distribution<float> uid{ fMin, fMax };
+		float r = uid(g_dre);
+		float g = uid(g_dre);
+		float b = uid(g_dre);
+
+		return XMFLOAT3(r, g, b);
+	}
+
 	static XMVECTOR GenerateRandomUnitVectorOnSphere() {
 		XMVECTOR xmvOne = XMVectorReplicate(1.0f);
 		XMVECTOR xmvZero = XMVectorZero();
@@ -43,6 +52,6 @@ public:
 
 	}
 
-private:
+public:
 	static std::default_random_engine g_dre;
 };

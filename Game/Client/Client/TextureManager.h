@@ -22,10 +22,26 @@ public:
 	void LoadGameTextures();
 
 public:
-	TextureRef<Texture> LoadTexture(const std::string& strTextureName, bool bCheckTransparent = false);
-	TextureRef<Texture> LoadTextureFromRaw(const std::string& strTextureName, uint32 unWidth, uint32 unHeight);
-	TextureRef<Texture> LoadTextureArray(const std::string& strTextureName, const std::wstring& wstrTexturePath);
+	TextureRef<Texture> LoadTexture(
+		const std::string& strTextureName,
+		bool bCheckTransparent = false);
+
+	TextureRef<Texture> LoadTextureFromRaw(
+		const std::string& strTextureName, 
+		uint32 unWidth, 
+		uint32 unHeight);
+
+	TextureRef<Texture> LoadTextureArray(
+		const std::string& strTextureName, 
+		const std::wstring& wstrTexturePath);
 	
+	TextureRef<Texture> LoadTextureFromRawData(
+		const std::string& strTextureName, 
+		std::vector<Vector4> data,
+		uint32 unWidth, 
+		uint32 unHeight,
+		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN);
+
 	TextureRef<RenderTargetTexture> LoadRenderTargetTexture(
 		const std::string& strTextureName, 
 		uint32 unWidth,
@@ -119,4 +135,3 @@ private:
 #pragma endregion
 
 };
-

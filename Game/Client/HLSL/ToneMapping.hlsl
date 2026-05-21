@@ -4,31 +4,9 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tone Mapping
 
-struct VS_QUAD_INPUT
-{
-	float3 position : POSITION;
-	float2 uv : TEXCOORD0;
-};
-
-struct VS_QUAD_OUTPUT
-{
-	float4 position : SV_POSITION;
-	float2 uv : TEXCOORD0;
-};
-
 const static uint gnLUTSize = 32;
 const static float gfLUTMinEV = -10.0f;
 const static float gfLUTMaxEV = 6.0f;
-
-VS_QUAD_OUTPUT VSToneMapping(VS_QUAD_INPUT input)
-{
-	VS_QUAD_OUTPUT output = (VS_QUAD_OUTPUT) 0;
-	
-	output.position = float4(input.position.xy, 0.f, 1.f);
-	output.uv = input.uv;
-	
-	return output;
-}
 
 float GetLuminance(float3 color)
 {

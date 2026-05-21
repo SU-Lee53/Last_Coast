@@ -551,6 +551,7 @@
     <ClInclude Include="ToneMappingPass.h">
       <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
     </ClInclude>
+    <ClInclude Include="SSAOPass.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -924,6 +925,7 @@
     <ClCompile Include="ToneMappingPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
     </ClCompile>
+    <ClCompile Include="SSAOPass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
@@ -949,9 +951,6 @@
     <FxCompile Include="..\HLSL\NewCommon.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
-    <FxCompile Include="..\HLSL\Shaders.hlsl">
-      <Filter>03.Engine\HLSL\Graphics</Filter>
-    </FxCompile>
     <FxCompile Include="..\HLSL\Sprite.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
@@ -970,9 +969,6 @@
     <FxCompile Include="..\HLSL\LUTBaking.hlsl">
       <Filter>03.Engine\HLSL\Compute</Filter>
     </FxCompile>
-    <FxCompile Include="..\HLSL\HDRPostProcessing.hlsl">
-      <Filter>03.Engine\HLSL\Graphics</Filter>
-    </FxCompile>
     <FxCompile Include="..\HLSL\ToneMappingCommon.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
@@ -983,6 +979,12 @@
       <Filter>03.Engine\HLSL\Compute</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\Bloom.hlsl">
+      <Filter>03.Engine\HLSL\Compute</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\SSAO.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\HDRPostProcessing.hlsl">
       <Filter>03.Engine\HLSL\Compute</Filter>
     </FxCompile>
   </ItemGroup>

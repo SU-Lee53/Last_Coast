@@ -59,6 +59,32 @@ struct VS_TERRAIN_OUTPUT
 	float2 positionLocalXZ : TEXCOORD0;
 };
 
+struct VS_QUAD_INPUT
+{
+	float3 position : POSITION;
+	float2 uv : TEXCOORD0;
+};
+
+struct VS_QUAD_OUTPUT
+{
+	float4 position : SV_POSITION;
+	float2 uv : TEXCOORD0;
+};
+
+// ================================================================================
+// Common quad VS
+// ================================================================================
+
+VS_QUAD_OUTPUT VSQuad(VS_QUAD_INPUT input)
+{
+	VS_QUAD_OUTPUT output = (VS_QUAD_OUTPUT) 0;
+	
+	output.position = float4(input.position.xy, 0.f, 1.f);
+	output.uv = input.uv;
+	
+	return output;
+}
+
 // ================================================================================
 // Constants
 // ================================================================================
@@ -206,6 +232,19 @@ cbuffer cbToneMappingData : register(b4, space0)
 	float3 pad1;
 };
 
+cbuffer cbSSAOData : register(b5, space0)
+{
+	float gfSSAORadius;
+	float gfSSAOBias;
+	float gfSSAOPower;
+	float gfSSAOIntensity;
+
+	int gnSSAOSampleCount;
+	float gfSSAODepthSigma;
+	float gfSSAONormalSigma;
+	float gfSSAONoiseScale;
+};
+
 // ============ StructuredBuffers ============
 
 StructuredBuffer<LightData> gLightData : register(t0, space0);
@@ -219,16 +258,21 @@ Texture2D gtxtGBufferDepth : register(t12, space0);
 Texture2D gtxtHDRResult : register(t13, space0);
 Texture2D gtxtBloomResult[3] : register(t14, space0);	// t14, t15, t16
 
+Texture2D<float4> gtxtSSAONoise : register(t17, space0);
+Texture2D<float> gtxtSSAOInput : register(t18, space0);
+Texture2D<float> gtxtSSAOBlur : register(t19, space0);
+
 // Tone mapping LUT
-Texture3D gtxtToneMapLUT : register(t17, space0);
-Texture3D gtxtGradingLUT : register(t18, space0);
+Texture3D gtxtToneMapLUT : register(t20, space0);
+Texture3D gtxtGradingLUT : register(t21, space0);
 
 // ============ Samplers ============
 SamplerState gSkyboxSamplerState : register(s0, space0);
 SamplerState gWeightMapSamplerState : register(s1, space0);
 SamplerState gSamplerState : register(s2, space0);
-SamplerState gAnisotropicSamplerState : register(s3, space0);
-SamplerComparisonState gShadowMapSamplerState : register(s4, space0);
+SamplerState gPointWrapSamplerState : register(s3, space0);
+SamplerState gAnisotropicSamplerState : register(s4, space0);
+SamplerComparisonState gShadowMapSamplerState : register(s5, space0);
 
 
 
@@ -589,7 +633,7 @@ float ComputeHeightFogOpticalDepth(float3 worldPos)
 	float3 ray = worldPos - gCamera.v3CameraPosition;
 	float fDistToPixel = length(ray);
 	
-	if(fDistToPixel <= 1e-4f)
+	if (fDistToPixel <= 1e-4f)
 	{
 		return 0.f;
 	}
@@ -597,12 +641,12 @@ float ComputeHeightFogOpticalDepth(float3 worldPos)
 	float3 rayDir = ray / fDistToPixel;
 	float fRayLength = max(0.f, fDistToPixel - gfFogHeightStartDistance);
 	
-	if(gfFogCutOffDistance > 0.f)
+	if (gfFogCutOffDistance > 0.f)
 	{
 		fRayLength = min(fRayLength, gfFogCutOffDistance);
 	}
 	
-	if(fRayLength <= 1e-4f)
+	if (fRayLength <= 1e-4f)
 	{
 		return 0.f;
 	}

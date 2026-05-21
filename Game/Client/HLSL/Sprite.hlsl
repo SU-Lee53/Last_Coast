@@ -1,22 +1,16 @@
 #include "NewCommon.hlsl"
 
 
-struct VS_QUAD_INPUT
-{
-	float3 position : POSITION;
-	float2 uv : TEXCOORD0;
-};
-
-struct VS_QUAD_OUTPUT
+struct VS_UI_QUAD_OUTPUT
 {
 	float4 position : SV_POSITION;
 	float2 uv : TEXCOORD0;
 	uint nInstance : TEXINDEX;
 };
 
-VS_QUAD_OUTPUT VSUIRect(VS_QUAD_INPUT input, uint nInstanceID : SV_InstanceID)
+VS_UI_QUAD_OUTPUT VSUIRect(VS_QUAD_INPUT input, uint nInstanceID : SV_InstanceID)
 {
-	VS_QUAD_OUTPUT output = (VS_QUAD_OUTPUT) 0;
+	VS_UI_QUAD_OUTPUT output = (VS_UI_QUAD_OUTPUT) 0;
 	
 	// local [-1, 1] -> [0,1]
 	float2 localUV;
@@ -49,7 +43,7 @@ VS_QUAD_OUTPUT VSUIRect(VS_QUAD_INPUT input, uint nInstanceID : SV_InstanceID)
 	return output;
 }
 
-float4 PSUISprite(VS_QUAD_OUTPUT input) : SV_Target
+float4 PSUISprite(VS_UI_QUAD_OUTPUT input) : SV_Target
 {
 	float4 sampledColor = gtxtTextures[gUIData[input.nInstance].nTexIndex].Sample(gSamplerState, input.uv);
 	return float4(sampledColor * gUIData[input.nInstance].v4TextColorOrTexIndex);

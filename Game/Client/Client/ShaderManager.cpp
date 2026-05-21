@@ -182,14 +182,8 @@ void ShaderManager::CompileShaders()
 	};
 
 	// Shaders.hlsl
-	//	Compile("StandardVS", L"Shaders.hlsl", L"VSStandard", SHADER_TYPE::VS);
-	//	Compile("StandardPS", L"Shaders.hlsl", L"PSStandard", SHADER_TYPE::PS);
-	//	
-	//	Compile("AnimatedVS", L"Shaders.hlsl", L"VSAnimated", SHADER_TYPE::VS);
-	//	Compile("AnimatedPS", L"Shaders.hlsl", L"PSAnimated", SHADER_TYPE::PS);
-	//	
-	//	Compile("TerrainVS", L"Shaders.hlsl", L"VSTerrain", SHADER_TYPE::VS);
-	//	Compile("TerrainPS", L"Shaders.hlsl", L"PSTerrain", SHADER_TYPE::PS);
+	// Common quad vs
+	Compile("QuadVS", L"NewCommon.hlsl", L"VSQuad", SHADER_TYPE::VS);
 
 	// Shaders.hlsl
 	Compile("StandardVS", L"DefferedShader.hlsl", L"VSStandard", SHADER_TYPE::VS);
@@ -203,10 +197,10 @@ void ShaderManager::CompileShaders()
 	Compile("TerrainVS", L"DefferedShader.hlsl", L"VSTerrain", SHADER_TYPE::VS);
 	Compile("TerrainPS", L"DefferedShader.hlsl", L"PSTerrain", SHADER_TYPE::PS);
 	
-	Compile("LightingVS", L"DefferedShader.hlsl", L"VSDefferedLighting", SHADER_TYPE::VS);
+	//Compile("LightingVS", L"DefferedShader.hlsl", L"VSDefferedLighting", SHADER_TYPE::VS);
 	Compile("LightingPS", L"DefferedShader.hlsl", L"PSDefferedLighting", SHADER_TYPE::PS);
 	
-	Compile("ToneMappingVS", L"ToneMapping.hlsl", L"VSToneMapping", SHADER_TYPE::VS);
+	//Compile("ToneMappingVS", L"ToneMapping.hlsl", L"VSToneMapping", SHADER_TYPE::VS);
 	Compile("ToneMappingPS", L"ToneMapping.hlsl", L"PSToneMapping", SHADER_TYPE::PS);
 	
 	Compile("SkyboxVS", L"Skybox.hlsl", L"VSSkybox", SHADER_TYPE::VS);
@@ -229,9 +223,11 @@ void ShaderManager::CompileShaders()
 	Compile("ParticlePS", L"Particle.hlsl", L"PSParticle", SHADER_TYPE::PS);
 
 	// PostProcess
-	Compile("DefferedFogVS", L"HDRPostProcessing.hlsl", L"VSDefferedFog", SHADER_TYPE::VS);
+	//Compile("DefferedFogVS", L"HDRPostProcessing.hlsl", L"VSDefferedFog", SHADER_TYPE::VS);
 	Compile("DefferedFogPS", L"HDRPostProcessing.hlsl", L"PSDefferedFog", SHADER_TYPE::PS);
 
+	Compile("SSAOPS", L"SSAO.hlsl", L"PSSSAO", SHADER_TYPE::PS);
+	Compile("SSAOBilateralBlurPS", L"SSAO.hlsl", L"PSSSAOBilateralBlur", SHADER_TYPE::PS);
 
 	// Compute
 	Compile("HDRIToCubeMapCS", L"HDRIToCubeMap.hlsl", L"CSHDRIToCubeMap", SHADER_TYPE::CS);
@@ -243,32 +239,4 @@ void ShaderManager::CompileShaders()
 	Compile("BloomBlurHorzCS", L"Bloom.hlsl", L"CSBloomBlurHorizontal", SHADER_TYPE::CS);
 	Compile("BloomBlurVertCS", L"Bloom.hlsl", L"CSBloomBlurVertical", SHADER_TYPE::CS);
 
-
-
-
-	//// FullScreenShader.hlsl
-	//Compile("FullScreenVS", L"FullScreenShader.hlsl", L"VSFullScreen", SHADER_TYPE::VS);
-	//Compile("FullScreenPS", L"FullScreenShader.hlsl", L"PSFullScreen", SHADER_TYPE::PS);
-	//
-	//// EffectShader.hlsl
-	//Compile("RayVS", L"EffectShader.hlsl", L"VSRay", SHADER_TYPE::VS);
-	//Compile("RayGS", L"EffectShader.hlsl", L"GSRay", SHADER_TYPE::GS);
-	//Compile("RayPS", L"EffectShader.hlsl", L"PSRay", SHADER_TYPE::PS);
-	//
-	//Compile("ExplosionVS", L"EffectShader.hlsl", L"VSExplosion", SHADER_TYPE::VS);
-	//Compile("ExplosionGS", L"EffectShader.hlsl", L"GSExplosion", SHADER_TYPE::GS);
-	//Compile("ExplosionPS", L"EffectShader.hlsl", L"PSExplosion", SHADER_TYPE::PS);
-
-	//// Sprite.hlsl
-	//Compile("TextureSpriteVS", L"Sprite.hlsl", L"VSTextureSprite", SHADER_TYPE::VS);
-	//Compile("TextureSpriteGS", L"Sprite.hlsl", L"GSTextureSprite", SHADER_TYPE::GS);
-	//Compile("TextureSpritePS", L"Sprite.hlsl", L"PSTextureSprite", SHADER_TYPE::PS);
-	//
-	//Compile("TextSpriteVS", L"Sprite.hlsl", L"VSTextSprite", SHADER_TYPE::VS);
-	//Compile("TextSpriteGS", L"Sprite.hlsl", L"GSTextSprite", SHADER_TYPE::GS);
-	//Compile("TextSpritePS", L"Sprite.hlsl", L"PSTextSprite", SHADER_TYPE::PS);
-	//
-	//Compile("BillboardSpriteVS", L"Sprite.hlsl", L"VSBillboardSprite", SHADER_TYPE::VS);
-	//Compile("BillboardSpriteGS", L"Sprite.hlsl", L"GSBillboardSprite", SHADER_TYPE::GS);
-	//Compile("BillboardSpritePS", L"Sprite.hlsl", L"PSBillboardSprite", SHADER_TYPE::PS);
 }

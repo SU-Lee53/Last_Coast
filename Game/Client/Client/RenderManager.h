@@ -14,18 +14,24 @@ enum class ROOT_PARAMETER : uint32 {
 	G_BUFFER								= 3,
 	HDR_RESULT								= 4,
 	BLOOM_RESULT							= 5,
-	TONE_MAPPING_DATA						= 6,
-	FOG_DATA								= 7,
-	PER_PASS_BUFFERS						= 8,
-	PER_PASS_TEXTURES						= 9,
-	PER_INSTANCE_DATA						= 10,
-	BONE_TRANSFORM_OFFSETS					= 11,
-	LIGHT_CAMERA_DATA						= 12,
-	TERRAIN_LAYER							= 13,
-	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 14,
-	TERRAIN_WORLD_TRANSFORM					= 15,
-	UI_DATA									= 16,
-	PARTICLE_DATA							= 17,
+	SSAO_DATA_AND_NOISE						= 6,
+	SSAO_INPUT								= 7,
+	SSAO_OUTPUT								= 8,
+	TONE_MAPPING_DATA						= 9,
+	FOG_DATA								= 10,
+	PER_PASS_BUFFERS						= 11,
+	PER_PASS_TEXTURES						= 12,
+
+	PER_INSTANCE_DATA						= 13,
+	BONE_TRANSFORM_OFFSETS					= 14,
+
+	LIGHT_CAMERA_DATA						= 15,
+	TERRAIN_LAYER							= 16,
+	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 17,
+
+	TERRAIN_WORLD_TRANSFORM					= 18,
+	UI_DATA									= 19,
+	PARTICLE_DATA							= 20,
 };
 
 enum class COMPUTE_ROOT_PARAMETER : uint32 {
@@ -50,8 +56,8 @@ struct PostProcessingResources {
 	std::array<TextureRef<RWRenderTargetTexture>, 2> BloomEighthBuffer;
 
 	// SSAO
-	TextureRef<RWRenderTargetTexture> SSAOBuffer;
-	TextureRef<RWRenderTargetTexture> SSAOBlurBuffer;
+	TextureRef<RenderTargetTexture> SSAOBuffer;
+	TextureRef<RenderTargetTexture> SSAOBlurBuffer;
 
 	// Shaft
 	TextureRef<RWRenderTargetTexture> ShaftBuffer;

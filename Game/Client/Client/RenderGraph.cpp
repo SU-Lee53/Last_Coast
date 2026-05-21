@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "RenderGraph.h"
 #include "GBufferPass.h"
+#include "SSAOPass.h"
 #include "DeferredLightingPass.h"
 #include "TransparentForwardLightingPass.h"
 #include "DirectionalCascadeShadowMapPass.h"
@@ -41,6 +42,10 @@ void RenderGraph::BuildGraph()
 	pGBufferPass->Initialize();
 	m_pAdjLists.push_back(pGBufferPass);
 	
+	std::shared_ptr<IRenderPass> pSSAOPass = std::make_shared<SSAOPass>();
+	pSSAOPass->Initialize();
+	m_pAdjLists.push_back(pSSAOPass);
+	
 	std::shared_ptr<IRenderPass> pDefferedLightingPass = std::make_shared<DeferredLightingPass>();
 	pDefferedLightingPass->Initialize();
 	m_pAdjLists.push_back(pDefferedLightingPass);
@@ -78,6 +83,10 @@ void RenderGraph::BuildGraph()
 	/*
 		1. Dirctional CSM pass
 		2. GBuffer pass
+
+		+ 2026.05.21
+		+ SSAO
+
 		3. Deffered Lighting pass
 		4. Deffered Fog pass
 		5. Forward Lighting pass
@@ -92,7 +101,8 @@ void RenderGraph::BuildGraph()
 	*/
 
 	pDirectionalCascadeShadowMapPass->Connect(pGBufferPass);
-	pGBufferPass->Connect(pDefferedLightingPass);
+	pGBufferPass->Connect(pSSAOPass);
+	pSSAOPass->Connect(pDefferedLightingPass);
 	pDefferedLightingPass->Connect(pDefferedFogPass);
 	pDefferedFogPass->Connect(pTransparentForwardPass);
 	pTransparentForwardPass->Connect(pSkyboxPass);

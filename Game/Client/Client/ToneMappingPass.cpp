@@ -151,7 +151,7 @@ void ToneMappingPass::CreatePipelineState()
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC d3dPipelineDesc{};
 	{
 		d3dPipelineDesc.pRootSignature = RenderManager::g_pd3dGlobalRootSignature.Get();
-		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("ToneMappingVS");
+		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("QuadVS");
 		d3dPipelineDesc.PS = SHADER->GetShaderByteCode("ToneMappingPS");
 		d3dPipelineDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 		d3dPipelineDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
