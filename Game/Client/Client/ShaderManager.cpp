@@ -239,4 +239,8 @@ void ShaderManager::CompileShaders()
 	Compile("BloomBlurHorzCS", L"Bloom.hlsl", L"CSBloomBlurHorizontal", SHADER_TYPE::CS);
 	Compile("BloomBlurVertCS", L"Bloom.hlsl", L"CSBloomBlurVertical", SHADER_TYPE::CS);
 
+	Compile("ExtractLuminanceCS", L"AutoExposure.hlsl", L"CSExtractLuminance", SHADER_TYPE::CS);
+	Compile("ReduceLuminanceCS", L"AutoExposure.hlsl", L"CSReduceLuminance", SHADER_TYPE::CS);
+	Compile("FinalLuminanceCS", L"AutoExposure.hlsl", L"CSFinalLuminance", SHADER_TYPE::CS);
+
 }

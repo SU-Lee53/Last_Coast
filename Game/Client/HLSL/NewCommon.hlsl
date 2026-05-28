@@ -217,22 +217,38 @@ cbuffer cbFogData : register(b3, space0)
 	float gfFogHeightStartDistance;
 
 	float gfFogMaxOpacity;
-	float3 pad0;
+	float3 _pad0;
 };
 
 cbuffer cbToneMappingData : register(b4, space0)
 {
-	float gfExposure;
-	float gfGamma;
-	float gfPostSaturation;
-	float gfInputScale;
+	float	gfExposure;
+	float	gfTargetLuminance;
+	float	gfMinExposure;
+	float	gfMaxExposure;
 	
-	float gfOutputScale;
-	float gfLookStrength;
-	float3 pad1;
+	int		gnEnableAutoExposure;
+	float	gfGamma;
+	float	gfPostSaturation;
+	float	gfInputScale;
+	
+	float	gfOutputScale;
+	float	gfLookStrength;
+	float2	_pad1;
 };
 
-cbuffer cbSSAOData : register(b5, space0)
+cbuffer cbScreenFXData : register(b5, space0)
+{
+	float gfGrainStrength;
+	float gfGrainScale;
+	float gfVignetteStrength;
+	float gfVignetteRadius;
+
+	float gfVignetteSoftness;
+	float3 _pad3;
+};
+
+cbuffer cbSSAOData : register(b6, space0)
 {
 	float gfSSAORadius;
 	float gfSSAOBias;
@@ -261,10 +277,11 @@ Texture2D gtxtBloomResult[3] : register(t14, space0);	// t14, t15, t16
 Texture2D<float4> gtxtSSAONoise : register(t17, space0);
 Texture2D<float> gtxtSSAOInput : register(t18, space0);
 Texture2D<float> gtxtSSAOBlur : register(t19, space0);
+Texture2D<float> gtxtLuminance : register(t20, space0);
 
 // Tone mapping LUT
-Texture3D gtxtToneMapLUT : register(t20, space0);
-Texture3D gtxtGradingLUT : register(t21, space0);
+Texture3D gtxtToneMapLUT : register(t21, space0);
+Texture3D gtxtGradingLUT : register(t22, space0);
 
 // ============ Samplers ============
 SamplerState gSkyboxSamplerState : register(s0, space0);

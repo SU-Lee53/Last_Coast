@@ -121,7 +121,7 @@ int GetCascadeIndex(float fViewDepth)
 
 float Compute3x3PCF(float3 shadowPos, int nCascadeIndex)
 {
-	const float fCascadeSize[4] = { 4096, 2048, 1024, 512 };
+	const float fCascadeSize[4] = { 2048, 1024, 512, 256 };
 	float fSum = 0.f;
 	
 	const float2 texelSize = (1.0f / fCascadeSize[nCascadeIndex]).xx;
@@ -139,24 +139,44 @@ float Compute3x3PCF(float3 shadowPos, int nCascadeIndex)
 	return fSum / 9.f;
 }
 
+float SampleCascadeShadow(float3 worldPos, int nCascadeIndex)
+{
+	float4 shadowPos = mul(float4(worldPos, 1.f), gmtxCascadeShadows[nCascadeIndex]);
+	shadowPos.xyz /= shadowPos.w;
+	return gtxtCascadeShadowMaps[nCascadeIndex].SampleCmpLevelZero(gShadowMapSamplerState, shadowPos.xy, shadowPos.z);
+	
+}
+
+
 float ComputeCascadeShadow(float3 worldPos)
 {
 	float3 viewPos = mul(float4(worldPos, 1.f), gCamera.mtxView).xyz;
 	float fViewDepth = viewPos.z;
 	
-	if (fViewDepth > gCamera.gvCascadeSplits[NUM_CASCADES - 1])
+	int nCascadeIndex = GetCascadeIndex(fViewDepth);
+	float fShadowA = SampleCascadeShadow(worldPos, nCascadeIndex);
+	
+	if (nCascadeIndex >= NUM_CASCADES - 1)
 	{
-		return 1.0f;
+		return fShadowA;
 	}
 	
-	int nCascadeIndex = GetCascadeIndex(fViewDepth);
+	float fSplitStart = (nCascadeIndex == 0) ? 0.0f : gCamera.gvCascadeSplits[nCascadeIndex - 1];
+	float fSplitEnd = gCamera.gvCascadeSplits[nCascadeIndex];
+	float fRange = fSplitEnd - fSplitStart;
 	
-	float4 shadowPos = mul(float4(worldPos, 1.f), gmtxCascadeShadows[nCascadeIndex]);
-	shadowPos.xyz /= shadowPos.w;
+	float fBlendWidth = fRange * 0.10f;	// Last 10%
+	float fBlendStart = fSplitEnd - fBlendWidth;
+	if (fViewDepth < fBlendStart)
+	{
+		return fShadowA;
+	}
 	
-	//float fShadow = (nCascadeIndex == 0) ? Compute3x3PCF(shadowPos, nCascadeIndex) : gtxtCascadeShadowMaps[nCascadeIndex].SampleCmpLevelZero(gShadowMapSamplerState, shadowPos.xy, shadowPos.z);
-	float fShadow = gtxtCascadeShadowMaps[nCascadeIndex].SampleCmpLevelZero(gShadowMapSamplerState, shadowPos.xy, shadowPos.z);
-	return fShadow;
+	float fShadowB = SampleCascadeShadow(worldPos, nCascadeIndex + 1);
+	
+	float t = saturate((fViewDepth - fBlendStart) / max(fBlendWidth, FLT_EPSILON));
+	return lerp(fShadowA, fShadowB, t);
+
 }
 
 

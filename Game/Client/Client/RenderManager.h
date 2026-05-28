@@ -17,27 +17,31 @@ enum class ROOT_PARAMETER : uint32 {
 	SSAO_DATA_AND_NOISE						= 6,
 	SSAO_INPUT								= 7,
 	SSAO_OUTPUT								= 8,
-	TONE_MAPPING_DATA						= 9,
-	FOG_DATA								= 10,
-	PER_PASS_BUFFERS						= 11,
-	PER_PASS_TEXTURES						= 12,
+	LUMINANCE								= 9,
+	TONE_MAPPING_DATA						= 10,
+	FOG_DATA								= 11,
+	PER_PASS_BUFFERS						= 12,
+	PER_PASS_TEXTURES						= 13,
 
-	PER_INSTANCE_DATA						= 13,
-	BONE_TRANSFORM_OFFSETS					= 14,
+	PER_INSTANCE_DATA						= 14,
+	BONE_TRANSFORM_OFFSETS					= 15,
 
-	LIGHT_CAMERA_DATA						= 15,
-	TERRAIN_LAYER							= 16,
-	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 17,
+	LIGHT_CAMERA_DATA						= 16,
+	TERRAIN_LAYER							= 17,
+	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 18,
 
-	TERRAIN_WORLD_TRANSFORM					= 18,
-	UI_DATA									= 19,
-	PARTICLE_DATA							= 20,
+	TERRAIN_WORLD_TRANSFORM					= 19,
+	UI_DATA									= 20,
+	PARTICLE_DATA							= 21,
 };
 
 enum class COMPUTE_ROOT_PARAMETER : uint32 {
-	INPUT_SRV	= 0,
-	OUTPUT_UAV	= 1,
-	BLOOM_DATA	= 2,
+	INPUT_SRV_FLOAT4	= 0,
+	OUTPUT_UAV_FLOAT4	= 1,
+	INPUT_SRV_FLOAT		= 2,
+	OUTPUT_UAV_FLOAT	= 3,
+	BLOOM_DATA			= 4,
+	AUTO_EXPOSURE_DATA	= 5,
 };
 
 struct GBuffer {
@@ -45,23 +49,26 @@ struct GBuffer {
 
 	std::array<TextureRef<RenderTargetTexture>, GBuffer::g_unNumGBuffers> GBuffers;
 
-	void Initialize(uint32 nPendingFrameIndex);
+	void Initialize();
 
 };
 
 struct PostProcessingResources {
+	// Graphics quad pipelines
+	// SSAO
+	TextureRef<RenderTargetTexture> SSAOBuffer;
+	TextureRef<RenderTargetTexture> SSAOBlurBuffer;
+
+	// Compute Pipelines
 	// Bloom Downsample
 	std::array<TextureRef<RWRenderTargetTexture>, 2> BloomHalfBuffer;
 	std::array<TextureRef<RWRenderTargetTexture>, 2> BloomQuaterBuffer;
 	std::array<TextureRef<RWRenderTargetTexture>, 2> BloomEighthBuffer;
 
-	// SSAO
-	TextureRef<RenderTargetTexture> SSAOBuffer;
-	TextureRef<RenderTargetTexture> SSAOBlurBuffer;
-
-	// Shaft
-	TextureRef<RWRenderTargetTexture> ShaftBuffer;
-
+	// HDR Luminance
+	std::array<TextureRef<RWRenderTargetTexture>, 4> LuminanceBuffer; // 1/2, 1/4, 1/8, 1/16
+	TextureRef<RWRenderTargetTexture> LuminanceFinalBuffer; // 1x1
+	
 	void Initialize();
 };
 

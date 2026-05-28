@@ -268,18 +268,6 @@ void Camera::ComputeCascadeSplits()
 	}
 
 	m_v4CascadeSplits = Vector4(fSplits);
-
-	//constexpr uint32 unNumCascade = DirectionalCascadeShadowMapPass::g_unNumCascade;
-
-	//float fNearToFar = m_fFar - m_fNear;
-	//float fDistancePerCascade = fNearToFar / static_cast<float>(unNumCascade);
-
-	//float fSplits[4] = {0.f, 0.f, 0.f, 0.f};
-	//for (auto i = 0; i < unNumCascade; ++i) {
-	//	fSplits[i] = m_fNear + ((i + 1) * fDistancePerCascade);
-	//}
-
-	//m_v4CascadeSplits = Vector4(fSplits);
 }
 
 Matrix Camera::GetViewProjectMatrix() const

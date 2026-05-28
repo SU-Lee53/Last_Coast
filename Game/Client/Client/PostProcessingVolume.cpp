@@ -15,7 +15,6 @@ CB_BLOOM_DATA PostProcessingVolume::GetBloomCBData(XMINT2 xmi2InputSize, XMINT2 
 
 CB_SSAO_DATA PostProcessingVolume::GetSSAOCBData() const
 {
-	CB_SSAO_DATA data;
 	return CB_SSAO_DATA{
 		.gfRadius = m_SSAO.fRadius,
 		.gfBias = m_SSAO.fBias,
@@ -25,6 +24,17 @@ CB_SSAO_DATA PostProcessingVolume::GetSSAOCBData() const
 		.gfDepthSigma = m_SSAO.fDepthSigma,
 		.gfNormalSigma = m_SSAO.fNormalSigma,
 		.gfNoiseScale = m_SSAO.fNoiseScale,
+	};
+}
+
+CB_SCREEN_FX_DATA PostProcessingVolume::GetScreenFXCBData() const
+{
+	return CB_SCREEN_FX_DATA{
+		.gGrainStrength = m_ScreenFX.fGrainStrength ,
+		.gGrainScale = m_ScreenFX.fGrainScale ,
+		.gVignetteStrength = m_ScreenFX.fVignetteStrength ,
+		.gVignetteRadius = m_ScreenFX.fVignetteRadius ,
+		.gfVignetteSoftness = m_ScreenFX.fVignetteSoftness ,
 	};
 }
 
@@ -44,10 +54,7 @@ void PostProcessingVolume::ShowDebugOptions()
 	}
 
 	if (ImGui::Button("Reset Bloom Parameters")) {
-		m_Bloom.fThreshold = 1.0f;
-		m_Bloom.fSoftKnee = 0.5f;
-		m_Bloom.fIntensity = 0.6f;
-		m_Bloom.fRadius = 1.0f;
+		m_Bloom = BloomParameters{};
 	}
 	
 	ImGui::SeparatorText("SSAO");
@@ -63,14 +70,27 @@ void PostProcessingVolume::ShowDebugOptions()
 	}
 
 	if (ImGui::Button("Reset SSAO Parameters")) {
-		m_SSAO.fRadius = 3.0f;
-		m_SSAO.fBias = 0.001f;
-		m_SSAO.fPower = 1.5f;
-		m_SSAO.fIntensity = 1.0f;
-		m_SSAO.nSampleCount = 16;
-		m_SSAO.fDepthSigma = 120.0f;
-		m_SSAO.fNormalSigma = 16.0f;
-		m_SSAO.fNoiseScale = 1.0f;
+		m_SSAO = SSAOParameters{};
+	}
+	
+	ImGui::SeparatorText("Screen FX");
+	{
+		ImGui::SeparatorText("Grain");
+		{
+			ImGui::DragFloat("Grain Strength", &m_ScreenFX.fGrainStrength, 0.01f, 0.0f, 0.08f);
+			ImGui::DragFloat("Grain Scale", &m_ScreenFX.fGrainScale, 0.01f, 0.25f, 4.0f);
+		}
+
+		ImGui::SeparatorText("Vignette");
+		{
+			ImGui::DragFloat("Vignette Strength", &m_ScreenFX.fVignetteStrength, 0.01f, 0.f, 1.f);
+			ImGui::DragFloat("Vignette Radius", &m_ScreenFX.fVignetteRadius, 0.01f, 0.2f, 1.5f);
+			ImGui::DragFloat("Vignette Softness", &m_ScreenFX.fVignetteSoftness, 0.01f, 0.01f, 1.5f);
+		}
+	}
+
+	if (ImGui::Button("Reset Screen FX Parameters")) {
+		m_ScreenFX = ScreenFXParameters{};
 	}
 
 }

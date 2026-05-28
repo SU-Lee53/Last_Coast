@@ -163,6 +163,7 @@
     <ClInclude Include="AnimationManager.h" />
     <ClInclude Include="AnimationMontage.h" />
     <ClInclude Include="AnimationStateMachine.h" />
+    <ClInclude Include="AutoExposurePass.h" />
     <ClInclude Include="BloodEffect.h" />
     <ClInclude Include="BloomPass.h" />
     <ClInclude Include="BoundingCapsule.h" />
@@ -185,6 +186,7 @@
     <ClInclude Include="DescriptorHeap.h" />
     <ClInclude Include="DirectionalCascadeShadowMapPass.h" />
     <ClInclude Include="DynamicObject.h" />
+    <ClInclude Include="LogInScene.h" />
     <ClInclude Include="MuzzleFlashEffect.h" />
     <ClInclude Include="NetworkGameTestScene.h" />
     <ClInclude Include="ParticleEffect.h" />
@@ -200,6 +202,7 @@
     <ClInclude Include="ParticleTypes.h" />
     <ClInclude Include="PostProcessingVolume.h" />
     <ClInclude Include="RayTraceUtils.h" />
+    <ClInclude Include="RWStructuredBuffer.h" />
     <ClInclude Include="SpatialTraits.h" />
     <ClInclude Include="SpatialTypes.h" />
     <ClInclude Include="SpatialWorld.h" />
@@ -337,6 +340,7 @@
     <ClCompile Include="AnimationManager.cpp" />
     <ClCompile Include="AnimationMontage.cpp" />
     <ClCompile Include="AnimationStateMachine.cpp" />
+    <ClCompile Include="AutoExposurePass.cpp" />
     <ClCompile Include="BloodEffect.cpp" />
     <ClCompile Include="BloomPass.cpp" />
     <ClCompile Include="BoundingCapsule.cpp" />
@@ -357,6 +361,7 @@
     <ClCompile Include="DescriptorHeap.cpp" />
     <ClCompile Include="DirectionalCascadeShadowMapPass.cpp" />
     <ClCompile Include="DynamicObject.cpp" />
+    <ClCompile Include="LogInScene.cpp" />
     <ClCompile Include="MuzzleFlashEffect.cpp" />
     <ClCompile Include="NetworkGameTestScene.cpp" />
     <ClCompile Include="ParticleEffect.cpp" />
@@ -371,6 +376,7 @@
     <ClCompile Include="ParticleRenderBatch.cpp" />
     <ClCompile Include="ParticleTextureCache.cpp" />
     <ClCompile Include="PostProcessingVolume.cpp" />
+    <ClCompile Include="RWStructuredBuffer.cpp" />
     <ClCompile Include="SpatialWorld.cpp" />
     <ClCompile Include="SSAOPass.cpp" />
     <ClCompile Include="TextAtlas.cpp" />
@@ -453,6 +459,10 @@
     <None Include="TextAtlas.h" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="..\HLSL\AutoExposure.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="..\HLSL\Bloom.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>

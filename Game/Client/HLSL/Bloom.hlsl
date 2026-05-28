@@ -8,11 +8,6 @@ static const float gWeights[9] =
     0.1216216216f, 0.0540540541f, 0.0162162162f
 };
 
-uint2 ClampPixel(int2 p, int2 size)
-{
-	return uint2(clamp(p, int2(0, 0), size - int2(1, 1)));
-}
-
 float3 ApplyBloomThreshold(float3 color)
 {
 	float brightness = max(color.r, max(color.g, color.b));
@@ -37,17 +32,17 @@ float3 ApplyBloomThreshold(float3 color)
 void CSBrightExtractDownsample(uint3 nDispatchThreadID : SV_DispatchThreadID)
 {
 	uint2 pixel = nDispatchThreadID.xy;
-	if(pixel.x >= gOutputSize.x || pixel.y >= gOutputSize.y)
+	if (pixel.x >= gBloomOutputSize.x || pixel.y >= gBloomOutputSize.y)
 		return;
 	
 	// Half-res output pixel -> Full res 2x2 input
 	int2 baseInput = int2(pixel) * 2;
 	
 	float3 color = 0.f;
-	color += gInputTexture.Load(int3(ClampPixel(baseInput + int2(0, 0), gInputSize), 0)).rgb;
-	color += gInputTexture.Load(int3(ClampPixel(baseInput + int2(1, 0), gInputSize), 0)).rgb;
-	color += gInputTexture.Load(int3(ClampPixel(baseInput + int2(0, 1), gInputSize), 0)).rgb;
-	color += gInputTexture.Load(int3(ClampPixel(baseInput + int2(1, 1), gInputSize), 0)).rgb;
+	color += gInputTexture.Load(int3(ClampPixel(baseInput + int2(0, 0), gBloomInputSize), 0)).rgb;
+	color += gInputTexture.Load(int3(ClampPixel(baseInput + int2(1, 0), gBloomInputSize), 0)).rgb;
+	color += gInputTexture.Load(int3(ClampPixel(baseInput + int2(0, 1), gBloomInputSize), 0)).rgb;
+	color += gInputTexture.Load(int3(ClampPixel(baseInput + int2(1, 1), gBloomInputSize), 0)).rgb;
 	color *= 0.25f;
 	
 	color = ApplyBloomThreshold(color);
@@ -72,12 +67,12 @@ void CSBloomBlurHorizontal(
 	for (uint x = lx; x < BLOOM_THREAD_X + BLOOM_RADIUS * 2; x += BLOOM_THREAD_X)
 	{
 		int2 srcPixel = basePixel + int2(x - BLOOM_RADIUS, ly);
-		gSharedH[ly][x] = gInputTexture.Load(int3(ClampPixel(srcPixel, gInputSize), 0));
+		gSharedH[ly][x] = gInputTexture.Load(int3(ClampPixel(srcPixel, gBloomInputSize), 0));
 	}
 	
 	GroupMemoryBarrierWithGroupSync();
 	
-	if (nDispatchThreadID.x >= gOutputSize.x || nDispatchThreadID.y >= gOutputSize.y)
+	if (nDispatchThreadID.x >= gBloomOutputSize.x || nDispatchThreadID.y >= gBloomOutputSize.y)
 		return;
 	
 	float3 color = 0.f;
@@ -107,12 +102,12 @@ void CSBloomBlurVertical(
 	for (uint y = ly; y < BLOOM_THREAD_Y + BLOOM_RADIUS * 2; y += BLOOM_THREAD_Y)
 	{
 		int2 srcPixel = basePixel + int2(lx, y - BLOOM_RADIUS);
-		gSharedV[y][lx] = gInputTexture.Load(int3(ClampPixel(srcPixel, gInputSize), 0));
+		gSharedV[y][lx] = gInputTexture.Load(int3(ClampPixel(srcPixel, gBloomInputSize), 0));
 	}
 	
 	GroupMemoryBarrierWithGroupSync();
 	
-	if (nDispatchThreadID.x >= gOutputSize.x || nDispatchThreadID.y >= gOutputSize.y)
+	if (nDispatchThreadID.x >= gBloomOutputSize.x || nDispatchThreadID.y >= gBloomOutputSize.y)
 		return;
 	
 	float3 color = 0.f;

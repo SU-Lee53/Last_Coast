@@ -8,6 +8,13 @@ const static uint gnLUTSize = 32;
 const static float gfLUTMinEV = -10.0f;
 const static float gfLUTMaxEV = 6.0f;
 
+float Hash12(float2 p)
+{
+	float3 p3 = frac(float3(p.xyx) * 0.1031f);
+	p3 += dot(p3, p3.yzx + 33.33f);
+	return frac((p3.x + p3.y) * p3.z);
+}
+
 float GetLuminance(float3 color)
 {
 	return dot(color, float3(0.2126f, 0.7152f, 0.0722f));
@@ -38,6 +45,23 @@ float3 ApplyLUTCoordScaleBias(float3 uvw)
 	return uvw * fScale + fBias;
 }
 
+float ComputeVignette(float2 uv)
+{
+	float2 p = uv * 2.0f - 1.0f;
+	float dist = length(p);
+
+	float vig = 1.0f - smoothstep(gfVignetteRadius, gfVignetteRadius + gfVignetteSoftness, dist);
+
+	return lerp(1.0f, vig, saturate(gfVignetteStrength));
+}
+
+float ComputeFilmGrain(float2 uv)
+{
+	float2 pixel = uv * gnScreenSize.xy;
+	float n = Hash12(pixel * gfGrainScale + gSceneGlobal.fTotalTime * 60.0f);
+	return n * 2.0f - 1.0f;
+}
+
 float4 PSToneMapping(VS_QUAD_OUTPUT input) : SV_Target0
 {
 	float3 hdrColor = gtxtHDRResult.Sample(gSamplerState, input.uv).rgb;
@@ -47,9 +71,21 @@ float4 PSToneMapping(VS_QUAD_OUTPUT input) : SV_Target0
 	float3 bloomColor = bloomColorHalf * 0.75 + bloomColorQuater * 0.20 + bloomColorEighth * 0.05;
 	
     hdrColor += bloomColor;
+	hdrColor += bloomColor;
 
-    hdrColor *= gfExposure;
-    hdrColor *= gfInputScale;
+	float autoExposure = 1.0f;
+
+	if (gnEnableAutoExposure != 0)
+	{
+		float avgLogLum = gtxtLuminance.Load(int3(0, 0, 0)).r;
+		float avgLum = exp2(avgLogLum);
+
+		autoExposure = gfTargetLuminance / max(avgLum, 1e-4f);
+		autoExposure = clamp(autoExposure, gfMinExposure, gfMaxExposure);
+	}
+
+	hdrColor *= gfExposure * autoExposure;
+	hdrColor *= gfInputScale;
 
 	
 	float3 uvw = HDRToLUTUVW(hdrColor);
@@ -64,6 +100,17 @@ float4 PSToneMapping(VS_QUAD_OUTPUT input) : SV_Target0
 	
 	finalColor = ApplySaturation(finalColor, gfPostSaturation);
 	finalColor *= gfOutputScale;
+	
+	// Apply ScreenFX(Grain, Vignette)
+	finalColor = ApplySaturation(finalColor, gfPostSaturation);
+	finalColor *= gfOutputScale;
+
+	float vignette = ComputeVignette(input.uv);
+	finalColor *= vignette;
+
+	float grain = ComputeFilmGrain(input.uv);
+	finalColor += grain * gfGrainStrength;
+	
 	finalColor = GammaCorrect(finalColor, gfGamma);
 	
 	return float4(finalColor, 1.0f);

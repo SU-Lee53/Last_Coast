@@ -27,6 +27,10 @@ CB_TONE_MAPPING_COMMON_DATA ToneMappingVolume::GetCommonCBData() const
 {
 	return CB_TONE_MAPPING_COMMON_DATA{
 		.fExposure = m_Parameters.Common.fExposure,
+		.fTargetLuminance = m_Parameters.Common.fTargetLuminance,
+		.fMinExposure = m_Parameters.Common.fMinExposure,
+		.fMaxExposure = m_Parameters.Common.fMaxExposure,
+		.nEnableAutoExposure = m_Parameters.Common.nEnableAutoExposure,
 		.fGamma = m_Parameters.Common.fGamma,
 		.fSaturation = m_Parameters.Common.fPostSaturation,
 		.fInputScale = m_Parameters.Common.fInputScale,
@@ -132,9 +136,13 @@ void ToneMappingVolume::ShowDebugOptions()
 
 	ImGui::SeparatorText("Global / Outputs");
 
+	ImGui::SliderInt("nEnableAutoExposure", reinterpret_cast<int*>(&m_Parameters.Common.nEnableAutoExposure), 1, 0, (m_Parameters.Common.nEnableAutoExposure == 0 ? "ON" : "OFF"));
 	ShowDragFloat(cnt++, "fExposure", reinterpret_cast<float*>(&m_Parameters.Common.fExposure), 0.01f, 0.f, 4.f, true, 0.f, 2.f, 1.f);
-	ShowDragFloat(cnt++, "fGamma", reinterpret_cast<float*>(&m_Parameters.Common.fGamma), 0.01f, 1.0f, 3.0f, true, 2.0f, 2.4f, 2.2f);
+	ShowDragFloat(cnt++, "fTargetLuminance", reinterpret_cast<float*>(&m_Parameters.Common.fTargetLuminance), 0.01f, 0.1f, 0.3f, true, 0.1f, 0.3f, 0.18f);
+	ShowDragFloat(cnt++, "fMinExposure", reinterpret_cast<float*>(&m_Parameters.Common.fMinExposure), 0.01f, 0.03f, 0.10f, true, 0.03f, 0.10f, 0.05f);
+	ShowDragFloat(cnt++, "fMaxExposure", reinterpret_cast<float*>(&m_Parameters.Common.fMaxExposure), 0.01f, 1.f, 32.f, true, 8.f, 32.f, 16.f);
 
+	ShowDragFloat(cnt++, "fGamma", reinterpret_cast<float*>(&m_Parameters.Common.fGamma), 0.01f, 1.0f, 3.0f, true, 2.0f, 2.4f, 2.2f);
 	ShowDragFloat(cnt++, "fSaturation", reinterpret_cast<float*>(&m_Parameters.Common.fPostSaturation), 0.01f, 0.f, 2.f, true, 0.75f, 1.15, 1.f);
 	ShowDragFloat(cnt++, "fInputScale", reinterpret_cast<float*>(&m_Parameters.Common.fInputScale), 0.01f, 0.25f, 4.f, true, 0.5f, 2.0f, 1.f);
 	ShowDragFloat(cnt++, "fOutputScale", reinterpret_cast<float*>(&m_Parameters.Common.fOutputScale), 0.01f, 0.5f, 2.f, true, 0.8, 1.2, 1.f);

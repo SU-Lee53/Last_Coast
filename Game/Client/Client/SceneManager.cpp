@@ -6,10 +6,11 @@
 #include "MapTestScene.h"
 #include "TestScene.h"
 #include "GameScene.h"
+#include "LogInScene.h"
 
 void SceneManager::Initialize()
 {
-	m_upCurrentScene = std::make_unique<MapTestScene>();
+	m_upCurrentScene = std::make_unique<LogInScene>();
 	m_upCurrentScene->BuildLights();
 	m_upCurrentScene->BuildObjects();
 	m_upCurrentScene->PostInitialize();

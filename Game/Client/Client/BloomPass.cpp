@@ -1,11 +1,6 @@
 ﻿#include "pch.h"
 #include "BloomPass.h"
 
-uint32 CeilDiv(uint32 x, uint32 y)
-{
-	return (x + y - 1) / y;
-}
-
 void BloomPass::Initialize()
 {
 	CreatePipelineStates();
@@ -28,8 +23,8 @@ void BloomPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const 
 
 	auto nDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
 
-	constexpr auto rootParamInputTexture = std::to_underlying(COMPUTE_ROOT_PARAMETER::INPUT_SRV);
-	constexpr auto rootParamOutputTexture = std::to_underlying(COMPUTE_ROOT_PARAMETER::OUTPUT_UAV);
+	constexpr auto rootParamInputTexture = std::to_underlying(COMPUTE_ROOT_PARAMETER::INPUT_SRV_FLOAT4);
+	constexpr auto rootParamOutputTexture = std::to_underlying(COMPUTE_ROOT_PARAMETER::OUTPUT_UAV_FLOAT4);
 	constexpr auto rootParamBloomData = std::to_underlying(COMPUTE_ROOT_PARAMETER::BLOOM_DATA);
 
 	const uint32 unFullW = WinCore::g_dwClientWidth;
@@ -67,8 +62,8 @@ void BloomPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const 
 			pd3dCommandList->SetComputeRootConstantBufferView(rootParamBloomData, cBuffer.GPUAddress);
 
 			pd3dCommandList->Dispatch(
-				CeilDiv(unTargetWidths[1], BLOOM_EXTRACT_THREAD_X),
-				CeilDiv(unTargetHeights[1], BLOOM_EXTRACT_THREAD_Y),
+				::CeilDiv(unTargetWidths[1], BLOOM_EXTRACT_THREAD_X),
+				::CeilDiv(unTargetHeights[1], BLOOM_EXTRACT_THREAD_Y),
 				1
 			);
 		}
@@ -96,8 +91,8 @@ void BloomPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const 
 			pd3dCommandList->SetComputeRootConstantBufferView(rootParamBloomData, cBuffer.GPUAddress);
 
 			pd3dCommandList->Dispatch(
-				CeilDiv(unTargetWidths[2], BLOOM_EXTRACT_THREAD_X),
-				CeilDiv(unTargetHeights[2], BLOOM_EXTRACT_THREAD_Y),
+				::CeilDiv(unTargetWidths[2], BLOOM_EXTRACT_THREAD_X),
+				::CeilDiv(unTargetHeights[2], BLOOM_EXTRACT_THREAD_Y),
 				1
 			);
 		}
@@ -125,8 +120,8 @@ void BloomPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const 
 			pd3dCommandList->SetComputeRootConstantBufferView(rootParamBloomData, cBuffer.GPUAddress);
 
 			pd3dCommandList->Dispatch(
-				CeilDiv(unTargetWidths[3], BLOOM_EXTRACT_THREAD_X),
-				CeilDiv(unTargetHeights[3], BLOOM_EXTRACT_THREAD_Y),
+				::CeilDiv(unTargetWidths[3], BLOOM_EXTRACT_THREAD_X),
+				::CeilDiv(unTargetHeights[3], BLOOM_EXTRACT_THREAD_Y),
 				1
 			);
 		}
@@ -167,8 +162,8 @@ void BloomPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const 
 			pd3dCommandList->SetComputeRootConstantBufferView(rootParamBloomData, cBuffer.GPUAddress);
 
 			pd3dCommandList->Dispatch(
-				CeilDiv(unTargetWidths[i + 1], BLOOM_BLUR_THREAD_X),
-				CeilDiv(unTargetHeights[i + 1], BLOOM_BLUR_THREAD_Y),
+				::CeilDiv(unTargetWidths[i + 1], BLOOM_BLUR_THREAD_X),
+				::CeilDiv(unTargetHeights[i + 1], BLOOM_BLUR_THREAD_Y),
 				1
 			);
 		}
@@ -222,9 +217,9 @@ void BloomPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const 
 void BloomPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
 	// Set Bloom Result
-	const auto& pFinalOutputHalf = RENDER->GetPostProcessingResources().BloomHalfBuffer[0].GetResource();
-	const auto& pFinalOutputQuater = RENDER->GetPostProcessingResources().BloomQuaterBuffer[0].GetResource();
-	const auto& pFinalOutputEighth = RENDER->GetPostProcessingResources().BloomEighthBuffer[0].GetResource();
+	const auto pFinalOutputHalf = RENDER->GetPostProcessingResources().BloomHalfBuffer[0].GetResource();
+	const auto pFinalOutputQuater = RENDER->GetPostProcessingResources().BloomQuaterBuffer[0].GetResource();
+	const auto pFinalOutputEighth = RENDER->GetPostProcessingResources().BloomEighthBuffer[0].GetResource();
 	pFinalOutputHalf->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);		// last half output
 	pFinalOutputQuater->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);		// last quater output
 	pFinalOutputEighth->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);		// last eighth output
@@ -242,7 +237,7 @@ void BloomPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
 	outDescHandle.gpuHandle.Offset(3, unDescriptorInc);
 
 	// Reset root signature
-	RENDER->SetGlobalRootSignature(pd3dCommandList.Get());
+	//RENDER->SetGlobalRootSignature(pd3dCommandList.Get());
 }
 
 void BloomPass::CreatePipelineStates()

@@ -82,7 +82,7 @@ private:
 	// Parameters
 	ToneMappingParameter m_Parameters;
 
-	TONE_MAPPING_MODE m_eCurrentToneMapper;
+	TONE_MAPPING_MODE m_eCurrentToneMapper = TONE_MAPPING_MODE::ACES;
 	uint8 m_unDirtyFlag = LUT_DIRTY_FLAG::TONE_MAPPER | LUT_DIRTY_FLAG::GRADING;
 	bool m_bSkipThisFrame = true;
 

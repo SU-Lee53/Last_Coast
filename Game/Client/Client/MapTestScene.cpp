@@ -11,6 +11,8 @@ void MapTestScene::BuildObjects()
 {
 	m_pUIBoard = std::make_unique<UIBoard>();
 
+	m_v4GlobalAmbient = Vector4(0.2f, 0.2f, 0.2f, 1.f);
+
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize();
 

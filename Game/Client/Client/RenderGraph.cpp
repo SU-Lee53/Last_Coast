@@ -9,6 +9,7 @@
 #include "SkyboxPass.h"
 #include "ParticlePass.h"
 #include "BloomPass.h"
+#include "AutoExposurePass.h"
 #include "DeferredFogPass.h"
 #include "UIPass.h"
 #include <queue>
@@ -66,11 +67,13 @@ void RenderGraph::BuildGraph()
 	pBloomPass->Initialize();
 	m_pAdjLists.push_back(pBloomPass);
 
+	std::shared_ptr<AutoExposurePass> pAutoExposurePass = std::make_shared<AutoExposurePass>();
+	pAutoExposurePass->Initialize();
+	m_pAdjLists.push_back(pAutoExposurePass);
+
 	std::shared_ptr<IRenderPass> pSkyboxPass = std::make_shared<SkyboxPass>();
 	pSkyboxPass->Initialize();
 	m_pAdjLists.push_back(pSkyboxPass);
-
-
 
 	std::shared_ptr<IRenderPass> pToneMappingPass = std::make_shared<ToneMappingPass>();
 	pToneMappingPass->Initialize();
@@ -95,6 +98,9 @@ void RenderGraph::BuildGraph()
 		
 		+ 2026.05.16
 		+ Bloom
+		
+		+ 2026.05.22
+		+ Auto Exposure luminance
 
 		8. Tone Mapping & Grading pass
 		9. UI pass
@@ -108,7 +114,8 @@ void RenderGraph::BuildGraph()
 	pTransparentForwardPass->Connect(pSkyboxPass);
 	pSkyboxPass->Connect(pParticlePass);
 	pParticlePass->Connect(pBloomPass);
-	pBloomPass->Connect(pToneMappingPass);
+	pBloomPass->Connect(pAutoExposurePass);
+	pAutoExposurePass->Connect(pToneMappingPass);
 	pToneMappingPass->Connect(pUIPass);
 
 	m_unEntryNodeIndex = 0;

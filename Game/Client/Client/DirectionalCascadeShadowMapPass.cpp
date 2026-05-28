@@ -39,7 +39,7 @@ void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> p
 	for (int i = 0; i < g_unNumCascade; ++i) {
 		m_RenderQueueCached.clear();
 		SetRenderTargets(pd3dCommandList, i);
-		BoundingFrustum xmFrsutum = m_CascadeCached[i].xmFrustum;
+		BoundingFrustum xmFrsutum = m_CascadeCached[i].xmCasterCullFrustum;
 
 		std::vector<IGameObject*> frustumCulled;
 		{
@@ -141,7 +141,7 @@ void DirectionalCascadeShadowMapPass::CreatePipelineState()
 		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("ShadowStandardVS");
 		d3dPipelineDesc.PS = { nullptr, 0 };
 		d3dPipelineDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
+		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 		d3dPipelineDesc.RasterizerState.FrontCounterClockwise = FALSE;
 		d3dPipelineDesc.RasterizerState.DepthBias = 5000;
 		d3dPipelineDesc.RasterizerState.DepthBiasClamp = 0.05f;
@@ -261,7 +261,6 @@ void DirectionalCascadeShadowMapPass::BindGeometryData(ComPtr<ID3D12GraphicsComm
 
 		for (int32 meshIdx = 0; meshIdx < k->GetMeshes().size(); ++meshIdx) {
 			RenderParameter renderParameter;
-
 			// Set
 			renderParameter.cbInstanceData.gnWorldTransformOffset = m_CachedData.sbWorldTransformDatas.size();
 			renderParameter.nInstances = v.size();
@@ -446,10 +445,14 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 		float fMinX = v3MinX->x, fMinY = v3MinY->y, fMinZ = v3MinZ->z;
 		float fMaxX = v3MaxX->x, fMaxY = v3MaxY->y, fMaxZ = v3MaxZ->z;
 
-		// 6. Add z-margin
-		float fMargin = 50.0f;
-		fMinZ -= fMargin;
-		fMaxZ += fMargin;
+		// 6. Add margin
+		const float fShadowXYMargin = 5.0_m;
+		fMinX -= fShadowXYMargin;
+		fMaxX += fShadowXYMargin;
+		fMinY -= fShadowXYMargin;
+		fMaxY += fShadowXYMargin;
+		fMinZ -= 80.0_m;
+		fMaxZ += 20.0_m;
 
 		// 7. off-center orthographic project
 		const float fShadowMapSize = static_cast<float>(g_unCascadeShadowMapSize[i]);
@@ -483,22 +486,36 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 			fMinZ, fMaxZ
 		);
 		
-		Matrix mtxLightWorld = Matrix{
-			v3LightRight.x, v3LightRight.y, v3LightRight.z, 0.f,
-			v3LightUpReal.x, v3LightUpReal.y, v3LightUpReal.z, 0.f,
-			v3LightDir.x, v3LightDir.y, v3LightDir.z, 0.f,
-			v3LightPos.x, v3LightPos.y, v3LightPos.z, 1.f
-		};
-
-		// Test world
-		//Matrix mtxInvView = mtxLightView.Invert();
+		Matrix mtxLightWorld = mtxLightView.Invert();
 
 		// 8. cache
-		BoundingFrustum xmFrustumLight;
-		BoundingFrustum::CreateFromMatrix(xmFrustumLight, mtxLightProj);
-		xmFrustumLight.Transform(xmFrustumLight, mtxLightWorld);
+		BoundingFrustum xmShadowFrustum;
+		BoundingFrustum::CreateFromMatrix(xmShadowFrustum, mtxLightProj);
+		xmShadowFrustum.Transform(xmShadowFrustum, mtxLightWorld);
+
+		float fCasterMinX = fMinX;
+		float fCasterMaxX = fMaxX;
+		float fCasterMinY = fMinY;
+		float fCasterMaxY = fMaxY;
+
+		constexpr float fCasterXYMargin = 50.0_m;
+		fCasterMinX -= fCasterXYMargin;
+		fCasterMaxX += fCasterXYMargin;
+		fCasterMinY -= fCasterXYMargin;
+		fCasterMaxY += fCasterXYMargin;
+		Matrix mtxCasterCullProj = XMMatrixOrthographicOffCenterLH(
+			fCasterMinX, fCasterMaxX,
+			fCasterMinY, fCasterMaxY,
+			fMinZ, fMaxZ
+		);
+
+		BoundingFrustum xmCasterCullFrustum;
+		BoundingFrustum::CreateFromMatrix(xmCasterCullFrustum, mtxCasterCullProj);
+		xmCasterCullFrustum.Transform(xmCasterCullFrustum, mtxLightWorld);
+
 		CascadeCameraData data{
-			.xmFrustum = xmFrustumLight,
+			.xmShadowFrustum = xmShadowFrustum,
+			.xmCasterCullFrustum = xmCasterCullFrustum,
 			.mtxLightViewProj = XMMatrixMultiply(mtxLightView, mtxLightProj),
 			.mtxToShadowMap = XMMatrixMultiply(XMMatrixMultiply(mtxLightView, mtxLightProj), g_mtxToTexture)
 		};

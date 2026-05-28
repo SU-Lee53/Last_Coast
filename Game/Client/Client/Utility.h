@@ -224,6 +224,11 @@ inline Vector3 ReadVector3FromJson(const nlohmann::json& j)
 	};
 }
 
+inline uint32 CeilDiv(uint32 x, uint32 y)
+{
+	return (x + y - 1) / y;
+}
+
 /////////////////////////////////////////////////////////////////////////////////
 // ImGui Helpers
 

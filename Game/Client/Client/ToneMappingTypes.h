@@ -2,10 +2,15 @@
 
 struct ToneMappingCommonParameters {
 	float fExposure = 1.f;
-	float fGamma = 2.2f;
+	float fTargetLuminance = 0.18f;
+	float fMinExposure = 0.05f;
+	float fMaxExposure = 2.0f;
 
+	int   nEnableAutoExposure = 1;
+	float fGamma = 2.2f;
 	float fPostSaturation = 1.0f;
 	float fInputScale = 1.0f;
+	
 	float fOutputScale = 1.0f;
 	float fGradingStrength = 0.f;
 };
@@ -182,10 +187,15 @@ struct CB_TONE_MAPPING_LUT_DATA {
 
 struct CB_TONE_MAPPING_COMMON_DATA {
 	float fExposure;
+	float fTargetLuminance;
+	float fMinExposure;
+	float fMaxExposure;
+	
+	int   nEnableAutoExposure;
 	float fGamma;
 	float fSaturation;
 	float fInputScale;
-
+	
 	float fOutputScale;
 	float fGradingStrength;
 	Vector2 pad;

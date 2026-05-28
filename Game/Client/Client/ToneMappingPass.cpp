@@ -20,6 +20,7 @@ void ToneMappingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 	constexpr auto rootParamToneMapping = std::to_underlying(ROOT_PARAMETER::TONE_MAPPING_DATA);
 	auto nDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
 	const auto& toneMappingVolume = CUR_SCENE->GetToneMappingVolume();
+	const auto& postProcessingVolume = CUR_SCENE->GetPostProcessingVolume();
 
 
 #ifdef TONE_MAPPING_USE_LUT
@@ -58,7 +59,7 @@ void ToneMappingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 		m_fLastToneLUTUpdated = TIME->GetTotalTime();
 	}
 
-	if (toneMappingVolume.IsDirty(LUT_DIRTY_FLAG::TONE_MAPPER)) {
+	if (toneMappingVolume.IsDirty(LUT_DIRTY_FLAG::GRADING)) {
 		// Resource barrier first
 		const auto pUAV = static_pointer_cast<UnorderedAccessTexture>(m_GradingLUT.GetResource());
 		pUAV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -91,21 +92,27 @@ void ToneMappingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 	pd3dCommandList->SetPipelineState(m_pd3dPipelineState.Get());
 	pd3dCommandList->SetGraphicsRootSignature(RenderManager::g_pd3dGlobalRootSignature.Get());
 
-	CB_TONE_MAPPING_COMMON_DATA data = toneMappingVolume.GetCommonCBData();
-	auto cBuffer = RENDER->AllocCBuffer<CB_TONE_MAPPING_COMMON_DATA>();
-	cBuffer.WriteData(&data);
+	CB_TONE_MAPPING_COMMON_DATA toneData = toneMappingVolume.GetCommonCBData();
+	auto cBuffer1 = RENDER->AllocCBuffer<CB_TONE_MAPPING_COMMON_DATA>();
+	cBuffer1.WriteData(&toneData);
+
+	CB_SCREEN_FX_DATA fxData = postProcessingVolume.GetScreenFXCBData();
+	auto cBuffer2 = RENDER->AllocCBuffer<CB_SCREEN_FX_DATA>();
+	cBuffer2.WriteData(&fxData);
 
 	const auto pToneLUTSRV = m_ToneMapLUT.GetResource();
 	const auto pGradingLUTSRV = m_GradingLUT.GetResource();
 
 	auto bindHandle = outDescHandle.cpuHandle;
-	DEVICE->CopyDescriptorsSimple(1, bindHandle, cBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	DEVICE->CopyDescriptorsSimple(1, bindHandle, cBuffer1.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, nDescriptorInc), cBuffer2.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	//DEVICE->CopyDescriptorsSimple(2, bindHandle, cBuffer1.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, nDescriptorInc), pToneLUTSRV->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, nDescriptorInc), pGradingLUTSRV->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamToneMapping, outDescHandle.gpuHandle);
-	outDescHandle.cpuHandle.Offset(3, nDescriptorInc);
-	outDescHandle.gpuHandle.Offset(3, nDescriptorInc);
+	outDescHandle.cpuHandle.Offset(4, nDescriptorInc);
+	outDescHandle.gpuHandle.Offset(4, nDescriptorInc);
 
 #else
 	CB_TONE_MAPPING_DATA data = MakeCBData();

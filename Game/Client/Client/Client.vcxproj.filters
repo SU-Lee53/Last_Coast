@@ -244,9 +244,6 @@
     <ClInclude Include="Light.h">
       <Filter>03.Engine\Graphic Components</Filter>
     </ClInclude>
-    <ClInclude Include="RenderPass.h">
-      <Filter>03.Engine\Rendering</Filter>
-    </ClInclude>
     <ClInclude Include="Shader.h">
       <Filter>03.Engine\Shader</Filter>
     </ClInclude>
@@ -547,11 +544,27 @@
     <ClInclude Include="DeferredFogPass.h">
       <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
     </ClInclude>
-    <ClInclude Include="BloomPass.h" />
     <ClInclude Include="ToneMappingPass.h">
       <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
     </ClInclude>
-    <ClInclude Include="SSAOPass.h" />
+    <ClInclude Include="BloomPass.h">
+      <Filter>03.Engine\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="RWStructuredBuffer.h">
+      <Filter>03.Engine\Resources\Buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="AutoExposurePass.h">
+      <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
+    </ClInclude>
+    <ClInclude Include="SSAOPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
+    </ClInclude>
+    <ClInclude Include="LogInScene.h">
+      <Filter>02.Game\Scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -641,9 +654,6 @@
     </ClCompile>
     <ClCompile Include="Light.cpp">
       <Filter>03.Engine\Graphic Components</Filter>
-    </ClCompile>
-    <ClCompile Include="RenderPass.cpp">
-      <Filter>03.Engine\Rendering</Filter>
     </ClCompile>
     <ClCompile Include="Shader.cpp">
       <Filter>03.Engine\Shader</Filter>
@@ -921,11 +931,27 @@
     <ClCompile Include="DeferredFogPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
     </ClCompile>
-    <ClCompile Include="BloomPass.cpp" />
     <ClCompile Include="ToneMappingPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
     </ClCompile>
-    <ClCompile Include="SSAOPass.cpp" />
+    <ClCompile Include="BloomPass.cpp">
+      <Filter>03.Engine\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="RWStructuredBuffer.cpp">
+      <Filter>03.Engine\Resources\Buffer</Filter>
+    </ClCompile>
+    <ClCompile Include="AutoExposurePass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
+    </ClCompile>
+    <ClCompile Include="SSAOPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
+    </ClCompile>
+    <ClCompile Include="LogInScene.cpp">
+      <Filter>02.Game\Scene</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
@@ -985,6 +1011,9 @@
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\HDRPostProcessing.hlsl">
+      <Filter>03.Engine\HLSL\Compute</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\AutoExposure.hlsl">
       <Filter>03.Engine\HLSL\Compute</Filter>
     </FxCompile>
   </ItemGroup>
