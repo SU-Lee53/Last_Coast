@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "ThirdPersonPlayer.h"
 #include "ThirdPersonCamera.h"
 #include "NodeObject.h"
@@ -26,7 +26,7 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pHealthText->SetAnchor(Vector2{ 1, 1 });
 		pHealthText->SetPivot(Vector2{ 1,1 });
 		pHealthText->SetPosition(Vector2{ -50, -100 });
-		pHealthText->SetSizePerLetter(Vector2{ 30,50 });
+		pHealthText->SetTextHeight(50);
 		pUIBoard->InsertUI(pHealthText);
 
 		//pHealthImage
@@ -37,7 +37,7 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pAmmo->SetAnchor(Vector2{ 1, 1 });
 		pAmmo->SetPivot(Vector2{ 1,1 });
 		pAmmo->SetPosition(Vector2{ -50, -40 });
-		pAmmo->SetSizePerLetter(Vector2{ 15,50 });
+		pAmmo->SetTextHeight(50);
 		pUIBoard->InsertUI(pAmmo);
 
 		pWeaponName = std::make_shared<TextBox>(L"Malgun Gothic");
@@ -46,7 +46,7 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pWeaponName->SetAnchor(Vector2{ 1, 1 });
 		pWeaponName->SetPivot(Vector2{ 1,1 });
 		pWeaponName->SetPosition(Vector2{ -200, -40 });
-		pWeaponName->SetSizePerLetter(Vector2{ 20,50 });
+		pWeaponName->SetTextHeight(50);
 		pUIBoard->InsertUI(pWeaponName);
 
 		pReloadAlert = std::make_shared<TextBox>(L"Malgun Gothic");
@@ -55,7 +55,7 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pReloadAlert->SetAnchor(Vector2{ 0.5, 0.5 });
 		pReloadAlert->SetPivot(Vector2{ 0,0.5 });
 		pReloadAlert->SetPosition(Vector2{ 100, 0 });
-		pReloadAlert->SetSizePerLetter(Vector2{ 10,40 });
+		pReloadAlert->SetTextHeight(50);
 		pReloadAlert->SetVisible(false);
 		pUIBoard->InsertUI(pReloadAlert);
 	}

@@ -57,13 +57,68 @@ void IText::RefreshTextHandle()
 
 }
 
+void IText::SetTextHeight(float fHeight)
+{
+	m_fTargetTextHeight = fHeight;
+	m_bUseTargetTextHeight = true;
+}
+
+Vector2 IText::GetCachedTextSize() const
+{
+	if (!m_TextHandle.IsValid()) {
+		return {};
+	}
+
+	auto pCached = m_TextHandle.GetResource();
+
+	if (!pCached || !pCached->bValid)
+		return Vector2::Zero;
+
+	return pCached->GetSize();
+}
+
+Vector2 IText::CalculateScaledTextSize() const
+{
+	if (!m_TextHandle.IsValid()) {
+		return Vector2::Zero;
+	}
+
+	auto pCached = m_TextHandle.GetResource();
+
+	Vector2 cachedSize{
+		static_cast<float>(pCached->Rect.w),
+		static_cast<float>(pCached->Rect.h)
+	};
+
+	if (!m_bUseTargetTextHeight || cachedSize.y <= 0.f)
+		return cachedSize;
+
+	float scale = m_fTargetTextHeight / cachedSize.y;
+
+	return Vector2{
+		cachedSize.x * scale,
+		cachedSize.y * scale
+	};
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // TextBox
 
 void TextBox::Update()
 {
-	m_v2Size = Vector2(m_v2SizePerLetter.x * m_wstrText.length(), m_v2SizePerLetter.y);
 	RefreshTextHandle();
+
+	if (m_bUseTargetTextHeight) {
+		Vector2 textSize = CalculateScaledTextSize();
+
+		if (textSize.x <= 0.f)
+			textSize.x = 1.f;
+
+		if (textSize.y <= 0.f)
+			textSize.y = m_fTargetTextHeight;
+
+		m_v2Size = textSize;
+	}
 }
 
 UIRectData TextBox::MakeSBData() const
@@ -92,9 +147,22 @@ UIRectData TextBox::MakeSBData() const
 	return data;
 }
 
+
 void TextButton::Update()
 {
 	RefreshTextHandle();
+
+	if (m_bUseTargetTextHeight) {
+		Vector2 textSize = CalculateScaledTextSize();
+
+		if (textSize.x <= 0.f)
+			textSize.x = 1.f;
+
+		if (textSize.y <= 0.f)
+			textSize.y = m_fTargetTextHeight;
+
+		m_v2Size = textSize;
+	}
 }
 
 UIRectData TextButton::MakeSBData() const
@@ -123,3 +191,148 @@ UIRectData TextButton::MakeSBData() const
 	return data;
 }
 
+void InputTextBox::Update()
+{
+	if (IsFocused()) {
+		m_fCaretTimer += DT;
+
+		if (m_fCaretTimer >= 0.5f) {
+			m_fCaretTimer = 0.f;
+			m_bCaretVisible = !m_bCaretVisible;
+			RefreshDisplayText();
+		}
+	}
+	else {
+		m_fCaretTimer = 0.f;
+		m_bCaretVisible = false;
+
+		RefreshDisplayText();
+	}
+
+	RefreshTextHandle();
+
+	Vector2 textSize = CalculateScaledTextSize();
+
+	if (textSize.x <= 0.f)
+		textSize.x = 1.f;
+
+	if (textSize.y <= 0.f)
+		textSize.y = m_fTargetTextHeight;
+
+	m_v2Size = textSize;
+}
+
+UIRectData InputTextBox::MakeSBData() const
+{
+	RECT screenRect = GetScreenRect();
+	RECT uvRect = {};
+
+	UIRectData data;
+	data.v4ScreenRect.x = static_cast<float>(screenRect.left);
+	data.v4ScreenRect.y = static_cast<float>(screenRect.top);
+	data.v4ScreenRect.z = static_cast<float>(screenRect.right);
+	data.v4ScreenRect.w = static_cast<float>(screenRect.bottom);
+
+	auto pCached = m_TextHandle.GetResource();
+	if (!pCached || pCached->bDirty == true || pCached->bValid == false) {
+		data.v4UVRect = Vector4{ 0,0,0,0 };
+		data.v4Color = m_v4Color;
+		return data;
+	}
+
+	data.v4UVRect = GetTextUV();
+	data.v4Color = m_v4Color;
+
+	data.nTexIndex = 0;
+
+	return data;
+}
+
+void InputTextBox::SetFocused(bool bFocused)
+{
+	IUIFocusableComponent::SetFocused(bFocused);
+
+	m_fCaretTimer = 0.f;
+	m_bCaretVisible = true;
+
+	RefreshDisplayText();
+}
+
+void InputTextBox::SetPlaceholder(const std::wstring& wstrPlaceholder)
+{
+	m_wstrPlaceholderText = wstrPlaceholder;
+	RefreshDisplayText();
+}
+
+void InputTextBox::SetPasswordMode(bool bEnable)
+{
+	m_bPasswordMode = bEnable;
+	RefreshDisplayText();
+}
+
+void InputTextBox::OnChar(wchar_t ch)
+{
+	if (!IsFocused())
+		return;
+
+	// Backspace
+	if (ch == L'\b') {
+		if (!m_wstrCommittedText.empty()) {
+			m_wstrCommittedText.pop_back();
+			RefreshDisplayText();
+		}
+		return;
+	}
+
+	// Enter
+	if (ch == L'\r') {
+		if (m_fnEnterCallback) {
+			m_fnEnterCallback(static_cast<IUIComponent*>(this));
+		}
+		return;
+	}
+
+	// ignore control character
+	if (ch < 32) {
+		return;
+	}
+
+	// limits maximum length
+	if (m_wstrCommittedText.length() >= m_maxLength) {
+		return;
+	}
+
+	m_wstrCommittedText.push_back(ch);
+	RefreshDisplayText();
+}
+
+void InputTextBox::RefreshDisplayText()
+{
+	const bool bShowPlaceholder =
+		!IsFocused() &&
+		m_wstrCommittedText.empty() &&
+		!m_wstrPlaceholderText.empty();
+
+	if (bShowPlaceholder) {
+		SetText(m_wstrPlaceholderText);
+		m_v4Color = m_v4PlaceholderColor;
+		return;
+	}
+
+	std::wstring wstrDisplayText = m_wstrCommittedText + m_wstrCompositionText;
+	if (m_bPasswordMode) {
+		wstrDisplayText.assign(m_wstrCommittedText.length(), m_chPasswordMask);
+	}
+	else {
+		wstrDisplayText = m_wstrCommittedText;
+	}
+
+	wstrDisplayText += m_wstrCompositionText;
+
+	if (IsFocused() && m_bCaretVisible) {
+		wstrDisplayText += L"|";
+	}
+
+	SetText(wstrDisplayText);
+	m_v4Color = m_v4TextColor;
+}

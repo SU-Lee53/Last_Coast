@@ -13,6 +13,11 @@ public:
 
 	void Update();
 
+	void SetFocus(const std::shared_ptr<IUIComponent>& pFocus);
+	void ClearFocus();
+
+	void OnChar(wchar_t ch);
+
 public:
 	const UIComponentLayer& GetUILayers() const { return m_UILayers; }
 
@@ -21,6 +26,7 @@ private:
 	UIComponentLayer m_UILayers;
 	//UIComponentLayer m_TextLayers;
 	
+	std::weak_ptr<IUIComponent> m_pCurrentFocused;
 
 };
 

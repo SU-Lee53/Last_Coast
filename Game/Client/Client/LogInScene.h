@@ -14,6 +14,7 @@ public:
 
 private:
 	std::string m_strServerIPInput;
+
 	std::string m_strIDInput;
 	std::string m_strPasswordInput;
 

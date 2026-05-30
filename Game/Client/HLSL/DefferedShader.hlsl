@@ -3,8 +3,8 @@
 
 struct PS_GBUFFER_OUTPUT
 {
-	float4 RT0 : SV_Target0;	// Albedo.rgb + Metallic
-	float4 RT1 : SV_Target1;	// Normal.xy + Roughness + AO
+	float4 RT0 : SV_Target0; // Albedo.rgb + Metallic
+	float4 RT1 : SV_Target1; // Normal.xy + Roughness + AO
 	float4 RT2 : SV_Target2; // Specular.rgb + Specular Power
 };
 

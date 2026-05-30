@@ -89,7 +89,7 @@ TextHandle TextRenderer::GetOrCacheText(Font::ID fontID, const std::wstring& wst
 
 	auto handle = CacheText(fontID, wstrText);
 	if (!handle.IsValid()) {
-		__debugbreak();
+		//__debugbreak();
 		return {};
 	}
 
