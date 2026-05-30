@@ -280,11 +280,18 @@ void Zombie::PostUpdate()
 
 		v3DbgDelta = v3Delta;
 
-		// 애니메이션
+		// 애니메이션 — 실제 XZ delta 기반 + 선형 decay
+		// state만 보면 A* 대기 중 제자리 걷기 발생,
+		// 즉시 delta만 보면 프레임마다 값이 튀어 flicker 발생
+		// → 이동 감지 시 즉시 1, 멈추면 5/s 속도로 감소 (약 0.2s 유지)
 		bool bMoving = (m_eServerBehaviorState != ZBS_Idle &&
 		                m_eServerBehaviorState != ZBS_Alert &&
 		                m_eServerBehaviorState != ZBS_Attacking);
-		m_fMoveSpeedSqXZ = bMoving ? 1.f : 0.f;
+		float fDeltaXZSq = v3Delta.x * v3Delta.x + v3Delta.z * v3Delta.z;
+		if (bMoving && fDeltaXZSq > 1.f) // 이번 프레임 XZ 이동 > 1cm
+			m_fMoveSpeedSqXZ = 1.f;
+		else
+			m_fMoveSpeedSqXZ = std::max(0.f, m_fMoveSpeedSqXZ - DT * 5.f);
 	}
 	else
 	{

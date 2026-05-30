@@ -123,6 +123,10 @@ namespace AIDLL
 		// 전역 PolyID = tileIdx * 100000 + polyIdx
 		std::unordered_map<int, std::vector<int>> m_Adjacency;
 
+		// 메인 연결 컴포넌트(가장 큰 섬)에 속한 폴리곤 ID 셋
+		// 고립된 섬 폴리곤은 여기에 없음 → FindPolygonContaining 등에서 제외
+		std::unordered_set<int> m_MainComponentPolys;
+
 		// 인접성 구축 (LoadFromJson 이후 호출)
 		void BuildAdjacency();
 

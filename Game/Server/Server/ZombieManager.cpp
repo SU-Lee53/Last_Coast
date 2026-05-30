@@ -78,8 +78,8 @@ int ZombieManager::SpawnZombie(Vector3 SpawnPos)
 	zombie.v3PrevPos      = v3SpawnPos;
 	zombie.fYaw           = 0.f;
 
-	std::cout << "[ZombieManager] 좀비 스폰 id=" << nId
-	          << " pos=(" << v3SpawnPos.x << "," << v3SpawnPos.z << ")\n";
+	//std::cout << "[ZombieManager] 좀비 스폰 id=" << nId
+	//          << " pos=(" << v3SpawnPos.x << "," << v3SpawnPos.z << ")\n";
 	return nId;
 }
 
@@ -89,7 +89,7 @@ void ZombieManager::DespawnZombie(int nId)
 	if (it == m_Zombies.end()) return;
 
 	m_Zombies.erase(it);
-	std::cout << "[ZombieManager] 좀비 디스폰 id=" << nId << "\n";
+	//std::cout << "[ZombieManager] 좀비 디스폰 id=" << nId << "\n";
 }
 
 void ZombieManager::Tick(float fDeltaTime,
@@ -102,9 +102,9 @@ void ZombieManager::Tick(float fDeltaTime,
 	static int nDebugCounter = 0;
 	bool bDebugPrint = (++nDebugCounter % 150 == 0); // 5초마다 (30Hz * 5)
 
-	if (bDebugPrint)
-		std::cout << "[ZombieTick] players=" << playerPositions.size()
-		          << " zombies=" << m_Zombies.size() << "\n";
+	//if (bDebugPrint)
+		//std::cout << "[ZombieTick] players=" << playerPositions.size()
+		//          << " zombies=" << m_Zombies.size() << "\n";
 
 	for (auto& [nId, zombie] : m_Zombies)
 	{
@@ -193,10 +193,10 @@ void ZombieManager::Tick(float fDeltaTime,
 			int nNewState = static_cast<int>(zombie.pAgent->GetBehaviorState());
 
 			if (nId == 0 && nPrevState != nNewState) {
-				static const char* sNames[] = {"Idle","Wander","Alert","Invest","Chase","Attack"};
-				std::cout << "[Z0] " << sNames[nPrevState] << " -> " << sNames[nNewState]
-				          << " dist=" << fDist
-				          << " pathState=" << static_cast<int>(zombie.pAgent->GetPathState()) << "\n";
+				//static const char* sNames[] = {"Idle","Wander","Alert","Invest","Chase","Attack"};
+				//std::cout << "[Z0] " << sNames[nPrevState] << " -> " << sNames[nNewState]
+				//          << " dist=" << fDist
+				//          << " pathState=" << static_cast<int>(zombie.pAgent->GetPathState()) << "\n";
 			}
 
 			if (zombie.pAgent->ConsumeAttackHit() && nTargetId >= 0) {
@@ -212,6 +212,26 @@ void ZombieManager::Tick(float fDeltaTime,
 		Vector3 v3XZDelta(v3NewPos.x - zombie.v3PrevPos.x, 0.f, v3NewPos.z - zombie.v3PrevPos.z);
 		if (v3XZDelta.LengthSquared() > 0.0001f)
 			zombie.fYaw = std::atan2f(v3XZDelta.x, v3XZDelta.z);
+
+		// Chase 상태인데 이동 없으면 위치 출력
+		if (zombie.pAgent->GetBehaviorState() == AIBehaviorState::Chasing &&
+		    v3XZDelta.LengthSquared() <= 0.0001f)
+		{
+			zombie.fStuckTimer += fDeltaTime;
+			if (zombie.fStuckTimer >= 1.f) // 1초 이상 멈춰 있을 때만 출력
+			{
+				printf("[Stuck] zombie=%d  pos=(%.0f,%.0f,%.0f)  pathState=%d\n",
+				       nId,
+				       v3NewPos.x, v3NewPos.y, v3NewPos.z,
+				       (int)zombie.pAgent->GetPathState());
+				zombie.fStuckTimer = 0.f;
+			}
+		}
+		else
+		{
+			zombie.fStuckTimer = 0.f;
+		}
+
 		zombie.v3PrevPos = v3NewPos;
 	}
 
@@ -219,15 +239,37 @@ void ZombieManager::Tick(float fDeltaTime,
 	m_pAIManager->UpdateAll(fDeltaTime);
 
 	// NavMesh 클램핑 — 서버에는 중력/충돌이 없으므로 매 틱 Y 보정
+	// 클라이언트와 동일하게 임계값 초과 시에만 클램핑.
+	// 무조건 클램핑하면 Boids가 조금 밀어낼 때마다 즉시 원위치되어
+	// PathState=Moving인데 순이동 0인 stuck 현상 발생.
+	// XZ: 30cm 이상 벗어날 때만 클램핑 (Boids 소량 편차로 인한 stuck 방지)
+	// Y:  항상 NavMesh 높이로 보정 (서버에는 중력 없으므로 Y 드리프트 방지)
+	static constexpr float CLAMP_THRESHOLD_XZ = 30.f; // cm
 	auto pNavMesh = m_pAIManager->GetNavMesh();
 	if (pNavMesh) {
 		for (auto& [nId, zombie] : m_Zombies)
 		{
 			if (!zombie.bAlive || !zombie.pAgent) continue;
 
-			Vector3 v3Pos = zombie.pAgent->GetPosition();
+			Vector3 v3Pos    = zombie.pAgent->GetPosition();
 			Vector3 v3Clamped = pNavMesh->GetNearestPointOnNavMesh(v3Pos);
-			zombie.pAgent->SyncPosition(v3Clamped);
+
+			float fXZDist = sqrtf(
+				(v3Pos.x - v3Clamped.x) * (v3Pos.x - v3Clamped.x) +
+				(v3Pos.z - v3Clamped.z) * (v3Pos.z - v3Clamped.z));
+
+			if (fXZDist > CLAMP_THRESHOLD_XZ)
+			{
+				// XZ도 크게 벗어남 → 전체 클램핑
+				zombie.pAgent->SyncPosition(v3Clamped);
+			}
+			else
+			{
+				// XZ는 허용 범위 → Y만 NavMesh 높이로 보정
+				Vector3 v3YFixed = v3Pos;
+				v3YFixed.y = v3Clamped.y;
+				zombie.pAgent->SyncPosition(v3YFixed);
+			}
 		}
 	}
 

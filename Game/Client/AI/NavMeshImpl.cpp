@@ -102,6 +102,75 @@ namespace AIDLL
 		// 로드 완료 후 인접 그래프 구축
 		BuildAdjacency();
 
+		// ── 연결 요소 검사 + 메인 컴포넌트 폴리곤 셋 구축 ──────────────────────
+		{
+			// BFS로 각 컴포넌트 수집
+			std::unordered_map<int, int> polyToComponent;
+			std::vector<std::vector<int>> components; // 컴포넌트별 polyID 목록
+
+			for (auto& [nPolyID, _] : m_Adjacency)
+			{
+				if (polyToComponent.count(nPolyID)) continue;
+
+				int nComponent = (int)components.size();
+				components.emplace_back();
+				auto& polys = components.back();
+
+				std::queue<int> q;
+				q.push(nPolyID);
+				polyToComponent[nPolyID] = nComponent;
+
+				Vector3 v3Min(FLT_MAX, FLT_MAX, FLT_MAX);
+				Vector3 v3Max(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+
+				while (!q.empty())
+				{
+					int nCur = q.front(); q.pop();
+					polys.push_back(nCur);
+
+					int nTile = GetTileFromID(nCur);
+					int nPoly = GetPolyFromID(nCur);
+					if (nTile >= 0 && nTile < (int)m_Tiles.size())
+					{
+						Vector3 c = GetPolygonCenter(nTile, nPoly);
+						v3Min.x = std::min(v3Min.x, c.x); v3Min.z = std::min(v3Min.z, c.z);
+						v3Max.x = std::max(v3Max.x, c.x); v3Max.z = std::max(v3Max.z, c.z);
+					}
+
+					auto it = m_Adjacency.find(nCur);
+					if (it == m_Adjacency.end()) continue;
+					for (int nNeighbor : it->second)
+					{
+						if (!polyToComponent.count(nNeighbor))
+						{
+							polyToComponent[nNeighbor] = nComponent;
+							q.push(nNeighbor);
+						}
+					}
+				}
+
+				//printf("[NavMesh] Component %d: polys=%d  X=[%.0f~%.0f]  Z=[%.0f~%.0f]\n",
+				//       nComponent, (int)polys.size(),
+				//       v3Min.x, v3Max.x, v3Min.z, v3Max.z);
+			}
+
+			// 가장 큰 컴포넌트 = 메인 NavMesh
+			int nMainIdx = 0;
+			for (int i = 1; i < (int)components.size(); ++i)
+				if (components[i].size() > components[nMainIdx].size())
+					nMainIdx = i;
+
+			m_MainComponentPolys.clear();
+			for (int nPolyID : components[nMainIdx])
+				m_MainComponentPolys.insert(nPolyID);
+
+			//if (components.size() > 1)
+			//	printf("[NavMesh] WARNING: %d 개의 단절된 섬 발견. 메인(Component %d, %d polys) 외 폴리곤 제외.\n",
+			//	       (int)components.size(), nMainIdx, (int)components[nMainIdx].size());
+			//else
+			//	printf("[NavMesh] OK: 전체 NavMesh 연결됨 (컴포넌트 1개)\n");
+		}
+
 		return true;
 	}
 
@@ -219,8 +288,12 @@ namespace AIDLL
 
 			for (int polyIdx = 0; polyIdx < (int)Tile.Polygons.size(); polyIdx++)
 			{
+				int nPolyID = MakePolyID(tileIdx, polyIdx);
+				// 메인 컴포넌트가 구축된 경우 고립된 섬 폴리곤 제외
+				if (!m_MainComponentPolys.empty() && !m_MainComponentPolys.count(nPolyID))
+					continue;
 				if (IsPointInPolygon(point, Tile.Polygons[polyIdx], Tile))
-					return MakePolyID(tileIdx, polyIdx);
+					return nPolyID;
 			}
 		}
 		return -1;
@@ -308,11 +381,17 @@ namespace AIDLL
 		float fMinDistance = FLT_MAX;
 		Vector3 v3NearestPoint = point;
 
-		for (const auto& tile : m_Tiles)
+		for (int tileIdx = 0; tileIdx < (int)m_Tiles.size(); ++tileIdx)
 		{
-			for (const auto& poly : tile.Polygons)
+			const auto& tile = m_Tiles[tileIdx];
+			for (int polyIdx = 0; polyIdx < (int)tile.Polygons.size(); ++polyIdx)
 			{
-				auto [dist, closest] = ClosestPointOnPolygon(point, poly, tile);
+				// 메인 컴포넌트가 구축된 경우 고립된 섬 폴리곤 제외
+				int nPolyID = MakePolyID(tileIdx, polyIdx);
+				if (!m_MainComponentPolys.empty() && !m_MainComponentPolys.count(nPolyID))
+					continue;
+
+				auto [dist, closest] = ClosestPointOnPolygon(point, tile.Polygons[polyIdx], tile);
 				if (dist < fMinDistance)
 				{
 					fMinDistance = dist;
@@ -562,7 +641,11 @@ namespace AIDLL
 	{
 		int nCurrentPolyID = FindPolygonContaining(From);
 		if (nCurrentPolyID < 0)
+		{
+			printf("[LOS_OffMesh] from=(%.0f,%.0f,%.0f) to=(%.0f,%.0f,%.0f)\n",
+			       From.x, From.y, From.z, To.x, To.y, To.z);
 			return false;  // 시작점이 NavMesh 위에 없음
+		}
 
 		constexpr int   nMaxIter  = 512;
 		constexpr float fEps      = 1e-3f;

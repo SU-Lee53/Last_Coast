@@ -181,11 +181,12 @@ PS_GBUFFER_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
 	float4 cAlbedo = BlendTerrainAlbedo(input.positionLocalXZ, flayerWeights);
 	
 	// Normal
-	float3 vNormal = BlendTerrainNormal(
-		input.positionLocalXZ, 
-		flayerWeights, 
-		normalize(input.normalW), 
-		normalize(input.tangentW));
+	//float3 vNormal = BlendTerrainNormal(
+	//	input.positionLocalXZ, 
+	//	flayerWeights, 
+	//	normalize(input.normalW), 
+	//	normalize(input.tangentW));
+	float3 vNormal = input.normalW;
 	float2 vNormalEnc = EncodeNormalOcta(vNormal);
 	
 	// Materials
