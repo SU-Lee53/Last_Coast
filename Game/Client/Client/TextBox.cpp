@@ -147,6 +147,14 @@ UIRectData TextBox::MakeSBData() const
 	return data;
 }
 
+void TextBox::ShowControllImGui()
+{
+	std::string strInput = WStringToString(m_wstrText);
+	if (ImGui::InputText("Text", &strInput)) {
+		SetText(StringToWString(strInput));
+	}
+	IUIComponent::ShowControllImGui();
+}
 
 void TextButton::Update()
 {
@@ -189,6 +197,15 @@ UIRectData TextButton::MakeSBData() const
 	data.nTexIndex = 0;
 
 	return data;
+}
+
+void TextButton::ShowControllImGui()
+{
+	std::string strInput = WStringToString(m_wstrText);
+	if (ImGui::InputText("Text", &strInput)) {
+		SetText(StringToWString(strInput));
+	}
+	IUIComponent::ShowControllImGui();
 }
 
 void InputTextBox::Update()
@@ -335,4 +352,13 @@ void InputTextBox::RefreshDisplayText()
 
 	SetText(wstrDisplayText);
 	m_v4Color = m_v4TextColor;
+}
+
+void InputTextBox::ShowControllImGui()
+{
+	std::string strInput = WStringToString(m_wstrPlaceholderText);
+	if (ImGui::InputText("PlaceHolder", &strInput)) {
+		m_wstrPlaceholderText = StringToWString(strInput);
+	}
+	IUIComponent::ShowControllImGui();
 }

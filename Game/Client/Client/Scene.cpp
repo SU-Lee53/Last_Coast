@@ -46,6 +46,10 @@ void Scene::CleanUp()
 
 void Scene::PostInitialize()
 {
+	if (!m_pUIBoard) {
+		m_pUIBoard = std::make_unique<UIBoard>();
+	}
+
 	InitializeObjects();
 	GenerateSceneBound();
 
@@ -647,6 +651,16 @@ void Scene::ShowDebugOptions()
 			}
 			else {
 				ImGui::Text("NULL Skybox");
+			}
+			ImGui::EndTabItem();		
+		}
+
+		if(ImGui::BeginTabItem("UI")){
+			if (m_pUIBoard) {
+				m_pUIBoard->EditUI();
+			}
+			else {
+				ImGui::Text("NULL UI");
 			}
 			ImGui::EndTabItem();		
 		}

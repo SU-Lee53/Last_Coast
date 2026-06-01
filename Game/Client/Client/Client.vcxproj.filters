@@ -547,9 +547,6 @@
     <ClInclude Include="ToneMappingPass.h">
       <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
     </ClInclude>
-    <ClInclude Include="BloomPass.h">
-      <Filter>03.Engine\Rendering</Filter>
-    </ClInclude>
     <ClInclude Include="RenderPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
@@ -564,6 +561,9 @@
     </ClInclude>
     <ClInclude Include="LogInScene.h">
       <Filter>02.Game\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="BloomPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -934,9 +934,6 @@
     <ClCompile Include="ToneMappingPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
     </ClCompile>
-    <ClCompile Include="BloomPass.cpp">
-      <Filter>03.Engine\Rendering</Filter>
-    </ClCompile>
     <ClCompile Include="RenderPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
@@ -951,6 +948,9 @@
     </ClCompile>
     <ClCompile Include="LogInScene.cpp">
       <Filter>02.Game\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="BloomPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

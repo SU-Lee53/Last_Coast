@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "NetworkManager.h"
 #include "Packets.h"
+#include "TextBox.h"
 
 HANDLE NetworkManager::g_hNetworkThread = nullptr;
 ConnectState m_connectState = ConnectState::None;

@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "Scene.h"
 
+class InputTextBox;
+
 class LogInScene : public Scene {
 public:
 	void BuildObjects() override;
@@ -17,6 +19,10 @@ private:
 
 	std::string m_strIDInput;
 	std::string m_strPasswordInput;
+
+	std::shared_ptr<InputTextBox> m_pIDInputBox;
+	std::shared_ptr<InputTextBox> m_pPWInputBox;
+	std::shared_ptr<TextBox> m_pResultText;
 
 	bool m_bLastRegisterTry = false;
 	bool m_bLastLogInTry = false;

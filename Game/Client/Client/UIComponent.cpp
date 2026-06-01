@@ -32,3 +32,15 @@ RECT IUIComponent::GetScreenRect() const
 
 	return r;
 }
+
+void IUIComponent::ShowControllImGui()
+{
+	ImGui::Text("Visible"); ImGui::SameLine();
+	if (ImGui::Button(m_bVisible ? "ON" : "OFF")) {
+		m_bVisible = !m_bVisible;
+	}
+	ImGui::InputFloat4("Color", (float*)&m_v4Color);
+	ImGui::InputFloat2("Anchor", (float*)&m_v2Anchor);
+	ImGui::InputFloat2("Pivot", (float*)&m_v2Pivot);
+	ImGui::InputFloat2("Position", (float*)&m_v2Position);
+}

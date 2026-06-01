@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #define SERVERPORT 9000
 #include "ServerCore/Session.h"
 
@@ -199,4 +199,5 @@ private:
 	concurrency::concurrent_queue<int>                            m_PendingPlayerLeaves;
 	concurrency::concurrent_queue<PlayerTransformEvent>           m_PendingPlayerTransforms;
 	concurrency::concurrent_queue<int>                            m_PendingPlayerReloads;
+
 };

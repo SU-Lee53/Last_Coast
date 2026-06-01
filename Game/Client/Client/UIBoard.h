@@ -21,6 +21,10 @@ public:
 public:
 	const UIComponentLayer& GetUILayers() const { return m_UILayers; }
 
+	void EditUI();
+
+	void SaveUI(const std::string& strFilename);
+	void LoadUI(const std::string& strFilename);
 
 private:
 	UIComponentLayer m_UILayers;
@@ -28,5 +32,16 @@ private:
 	
 	std::weak_ptr<IUIComponent> m_pCurrentFocused;
 
+	// Editor variables
+	int32 m_nSelectedLayer = 0;
+	int32 m_nSelectedUIIndex = 0;
+
+	std::string m_strNewName;
+	int32 m_nNewLayer = 0;
+	Vector2 m_v2NewAnchor = Vector2::Zero;
+	Vector2 m_v2NewPivot = Vector2::Zero;
+	Vector2 m_v2NewPosition = Vector2::Zero;
+	float m_fNewWidth = 0.f;
+	float m_fNewHeight = 0.f;
 };
 

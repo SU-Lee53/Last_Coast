@@ -41,6 +41,8 @@ public:
 	virtual void Update() override;
 	virtual UIRectData MakeSBData() const override;
 
+	virtual const std::wstring& GetName() const override { return m_wstrText; }
+	virtual void ShowControllImGui() override;
 };
 
 class TextButton : public IUIButtonComponent, public IText {
@@ -50,6 +52,9 @@ public:
 
 	virtual void Update() override;
 	virtual UIRectData MakeSBData() const override;
+
+	virtual const std::wstring& GetName() const override { return m_wstrText; }
+	virtual void ShowControllImGui() override;
 };
 
 class InputTextBox : public IUIFocusableComponent, public IText {
@@ -75,6 +80,9 @@ public:
 	virtual UIRectData MakeSBData() const override;
 
 	const std::wstring& GetCommittedText() const { return m_wstrCommittedText; }
+
+	virtual const std::wstring& GetName() const override { return m_wstrCommittedText; }
+	virtual void ShowControllImGui() override;
 
 private:
 	void RefreshDisplayText();

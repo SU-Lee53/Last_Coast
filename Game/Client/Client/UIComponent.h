@@ -57,8 +57,13 @@ public:
 	virtual const TextureRef<Texture>& GetTextureRef() const { return {}; }
 
 	RECT GetScreenRect() const;
+	virtual const std::wstring& GetName() const { return m_strName; }
+
+	virtual void ShowControllImGui();
 
 protected:
+	std::wstring m_strName;
+
 	uint32 m_unLayer = 0;
 	Vector4 m_v4Color = Vector4{ 1.f, 1.f, 1.f, 1.f };
 

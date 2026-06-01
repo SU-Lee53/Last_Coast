@@ -5,7 +5,8 @@ class DirectionalCascadeShadowMapPass : public IRenderPass {
 public:
 	constexpr static uint32 g_unNumCascade = 4;
 	constexpr static uint32 g_unCascadeShadowMapSize[g_unNumCascade] = {
-		2048, 1024, 512, 256
+		//2048, 1024, 512, 256
+		4096, 2048, 1024, 512
 	};
 
 	constexpr static float g_fMaxShadowDistance = 100_m;
