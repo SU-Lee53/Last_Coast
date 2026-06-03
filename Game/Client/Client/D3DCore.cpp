@@ -111,29 +111,29 @@ void D3DCore::CreateD3DDevice()
 	}
 
 #ifdef _DEBUG
-	//if (g_bEnableDebugLayer)
-	//{
-	//	ComPtr<ID3D12InfoQueue> infoQueue;
-	//	if (SUCCEEDED(m_pd3dDevice.As(&infoQueue)))
-	//	{
-	//		infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
-	//		infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
-	//		infoQueue->SetBreakOnID(
-	//			D3D12_MESSAGE_ID_CREATERESOURCE_STATE_IGNORED,
-	//			TRUE
-	//		);
-	//
-	//		infoQueue->SetBreakOnID(
-	//			D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
-	//			TRUE
-	//		);
-	//
-	//		infoQueue->SetBreakOnID(
-	//			D3D12_MESSAGE_ID_REFLECTSHAREDPROPERTIES_INVALIDOBJECT,
-	//			TRUE
-	//		);
-	//	}
-	//}
+	if (g_bEnableDebugLayer)
+	{
+		ComPtr<ID3D12InfoQueue> infoQueue;
+		if (SUCCEEDED(m_pd3dDevice.As(&infoQueue)))
+		{
+			infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+			infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+			infoQueue->SetBreakOnID(
+				D3D12_MESSAGE_ID_CREATERESOURCE_STATE_IGNORED,
+				TRUE
+			);
+	
+			infoQueue->SetBreakOnID(
+				D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
+				TRUE
+			);
+	
+			infoQueue->SetBreakOnID(
+				D3D12_MESSAGE_ID_REFLECTSHAREDPROPERTIES_INVALIDOBJECT,
+				TRUE
+			);
+		}
+	}
 #endif
 
 

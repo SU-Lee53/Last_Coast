@@ -259,7 +259,7 @@ float4 PSDefferedLighting(VS_QUAD_OUTPUT input) : SV_Target0
 	//float ao = saturate(g.ao * ssao);
 
 	float3 ambient = gSceneGlobal.v4GlobalAmbient.rgb * g.albedo * ssao;
-	float3 finalColor = directLighting * lerp(1.0f, ssao, 0.25f) + ambient;
+	float3 finalColor = directLighting + ambient;
 
 	return float4(finalColor, 1.0f);
 }

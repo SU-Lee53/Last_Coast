@@ -23,6 +23,10 @@ void UIBoard::Update()
 
 	for (auto& layer : m_UILayers) {
 		for (auto& pComp : layer) {
+			if (!pComp) {
+				continue;
+			}
+
 			if (pComp->IsClickable()) {
 				//auto& pButton = static_pointer_cast<IUIButtonComponent>(pComp);
 				bool bCursorOnButton = pComp->CheckPointInComponent(ptCursorPos);

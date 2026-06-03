@@ -222,7 +222,7 @@ bool Texture::CreateTextureFromRawData(const std::wstring& wstrTexturePath, cons
 	subResources[0].RowPitch = unWidth * sizeof(uint32); // R8G8B8A8
 	subResources[0].SlicePitch = subResources[0].RowPitch * unHeight;
 
-	TEXTURE->UpdateResources(m_pd3dResource, m_d3dCurrentState, subResources, nBytes, pd3dUploadBuffer);
+	TEXTURE->UpdateResources(m_pd3dResource, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, subResources, nBytes, pd3dUploadBuffer);
 
 	return true;
 }

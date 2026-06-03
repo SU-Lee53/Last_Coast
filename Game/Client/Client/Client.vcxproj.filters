@@ -565,6 +565,9 @@
     <ClInclude Include="BloomPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
+    <ClInclude Include="MenuScene.h">
+      <Filter>02.Game\Scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -951,6 +954,9 @@
     </ClCompile>
     <ClCompile Include="BloomPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="MenuScene.cpp">
+      <Filter>02.Game\Scene</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

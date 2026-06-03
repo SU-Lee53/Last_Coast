@@ -3,6 +3,7 @@
 #include "DebugPlayer.h"
 #include "GameScene.h"
 #include "TextBox.h"
+#include "MenuScene.h"
 
 void LogInScene::BuildObjects()
 {
@@ -43,7 +44,7 @@ void LogInScene::BuildObjects()
 		pTitle->SetLayer(1);
 		pTitle->SetAnchor(Vector2{ 0.5, 0.0 });
 		pTitle->SetPivot(Vector2{ 0.5,0.0 });
-		pTitle->SetPosition(Vector2{ 0,150 });
+		pTitle->SetPosition(Vector2{ 0,200 });
 		pTitle->SetTextHeight(120);
 		m_pUIBoard->InsertUI(pTitle);
 	}
@@ -173,6 +174,39 @@ void LogInScene::BuildObjects()
 		m_pUIBoard->InsertUI(m_pResultText);
 	}
 
+	// Enter game button
+	{
+		std::shared_ptr<TextButton> pPlayButton = std::make_shared<TextButton>(L"Malgun Gothic");
+		pPlayButton->SetText(L"Enter");
+		pPlayButton->SetLayer(1);
+		pPlayButton->SetAnchor(Vector2{ 0.5, 0.0 });
+		pPlayButton->SetPivot(Vector2{ 0.5,0.0 });
+		pPlayButton->SetPosition(Vector2{ 0,750 });
+		pPlayButton->SetTextHeight(70);
+
+		pPlayButton->SetBeginHoverCallback(
+			[](IUIComponent* pComp) {
+				auto pButton = static_cast<TextBox*>(pComp);
+				pButton->SetColor(Vector3(1.0, 0.0, 0.0));
+			}
+		);
+
+		pPlayButton->SetEndHoverCallback(
+			[](IUIComponent* pComp) {
+				auto pButton = static_cast<TextBox*>(pComp);
+				pButton->SetColor(Vector3{ 0.8, 0.8, 0.8 });
+			}
+		);
+
+		pPlayButton->SetButtonCallback(
+			[&](IUIComponent* pComp) {
+				m_bProceed = true;
+			}
+		);
+
+		m_pUIBoard->InsertUI(pPlayButton);
+	}
+
 }
 
 void LogInScene::OnEnterScene()
@@ -191,54 +225,10 @@ void LogInScene::Update()
 {
 	NETWORK->ConnectToServer();
 
-
-	if (NETWORK->IsConnected()) {
-		ImGui::Begin("Log In");
-
-		if (ImGui::BeginTabBar("Log in")) {
-			if (ImGui::BeginTabItem("Register")) {
-				ImGui::InputText("ID", &m_strIDInput);
-				ImGui::InputText("Password", &m_strPasswordInput);
-				if (ImGui::Button("Register")) {
-					m_bLastRegisterTry = TryRegister();
-				}
-
-				if (m_bLastRegisterTry) {
-					ImGui::Text("Register Successful, Try log in");
-				}
-
-				ImGui::EndTabItem();
-			}
-
-			if (ImGui::BeginTabItem("Log in")) {
-				ImGui::InputText("ID", &m_strIDInput);
-				ImGui::InputText("Password", &m_strPasswordInput);
-				if (ImGui::Button("Log in")) {
-					m_bLastLogInTry = TryLogIn();
-				}
-
-				if (m_bLastLogInTry) {
-					ImGui::Text("Log in Successful");
-					if (ImGui::Button("Change To Scene")) {
-						SCENE->ChangeScene<GameScene>();
-					}
-				}
-
-				ImGui::EndTabItem();
-			}
-
-			ImGui::EndTabBar();
-		}
-
-		ImGui::SeparatorText("Test");
-		ImGui::Text("ID In : %s", m_strIDInput.c_str());
-		ImGui::Text("PW In : %s", m_strPasswordInput.c_str());
-
-
-		ImGui::End();
+	if (m_bProceed) {
+		SCENE->ChangeScene<MenuScene>();
+		return;
 	}
-
-
 }
 
 bool LogInScene::TryLogIn()

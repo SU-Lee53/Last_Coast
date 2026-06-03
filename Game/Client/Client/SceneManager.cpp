@@ -31,7 +31,6 @@ void SceneManager::Update()
 	m_upCurrentScene->PreUpdate();
 	m_upCurrentScene->Update();
 	if (m_bSceneChanged) {
-		m_bSceneChanged = false;
 		return;
 	}
 	m_upCurrentScene->FixedUpdate();
@@ -40,6 +39,10 @@ void SceneManager::Update()
 
 void SceneManager::PrepareRender()
 {
+	if (m_bSceneChanged) {
+		m_bSceneChanged = false;
+		return;
+	}
 	m_upCurrentScene->PrepareRender();
 }
 

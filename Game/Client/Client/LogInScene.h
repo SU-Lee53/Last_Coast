@@ -26,4 +26,6 @@ private:
 
 	bool m_bLastRegisterTry = false;
 	bool m_bLastLogInTry = false;
+
+	bool m_bProceed = false;
 };
