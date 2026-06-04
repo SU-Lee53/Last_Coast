@@ -16,6 +16,7 @@
 class TerrainComponent;
 class TerrainObject;
 class Skybox;
+class EventSequence;
 //class Sprite;
 
 using CollisionPair = std::pair<std::shared_ptr<IGameObject>, std::shared_ptr<IGameObject>>;
@@ -76,7 +77,7 @@ public:
 	const std::shared_ptr<IPlayer>& GetPlayer() const { return m_pPlayer; }
 	const std::shared_ptr<TerrainObject>& GetTerrain() const { return m_pTerrain; }
 	const std::shared_ptr<Skybox>& GetSkybox() const { return m_pSkybox; }
-	const std::shared_ptr<Camera>& GetCamera() const { return m_pPlayer->GetCamera(); }
+	const std::shared_ptr<Camera>& GetCamera() const { return m_pMainCamera; }
 	const std::vector<std::shared_ptr<Light>>& GetLightsInScene() const { return m_pLights; }
 	const Vector4& GetGlobalAmbient() const { return m_v4GlobalAmbient; }
 	const std::unique_ptr<UIBoard>& GetUIBoard() const { return m_pUIBoard; }
@@ -87,6 +88,8 @@ public:
 	std::vector<LightData> MakeLightData() const;
 
 	TerrainHit QueryTerrainHit(const Vector3& v3WorldPos);
+
+	std::shared_ptr<Camera> SwapCamera(std::shared_ptr<Camera>& pNewCamera);
 
 protected:
 	void RemoveCollisionPairsOf(IGameObject* pDeadObject);
@@ -103,13 +106,14 @@ protected:
 	ToneMappingVolume m_ToneMappingVolume{};
 	PostProcessingVolume m_PostProcessingVolume{};
 
-
 	std::vector<std::shared_ptr<Light>>			m_pLights = {};
 	
 	std::shared_ptr<IPlayer>					m_pPlayer = nullptr;
+	std::shared_ptr<Camera>						m_pMainCamera = nullptr;
 	std::shared_ptr<TerrainObject>				m_pTerrain = nullptr;
 	std::shared_ptr<Skybox>						m_pSkybox = nullptr;
-
+	std::shared_ptr<EventSequence>				m_pEventSequence = nullptr;
+	
 	BoundingBox m_xmSceneBound{};
 	std::unique_ptr<UIBoard> m_pUIBoard{};
 	std::unordered_set<CollisionResult> m_pCollisionPairs;

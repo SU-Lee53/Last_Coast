@@ -4,6 +4,7 @@
 #include "NodeObject.h"
 #include "Collider.h"
 #include "Skybox.h"
+#include "EventSequence.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // Scene
@@ -46,11 +47,11 @@ void Scene::CleanUp()
 
 void Scene::PostInitialize()
 {
-	if (!m_pUIBoard) {
-		m_pUIBoard = std::make_unique<UIBoard>();
+	InitializeObjects();
+	if (m_pPlayer) {
+		m_pMainCamera = m_pPlayer->GetCamera();
 	}
 
-	InitializeObjects();
 	GenerateSceneBound();
 
 	// Space Partition
@@ -135,6 +136,15 @@ void Scene::PostInitialize()
 	}
 
 	m_bSpatialRuntimeRegistrationEnabled = true;
+
+	if (!m_pUIBoard) {
+		m_pUIBoard = std::make_unique<UIBoard>();
+	}
+
+	if (m_pEventSequence) {
+		m_pEventSequence->Initialize();
+	}
+
 }
 
 void Scene::PreProcessInput()
@@ -176,6 +186,10 @@ void Scene::FixedUpdate()
 	m_World.UpdateSpatial();
 
 	m_ToneMappingVolume.Update();
+
+	if (m_pEventSequence) {
+		m_pEventSequence->Update();
+	}
 
 	CheckCollision();
 }
@@ -405,6 +419,13 @@ TerrainHit Scene::QueryTerrainHit(const Vector3& v3WorldPos)
 	}
 
 	return result;
+}
+
+std::shared_ptr<Camera> Scene::SwapCamera(std::shared_ptr<Camera>& pNewCamera)
+{
+	std::shared_ptr<Camera> pBefore = m_pMainCamera;
+	m_pMainCamera = pNewCamera;
+	return pBefore;
 }
 
 void Scene::RemoveCollisionPairsOf(IGameObject* pDeadObject)

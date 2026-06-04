@@ -12,6 +12,7 @@
 #include "ZombieAnimationController.h"
 #include "ThirdPersonCamera.h"
 #include "BulletImpactEffect.h"
+#include "EventSequence.h"
 
 void GameScene::BuildObjects()
 {
@@ -56,7 +57,6 @@ void GameScene::BuildObjects()
 	pText->SetPosition(Vector2{ 10,150 });
 	pText->SetTextHeight(50);
 	m_pUIBoard->InsertUI(pText);
-
 }
 
 void GameScene::OnEnterScene()

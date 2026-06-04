@@ -21,6 +21,8 @@ public:
 	SkyboxData MakeCBData() const;
 	void ShowControllImGui();
 
+	void SetDayNightBlend(float fTime) { m_fDayNightBlend = fTime; }
+
 private:
 	void SaveParametersToJson() const;
 

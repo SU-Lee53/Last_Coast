@@ -226,9 +226,11 @@ void LogInScene::Update()
 	NETWORK->ConnectToServer();
 
 	if (m_bProceed) {
-		SCENE->ChangeScene<MenuScene>();
+		m_bProceed = false;
+		SCENE->PushScene<MenuScene>();
 		return;
 	}
+
 }
 
 bool LogInScene::TryLogIn()

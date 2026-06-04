@@ -10,10 +10,11 @@
 
 void SceneManager::Initialize()
 {
-	m_upCurrentScene = std::make_unique<LogInScene>();
-	m_upCurrentScene->BuildLights();
-	m_upCurrentScene->BuildObjects();
-	m_upCurrentScene->PostInitialize();
+	m_pSceneStack.push_back(std::make_unique<MapTestScene>());
+	m_pSceneStack.back()->OnEnterScene();
+	m_pSceneStack.back()->BuildLights();
+	m_pSceneStack.back()->BuildObjects();
+	m_pSceneStack.back()->PostInitialize();
 
 	//RESOURCE->WaitForCopyComplete();
 	//TEXTURE->WaitForCopyComplete();
@@ -21,20 +22,20 @@ void SceneManager::Initialize()
 
 void SceneManager::ProcessInput() 
 {
-	m_upCurrentScene->PreProcessInput();
-	m_upCurrentScene->ProcessInput();
-	m_upCurrentScene->PostProcessInput();
+	m_pSceneStack.back()->PreProcessInput();
+	m_pSceneStack.back()->ProcessInput();
+	m_pSceneStack.back()->PostProcessInput();
 }
 
 void SceneManager::Update()
 {
-	m_upCurrentScene->PreUpdate();
-	m_upCurrentScene->Update();
+	m_pSceneStack.back()->PreUpdate();
+	m_pSceneStack.back()->Update();
 	if (m_bSceneChanged) {
 		return;
 	}
-	m_upCurrentScene->FixedUpdate();
-	m_upCurrentScene->PostUpdate();
+	m_pSceneStack.back()->FixedUpdate();
+	m_pSceneStack.back()->PostUpdate();
 }
 
 void SceneManager::PrepareRender()
@@ -43,12 +44,12 @@ void SceneManager::PrepareRender()
 		m_bSceneChanged = false;
 		return;
 	}
-	m_upCurrentScene->PrepareRender();
+	m_pSceneStack.back()->PrepareRender();
 }
 
 void SceneManager::ShowDebugOptions()
 {
 	ImGui::Begin("Scene");
-	m_upCurrentScene->ShowDebugOptions();
+	m_pSceneStack.back()->ShowDebugOptions();
 	ImGui::End();
 }

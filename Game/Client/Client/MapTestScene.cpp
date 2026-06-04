@@ -6,6 +6,7 @@
 #include "GameScene.h"
 #include "TextBox.h"
 #include "WeaponObject.h"
+#include "EventSequence.h"
 
 void MapTestScene::BuildObjects()
 {
@@ -39,7 +40,7 @@ void MapTestScene::BuildObjects()
 	m_pTimeText->SetTextHeight(50);
 
 	m_pKoreanText = std::make_shared<TextButton>(L"Malgun Gothic");
-	m_pKoreanText->SetText(L"클릭하면 글자색이 바뀜");
+	m_pKoreanText->SetText(L"카메라 재생");
 	m_pKoreanText->SetLayer(0);
 	m_pKoreanText->SetAnchor(Vector2{ 0,0 });
 	m_pKoreanText->SetPivot(Vector2{ 0,0 });
@@ -105,6 +106,16 @@ void MapTestScene::BuildObjects()
 	}
 
 	LoadFromFiles("LightTest");
+
+
+	m_pEventSequence = std::make_shared<EventSequence>(this);
+	m_pEventSequence->AddEvent(std::make_shared<TimeForwardEvent>());
+	//m_pEventSequence->AddEvent(std::make_shared<BleedEvent>());
+
+	auto pCinematicEvent = std::make_shared<CinematicCameraEvent>();
+
+	m_pEventSequence->AddEvent(std::make_shared<CinematicCameraEvent>());
+
 }
 
 void MapTestScene::OnEnterScene()

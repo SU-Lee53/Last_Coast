@@ -158,6 +158,9 @@
     <Filter Include="03.Engine\Rendering\RenderPasses\PostProcessing">
       <UniqueIdentifier>{608e1348-ad04-4f9a-95ce-840fecdf345f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02.Game\Scene\Sequence">
+      <UniqueIdentifier>{6bf59c52-fb7d-484a-80f8-8c10c4f43567}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h">
@@ -471,9 +474,6 @@
     <ClInclude Include="UIPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
-    <ClInclude Include="WeaponObject.h">
-      <Filter>02.Game\GameObject\GameObjects</Filter>
-    </ClInclude>
     <ClInclude Include="TypedObjectPool.h">
       <Filter>02.Game\Scene\World</Filter>
     </ClInclude>
@@ -567,6 +567,15 @@
     </ClInclude>
     <ClInclude Include="MenuScene.h">
       <Filter>02.Game\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="EventSequence.h">
+      <Filter>02.Game\Scene\Sequence</Filter>
+    </ClInclude>
+    <ClInclude Include="GameEvent.h">
+      <Filter>02.Game\Scene\Sequence</Filter>
+    </ClInclude>
+    <ClInclude Include="WeaponObject.h">
+      <Filter>02.Game\GameObject\Weapons</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -876,9 +885,6 @@
     <ClCompile Include="UIPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
-    <ClCompile Include="WeaponObject.cpp">
-      <Filter>02.Game\GameObject\GameObjects</Filter>
-    </ClCompile>
     <ClCompile Include="TypedObjectPool.cpp">
       <Filter>02.Game\Scene\World</Filter>
     </ClCompile>
@@ -957,6 +963,15 @@
     </ClCompile>
     <ClCompile Include="MenuScene.cpp">
       <Filter>02.Game\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="EventSequence.cpp">
+      <Filter>02.Game\Scene\Sequence</Filter>
+    </ClCompile>
+    <ClCompile Include="GameEvent.cpp">
+      <Filter>02.Game\Scene\Sequence</Filter>
+    </ClCompile>
+    <ClCompile Include="WeaponObject.cpp">
+      <Filter>02.Game\GameObject\Weapons</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

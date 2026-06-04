@@ -112,4 +112,8 @@ void MenuScene::Update()
 		SCENE->ChangeScene<GameScene>();	// Test
 		return;
 	}
+
+	if (INPUT->GetButtonDown(VK_BACK)) {
+		SCENE->PopScene();
+	}
 }
