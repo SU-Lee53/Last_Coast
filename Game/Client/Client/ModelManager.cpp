@@ -5,6 +5,61 @@
 #include "Skeleton.h"
 #include "NodeObject.h"
 
+namespace {
+	void ReadVector2ArrayFromJson(const nlohmann::json& j, uint32 unCount, OUT std::vector<Vector2>& outData)
+	{
+		outData.resize(unCount);
+		for (uint32 i = 0; i < unCount; ++i) {
+			const uint32 unBase = i * 2;
+			outData[i] = Vector2{
+				j[unBase + 0].get<float>(),
+				j[unBase + 1].get<float>()
+			};
+		}
+	}
+
+	void ReadVector3ArrayFromJson(const nlohmann::json& j, uint32 unCount, OUT std::vector<Vector3>& outData)
+	{
+		outData.resize(unCount);
+		for (uint32 i = 0; i < unCount; ++i) {
+			const uint32 unBase = i * 3;
+			outData[i] = Vector3{
+				j[unBase + 0].get<float>(),
+				j[unBase + 1].get<float>(),
+				j[unBase + 2].get<float>()
+			};
+		}
+	}
+
+	void ReadVector4ArrayFromJson(const nlohmann::json& j, uint32 unCount, OUT std::vector<Vector4>& outData)
+	{
+		outData.resize(unCount);
+		for (uint32 i = 0; i < unCount; ++i) {
+			const uint32 unBase = i * 4;
+			outData[i] = Vector4{
+				j[unBase + 0].get<float>(),
+				j[unBase + 1].get<float>(),
+				j[unBase + 2].get<float>(),
+				j[unBase + 3].get<float>()
+			};
+		}
+	}
+
+	void ReadXMUINT4ArrayFromJson(const nlohmann::json& j, uint32 unCount, OUT std::vector<XMUINT4>& outData)
+	{
+		outData.resize(unCount);
+		for (uint32 i = 0; i < unCount; ++i) {
+			const uint32 unBase = i * 4;
+			outData[i] = XMUINT4{
+				j[unBase + 0].get<uint32>(),
+				j[unBase + 1].get<uint32>(),
+				j[unBase + 2].get<uint32>(),
+				j[unBase + 3].get<uint32>()
+			};
+		}
+	}
+}
+
 void ModelManager::Initialize()
 {
 }
@@ -85,20 +140,22 @@ std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& 
 
 	// 콜리전 정보를 NodeObject가 아닌 별도 풀에 저장
 	// (StaticObject 루트에 붙여야 하므로 Scene::LoadFromFiles에서 꺼내 씀)
-	std::vector<COLLISIONMESHINFO> collisionInfos;
 	if (j.contains("nCollisions") && j["nCollisions"].get<size_t>() > 0) {
+		std::vector<COLLISIONMESHINFO> collisionInfos;
+		collisionInfos.reserve(j["nCollisions"].get<size_t>());
 		for (const auto& jCol : j["Collisions"]) {
 			collisionInfos.push_back(LoadCollisionInfoFromJson(jCol));
 		}
-	}
-	else {
-		COLLISIONMESHINFO info = GatherRenderMeshCollisionInfo(j["Hierarchy"]);
-		if (!info.v3Positions.empty()) {
-			collisionInfos.push_back(std::move(info));
+
+		if (!collisionInfos.empty()) {
+			m_CollisionInfoPool[strFileName] = std::move(collisionInfos);
 		}
 	}
-	if (!collisionInfos.empty()) {
-		m_CollisionInfoPool[strFileName] = std::move(collisionInfos);
+	else {
+		COLLISIONMESHINFO collisionInfo = GatherRenderMeshCollisionInfo(j["Hierarchy"]);
+		if (!collisionInfo.v3Positions.empty() && !collisionInfo.unIndices.empty()) {
+			m_CollisionInfoPool[strFileName].push_back(std::move(collisionInfo));
+		}
 	}
 
 	if (pGameObject) {
@@ -119,10 +176,12 @@ std::shared_ptr<IGameObject> ModelManager::LoadFrameHierarchyFromFile(const std:
 
 	std::vector<MESHLOADINFO> meshLoadInfos;
 	std::vector<MATERIALLOADINFO> materialLoadInfos;
+	meshLoadInfos.reserve(nMeshes);
+	materialLoadInfos.reserve(nMeshes);
 	for (int i = 0; i < nMeshes; ++i) {
 		auto [meshInfo, materialInfo] = LoadMeshInfoFromFiles(inJson["Meshes"][i]);
-		meshLoadInfos.push_back(meshInfo);
-		materialLoadInfos.push_back(materialInfo);
+		meshLoadInfos.push_back(std::move(meshInfo));
+		materialLoadInfos.push_back(std::move(materialInfo));
 	}
 
 	if (meshLoadInfos.size() != 0) {
@@ -162,54 +221,19 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 	std::iota(loadIndices.begin(), loadIndices.end(), 0);
 
 	// Positions
-	auto positions = inJson["Positions"].get<std::vector<float>>();
-	meshLoadInfo.v3Positions.resize(nVertices);
-	for (size_t i = 0; i < nVertices; ++i) {
-		const size_t base = i * 3;
-		meshLoadInfo.v3Positions[i] = Vector3{
-			positions[base + 0],
-			positions[base + 1],
-			positions[base + 2]
-		};
-	}
+	ReadVector3ArrayFromJson(inJson["Positions"], nVertices, meshLoadInfo.v3Positions);
 
 	// Normals
-	auto normals = inJson["Normals"].get<std::vector<float>>();
-	meshLoadInfo.v3Normals.resize(nVertices);
-	for (size_t i = 0; i < nVertices; ++i) {
-		const size_t base = i * 3;
-		meshLoadInfo.v3Normals[i] = Vector3{
-			normals[base + 0],
-			normals[base + 1],
-			normals[base + 2]
-		};
-	}
+	ReadVector3ArrayFromJson(inJson["Normals"], nVertices, meshLoadInfo.v3Normals);
 
 	// Tangents
-	auto tangents = inJson["Tangents"].get<std::vector<float>>();
-	meshLoadInfo.v3Tangents.resize(nVertices);
-	for (size_t i = 0; i < nVertices; ++i) {
-		const size_t base = i * 3;
-		meshLoadInfo.v3Tangents[i] = Vector3{
-			tangents[base + 0],
-			tangents[base + 1],
-			tangents[base + 2]
-		};
-	}
+	ReadVector3ArrayFromJson(inJson["Tangents"], nVertices, meshLoadInfo.v3Tangents);
 
 	// TexCoord0
 	unsigned nUVChannels = inJson["nUVChannels"].get<unsigned>();
 	if (nUVChannels != 0) {
 		const nlohmann::json& texCoordData = inJson["TexCoord0"];
-		const auto& texCoord = texCoordData["TexCoord"].get<std::vector<float>>();
-		meshLoadInfo.v2TexCoord0.resize(nVertices);
-		for (size_t i = 0; i < nVertices; ++i) {
-			const size_t base = i * 2;
-			meshLoadInfo.v2TexCoord0[i] = Vector2{
-				texCoord[base + 0],
-				texCoord[base + 1],
-			};
-		}
+		ReadVector2ArrayFromJson(texCoordData["TexCoord"], nVertices, meshLoadInfo.v2TexCoord0);
 	}
 	else {
 		meshLoadInfo.v2TexCoord0.resize(nVertices);
@@ -218,30 +242,10 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 	meshLoadInfo.bIsSkinned = inJson["Skinned?"].get<bool>();
 	if (meshLoadInfo.bIsSkinned) {
 		// BlendIndices
-		auto blendIndices = inJson["BlendIndices"].get<std::vector<uint32>>();
-		meshLoadInfo.xmun4BlendIndices.resize(nVertices);
-		for (size_t i = 0; i < nVertices; ++i) {
-			const size_t base = i * 4;
-			meshLoadInfo.xmun4BlendIndices[i] = XMUINT4{
-				blendIndices[base + 0],
-				blendIndices[base + 1],
-				blendIndices[base + 2],
-				blendIndices[base + 3]
-			};
-		}
+		ReadXMUINT4ArrayFromJson(inJson["BlendIndices"], nVertices, meshLoadInfo.xmun4BlendIndices);
 
 		// BlendWeights
-		auto blendWeights = inJson["BlendWeights"].get<std::vector<float>>();
-		meshLoadInfo.v4BlendWeights.resize(nVertices);
-		for (size_t i = 0; i < nVertices; ++i) {
-			const size_t base = i * 4;
-			meshLoadInfo.v4BlendWeights[i] = Vector4{
-				blendWeights[base + 0],
-				blendWeights[base + 1],
-				blendWeights[base + 2],
-				blendWeights[base + 3]
-			};
-		}
+		ReadVector4ArrayFromJson(inJson["BlendWeights"], nVertices, meshLoadInfo.v4BlendWeights);
 
 		meshLoadInfo.eMeshType = MESH_TYPE::SKINNED;
 	}
@@ -253,7 +257,7 @@ std::pair<MESHLOADINFO, MATERIALLOADINFO> ModelManager::LoadMeshInfoFromFiles(co
 	}
 
 	// Indices
-	meshLoadInfo.unIndices = inJson["Indices"].get<std::vector<UINT>>();
+	inJson["Indices"].get_to(meshLoadInfo.unIndices);
 
 	// Bounds (AABB)
 	const nlohmann::json& aabbData = inJson["Bounds"];
@@ -310,14 +314,13 @@ COLLISIONMESHINFO ModelManager::GatherRenderMeshCollisionInfo(const nlohmann::js
 			unsigned nVertices = meshJson["nVertices"].get<unsigned>();
 			uint32 nBaseVertex = static_cast<uint32>(info.v3Positions.size());
 
-			auto positions = meshJson["Positions"].get<std::vector<float>>();
 			info.v3Positions.reserve(info.v3Positions.size() + nVertices);
-			for (unsigned v = 0; v < nVertices; ++v) {
-				unsigned base = v * 3;
-				info.v3Positions.emplace_back(positions[base], positions[base + 1], positions[base + 2]);
-			}
+			std::vector<Vector3> v3Positions;
+			ReadVector3ArrayFromJson(meshJson["Positions"], nVertices, v3Positions);
+			info.v3Positions.insert(info.v3Positions.end(), v3Positions.begin(), v3Positions.end());
 
-			auto indices = meshJson["Indices"].get<std::vector<uint32>>();
+			std::vector<uint32> indices;
+			meshJson["Indices"].get_to(indices);
 			info.unIndices.reserve(info.unIndices.size() + indices.size());
 			for (uint32 idx : indices) {
 				info.unIndices.push_back(nBaseVertex + idx);
@@ -342,15 +345,10 @@ COLLISIONMESHINFO ModelManager::LoadCollisionInfoFromJson(const nlohmann::json& 
 
 	// Positions
 	unsigned nVertices = inJson["nVertices"].get<unsigned>();
-	std::vector<float> positions = inJson["Positions"].get<std::vector<float>>();
-	info.v3Positions.reserve(nVertices);
-	for (unsigned i = 0; i < nVertices; ++i) {
-		unsigned base = i * 3;
-		info.v3Positions.emplace_back(positions[base], positions[base + 1], positions[base + 2]);
-	}
+	ReadVector3ArrayFromJson(inJson["Positions"], nVertices, info.v3Positions);
 
 	// Indices
-	info.unIndices = inJson["Indices"].get<std::vector<uint32>>();
+	inJson["Indices"].get_to(info.unIndices);
 
 	return info;
 }

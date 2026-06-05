@@ -463,13 +463,12 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 {
 	std::string strFilePath = std::format("{}/{}.bin", g_strSceneBasePath, strFileName);
 
-	std::ifstream inFile{ strFilePath, std::ios::binary };
-	if (!inFile) {
+	auto bson = ::ReadBinaryFile(strFilePath);
+	if (bson.empty()) {
 		__debugbreak();
 		return E_INVALIDARG;
 	}
 
-	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
 	nlohmann::json jScene = nlohmann::json::from_bson(bson);;
 
 	if (jScene.contains("StaticMeshActors")) {
@@ -479,8 +478,7 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 			std::shared_ptr<StaticObject> pObj = std::make_shared<StaticObject>();
 			pObj->SetName(jObject["ActorName"].get<std::string>());
 
-			auto matrixData = jObject["Transform"]["WorldMatrix"].get<std::vector<float>>();
-			Matrix mtxWorldMatrix(matrixData.data());
+			Matrix mtxWorldMatrix = ::ReadMatrixFromJson(jObject["Transform"]["WorldMatrix"]);
 			pObj->GetTransform()->SetWorldMatrix(mtxWorldMatrix);
 
 			std::string strMeshName = jObject["MeshName"].get<std::string>();
@@ -512,8 +510,7 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 			if (strType == "PointLight") {
 				std::shared_ptr<PointLight> pLight = std::make_shared<PointLight>();
 				// Transform (Position)
-				auto matrixData = jLight["Transform"]["WorldMatrix"].get<std::vector<float>>();
-				Matrix mtxWorldMatrix(matrixData.data());
+				Matrix mtxWorldMatrix = ::ReadMatrixFromJson(jLight["Transform"]["WorldMatrix"]);
 				Vector3 v3Position(mtxWorldMatrix._41, mtxWorldMatrix._42, mtxWorldMatrix._43);
 				pLight->m_v3Position = v3Position;
 
@@ -538,8 +535,7 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 			else if (strType == "SpotLight") {
 				std::shared_ptr<SpotLight> pLight = std::make_shared<SpotLight>();
 				// Transform (Position)
-				auto matrixData = jLight["Transform"]["WorldMatrix"].get<std::vector<float>>();
-				Matrix mtxWorldMatrix(matrixData.data());
+				Matrix mtxWorldMatrix = ::ReadMatrixFromJson(jLight["Transform"]["WorldMatrix"]);
 				Vector3 v3Position(mtxWorldMatrix._41, mtxWorldMatrix._42, mtxWorldMatrix._43);
 				pLight->m_v3Position = v3Position;
 
@@ -575,6 +571,7 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 		}
 	}
 
+	return S_OK;
 }
 
 void Scene::ShowDebugOptions()
