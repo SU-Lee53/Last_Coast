@@ -228,6 +228,7 @@ void ShaderManager::CompileShaders()
 
 	Compile("SSAOPS", L"SSAO.hlsl", L"PSSSAO", SHADER_TYPE::PS);
 	Compile("SSAOBilateralBlurPS", L"SSAO.hlsl", L"PSSSAOBilateralBlur", SHADER_TYPE::PS);
+	Compile("LightShaftPS", L"LightShaft.hlsl", L"PSLightShaft", SHADER_TYPE::PS);
 
 	// Compute
 	Compile("HDRIToCubeMapCS", L"HDRIToCubeMap.hlsl", L"CSHDRIToCubeMap", SHADER_TYPE::CS);

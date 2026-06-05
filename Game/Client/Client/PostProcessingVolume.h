@@ -29,6 +29,17 @@ struct ScreenFXParameters {
 	float fVignetteSoftness = 0.45;
 };
 
+struct LightShaftParameters {
+	bool bEnable = true;
+	float fIntensity = 0.65f;
+	float fDecay = 0.94f;
+	float fDensity = 0.85f;
+	float fWeight = 0.08f;
+	float fExposure = 1.0f;
+	float fDepthThreshold = 0.999f;
+	int nSampleCount = 48;
+};
+
 struct CB_BLOOM_DATA {
 	float gBloomThreshold;
 	float gBloomSoftKnee;
@@ -61,6 +72,21 @@ struct CB_SCREEN_FX_DATA {
 	Vector2 pad;
 };
 
+struct CB_LIGHT_SHAFT_DATA {
+	Vector2 gv2LightScreenPosition;
+	float gfIntensity;
+	float gfDecay;
+
+	float gfDensity;
+	float gfWeight;
+	float gfExposure;
+	float gfDepthThreshold;
+
+	int gnSampleCount;
+	int gnEnable;
+	Vector2 pad;
+};
+
 class PostProcessingVolume
 {
 public:
@@ -70,15 +96,18 @@ public:
 	CB_BLOOM_DATA GetBloomCBData(XMINT2 xmi2InputSize, XMINT2 xmi2OutputSize) const;
 	CB_SSAO_DATA GetSSAOCBData() const;
 	CB_SCREEN_FX_DATA GetScreenFXCBData() const;
+	CB_LIGHT_SHAFT_DATA GetLightShaftCBData(const Vector2& v2LightScreenPosition) const;
 
 	const BloomParameters& GetBloomParameters() const { return m_Bloom; }
 	const SSAOParameters& GetSSAOParameters() const { return m_SSAO; }
 	const ScreenFXParameters& GetScreenFXParameters() const { return m_ScreenFX; }
+	const LightShaftParameters& GetLightShaftParameters() const { return m_LightShaft; }
 
 private:
 	BloomParameters m_Bloom;
 	SSAOParameters m_SSAO;
 	ScreenFXParameters m_ScreenFX;
+	LightShaftParameters m_LightShaft;
 
 private:
 	TextureRef<Texture> m_NoiseTexture;

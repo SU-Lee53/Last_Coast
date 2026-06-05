@@ -38,6 +38,21 @@ CB_SCREEN_FX_DATA PostProcessingVolume::GetScreenFXCBData() const
 	};
 }
 
+CB_LIGHT_SHAFT_DATA PostProcessingVolume::GetLightShaftCBData(const Vector2& v2LightScreenPosition) const
+{
+	return CB_LIGHT_SHAFT_DATA{
+		.gv2LightScreenPosition = v2LightScreenPosition,
+		.gfIntensity = m_LightShaft.fIntensity,
+		.gfDecay = m_LightShaft.fDecay,
+		.gfDensity = m_LightShaft.fDensity,
+		.gfWeight = m_LightShaft.fWeight,
+		.gfExposure = m_LightShaft.fExposure,
+		.gfDepthThreshold = m_LightShaft.fDepthThreshold,
+		.gnSampleCount = m_LightShaft.nSampleCount,
+		.gnEnable = (m_LightShaft.bEnable) ? 1 : 0,
+	};
+}
+
 void PostProcessingVolume::Update()
 {
 
@@ -71,6 +86,22 @@ void PostProcessingVolume::ShowDebugOptions()
 
 	if (ImGui::Button("Reset SSAO Parameters")) {
 		m_SSAO = SSAOParameters{};
+	}
+
+	ImGui::SeparatorText("Light Shaft");
+	{
+		ImGui::Checkbox("Light Shaft Enable", &m_LightShaft.bEnable);
+		ImGui::DragFloat("Light Shaft Intensity", &m_LightShaft.fIntensity, 0.01f, 0.0f, 5.0f);
+		ImGui::DragFloat("Light Shaft Decay", &m_LightShaft.fDecay, 0.001f, 0.8f, 1.0f);
+		ImGui::DragFloat("Light Shaft Density", &m_LightShaft.fDensity, 0.01f, 0.1f, 2.0f);
+		ImGui::DragFloat("Light Shaft Weight", &m_LightShaft.fWeight, 0.001f, 0.001f, 0.5f);
+		ImGui::DragFloat("Light Shaft Exposure", &m_LightShaft.fExposure, 0.01f, 0.0f, 5.0f);
+		ImGui::DragFloat("Light Shaft DepthThreshold", &m_LightShaft.fDepthThreshold, 0.0001f, 0.95f, 1.0f, "%.4f");
+		ImGui::DragInt("Light Shaft SampleCount", &m_LightShaft.nSampleCount, 1, 8, 96);
+	}
+
+	if (ImGui::Button("Reset Light Shaft Parameters")) {
+		m_LightShaft = LightShaftParameters{};
 	}
 	
 	ImGui::SeparatorText("Screen FX");

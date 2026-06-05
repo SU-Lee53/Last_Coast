@@ -261,6 +261,22 @@ cbuffer cbSSAOData : register(b6, space0)
 	float gfSSAONoiseScale;
 };
 
+cbuffer cbLightShaftData : register(b7, space0)
+{
+	float2 gv2LightScreenPosition;
+	float gfLightShaftIntensity;
+	float gfLightShaftDecay;
+
+	float gfLightShaftDensity;
+	float gfLightShaftWeight;
+	float gfLightShaftExposure;
+	float gfLightShaftDepthThreshold;
+
+	int gnLightShaftSampleCount;
+	int gnEnableLightShaft;
+	float2 gLightShaftPad;
+};
+
 // ============ StructuredBuffers ============
 
 StructuredBuffer<LightData> gLightData : register(t0, space0);
@@ -282,6 +298,7 @@ Texture2D<float> gtxtLuminance : register(t20, space0);
 // Tone mapping LUT
 Texture3D gtxtToneMapLUT : register(t21, space0);
 Texture3D gtxtGradingLUT : register(t22, space0);
+Texture2D gtxtLightShaft : register(t23, space0);
 
 // ============ Samplers ============
 SamplerState gSkyboxSamplerState : register(s0, space0);

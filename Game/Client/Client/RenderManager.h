@@ -18,21 +18,23 @@ enum class ROOT_PARAMETER : uint32 {
 	SSAO_INPUT								= 7,
 	SSAO_OUTPUT								= 8,
 	LUMINANCE								= 9,
-	TONE_MAPPING_DATA						= 10,
-	FOG_DATA								= 11,
-	PER_PASS_BUFFERS						= 12,
-	PER_PASS_TEXTURES						= 13,
+	LIGHT_SHAFT_DATA						= 10,
+	LIGHT_SHAFT_RESULT						= 11,
+	TONE_MAPPING_DATA						= 12,
+	FOG_DATA								= 13,
+	PER_PASS_BUFFERS						= 14,
+	PER_PASS_TEXTURES						= 15,
 
-	PER_INSTANCE_DATA						= 14,
-	BONE_TRANSFORM_OFFSETS					= 15,
+	PER_INSTANCE_DATA						= 16,
+	BONE_TRANSFORM_OFFSETS					= 17,
 
-	LIGHT_CAMERA_DATA						= 16,
-	TERRAIN_LAYER							= 17,
-	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 18,
+	LIGHT_CAMERA_DATA						= 18,
+	TERRAIN_LAYER							= 19,
+	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 20,
 
-	TERRAIN_WORLD_TRANSFORM					= 19,
-	UI_DATA									= 20,
-	PARTICLE_DATA							= 21,
+	TERRAIN_WORLD_TRANSFORM					= 21,
+	UI_DATA									= 22,
+	PARTICLE_DATA							= 23,
 };
 
 enum class COMPUTE_ROOT_PARAMETER : uint32 {
@@ -58,6 +60,7 @@ struct PostProcessingResources {
 	// SSAO
 	TextureRef<RenderTargetTexture> SSAOBuffer;
 	TextureRef<RenderTargetTexture> SSAOBlurBuffer;
+	TextureRef<RenderTargetTexture> LightShaftBuffer;
 
 	// Compute Pipelines
 	// Bloom Downsample

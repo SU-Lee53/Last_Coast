@@ -70,6 +70,14 @@ void PostProcessingResources::Initialize()
 			DXGI_FORMAT_R16_FLOAT,
 			DXGI_FORMAT_R16_FLOAT
 		);
+
+		LightShaftBuffer = TEXTURE->LoadRenderTargetTexture(
+			"LightShaft",
+			nWidth,
+			nHeight,
+			DXGI_FORMAT_R16G16B16A16_FLOAT,
+			DXGI_FORMAT_R16G16B16A16_FLOAT
+		);
 	}
 	
 	// Luminance
@@ -159,7 +167,7 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 
 void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 {
-	CD3DX12_DESCRIPTOR_RANGE d3dDescriptorRanges[26]; 
+	CD3DX12_DESCRIPTOR_RANGE d3dDescriptorRanges[28]; 
 	// space0 : Per Scene (Frame) 
 	d3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, 0); // cbSceneData 
 	d3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gLightData 
@@ -191,26 +199,30 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	// space0 : Luminance
 	d3dDescriptorRanges[14].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 20, 0, 0);	// Luminance 
 
+	// space0 : Light Shaft
+	d3dDescriptorRanges[15].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 7, 0, 0);	// Light shaft data
+	d3dDescriptorRanges[16].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 23, 0, 0);	// Light shaft result
+
 	// space0 : ToneMapping
-	d3dDescriptorRanges[15].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2, 4, 0, 0);
-	d3dDescriptorRanges[16].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 21, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
+	d3dDescriptorRanges[17].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2, 4, 0, 0);
+	d3dDescriptorRanges[18].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 21, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
 	
 	// space1 : Per Pass 
-	d3dDescriptorRanges[17].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1,		0, 1, 0); // gWorldTransforms
-	d3dDescriptorRanges[18].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1,		1, 1, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gBoneTransforms
-	d3dDescriptorRanges[19].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1,		2, 1, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gMaterialDatas
-	d3dDescriptorRanges[20].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, 3, 1, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTextures
+	d3dDescriptorRanges[19].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1,		0, 1, 0); // gWorldTransforms
+	d3dDescriptorRanges[20].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1,		1, 1, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gBoneTransforms
+	d3dDescriptorRanges[21].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1,		2, 1, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gMaterialDatas
+	d3dDescriptorRanges[22].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, 3, 1, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTextures
 
 	// space2 : cbTerrainLayerData
-	d3dDescriptorRanges[21].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 2, 0); // cbTerrainLayerData
-	d3dDescriptorRanges[22].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 3, 2, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainAlbedo[4] 
-	d3dDescriptorRanges[23].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 7, 2, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainNormal[4]
+	d3dDescriptorRanges[23].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 2, 0); // cbTerrainLayerData
+	d3dDescriptorRanges[24].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 3, 2, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainAlbedo[4] 
+	d3dDescriptorRanges[25].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 7, 2, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainNormal[4]
 
 	// space2 : cbTerrainComponentData
-	d3dDescriptorRanges[24].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 2, 0); // cbTerrainComponentData 
-	d3dDescriptorRanges[25].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 11, 2, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainWeightMap
+	d3dDescriptorRanges[26].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 2, 0); // cbTerrainComponentData 
+	d3dDescriptorRanges[27].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 11, 2, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainWeightMap
 
-	CD3DX12_ROOT_PARAMETER d3dRootParameters[22];
+	CD3DX12_ROOT_PARAMETER d3dRootParameters[24];
 	// Per Scene
 	d3dRootParameters[0].InitAsDescriptorTable(2, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);	// Per Draw
 	d3dRootParameters[1].InitAsDescriptorTable(2, &d3dDescriptorRanges[2], D3D12_SHADER_VISIBILITY_ALL);	// Cascade Shadow maps
@@ -222,23 +234,25 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	d3dRootParameters[7].InitAsDescriptorTable(1, &d3dDescriptorRanges[12], D3D12_SHADER_VISIBILITY_ALL);	// SSAO In
 	d3dRootParameters[8].InitAsDescriptorTable(1, &d3dDescriptorRanges[13], D3D12_SHADER_VISIBILITY_ALL);	// SSAO Out (Blur)
 	d3dRootParameters[9].InitAsDescriptorTable(1, &d3dDescriptorRanges[14], D3D12_SHADER_VISIBILITY_ALL);	// Luminance
-	d3dRootParameters[10].InitAsDescriptorTable(2, &d3dDescriptorRanges[15], D3D12_SHADER_VISIBILITY_ALL);	// Tone Mapping
-	d3dRootParameters[11].InitAsConstantBufferView(3, 0, D3D12_SHADER_VISIBILITY_ALL);	// Fog parameters
+	d3dRootParameters[10].InitAsDescriptorTable(1, &d3dDescriptorRanges[15], D3D12_SHADER_VISIBILITY_ALL);	// Light Shaft Data
+	d3dRootParameters[11].InitAsDescriptorTable(1, &d3dDescriptorRanges[16], D3D12_SHADER_VISIBILITY_ALL);	// Light Shaft Result
+	d3dRootParameters[12].InitAsDescriptorTable(2, &d3dDescriptorRanges[17], D3D12_SHADER_VISIBILITY_ALL);	// Tone Mapping
+	d3dRootParameters[13].InitAsConstantBufferView(3, 0, D3D12_SHADER_VISIBILITY_ALL);	// Fog parameters
 	
 	// Per Pass
-	d3dRootParameters[12].InitAsDescriptorTable(3, &d3dDescriptorRanges[17], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass
-	d3dRootParameters[13].InitAsDescriptorTable(1, &d3dDescriptorRanges[20], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass textures
+	d3dRootParameters[14].InitAsDescriptorTable(3, &d3dDescriptorRanges[19], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass
+	d3dRootParameters[15].InitAsDescriptorTable(1, &d3dDescriptorRanges[22], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass textures
 
 	// Per Instance(Draw)
-	d3dRootParameters[14].InitAsConstantBufferView(0, 2, D3D12_SHADER_VISIBILITY_ALL);		// cbInstanceData
-	d3dRootParameters[15].InitAsShaderResourceView(2, 2, D3D12_SHADER_VISIBILITY_ALL);		// gBoneTransformOffsets
-	d3dRootParameters[16].InitAsConstantBufferView(3, 2, D3D12_SHADER_VISIBILITY_ALL);		// cbLightCameraData
+	d3dRootParameters[16].InitAsConstantBufferView(0, 2, D3D12_SHADER_VISIBILITY_ALL);		// cbInstanceData
+	d3dRootParameters[17].InitAsShaderResourceView(2, 2, D3D12_SHADER_VISIBILITY_ALL);		// gBoneTransformOffsets
+	d3dRootParameters[18].InitAsConstantBufferView(3, 2, D3D12_SHADER_VISIBILITY_ALL);		// cbLightCameraData
 
-	d3dRootParameters[17].InitAsDescriptorTable(3, &d3dDescriptorRanges[21], D3D12_SHADER_VISIBILITY_ALL);								// TerrainLayer
-	d3dRootParameters[18].InitAsDescriptorTable(2, &d3dDescriptorRanges[24], D3D12_SHADER_VISIBILITY_ALL);								// TerrainComponent
-	d3dRootParameters[19].InitAsConstantBufferView(4, 2, D3D12_SHADER_VISIBILITY_ALL);		// gnWorldTransformIndex
-	d3dRootParameters[20].InitAsShaderResourceView(12, 2, D3D12_SHADER_VISIBILITY_ALL);		// gUIData
-	d3dRootParameters[21].InitAsShaderResourceView(13, 2, D3D12_SHADER_VISIBILITY_ALL);		// gParticleData
+	d3dRootParameters[19].InitAsDescriptorTable(3, &d3dDescriptorRanges[23], D3D12_SHADER_VISIBILITY_ALL);								// TerrainLayer
+	d3dRootParameters[20].InitAsDescriptorTable(2, &d3dDescriptorRanges[26], D3D12_SHADER_VISIBILITY_ALL);								// TerrainComponent
+	d3dRootParameters[21].InitAsConstantBufferView(4, 2, D3D12_SHADER_VISIBILITY_ALL);		// gnWorldTransformIndex
+	d3dRootParameters[22].InitAsShaderResourceView(12, 2, D3D12_SHADER_VISIBILITY_ALL);		// gUIData
+	d3dRootParameters[23].InitAsShaderResourceView(13, 2, D3D12_SHADER_VISIBILITY_ALL);		// gParticleData
 
 	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[6];
 	// s0 : SkyboxSampler

@@ -210,6 +210,7 @@
     <ClInclude Include="SpatialTypes.h" />
     <ClInclude Include="SpatialWorld.h" />
     <ClInclude Include="SSAOPass.h" />
+    <ClInclude Include="LightShaftPass.h" />
     <ClInclude Include="TextRenderer.h" />
     <ClInclude Include="GameFramework.h" />
     <ClInclude Include="GameObject.h" />
@@ -385,6 +386,7 @@
     <ClCompile Include="RWStructuredBuffer.cpp" />
     <ClCompile Include="SpatialWorld.cpp" />
     <ClCompile Include="SSAOPass.cpp" />
+    <ClCompile Include="LightShaftPass.cpp" />
     <ClCompile Include="TextAtlas.cpp" />
     <ClCompile Include="TextRenderer.cpp" />
     <ClCompile Include="GameFramework.cpp" />
@@ -494,6 +496,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="..\HLSL\Light.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\LightShaft.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
