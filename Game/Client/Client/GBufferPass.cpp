@@ -123,17 +123,53 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 	}
 
 	m_RenderQueueCached.reserve(estimatedRenderQueueSize);
-	m_CachedData.sbWorldTransformDatas.reserve(estimatedRenderQueueSize);
-	m_CachedData.sbBoneTransformDatas.reserve(estimatedRenderQueueSize * 10);
+	size_t estimatedWorldTransformSize = 0;
+	for (const auto& [k, v] : m_CachedData.frustumCulledMap.GetElements()) {
+		estimatedWorldTransformSize += v.size();
+	}
 
-	uint32 unAnimationBufferSizeCount = 0;
+	m_CachedData.sbWorldTransformDatas.reserve(estimatedWorldTransformSize);
+	m_CachedData.sbBoneTransformDatas.reserve(estimatedRenderQueueSize * 10);
+	m_CachedData.nBoneOffsets.reserve(estimatedWorldTransformSize);
+
 	for (auto& [k, v] : m_CachedData.frustumCulledMap.GetElements()) {
 		// Prepare
 		const auto& pMeshes = k->GetMeshes();
 		const auto& materialHandles = k->GetMaterialHandles();
-		int32 nMeshes = pMeshes.size();
-	
-		for (int32 meshIdx = 0; meshIdx < k->GetMeshes().size(); ++meshIdx) {
+
+		const uint32 unWorldTransformOffset = m_CachedData.sbWorldTransformDatas.size();
+		for (const auto pObj : v) {
+			const Matrix& mtxWorld = pObj->GetWorldMatrix();
+			Matrix mtxInvWorld = mtxWorld.Invert();
+
+			m_CachedData.sbWorldTransformDatas.emplace_back(
+				mtxWorld.Transpose(),
+				mtxInvWorld.Transpose()
+			);
+		}
+
+		std::vector<int32> nBoneOffsets;
+		nBoneOffsets.reserve(v.size());
+		for (const auto pObj : v) {
+			const AnimationController* pAnim = pObj->GetComponentFromRoot<AnimationController>().get();
+			if (!pAnim) continue;
+
+			auto [it, bInserted] = m_CachedData.animationInstancingData.emplace(pAnim, m_CachedData.sbBoneTransformDatas.size());
+			if (bInserted) {
+				nBoneOffsets.emplace_back(m_CachedData.sbBoneTransformDatas.size());
+				const auto& boneTransforms = pAnim->GetFinalOutput();
+				m_CachedData.sbBoneTransformDatas.insert(m_CachedData.sbBoneTransformDatas.end(), boneTransforms.begin(), boneTransforms.end());
+			}
+			else {
+				nBoneOffsets.emplace_back(it->second.unOffset);
+			}
+		}
+
+		const uint32 unBoneOffsetStart = m_CachedData.nBoneOffsets.size();
+		const uint32 unBoneOffsetCount = nBoneOffsets.size();
+		m_CachedData.nBoneOffsets.insert(m_CachedData.nBoneOffsets.end(), nBoneOffsets.begin(), nBoneOffsets.end());
+
+		for (int32 meshIdx = 0; meshIdx < pMeshes.size(); ++meshIdx) {
 			CB_INSTANCE_DATA instanceData{};
 
 			auto [idx, bInserted] = m_CachedData.materialMap.Insert(materialHandles[meshIdx].GetID(), materialHandles[meshIdx].GetResource()->GetMaterialData());
@@ -157,30 +193,9 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 			renderParameter.pd3dPipelineState = (pMaterial->HasAlphaMask()) ? pPSOs[1] : pPSOs[0];
 			renderParameter.cbInstanceData = instanceData;
 			renderParameter.nInstances = v.size();
-			renderParameter.cbInstanceData.gnWorldTransformOffset = m_CachedData.sbWorldTransformDatas.size();
-
-			for (const auto pObj : v) {
-				Matrix mtxWorld = pObj->GetWorldMatrix();
-				Matrix mtxInvWorld = mtxWorld.Invert();
-
-				m_CachedData.sbWorldTransformDatas.emplace_back(
-					mtxWorld.Transpose(),
-					mtxInvWorld.Transpose()
-				);
-				
-				const AnimationController* pAnim = pObj->GetComponentFromRoot<AnimationController>().get();
-				if (!pAnim) continue;
-
-				auto [it, bInserted] = m_CachedData.animationInstancingData.emplace(pAnim, m_CachedData.sbBoneTransformDatas.size());
-				if (bInserted) {
-					renderParameter.nBoneOffsets.emplace_back(m_CachedData.sbBoneTransformDatas.size());
-					const auto& boneTransforms = pAnim->GetFinalOutput();
-					m_CachedData.sbBoneTransformDatas.insert(m_CachedData.sbBoneTransformDatas.end(), boneTransforms.begin(), boneTransforms.end());
-				}
-				else {
-					renderParameter.nBoneOffsets.emplace_back(it->second.unOffset);
-				}
-			}
+			renderParameter.cbInstanceData.gnWorldTransformOffset = unWorldTransformOffset;
+			renderParameter.unBoneOffsetStart = unBoneOffsetStart;
+			renderParameter.unBoneOffsetCount = unBoneOffsetCount;
 
 			m_RenderQueueCached.emplace_back(pMeshes[meshIdx].get(), renderParameter);
 		}
@@ -201,6 +216,11 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 	auto boneTransformSBuffer = RENDER->AllocSBuffer<Matrix>(boneTransformDatas.size());
 	boneTransformSBuffer.WriteData(boneTransformDatas);
 	DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, unDescriptorInc), boneTransformSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	const auto& boneOffsets = m_CachedData.nBoneOffsets;
+	auto boneOffsetSBuffer = RENDER->AllocSBuffer<int32>(boneOffsets.size());
+	boneOffsetSBuffer.WriteData(boneOffsets);
+	m_CachedData.d3dBoneOffsetGPUAddress = boneOffsetSBuffer.GPUAddress;
 
 	// rootParam[13]
 	const auto& materialDatas = m_CachedData.materialMap.GetElements();
@@ -288,19 +308,24 @@ void GBufferPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList
 	constexpr uint32 rootParamInstanceData = std::to_underlying(ROOT_PARAMETER::PER_INSTANCE_DATA);
 	constexpr uint32 rootParamBoneOffset = std::to_underlying(ROOT_PARAMETER::BONE_TRANSFORM_OFFSETS);
 
+	ID3D12PipelineState* pd3dLastPipelineState = nullptr;
+
 	for (auto& [k, v] : m_RenderQueueCached) {
 		ConstantBuffer instanceCBuffer = RENDER->AllocCBuffer<CB_INSTANCE_DATA>();
 		instanceCBuffer.WriteData(&v.cbInstanceData);
 		pd3dCommandList->SetGraphicsRootConstantBufferView(rootParamInstanceData, instanceCBuffer.GPUAddress);
 
-		if (v.nBoneOffsets.size() != 0) {
-			auto boneOffsetSBuffer = RENDER->AllocSBuffer<int32>(v.nBoneOffsets.size());
-			boneOffsetSBuffer.WriteData(v.nBoneOffsets);
-			pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamBoneOffset, boneOffsetSBuffer.GPUAddress);
+		if (v.unBoneOffsetCount != 0) {
+			D3D12_GPU_VIRTUAL_ADDRESS d3dBoneOffsetGPUAddress =
+				m_CachedData.d3dBoneOffsetGPUAddress + v.unBoneOffsetStart * sizeof(int32);
+			pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamBoneOffset, d3dBoneOffsetGPUAddress);
 		}
 
 		auto pPSO = v.pd3dPipelineState;
-		pd3dCommandList->SetPipelineState(pPSO.Get());
+		if (pd3dLastPipelineState != pPSO.Get()) {
+			pd3dCommandList->SetPipelineState(pPSO.Get());
+			pd3dLastPipelineState = pPSO.Get();
+		}
 
 		k->Render(pd3dCommandList, v.nInstances);
 	}
@@ -388,7 +413,7 @@ void GBufferPass::ShowDebugInfo()
 				"IMesh {} - Instance : {}, Anim? : {}",
 				(void*)param.first,
 				param.second.nInstances,
-				(param.second.nBoneOffsets.size() != 0) ? "TRUE" : "FALSE");
+				(param.second.unBoneOffsetCount != 0) ? "TRUE" : "FALSE");
 
 			if (ImGui::TreeNode(str.c_str())) {
 				ImGui::Indent(20.f);
