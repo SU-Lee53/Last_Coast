@@ -10,6 +10,8 @@ public:
 	explicit BurstSpawnModule(uint32 unCount)
 		: m_unCount(unCount) {}
 
+	virtual void Reset() override { m_bSpawned = false; }
+
 	virtual void UpdateSpawn(
 		ParticleEmitter& emitter,
 		const ParticleModuleContext& context) override;

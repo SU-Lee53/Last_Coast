@@ -4,6 +4,8 @@
 void ParticleManager::Initialize()
 {
 	m_pActiveEffects.Clear();
+	m_pEffectPools.clear();
+	m_pDeadEffectsScratch.clear();
 	m_RenderBatches.clear();
 
 	RegisterParticleTextures();
@@ -16,11 +18,26 @@ void ParticleManager::Update()
 		pEffect->Update();
 	});
 	
-	m_pActiveEffects.RemoveAndResetIfAlive([](const std::shared_ptr<IParticleEffect>& pEffect) {
-		return pEffect->IsDead();
-	});
+	ReleaseDeadEffects();
 
 	BuildRenderBatches();
+}
+
+void ParticleManager::ReleaseDeadEffects()
+{
+	m_pDeadEffectsScratch.clear();
+
+	m_pActiveEffects.ForEachAlive([this](const std::shared_ptr<IParticleEffect>& pEffect) {
+		if (pEffect->IsDead()) {
+			m_pDeadEffectsScratch.push_back(pEffect);
+		}
+	});
+
+	for (auto& pEffect : m_pDeadEffectsScratch) {
+		m_pActiveEffects.Remove(pEffect);
+		pEffect->Reset();
+		m_pEffectPools[std::type_index(typeid(*pEffect))].push_back(pEffect);
+	}
 }
 
 void ParticleManager::BuildRenderBatches()

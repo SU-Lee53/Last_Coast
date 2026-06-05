@@ -1,6 +1,17 @@
 ﻿#include "pch.h"
 #include "ParticleEffect.h"
 
+void IParticleEffect::Reset()
+{
+	for (auto& pEmitter : m_pEmitters) {
+		pEmitter->Reset();
+	}
+
+	m_SpawnDesc = {};
+	m_bPlaying = false;
+	m_bDead = false;
+}
+
 void IParticleEffect::Update()
 {
 	if (!m_bPlaying || m_bDead) {
@@ -23,6 +34,7 @@ void IParticleEffect::Update()
 
 void IParticleEffect::Play(const ParticleEffectSpawnDesc& desc)
 {
+	Reset();
 	m_SpawnDesc = desc;
 	m_bPlaying = true;
 	m_bDead = false;

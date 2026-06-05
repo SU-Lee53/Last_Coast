@@ -10,6 +10,7 @@ public:
 	virtual ~IParticleEffect() = default;
 
 	virtual void Initialize() = 0;
+	virtual void Reset();
 	virtual void Update();
 
 	virtual void Play(const ParticleEffectSpawnDesc& desc);

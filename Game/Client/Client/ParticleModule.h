@@ -8,6 +8,8 @@ interface IParticleSpawnModule abstract{
 public:
 	virtual ~IParticleSpawnModule() = default;
 
+	virtual void Reset() {}
+
 	virtual void UpdateSpawn(
 		ParticleEmitter& emitter, 
 		const ParticleModuleContext& context) = 0;
@@ -17,6 +19,8 @@ interface IParticleInitializeModule abstract{
 public:
 	virtual ~IParticleInitializeModule() = default;
 
+	virtual void Reset() {}
+
 	virtual void Initialize(
 		Particle& particle,
 		const ParticleModuleContext& context) = 0;
@@ -25,6 +29,8 @@ public:
 interface IParticleUpdateModule abstract{
 public:
 	virtual ~IParticleUpdateModule() = default;
+
+	virtual void Reset() {}
 
 	virtual void Update(
 		Particle& particle,
