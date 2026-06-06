@@ -83,6 +83,14 @@ struct ShootResultEvent {
 	Vector3       v3ShootDir;        // 발사 방향
 };
 
+// 근접공격 좀비 히트 이벤트
+struct MeleeHitEvent {
+	int     attackerPlayerId;
+	int     zombieId;
+	float   damage;
+	Vector3 v3HitPoint;
+};
+
 class NetworkManager {
 
 	DECLARE_SINGLE(NetworkManager)
@@ -119,6 +127,11 @@ public:
 
 	void SendPlayerReload();
 	std::vector<int> ConsumePlayerReloads();
+
+	// ── 근접공격 송수신 ────────────────────────────────────────────────────────
+	void SendPlayerMelee(const Vector3& v3Origin, const Vector3& v3Direction);
+	std::vector<int>           ConsumePlayerMelees(); // 근접공격 모션 (attackerPlayerId)
+	std::vector<MeleeHitEvent> ConsumeMeleeHits();    // 좀비 히트
 
 	// ── 플레이어 이벤트 소비 (Task: Remote Player Sync) ─────────────────────────
 	std::vector<PlayerJoinEvent>      ConsumePlayerJoins();
@@ -199,4 +212,6 @@ private:
 	concurrency::concurrent_queue<int>                            m_PendingPlayerLeaves;
 	concurrency::concurrent_queue<PlayerTransformEvent>           m_PendingPlayerTransforms;
 	concurrency::concurrent_queue<int>                            m_PendingPlayerReloads;
+	concurrency::concurrent_queue<int>                            m_PendingPlayerMelees;
+	concurrency::concurrent_queue<MeleeHitEvent>                  m_PendingMeleeHits;
 };

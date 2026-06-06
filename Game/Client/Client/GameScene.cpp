@@ -18,7 +18,7 @@ void GameScene::BuildObjects()
 	using namespace std::chrono;
 
 	m_pUIBoard = std::make_unique<UIBoard>();
-	m_pPlayer = std::make_shared<DebugPlayer>();
+	m_pPlayer = std::make_shared<NetworkOwnerThirdPersonPlayer>();
 	m_pPlayer->Initialize();
 	m_pPlayer->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
 	if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
@@ -192,7 +192,9 @@ void GameScene::Update()
 
 	SyncSceneWithServer();
 	ProcessNetworkZombies();
+	ProcessPlayerMelee();
 	ProcessShootResults();
+	ProcessMeleeResults();
 	RemoveDeadZombies();
 }
 
@@ -228,6 +230,113 @@ void GameScene::ProcessPlayerShoot()
 
 	if (pHitZombie)
 		pHitZombie->TakeDamage(25.f);
+}
+
+void GameScene::ProcessPlayerMelee()
+{
+	auto pPlayer = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer);
+	if (!pPlayer || !pPlayer->ConsumeMelee())
+		return;
+
+	auto pCamera = std::dynamic_pointer_cast<ThirdPersonCamera>(pPlayer->GetCamera());
+	if (!pCamera)
+		return;
+
+	// origin은 발밑(Transform pos)이 아니라 캡슐 중심 높이를 써야 함.
+	// 발밑 + 수평 레이는 좀비 히트 캡슐(몸통 높이) 아래로 빗나감.
+	Vector3 v3Origin = pPlayer->GetTransform()->GetPosition();
+	if (auto pSelfCollider = pPlayer->GetComponent<PlayerCollider>())
+		v3Origin = pSelfCollider->GetCapsuleWorld().v3Center;
+
+	Vector3 v3Dir = pCamera->GetForwardXZ();		// 전방 XZ (y=0)
+	if (v3Dir.LengthSquared() > 1e-6f)
+		v3Dir.Normalize();
+
+	constexpr float fRange  = 200.f;
+	constexpr float fDamage = 50.f;
+
+	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
+	if (bOnline)
+	{
+		// 온라인: 서버가 권위적으로 판정 → S2C_MELEE_HIT 로 데미지 반영
+		NETWORK->SendPlayerMelee(v3Origin, v3Dir);
+		return;
+	}
+
+	// 오프라인: 단일 레이 — 전방 사거리 내 가장 가까운 좀비 1마리
+	float fMinDist = fRange;
+	std::shared_ptr<Zombie> pHitZombie;
+	for (const auto& pZombie : m_World.GetObjects<Zombie>())
+	{
+		if (!pZombie || !pZombie->IsPoolActive())
+			continue;
+
+		auto pCollider = pZombie->GetComponent<PlayerCollider>();
+		if (!pCollider)
+			continue;
+
+		float fDist = 0.f;
+		if (pCollider->GetCapsuleWorld().Intersects(v3Origin, v3Dir, fDist))
+		{
+			if (fDist >= 0.f && fDist < fMinDist)
+			{
+				fMinDist = fDist;
+				pHitZombie = pZombie;
+			}
+		}
+	}
+
+	if (pHitZombie)
+	{
+		pHitZombie->TakeDamage(fDamage);
+
+		auto pCollider = pHitZombie->GetComponent<PlayerCollider>();
+
+		// 피 이펙트 (좀비 캡슐 중심)
+		ParticleEffectSpawnDesc desc{};
+		desc.v3Position = pCollider->GetCapsuleWorld().v3Center;
+		desc.v3Direction = -v3Dir;
+		desc.v3Normal = Vector3::Up;
+		desc.mtxWorld = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
+		PARTICLE->Spawn<BloodEffect>(desc);
+	}
+}
+
+void GameScene::ProcessMeleeResults()
+{
+	if (!NETWORK->IsConnected() || NETWORK->IsOffline()) return;
+
+	auto pPlayer = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer);
+
+	// ── 리모트 플레이어 근접공격 모션 ────────────────────────────────────────
+	for (int nAttackerId : NETWORK->ConsumePlayerMelees())
+	{
+		if (nAttackerId == NETWORK->GetPlayerID()) continue; // 본인은 입력으로 이미 재생
+		auto it = m_RemotePlayers.find(nAttackerId);
+		if (it != m_RemotePlayers.end())
+			it->second->PlayMeleeStartAction();
+	}
+
+	// ── 좀비 히트: 데미지 + 피 + 히트마커 ────────────────────────────────────
+	for (auto& ev : NETWORK->ConsumeMeleeHits())
+	{
+		auto it = m_ServerZombies.find(ev.zombieId);
+		if (it != m_ServerZombies.end() && it->second)
+		{
+			it->second->TakeDamage(ev.damage);
+
+			ParticleEffectSpawnDesc desc{};
+			desc.v3Position = ev.v3HitPoint;
+			desc.v3Direction = Vector3::Up;
+			desc.v3Normal = Vector3::Up;
+			desc.mtxWorld = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
+			PARTICLE->Spawn<BloodEffect>(desc);
+		}
+
+		// 히트마커 (내 근접공격일 때만)
+		if (pPlayer && ev.attackerPlayerId == NETWORK->GetPlayerID())
+			pPlayer->ShowHitMarker();
+	}
 }
 
 void GameScene::RemoveDeadZombies()

@@ -22,6 +22,9 @@ enum PACKET_TYPE {
 	S2C_SHOOT_RESULT,                             // 서버 → 클라이언트: 사격 판정 결과
 	C2S_PLAYER_RELOAD,                            // 클라이언트 → 서버: 재장전 요청
 	S2C_PLAYER_RELOAD,                            // 서버 → 클라이언트: 재장전 알림
+	C2S_PLAYER_MELEE,                             // 클라이언트 → 서버: 근접공격 요청
+	S2C_PLAYER_MELEE,                             // 서버 → 클라이언트: 근접공격 모션 (리모트 애니메이션)
+	S2C_MELEE_HIT,                                // 서버 → 클라이언트: 근접공격 좀비 히트 (좀비 1마리당 1패킷)
 };
 enum IOType { IO_SEND, IO_RECV, IO_ACCEPT };
 
@@ -200,6 +203,33 @@ struct S2C_PlayerReload {
 	unsigned char size;
 	PACKET_TYPE   type;
 	int           playerId;
+};
+
+// ── 근접공격 패킷 ───────────────────────────────────────────────────────────
+
+// 클라이언트 → 서버: 근접공격 요청 (플레이어 위치 + 전방 방향)
+struct C2S_PlayerMelee {
+	unsigned char size;
+	PACKET_TYPE   type;
+	float         originX, originY, originZ;  // 플레이어 월드 위치 (cm)
+	float         dirX, dirY, dirZ;           // 전방 방향 (정규화)
+};
+
+// 서버 → 클라이언트: 근접공격 모션 (리모트 플레이어 애니메이션용)
+struct S2C_PlayerMelee {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           attackerPlayerId;
+};
+
+// 서버 → 클라이언트: 근접공격 좀비 히트 (히트한 좀비 1마리당 1패킷)
+struct S2C_MeleeHit {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           attackerPlayerId;
+	int           zombieId;
+	float         damage;
+	float         hitX, hitY, hitZ;           // 피 이펙트 위치 (cm)
 };
 
 #pragma pack(pop) // Restore default packing

@@ -64,6 +64,8 @@ public:
 	void send_zombie_attack(int nZombieId, int nTargetPlayerId, float fDamage);
 	void send_shoot_result(const S2C_ShootResult& result);
 	void send_player_reload(int player_id);
+	void send_player_melee(int attacker_id);
+	void send_melee_hit(int attacker_id, int zombie_id, float damage, const Vector3& v3Hit);
 
 public:
 	SOCKET		m_client;

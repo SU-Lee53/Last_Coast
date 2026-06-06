@@ -252,11 +252,65 @@ bool Session::process_packet(unsigned char* p)
 		}
 	}
 	break;
+	case C2S_PLAYER_MELEE: {
+		C2S_PlayerMelee* packet = reinterpret_cast<C2S_PlayerMelee*>(p);
+
+		Vector3 v3Origin{ packet->originX, packet->originY, packet->originZ };
+		Vector3 v3Dir{ packet->dirX, packet->dirY, packet->dirZ };
+		v3Dir.Normalize();
+
+		constexpr float fRange  = 200.f;
+		constexpr float fDamage = 50.f;
+
+		// 단일 레이 — 전방 사거리 내 가장 가까운 좀비 1마리
+		int   nHitZombieId = -1;
+		float fHitDist     = fRange;
+		g_ZombieManager.RayTestZombies(v3Origin, v3Dir, fRange, nHitZombieId, fHitDist);
+
+		// 근접공격 모션을 전체 클라이언트에 브로드캐스트 (리모트 애니메이션)
+		for (auto& cl : clients)
+			if (cl.m_is_connected)
+				cl.send_player_melee(m_id);
+
+		// 히트 시 데미지 적용 + 피 이펙트 브로드캐스트
+		if (nHitZombieId >= 0)
+		{
+			g_ZombieManager.ApplyDamageToZombie(nHitZombieId, fDamage);
+			Vector3 v3Hit = v3Origin + v3Dir * fHitDist;
+			for (auto& cl : clients)
+				if (cl.m_is_connected)
+					cl.send_melee_hit(m_id, nHitZombieId, fDamage, v3Hit);
+		}
+	}
+	break;
 	default:
 		std::cout << "Unknown packet type received from player[" << m_id << "].\n";
 		return false;
 	}
 	return true;
+}
+
+void Session::send_player_melee(int attacker_id)
+{
+	S2C_PlayerMelee packet;
+	packet.size = sizeof(S2C_PlayerMelee);
+	packet.type = S2C_PLAYER_MELEE;
+	packet.attackerPlayerId = attacker_id;
+	do_send(packet.size, reinterpret_cast<char*>(&packet));
+}
+
+void Session::send_melee_hit(int attacker_id, int zombie_id, float damage, const Vector3& v3Hit)
+{
+	S2C_MeleeHit packet;
+	packet.size = sizeof(S2C_MeleeHit);
+	packet.type = S2C_MELEE_HIT;
+	packet.attackerPlayerId = attacker_id;
+	packet.zombieId = zombie_id;
+	packet.damage = damage;
+	packet.hitX = v3Hit.x;
+	packet.hitY = v3Hit.y;
+	packet.hitZ = v3Hit.z;
+	do_send(packet.size, reinterpret_cast<char*>(&packet));
 }
 
 void Session::send_spawn_zombie(int nZombieId, const Vector3& v3Pos)

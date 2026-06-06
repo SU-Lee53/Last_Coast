@@ -250,11 +250,6 @@ void Scene::CheckCollision()
 		return;
 	}
 
-	const std::shared_ptr<PlayerCollider> playerCollider = m_pPlayer->GetComponent<PlayerCollider>();
-	if (!playerCollider) {
-		return;
-	}
-
 	SpatialQueryDesc staticCollisionDesc{};
 	staticCollisionDesc.unLayerMask =
 		SPATIAL_COLLIDABLE |
@@ -264,45 +259,48 @@ void Scene::CheckCollision()
 	staticCollisionDesc.bIncludeStatic = true;
 	staticCollisionDesc.bIncludeDynamic = false;
 	staticCollisionDesc.v3AABBInflation = Vector3{ 3_m, 3_m, 3_m };
-	SpatialQueryResult playerBroadPhaseResult = m_World.GetSpatial().QueryAABB(playerCollider->GetAABBFromOBBWorld(), staticCollisionDesc);
-	//ImGui::Text("Player Collision Candidates : %d", (int)playerBroadPhaseResult.pObjects.size());
-	//RemoveInvalidCollisionSet(playerBroadPhaseResult);
 
-	// Player vs StaticObject
-	for (const auto& pObj : playerBroadPhaseResult.pObjects) {
-		const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
-		if (!pCollider) {
-			continue;
-		}
+	const std::shared_ptr<PlayerCollider> playerCollider = m_pPlayer->GetComponent<PlayerCollider>();
+	if (playerCollider) {
+		SpatialQueryResult playerBroadPhaseResult = m_World.GetSpatial().QueryAABB(playerCollider->GetAABBFromOBBWorld(), staticCollisionDesc);
+		//ImGui::Text("Player Collision Candidates : %d", (int)playerBroadPhaseResult.pObjects.size());
+		//RemoveInvalidCollisionSet(playerBroadPhaseResult);
 
-		bool bResult = playerCollider->CheckCollision(pCollider);
-		if (bResult) {
-			CollisionResult result1(m_pPlayer.get(), pObj);
-			CollisionResult result2(pObj, m_pPlayer.get());
-			if (!m_pCollisionPairs.contains(result1) || !m_pCollisionPairs.contains(result2)) {
-				// Begin Overlap
-				m_pPlayer->OnBeginCollision(result1);
-				pObj->OnBeginCollision(result2);
+		for (const auto& pObj : playerBroadPhaseResult.pObjects) {
+			const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
+			if (!pCollider) {
+				continue;
+			}
 
-				m_pCollisionPairs.insert(result1);
-				m_pCollisionPairs.insert(result2);
+			bool bResult = playerCollider->CheckCollision(pCollider);
+			if (bResult) {
+				CollisionResult result1(m_pPlayer.get(), pObj);
+				CollisionResult result2(pObj, m_pPlayer.get());
+				if (!m_pCollisionPairs.contains(result1) || !m_pCollisionPairs.contains(result2)) {
+					// Begin Overlap
+					m_pPlayer->OnBeginCollision(result1);
+					pObj->OnBeginCollision(result2);
+
+					m_pCollisionPairs.insert(result1);
+					m_pCollisionPairs.insert(result2);
+				}
+				else {
+					// While Overlap
+					m_pPlayer->OnWhileCollision(CollisionResult(m_pPlayer.get(), pObj));
+					pObj->OnWhileCollision(CollisionResult(pObj, m_pPlayer.get()));
+				}
 			}
 			else {
-				// While Overlap
-				m_pPlayer->OnWhileCollision(CollisionResult(m_pPlayer.get(), pObj));
-				pObj->OnWhileCollision(CollisionResult(pObj, m_pPlayer.get()));
-			}
-		}
-		else {
-			// End Overlap
-			CollisionResult result1(m_pPlayer.get(), pObj);
-			CollisionResult result2(pObj, m_pPlayer.get());
-			if (m_pCollisionPairs.contains(result1) || m_pCollisionPairs.contains(result2)) {
-				m_pPlayer->OnEndCollision(result1);
-				pObj->OnEndCollision(result2);
+				// End Overlap
+				CollisionResult result1(m_pPlayer.get(), pObj);
+				CollisionResult result2(pObj, m_pPlayer.get());
+				if (m_pCollisionPairs.contains(result1) || m_pCollisionPairs.contains(result2)) {
+					m_pPlayer->OnEndCollision(result1);
+					pObj->OnEndCollision(result2);
 
-				m_pCollisionPairs.erase(result1);
-				m_pCollisionPairs.erase(result2);
+					m_pCollisionPairs.erase(result1);
+					m_pCollisionPairs.erase(result2);
+				}
 			}
 		}
 	}

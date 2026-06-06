@@ -824,6 +824,7 @@ void IThirdPersonPlayer::PlayMeleeStartAction()
 	m_eWeaponTypeBeforeMelee = m_pWeaponSocket->GetCurrentWeaponType();
 	m_bWasAimBeforeMelee = m_bAiming;
 	m_bInMeleeAttack = true;
+	m_bMeleeStartedThisFrame = true;	// 씬에서 소비 → 서버 전송(온라인)/로컬 판정(오프라인)
 
 	ApplyWeaponChanged(WEAPON_TYPE::MELEE);
 	pAnimationCtrl->GetMontage()->PlayMontage("Melee Attack");

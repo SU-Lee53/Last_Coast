@@ -383,6 +383,23 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		m_PendingPlayerReloads.push(p->playerId);
 		break;
 	}
+	case S2C_PLAYER_MELEE: {
+		if (size < static_cast<int>(sizeof(S2C_PlayerMelee))) return;
+		auto* p = reinterpret_cast<const S2C_PlayerMelee*>(data);
+		m_PendingPlayerMelees.push(p->attackerPlayerId);
+		break;
+	}
+	case S2C_MELEE_HIT: {
+		if (size < static_cast<int>(sizeof(S2C_MeleeHit))) return;
+		auto* p = reinterpret_cast<const S2C_MeleeHit*>(data);
+		MeleeHitEvent ev;
+		ev.attackerPlayerId = p->attackerPlayerId;
+		ev.zombieId         = p->zombieId;
+		ev.damage           = p->damage;
+		ev.v3HitPoint       = Vector3{ p->hitX, p->hitY, p->hitZ };
+		m_PendingMeleeHits.push(ev);
+		break;
+	}
 	default:
 		break;
 	}
@@ -499,6 +516,40 @@ std::vector<int> NetworkManager::ConsumePlayerReloads()
 	int playerId;
 	while (m_PendingPlayerReloads.try_pop(playerId))
 		out.push_back(playerId);
+	return out;
+}
+
+void NetworkManager::SendPlayerMelee(const Vector3& v3Origin, const Vector3& v3Direction)
+{
+	if (!m_bConnected || m_bOfflineMode) return;
+
+	C2S_PlayerMelee p;
+	p.size    = sizeof(C2S_PlayerMelee);
+	p.type    = C2S_PLAYER_MELEE;
+	p.originX = v3Origin.x;
+	p.originY = v3Origin.y;
+	p.originZ = v3Origin.z;
+	p.dirX    = v3Direction.x;
+	p.dirY    = v3Direction.y;
+	p.dirZ    = v3Direction.z;
+	SendPacket(&p, p.size);
+}
+
+std::vector<int> NetworkManager::ConsumePlayerMelees()
+{
+	std::vector<int> out;
+	int attackerId;
+	while (m_PendingPlayerMelees.try_pop(attackerId))
+		out.push_back(attackerId);
+	return out;
+}
+
+std::vector<MeleeHitEvent> NetworkManager::ConsumeMeleeHits()
+{
+	std::vector<MeleeHitEvent> out;
+	MeleeHitEvent ev;
+	while (m_PendingMeleeHits.try_pop(ev))
+		out.push_back(ev);
 	return out;
 }
 
