@@ -175,7 +175,7 @@ void LobbyScene::BuildObjects()
 		// Buttons
 		{
 			std::shared_ptr<TextButton> pReadyButton = std::make_shared<TextButton>(L"Malgun Gothic");
-			pReadyButton->SetText(m_bReadyState ? "Not Ready" : "Ready");
+			pReadyButton->SetText(m_bReadyState ? "Ready" : "Not Ready");
 			pReadyButton->SetLayer(0);
 			pReadyButton->SetAnchor(Vector2{ 0.0, 0.0 });
 			pReadyButton->SetPivot(Vector2{ 0.5, 0.0 });
@@ -185,7 +185,7 @@ void LobbyScene::BuildObjects()
 			pReadyButton->SetButtonCallback(
 				[&](IUIComponent* pComp) {
 					m_bReadyState = !m_bReadyState;
-					static_cast<TextButton*>(pComp)->SetText(m_bReadyState ? L"Not Ready" : L"Ready");	// invert ready state for button effect
+					static_cast<TextButton*>(pComp)->SetText(m_bReadyState ? "Ready" : "Not Ready");
 				}
 			);
 
@@ -230,7 +230,7 @@ void LobbyScene::OnLeaveScene()
 {
 	GameContext::GameData data;
 	data.m_nCurModelIndex = m_nCurModelIndex;
-	data.m_nCurModelIndex = m_nCurWeaponIndex;
+	data.m_nCurWeaponIndex = m_nCurWeaponIndex;
 	GCTX->SetGameData(data);
 }
 

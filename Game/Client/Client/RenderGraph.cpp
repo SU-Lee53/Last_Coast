@@ -12,8 +12,8 @@
 #include "AutoExposurePass.h"
 #include "LightShaftPass.h"
 #include "DeferredFogPass.h"
+#include "BoundingBoxDebugPass.h"
 #include "UIPass.h"
-#include <queue>
 
 void RenderGraph::BuildGraph()
 {
@@ -84,6 +84,10 @@ void RenderGraph::BuildGraph()
 	pToneMappingPass->Initialize();
 	m_pAdjLists.push_back(pToneMappingPass);
 
+	std::shared_ptr<IRenderPass> pBoundingBoxDebugPass = std::make_shared<BoundingBoxDebugPass>();
+	pBoundingBoxDebugPass->Initialize();
+	m_pAdjLists.push_back(pBoundingBoxDebugPass);
+
 	std::shared_ptr<IRenderPass> pUIPass = std::make_shared<UIPass>();
 	pUIPass->Initialize();
 	m_pAdjLists.push_back(pUIPass);
@@ -117,12 +121,13 @@ void RenderGraph::BuildGraph()
 	pDefferedLightingPass->Connect(pDefferedFogPass);
 	pDefferedFogPass->Connect(pTransparentForwardPass);
 	pTransparentForwardPass->Connect(pSkyboxPass);
-	pSkyboxPass->Connect(pParticlePass);
+	pSkyboxPass->Connect(pLightShaftPass);
+	pLightShaftPass->Connect(pParticlePass);
 	pParticlePass->Connect(pBloomPass);
 	pBloomPass->Connect(pAutoExposurePass);
-	pAutoExposurePass->Connect(pLightShaftPass);
-	pLightShaftPass->Connect(pToneMappingPass);
-	pToneMappingPass->Connect(pUIPass);
+	pAutoExposurePass->Connect(pToneMappingPass);
+	pToneMappingPass->Connect(pBoundingBoxDebugPass);
+	pBoundingBoxDebugPass->Connect(pUIPass);
 
 	m_unEntryNodeIndex = 0;
 }

@@ -166,6 +166,7 @@
     <ClInclude Include="AutoExposurePass.h" />
     <ClInclude Include="BloodEffect.h" />
     <ClInclude Include="BloomPass.h" />
+    <ClInclude Include="BoundingBoxDebugPass.h" />
     <ClInclude Include="BoundingCapsule.h" />
     <ClInclude Include="BulletImpactEffect.h" />
     <ClInclude Include="Camera.h" />
@@ -348,6 +349,7 @@
     <ClCompile Include="AutoExposurePass.cpp" />
     <ClCompile Include="BloodEffect.cpp" />
     <ClCompile Include="BloomPass.cpp" />
+    <ClCompile Include="BoundingBoxDebugPass.cpp" />
     <ClCompile Include="BoundingCapsule.cpp" />
     <ClCompile Include="BulletImpactEffect.cpp" />
     <ClCompile Include="Camera.cpp" />
@@ -482,6 +484,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\DebugLineShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="..\HLSL\ForwardShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>

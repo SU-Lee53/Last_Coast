@@ -2,11 +2,11 @@
 #include "ToneMappingVolume.h"
 
 ToneMappingVolume::ToneMappingVolume()
-	:m_eCurrentToneMapper(TONE_MAPPING_MODE::AGX)
+	:m_eCurrentToneMapper(TONE_MAPPING_MODE::ACES)
 {
 	m_Parameters.Common = ToneMappingParameter::g_DefaultCommonParameters;
 	m_Parameters.Grading = ToneMappingParameter::g_DefaultGradingParameters;
-	m_Parameters.AgX = ToneMappingParameter::g_DefaultAgXParameters;
+	m_Parameters.ACES = ToneMappingParameter::g_DefaultACESParameters;
 }
 
 void ToneMappingVolume::LoadFromFiles(const std::string& strFilename)

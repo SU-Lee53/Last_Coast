@@ -436,13 +436,12 @@ void IThirdPersonPlayer::SetPlayerModel(const std::string& strModelKey)
 	if (!m_pWeaponSocket) {
 		m_pWeaponSocket = GetComponent<Skeleton>()->CreateAttachSocket<WeaponSocket>("RightHand"s);
 	}
-
-	GetComponent<PlayerCollider>()->ResetCharacterModelCollision();
 }
 
 void IThirdPersonPlayer::InitializeCommonPlayer()
 {
-	auto pModel = MODEL->LoadOrGet("player_m_02")->CopyObject<NodeObject>();
+	const auto& data = GCTX->GetGameData();
+	auto pModel = MODEL->LoadOrGet(GameContext::g_strCharacterNames[data.m_nCurModelIndex])->CopyObject<NodeObject>();
 	pModel->GetTransform()->Rotate(Vector3::Up, -90.f);
 	SetChild(pModel);
 
