@@ -580,6 +580,7 @@
     <ClInclude Include="BloomPass.h">
       <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
     </ClInclude>
+    <ClInclude Include="LobbyScene.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -979,6 +980,7 @@
     <ClCompile Include="BloomPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
     </ClCompile>
+    <ClCompile Include="LobbyScene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">

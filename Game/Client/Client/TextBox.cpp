@@ -32,6 +32,11 @@ void IText::SetText(const std::wstring& wstrText)
 	m_bDirty = true;
 }
 
+void IText::SetText(const std::string& strText)
+{
+	return SetText(StringToWString(strText));
+}
+
 Vector4 IText::GetTextUV() const
 {
 	auto pCached = m_TextHandle.GetResource();

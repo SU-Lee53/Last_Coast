@@ -444,7 +444,7 @@ void Scene::RemoveCollisionPairsOf(IGameObject* pDeadObject)
 
 void Scene::BuildLights()
 {
-	m_pLights.reserve(1);
+	m_pLights.reserve(m_pLights.size() + 1);
 
 	auto pLight = std::make_shared<DirectionalLight>();
 	{
@@ -456,7 +456,22 @@ void Scene::BuildLights()
 		pLight->m_v3Direction.Normalize();
 	}
 
-	m_pLights.push_back(pLight);
+	m_pLights.insert(m_pLights.begin(), pLight);
+}
+
+std::shared_ptr<DirectionalLight> Scene::GetSunLight() const
+{
+	/*for (const auto& pLight : m_pLights) {
+		if (auto pDirectionalLight = std::dynamic_pointer_cast<DirectionalLight>(pLight)) {
+			return pDirectionalLight;
+		}
+	}*/
+
+	if (m_pSkybox) {
+		return std::static_pointer_cast<DirectionalLight>(m_pLights[0]);
+	}
+
+	return nullptr;
 }
 
 HRESULT Scene::LoadFromFiles(const std::string& strFileName)
@@ -629,7 +644,7 @@ void Scene::ShowDebugOptions()
 				ImGui::Text("====== Weapon Test ======");
 				const auto eWeaponType = pPlayer->GetCurrentWeaponType();
 				auto nWeaponIdx = std::to_underlying(eWeaponType);
-				const auto& strWeaponNames = GameContext::g_strWeaponName;
+				const auto& strWeaponNames = GameContext::g_strWeaponNames;
 				if (ImGui::BeginCombo("Weapons", strWeaponNames[nWeaponIdx].c_str())) {
 					for (int i = 0; i < strWeaponNames.size(); ++i) {
 						bool bSelected = (nWeaponIdx == i);

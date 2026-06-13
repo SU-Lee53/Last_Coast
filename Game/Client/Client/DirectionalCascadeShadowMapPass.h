@@ -62,7 +62,9 @@ private:
 	struct RenderParameter {
 		CB_INSTANCE_DATA cbInstanceData{};
 		int32 nInstances = 0;
-		std::vector<int32> nBoneOffsets;
+		uint32 unBoneOffsetStart = 0;
+		uint32 unBoneOffsetCount = 0;
+		ID3D12PipelineState* pd3dPipelineState = nullptr;
 	};
 
 	using RenderQueue = std::vector<std::pair<IMesh*, DirectionalCascadeShadowMapPass::RenderParameter>>;
@@ -77,6 +79,7 @@ private:
 
 	mutable std::array<CascadeCameraData, g_unNumCascade> m_CascadeCached;
 	mutable RenderQueue m_RenderQueueCached;
+	mutable std::vector<IGameObject*> m_FrustumCulledCached;
 
 	ComPtr<ID3D12PipelineState> m_pd3dStandardPipelineState;
 	ComPtr<ID3D12PipelineState> m_pd3dAnimatedPipelineState;
@@ -90,6 +93,8 @@ private:
 
 		std::vector<WorldTransformData> sbWorldTransformDatas;
 		std::vector<Matrix> sbBoneTransformDatas;
+		std::vector<int32> nBoneOffsets;
+		D3D12_GPU_VIRTUAL_ADDRESS d3dBoneOffsetGPUAddress = 0;
 
 		struct AnimationInstancingData {
 			int32 unOffset = 0;
@@ -102,6 +107,8 @@ private:
 
 			sbWorldTransformDatas.clear();
 			sbBoneTransformDatas.clear();
+			nBoneOffsets.clear();
+			d3dBoneOffsetGPUAddress = 0;
 
 			animationInstancingData.clear();
 		}

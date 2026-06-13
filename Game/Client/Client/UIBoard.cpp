@@ -207,11 +207,3 @@ void UIBoard::EditUI()
 
 
 }
-
-void UIBoard::SaveUI(const std::string& strFilename)
-{
-}
-
-void UIBoard::LoadUI(const std::string& strFilename)
-{
-}

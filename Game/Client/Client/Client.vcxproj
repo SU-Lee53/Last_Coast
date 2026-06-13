@@ -188,6 +188,7 @@
     <ClInclude Include="DynamicObject.h" />
     <ClInclude Include="EventSequence.h" />
     <ClInclude Include="GameEvent.h" />
+    <ClInclude Include="LobbyScene.h" />
     <ClInclude Include="LogInScene.h" />
     <ClInclude Include="MenuScene.h" />
     <ClInclude Include="MuzzleFlashEffect.h" />
@@ -367,6 +368,7 @@
     <ClCompile Include="DynamicObject.cpp" />
     <ClCompile Include="EventSequence.cpp" />
     <ClCompile Include="GameEvent.cpp" />
+    <ClCompile Include="LobbyScene.cpp" />
     <ClCompile Include="LogInScene.cpp" />
     <ClCompile Include="MenuScene.cpp" />
     <ClCompile Include="MuzzleFlashEffect.cpp" />

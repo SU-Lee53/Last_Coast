@@ -3,7 +3,7 @@
 #include "DebugPlayer.h"
 #include "GameScene.h"
 #include "TextBox.h"
-#include "MenuScene.h"
+#include "LobbyScene.h"
 
 void MenuScene::BuildObjects()
 {
@@ -109,7 +109,7 @@ void MenuScene::Update()
 {
 	if (m_bProceed) {
 		// Proceed to LobbyScene
-		SCENE->ChangeScene<GameScene>();	// Test
+		SCENE->PushScene<LobbyScene>();	// Test
 		return;
 	}
 

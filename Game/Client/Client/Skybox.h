@@ -21,10 +21,16 @@ public:
 	SkyboxData MakeCBData() const;
 	void ShowControllImGui();
 
-	void SetDayNightBlend(float fTime) { m_fDayNightBlend = fTime; }
+	void SetDayNightBlend(float fTime) { m_fTimeOfDayHours = std::clamp(fTime, 0.0f, 1.0f) * 24.0f; }
+	void SetTimeOfDayHours(float fHours) { m_fTimeOfDayHours = NormalizeTimeOfDayHours(fHours); }
 
 private:
 	void SaveParametersToJson() const;
+	void UpdateTimeDerivedValues();
+	void SyncSunLightWithScene() const;
+
+	static float NormalizeTimeOfDayHours(float fHours);
+	static float GetEffectiveTwilightWidth(float fWidth);
 
 private:
 	CubeMapIDPair m_CubeMapDay;
@@ -35,10 +41,13 @@ private:
 	
 	// CB parameters
 	float m_fDayNightBlend;		// Main arameter for control skybox
+	float m_fTimeOfDayHours = 12.0f;
 	Vector3 m_v3SunDirection;	// -v3SunDirection = v3MoonDirection
 
 	float	m_fSunIntensity;
 	float	m_fMoonIntensity;
+	float	m_fDirectionalLightIntensityScale = 0.04f;
+	float	m_fAmbientIntensity = 0.08f;
 	float	m_fSunDiskSize;
 	float	m_fMoonDiskSize;
 

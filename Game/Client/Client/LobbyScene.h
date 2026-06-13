@@ -1,0 +1,53 @@
+﻿#pragma once
+#include "Scene.h"
+
+/*
+	- 할 일
+		- 1. 캐릭터 4명이 들어갈 위치와 모두를 담을 적절한 카메라 위치를 잡음
+		- 2. "현재 본인" 의 위치에 캐릭터/무기 선택 UI 를 넣음
+		- 3. Ready 버튼을 넣음
+		- 4. 다른 플레이어의 Ready 상태도 확인 가능해야 함
+
+*/
+
+interface IThirdPersonPlayer;
+
+class LobbyScene : public Scene {
+public:
+	void BuildObjects() override;
+	void OnEnterScene() override;
+	void OnLeaveScene() override;
+	void ProcessInput() override;
+	void Update() override;
+
+private:
+	bool m_bReadyState = false;
+
+	std::shared_ptr<Camera> m_pViewCamera = nullptr;
+	std::shared_ptr<Camera> m_pSwappedPlayerCamera = nullptr;
+
+	struct PlayerPreviewTransform {
+		Vector3 v3Position;
+		Vector3 v3Orientation;
+	};
+
+	std::array<PlayerPreviewTransform, 3> m_PreviewTransforms{
+		PlayerPreviewTransform{ Vector3{50.f, 90.f, 0.f},	Vector3{0.f, 0.f, 0.f} },
+		PlayerPreviewTransform{ Vector3{-100.f, 90.f, 0.f}, Vector3{0.f, 10.f, 0.f} },
+		PlayerPreviewTransform{ Vector3{-250.f, 90.f, 0.f}, Vector3{0.f, 30.f, 0.f} }
+	};
+	std::array<std::shared_ptr<NetworkRemoteThirdPersonPlayer>, 3> m_pPreviewPlayers;
+
+	const Vector3 m_v3CurrentPlayerPos{ 120.f, 33.f, 210.f };
+	const Vector3 m_v3CurrentPlayerOrientation{0.f, -45.f, 0.f};
+
+	std::shared_ptr<TextBox> m_pModelNameTextbox = nullptr;
+	int32 m_nCurModelIndex = 0;
+
+	std::shared_ptr<TextBox> m_pWeaponNameTextbox = nullptr;
+	int32 m_nCurWeaponIndex = 0;
+
+
+	bool m_bProceed = false;
+};
+

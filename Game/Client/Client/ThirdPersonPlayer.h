@@ -59,13 +59,14 @@ public:
 	std::shared_ptr<WeaponObject> GetCurrentWeaponObject() const { return m_pWeaponSocket->GetWeaponModel(); }
 	WEAPON_TYPE GetCurrentWeaponType() const { return m_pWeaponSocket->GetCurrentWeaponType(); }
 
-
 	bool IsAiming() const { return m_bAiming; }
 	float GetAimPitch() const { return m_fAimPitch; }
 	bool IsMoving() const { return m_bMoved; }
 	bool IsRunning() const { return m_bRunning; }
 	bool IsMouseOn() const { return m_bMouseInUse; }
 	bool ConsumeFire() { bool b = m_bFiredThisFrame; m_bFiredThisFrame = false; return b; }
+
+	void SetPlayerModel(const std::string& strModelKey);
 
 public:
 	// Collision

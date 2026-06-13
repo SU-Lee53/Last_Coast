@@ -326,6 +326,25 @@ void PlayerAnimationMontage::BuildMontage()
 		};
 		m_Notifies.push_back(meleeEndNotify);
 	}
+
+
+	// 2. Pistol Reload
+	{
+		MontageSection reloadSection{};
+		reloadSection.strName = "Pistol Reloading";
+		reloadSection.pAnimationToPlay = ANIMATION->Get("Pistol Reloading");
+		reloadSection.eEndRule = MONTAGE_SECTION_END_RULE::JUMP;
+		reloadSection.strJumpTarget = "Pistol Aiming Idle";
+		m_MontageSections.push_back(reloadSection);
+
+		MontageNotify reloadEndNotify;
+		reloadEndNotify.nSectionIndex = m_MontageSections.size() - 1;
+		reloadEndNotify.fTime = ANIMATION->Get("Pistol Reloading")->GetDuration() - 0.1f;
+		reloadEndNotify.pCallback = [](std::shared_ptr<IGameObject> pObj) {
+			std::static_pointer_cast<IThirdPersonPlayer>(pObj)->OnReloadEnd();
+		};
+		m_Notifies.push_back(reloadEndNotify);
+	}
 }
 
 void ZombieAnimationMontage::BuildMontage()

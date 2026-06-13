@@ -215,6 +215,10 @@ void LogInScene::OnEnterScene()
 
 void LogInScene::OnLeaveScene()
 {
+	GameContext::PlayerData data;
+	data.m_nPlayerID = 0;
+	data.m_nPlayerName = ::WStringToString(m_pIDInputBox->GetCommittedText());;
+	GCTX->SetPlayerData(data);
 }
 
 void LogInScene::ProcessInput()

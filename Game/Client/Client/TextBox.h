@@ -8,6 +8,7 @@ public:
 
 	void SetFontID(Font::ID fontID);
 	virtual void SetText(const std::wstring& wstrText);
+	virtual void SetText(const std::string& strText);
 
 	const std::wstring& GetText() const { return m_wstrText; }
 	Font::ID GetFontID() const { return m_fontID; }
@@ -47,14 +48,34 @@ public:
 
 class TextButton : public IUIButtonComponent, public IText {
 public:
-	TextButton(Font::ID font) : IText{ font } {}
-	TextButton(const std::wstring& wstrFontname) : IText{ wstrFontname } {}
+	TextButton(Font::ID font) 
+		: IText{ font } {
+		SetColor(Vector3{ 0.8, 0.8, 0.8 });
+		m_fnBeginHoverCallback = g_fnDefaultBeginHover;
+		m_fnEndHoverCallback = g_fnDefaultEndHover;
+	}
+	TextButton(const std::wstring& wstrFontname) : IText{ wstrFontname } {
+		SetColor(Vector3{ 0.8, 0.8, 0.8 });
+		m_fnBeginHoverCallback = g_fnDefaultBeginHover;
+		m_fnEndHoverCallback = g_fnDefaultEndHover;
+	}
 
 	virtual void Update() override;
 	virtual UIRectData MakeSBData() const override;
 
 	virtual const std::wstring& GetName() const override { return m_wstrText; }
 	virtual void ShowControllImGui() override;
+
+	static void g_fnDefaultBeginHover(IUIComponent* pComp) {
+		auto pButton = static_cast<TextBox*>(pComp);
+		pButton->SetColor(Vector3(1.0, 0.0, 0.0));
+	}
+
+	static void g_fnDefaultEndHover(IUIComponent* pComp) {
+		auto pButton = static_cast<TextBox*>(pComp);
+		pButton->SetColor(Vector3{ 0.8, 0.8, 0.8 });
+	}
+
 };
 
 class InputTextBox : public IUIFocusableComponent, public IText {

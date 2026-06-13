@@ -23,9 +23,6 @@ public:
 
 	void EditUI();
 
-	void SaveUI(const std::string& strFilename);
-	void LoadUI(const std::string& strFilename);
-
 private:
 	UIComponentLayer m_UILayers;
 	//UIComponentLayer m_TextLayers;

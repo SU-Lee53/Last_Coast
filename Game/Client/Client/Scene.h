@@ -24,7 +24,7 @@ using CollisionPair = std::pair<std::shared_ptr<IGameObject>, std::shared_ptr<IG
 class Scene {
 	friend class SceneManager;
 
-	using WorldType = World<NetworkRemoteThirdPersonPlayer, StaticObject, WeaponObject, Zombie>;
+	using WorldType = World<NetworkOwnerThirdPersonPlayer, NetworkRemoteThirdPersonPlayer, StaticObject, WeaponObject, Zombie>;
 
 public:
 	virtual void BuildObjects() = 0;
@@ -79,11 +79,15 @@ public:
 	const std::shared_ptr<Skybox>& GetSkybox() const { return m_pSkybox; }
 	const std::shared_ptr<Camera>& GetCamera() const { return m_pMainCamera; }
 	const std::vector<std::shared_ptr<Light>>& GetLightsInScene() const { return m_pLights; }
+	std::shared_ptr<DirectionalLight> GetSunLight() const;
 	const Vector4& GetGlobalAmbient() const { return m_v4GlobalAmbient; }
+	void SetGlobalAmbient(const Vector4& v4Ambient) { m_v4GlobalAmbient = v4Ambient; }
 	const std::unique_ptr<UIBoard>& GetUIBoard() const { return m_pUIBoard; }
 
 	const ToneMappingVolume& GetToneMappingVolume() const { return m_ToneMappingVolume; }
 	const PostProcessingVolume& GetPostProcessingVolume() const { return m_PostProcessingVolume; }
+
+	bool IsGravityOn() const { return m_bEnableGravity; }
 
 	std::vector<LightData> MakeLightData() const;
 
@@ -118,9 +122,10 @@ protected:
 	std::unique_ptr<UIBoard> m_pUIBoard{};
 	std::unordered_set<CollisionResult> m_pCollisionPairs;
 	Vector4 m_v4GlobalAmbient;
+	bool m_bEnableGravity = true;
 
 	std::unordered_map<int, std::shared_ptr<NetworkRemoteThirdPersonPlayer>> m_RemotePlayers;
-
+	
 
 private:
 	bool m_bSpatialRuntimeRegistrationEnabled = false;

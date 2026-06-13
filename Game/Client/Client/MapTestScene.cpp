@@ -110,7 +110,7 @@ void MapTestScene::BuildObjects()
 
 	m_pEventSequence = std::make_shared<EventSequence>(this);
 	m_pEventSequence->AddEvent(std::make_shared<TimeForwardEvent>());
-	//m_pEventSequence->AddEvent(std::make_shared<BleedEvent>());
+	m_pEventSequence->AddEvent(std::make_shared<BleedEvent>());
 
 	auto pCinematicEvent = std::make_shared<CinematicCameraEvent>();
 
@@ -132,6 +132,28 @@ void MapTestScene::ProcessInput()
 
 void MapTestScene::Update()
 {
+	// model change test
+	static std::string pstrModelName[] = {
+		"player_m_01",	// not ready
+		"player_f_01",	// not ready
+		"player_m_02",
+		"player_f_02",
+	};
+
+	static int32 nModelIndex = 2;
+	if (INPUT->GetButtonDown(VK_NEXT)) {
+		nModelIndex = ((nModelIndex - 1) % _countof(pstrModelName));
+		if (auto p = static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
+			p->SetPlayerModel(pstrModelName[nModelIndex]);
+		}
+	}
+	if (INPUT->GetButtonDown(VK_PRIOR)) {
+		nModelIndex = ((nModelIndex + 1) % _countof(pstrModelName));
+		if (auto p = static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
+			p->SetPlayerModel(pstrModelName[nModelIndex]);
+		}
+	}
+
 
 	// Update text test
 	std::wstring wstrFrameRate;
@@ -174,7 +196,7 @@ void MapTestScene::Update()
 	//					}
 	//	
 	//					ImGui::Text("====== Weapon Test ======");
-	//					const auto& strWeaponNames = GameContext::g_strWeaponName;
+	//					const auto& strWeaponNames = GameContext::g_strWeaponNames;
 	//					if(ImGui::BeginCombo("Weapons", strWeaponNames[m_nWeaponSelected].c_str())) {
 	//						for (int i = 0; i < strWeaponNames.size(); ++i) {
 	//							bool bSelected = (m_nWeaponSelected == i);

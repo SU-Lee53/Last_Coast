@@ -148,7 +148,7 @@ void WeaponObject::SaveStat()
 		j = nlohmann::json::parse(in);
 	}
 
-	std::string strWeaponName = GameContext::g_strWeaponName[std::to_underlying(m_eWeaponType)];
+	std::string strWeaponName = GameContext::g_strWeaponNames[std::to_underlying(m_eWeaponType)];
 	auto& jStat = j[strWeaponName];
 
 	jStat["Damage"] = m_fDamage;

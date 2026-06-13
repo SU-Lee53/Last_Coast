@@ -61,6 +61,7 @@ public:
 
 	virtual void ShowControllImGui();
 
+
 protected:
 	std::wstring m_strName;
 

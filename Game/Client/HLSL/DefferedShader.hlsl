@@ -5,8 +5,40 @@ struct PS_GBUFFER_OUTPUT
 {
 	float4 RT0 : SV_Target0; // Albedo.rgb + Metallic
 	float4 RT1 : SV_Target1; // Normal.xy + Roughness + AO
-	float4 RT2 : SV_Target2; // Specular.rgb + Specular Power
+	float4 RT2 : SV_Target2; // Emissive.rgb + Specular Intensity
 };
+
+float GetSpecularIntensity(MaterialData materialData, float2 uv)
+{
+	float fSpecularIntensity = saturate(materialData.cSpecular.a);
+	if (gnTextureIndex.w != -1)
+	{
+		float3 cSpecularMap = gtxtTextures[gnTextureIndex.w].Sample(gSamplerState, uv).rgb;
+		fSpecularIntensity *= dot(cSpecularMap, float3(0.2126f, 0.7152f, 0.0722f));
+	}
+	else
+	{
+		fSpecularIntensity = min(fSpecularIntensity, 0.10f);
+	}
+
+	return saturate(fSpecularIntensity);
+}
+
+float GetMetallic(MaterialData materialData, float2 uv)
+{
+	if (gnTextureIndex.z != -1)
+	{
+		return saturate(gtxtTextures[gnTextureIndex.z].Sample(gSamplerState, uv).r);
+	}
+
+	return min(saturate(materialData.fMetallic), 0.05f);
+}
+
+float GetFallbackRoughness(MaterialData materialData)
+{
+	float fRoughness = 1.0f - saturate(materialData.fSmoothness);
+	return max(fRoughness, 0.82f);
+}
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -94,20 +126,16 @@ PS_GBUFFER_OUTPUT PSGBufferOpaque(VS_STANDARD_OUTPUT input)
 	// Materials
 	MaterialData m = gMaterialDatas[gnMaterialIndex];
 	
-	float3 cEmissive = (gnTextureIndex.w != -1) ? gtxtTextures[gnTextureIndex.w].Sample(gSamplerState, input.uv).rgb
-	                                            : m.cEmissive.rgb;
+	float3 cEmissive = m.cEmissive.rgb;
 	
-	float fMetallic = (gnTextureIndex.z != -1) ? gtxtTextures[gnTextureIndex.z].Sample(gSamplerState, input.uv).r
-	                                           : m.fMetallic;
-	
-	//float fRoughness = 1.0f - saturate(m.fSmoothness);
-	float fRoughness = saturate(m.fSmoothness);
+	float fMetallic = GetMetallic(m, input.uv);
+	float fRoughness = GetFallbackRoughness(m);
 	float fAO = 1.0f;
-	float fSpecularPower = saturate(m.cSpecular.a);
+	float fSpecularIntensity = GetSpecularIntensity(m, input.uv);
 	
 	output.RT0 = float4(cAlbedo.rgb, fMetallic);
 	output.RT1 = float4(vNormalEnc, fRoughness, fAO);
-	output.RT2 = float4(cEmissive, fSpecularPower);
+	output.RT2 = float4(cEmissive, fSpecularIntensity);
 	
 	return output;
 }
@@ -131,20 +159,16 @@ PS_GBUFFER_OUTPUT PSGBufferAlphaMask(VS_STANDARD_OUTPUT input)
 	// Materials
 	MaterialData m = gMaterialDatas[gnMaterialIndex];
 	
-	float3 cEmissive = (gnTextureIndex.w != -1) ? gtxtTextures[gnTextureIndex.w].Sample(gSamplerState, input.uv).rgb
-	                                            : m.cEmissive.rgb;
+	float3 cEmissive = m.cEmissive.rgb;
 	
-	float fMetallic = (gnTextureIndex.z != -1) ? gtxtTextures[gnTextureIndex.z].Sample(gSamplerState, input.uv).r
-	                                           : m.fMetallic;
-	
-	//float fRoughness = 1.0f - saturate(m.fSmoothness);
-	float fRoughness = saturate(m.fSmoothness);
+	float fMetallic = GetMetallic(m, input.uv);
+	float fRoughness = GetFallbackRoughness(m);
 	float fAO = 1.0f;
-	float fSpecularPower = saturate(m.cSpecular.a);
+	float fSpecularIntensity = GetSpecularIntensity(m, input.uv);
 	
 	output.RT0 = float4(cAlbedo.rgb, fMetallic);
 	output.RT1 = float4(vNormalEnc, fRoughness, fAO);
-	output.RT2 = float4(cEmissive, fSpecularPower);
+	output.RT2 = float4(cEmissive, fSpecularIntensity);
 	
 	return output;
 }
@@ -219,10 +243,9 @@ float4 PSDefferedLighting(VS_QUAD_OUTPUT input) : SV_Target0
 	float3 worldPos = ReconstructWorldPos(uv, g.depth);
 	float3 viewDir = normalize(gCamera.v3CameraPosition - worldPos);
 
-	float specularIntensity = g.specular;
-
 	float gloss = 1.0f - saturate(g.roughness);
-	float specularPower = lerp(8.f, 256.f, gloss * gloss);
+	float specularPower = lerp(4.f, 192.f, gloss * gloss);
+	float specularIntensity = g.specular * lerp(0.05f, 1.0f, gloss * gloss);
 
 	float fShadow = ComputeCascadeShadow(worldPos);
 

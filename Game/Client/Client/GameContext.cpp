@@ -3,7 +3,7 @@
 #include "WeaponObject.h"
 #include "NodeObject.h"
 
-const std::vector<std::string> GameContext::g_strWeaponName = {
+const std::vector<std::string> GameContext::g_strWeaponNames = {
 	"M4",
 	"AK",
 	"RIFLE",
@@ -12,8 +12,23 @@ const std::vector<std::string> GameContext::g_strWeaponName = {
 	"UNKNOWN",
 };
 
+const std::vector<std::string> GameContext::g_strCharacterNames = {
+	"player_m_01",
+	"player_f_01",
+	"player_m_02",
+	"player_f_02",
+	"UNKNOWN",
+};
+
 void GameContext::Initialize()
 {
+	LoadWeaponData();
+	LoadZombieModels();
+}
+
+void GameContext::LoadWeaponData()
+{
+
 	// Load weapon models
 	{
 		std::string strWeaponFilename[] = {
@@ -28,7 +43,7 @@ void GameContext::Initialize()
 			//m_pWeaponModels[i] = MODEL->LoadOrGet(strWeaponFilename[i], true);
 			auto p = std::make_shared<WeaponObject>();
 			p->SetChild(MODEL->LoadOrGet(strWeaponFilename[i], true));
-			p->SetName(g_strWeaponName[i]);
+			p->SetName(g_strWeaponNames[i]);
 			p->SetWeaponType(static_cast<WEAPON_TYPE>(i));
 			m_pWeaponModels[i] = p;
 		}
@@ -40,13 +55,13 @@ void GameContext::Initialize()
 		ifstream in{ strSavePath };
 		nlohmann::json jWeaponData = nlohmann::json::parse(in);
 
-		std::vector<bool> checked(g_strWeaponName.size(), false);
+		std::vector<bool> checked(g_strWeaponNames.size(), false);
 
 		for (const auto& [k, v] : jWeaponData.items()) {
-			for (int i = 0; i < g_strWeaponName.size(); ++i) {
+			for (int i = 0; i < g_strWeaponNames.size(); ++i) {
 				if (checked[i]) continue;
 
-				if (k == g_strWeaponName[i]) {
+				if (k == g_strWeaponNames[i]) {
 					m_WeaponStats[i].fDamage = v["Damage"].get<float>();
 					m_WeaponStats[i].fFirePerSecond = v["FirePerSecond"].get<float>();
 					m_WeaponStats[i].fRecoil = v["Recoil"].get<float>();
@@ -61,7 +76,27 @@ void GameContext::Initialize()
 			}
 		}
 	}
+}
 
+void GameContext::LoadPlayerModels()
+{
+	// Load Zombie Models
+	{
+		std::string strZombieFilename[] = {
+			"player_m_01",
+			"player_f_01",
+			"player_m_02",
+			"player_f_02"
+		};
+
+		for (int i = 0; i < g_unZombieModels; ++i) {
+			m_pZombieModels[i] = MODEL->LoadOrGet(strZombieFilename[i]);
+		}
+	}
+}
+
+void GameContext::LoadZombieModels()
+{
 	// Load Zombie Models
 	{
 		std::string strZombieFilename[] = {
@@ -75,6 +110,7 @@ void GameContext::Initialize()
 		}
 	}
 }
+
 
 std::shared_ptr<WeaponObject> GameContext::GetWeaponCopy(WEAPON_TYPE eWeaponType)
 {
@@ -98,13 +134,6 @@ std::shared_ptr<WeaponObject> GameContext::GetWeaponCopy(WEAPON_TYPE eWeaponType
 std::shared_ptr<NodeObject> GameContext::GetZombieCopy(uint32 unIndex)
 {
 	return m_pZombieModels[unIndex]->CopyObject<NodeObject>();
-}
-
-std::shared_ptr<IGameObject> GameContext::GeModel(const std::string& strName)
-{
-	//auto find = m_pGameModels.find(strName);
-	//return (find != m_pGameModels.end()) ? find->second : nullptr;
-	return nullptr;
 }
 
 TextureRef<Texture> GameContext::GetImage(const std::string& strName)

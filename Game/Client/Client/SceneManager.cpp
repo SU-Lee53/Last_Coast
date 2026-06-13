@@ -7,10 +7,11 @@
 #include "TestScene.h"
 #include "GameScene.h"
 #include "LogInScene.h"
+#include "LobbyScene.h"
 
 void SceneManager::Initialize()
 {
-	m_pSceneStack.push_back(std::make_unique<MapTestScene>());
+	m_pSceneStack.push_back(std::make_unique<LobbyScene>());
 	m_pSceneStack.back()->OnEnterScene();
 	m_pSceneStack.back()->BuildLights();
 	m_pSceneStack.back()->BuildObjects();

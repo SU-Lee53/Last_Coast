@@ -27,6 +27,7 @@ private:
 
 	std::shared_ptr<IGameObject> m_pGun = nullptr;
 
+
 	int32 m_nWeaponSelected = 0;
 
 	nlohmann::json jWeaponData;

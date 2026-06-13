@@ -340,7 +340,8 @@ float4 PSSkybox(VS_SKYBOX_OUTPUT input) : SV_Target
 	
 	// 2. Twilight timing from sun height
 	float fSunHeight = sunDir.y;
-	float fTwilightTime = 1.0f - smoothstep(0.f, gSkybox.fTwilightWidth, abs(fSunHeight));
+	float fTwilightWidth = clamp(gSkybox.fTwilightWidth, 0.001f, 0.35f);
+	float fTwilightTime = 1.0f - smoothstep(0.f, fTwilightWidth, abs(fSunHeight));
 	
 	// 3. Directional twilight toward sun
 	float fSunForward = saturate(dot(inDir, sunDir));
@@ -425,7 +426,8 @@ float4 PSCelestialDisk(VS_SKYBOX_OUTPUT input) : SV_Target
 	float moonVisible = 1 - sunVisible;
 	
 	float fSunHeight = sunDir.y;
-	float fTwilightTime = 1.0f - smoothstep(0.f, gSkybox.fTwilightWidth, abs(fSunHeight));
+	float fTwilightWidth = clamp(gSkybox.fTwilightWidth, 0.001f, 0.35f);
+	float fTwilightTime = 1.0f - smoothstep(0.f, fTwilightWidth, abs(fSunHeight));
 	
 	float3 sunColor = lerp(gSkybox.v3SunColor, gSkybox.v3TwilightColor, fTwilightTime) * gSkybox.fSunIntensity;
 	float3 moonColor = gSkybox.v3MoonColor * gSkybox.fMoonIntensity;

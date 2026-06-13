@@ -20,11 +20,16 @@ void GameScene::BuildObjects()
 
 	m_pUIBoard = std::make_unique<UIBoard>();
 	m_pPlayer = std::make_shared<NetworkOwnerThirdPersonPlayer>();
+
+	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
 	m_pPlayer->Initialize();
 	m_pPlayer->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
-	if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
-		pThirdPerson->GiveWeapon(WEAPON_TYPE::AK);
+	if (auto pThirdPerson = static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
+		const auto& data = GCTX->GetGameData();
+		pThirdPerson->SetPlayerModel(GameContext::g_strCharacterNames[data.m_nCurModelIndex]);
+		pThirdPerson->GiveWeapon((WEAPON_TYPE)data.m_nCurWeaponIndex);
 	}
+
 
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize();
@@ -35,7 +40,6 @@ void GameScene::BuildObjects()
 	m_pTerrain = std::make_shared<TerrainObject>();
 	m_pTerrain->LoadFromFiles("Game");
 
-	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
 	if (!bOnline) {
 		for (auto& pZombie : m_ZombiePool.Initialize(100, bOnline))
 			AddObject(pZombie);

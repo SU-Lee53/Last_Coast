@@ -130,6 +130,10 @@ IThirdPersonPlayer::~IThirdPersonPlayer()
 
 void IThirdPersonPlayer::Initialize()
 {
+	if (!GetComponent<Transform>()) {
+		AddComponent<Transform>();
+	}
+
 	if (!m_bInitialized) {
 		InitializeCommonPlayer();
 
@@ -147,6 +151,8 @@ void IThirdPersonPlayer::Initialize()
 			component->Initialize();
 		}
 	}
+
+	GetTransform()->Update();
 
 	for (auto& pChild : m_pChildren) {
 		pChild->Initialize();
@@ -417,9 +423,24 @@ float IThirdPersonPlayer::GetMoveSpeedSqXZ() const
 	return v3Delta.LengthSquared();
 }
 
+void IThirdPersonPlayer::SetPlayerModel(const std::string& strModelKey)
+{
+	auto pModel = MODEL->LoadOrGet(strModelKey)->CopyObject<NodeObject>();
+	pModel->GetTransform()->Rotate(Vector3::Up, -90.f);
+	SwapChild(0, pModel);
+
+	if (!GetComponent<AnimationController>()) {
+		AddComponent<PlayerAnimationController>();
+	}
+
+	if (!m_pWeaponSocket) {
+		m_pWeaponSocket = GetComponent<Skeleton>()->CreateAttachSocket<WeaponSocket>("RightHand"s);
+	}
+}
+
 void IThirdPersonPlayer::InitializeCommonPlayer()
 {
-	auto pModel = MODEL->LoadOrGet("Ch33_nonPBR")->CopyObject<NodeObject>();
+	auto pModel = MODEL->LoadOrGet("player_m_02")->CopyObject<NodeObject>();
 	pModel->GetTransform()->Rotate(Vector3::Up, -90.f);
 	SetChild(pModel);
 
@@ -861,10 +882,24 @@ void IThirdPersonPlayer::PlayReloadStartAction()
 
 	auto pMontage = pAnimationCtrl->GetMontage().get();
 	if (m_bAiming && pMontage->IsPlaying()) {
-		pMontage->JumpToSection("Rifle Reloading");
+		if (m_pWeaponSocket->GetCurrentWeaponType() == WEAPON_TYPE::PISTOL) {
+			pAnimationCtrl->GetMontage()->JumpToSection("Pistol Reloading");
+		}
+		else {
+			pAnimationCtrl->GetMontage()->JumpToSection("Rifle Reloading");
+		}
+
+		//pMontage->JumpToSection("Rifle Reloading");
 	}
 	else {
-		pMontage->PlayMontage("Rifle Reloading");
+		if (m_pWeaponSocket->GetCurrentWeaponType() == WEAPON_TYPE::PISTOL) {
+			pAnimationCtrl->GetMontage()->PlayMontage("Pistol Reloading");
+		}
+		else {
+			pAnimationCtrl->GetMontage()->PlayMontage("Rifle Reloading");
+		}
+
+		//pMontage->PlayMontage("Rifle Reloading");
 	}
 	pWeapon->BeginReload();
 }
@@ -903,7 +938,7 @@ void IThirdPersonPlayer::ApplyWeaponChanged(WEAPON_TYPE eWeaponType)
 
 	m_pWeaponSocket->SetWeapon(eWeaponType);
 	if (m_PlayerHUD.pWeaponName) {
-		const std::string& strWeaponName = GameContext::g_strWeaponName[std::to_underlying(eWeaponType)];
+		const std::string& strWeaponName = GameContext::g_strWeaponNames[std::to_underlying(eWeaponType)];
 		m_PlayerHUD.pWeaponName->SetText(::StringToWString(strWeaponName));
 	}
 }
@@ -920,11 +955,13 @@ void IThirdPersonPlayer::ApplyDead()
 
 void IThirdPersonPlayer::ApplyGravity()
 {
-	if (!m_bGrounded) {
-		m_fVerticalVelocity += m_fGravity * DT;
-	}
-	else {
-		m_fVerticalVelocity = 0.f;
+	if (CUR_SCENE->IsGravityOn()) {
+		if (!m_bGrounded) {
+			m_fVerticalVelocity += m_fGravity * DT;
+		}
+		else {
+			m_fVerticalVelocity = 0.f;
+		}
 	}
 }
 

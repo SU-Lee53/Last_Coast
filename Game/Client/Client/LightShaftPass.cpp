@@ -105,11 +105,8 @@ CB_LIGHT_SHAFT_DATA LightShaftPass::MakeLightShaftCBData()
 	}
 
 	if (v3SunDirection.LengthSquared() <= 1e-6f) {
-		const auto& pLights = CUR_SCENE->GetLightsInScene();
-		if (!pLights.empty()) {
-			if (const auto pDirectionalLight = std::dynamic_pointer_cast<DirectionalLight>(pLights[0])) {
-				v3SunDirection = -pDirectionalLight->m_v3Direction;
-			}
+		if (const auto pDirectionalLight = CUR_SCENE->GetSunLight()) {
+			v3SunDirection = -pDirectionalLight->m_v3Direction;
 		}
 	}
 

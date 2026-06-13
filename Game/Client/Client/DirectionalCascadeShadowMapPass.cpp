@@ -41,10 +41,10 @@ void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> p
 		SetRenderTargets(pd3dCommandList, i);
 		BoundingFrustum xmFrsutum = m_CascadeCached[i].xmCasterCullFrustum;
 
-		std::vector<IGameObject*> frustumCulled;
+		m_FrustumCulledCached.clear();
 		{
 			//const std::vector<std::shared_ptr<IGameObject>>& inputResource = RENDER->GetObjectsToRender();
-			frustumCulled.reserve(300);
+			m_FrustumCulledCached.reserve(300);
 
 			SpatialQueryDesc objectShadowDesc{};
 			objectShadowDesc.unLayerMask = SPATIAL_RENDERABLE | SPATIAL_CAST_SHADOW;
@@ -54,15 +54,15 @@ void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> p
 
 			SpatialQueryResult objectShadowCandidates = CUR_SCENE->GetWorld().GetSpatial().QueryFrustum(xmFrsutum, objectShadowDesc);
 			for (const auto& pObj : objectShadowCandidates.pObjects) {
-				pObj->AddToQueue(frustumCulled);
+				pObj->AddToQueue(m_FrustumCulledCached);
 			}
 
 			// Add Player
-			CUR_SCENE->GetPlayer()->AddToQueue(frustumCulled);
+			CUR_SCENE->GetPlayer()->AddToQueue(m_FrustumCulledCached);
 		}
 
 
-		BindGeometryData(pd3dCommandList, frustumCulled, outDescHandle);
+		BindGeometryData(pd3dCommandList, m_FrustumCulledCached, outDescHandle);
 
 		auto lightCameraCBuffer = RENDER->AllocCBuffer<Matrix>();
 		Matrix mtxViewProj = m_CascadeCached[i].mtxLightViewProj.Transpose();
@@ -100,12 +100,13 @@ void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandL
 	constexpr uint32 rootParamCascadeShadowMap = std::to_underlying(ROOT_PARAMETER::CASCADE_SHADOW_MAPS);
 
 	// Set toShadow matrix
-	std::vector<Matrix> mtxToShadows;
-	mtxToShadows.reserve(4);
-	std::transform(m_CascadeCached.begin(), m_CascadeCached.end(), std::back_inserter(mtxToShadows), [](const CascadeCameraData& data) {return data.mtxToShadowMap.Transpose(); });
+	CB_TO_SHADOW_MATRICES_DATA toShadowData{};
+	for (uint32 i = 0; i < g_unNumCascade; ++i) {
+		toShadowData.mtxToShadows[i] = m_CascadeCached[i].mtxToShadowMap.Transpose();
+	}
 	
 	auto toShadowCBuffer = RENDER->AllocCBuffer<CB_TO_SHADOW_MATRICES_DATA>();
-	toShadowCBuffer.WriteData(mtxToShadows);
+	toShadowCBuffer.WriteData(&toShadowData);
 	DEVICE->CopyDescriptorsSimple(1, bindHandle, toShadowCBuffer.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	bindHandle.Offset(1, unDescriptorInc);
 
@@ -132,7 +133,7 @@ void DirectionalCascadeShadowMapPass::CreatePipelineState()
 	};
 
 	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc;
-	inputLayoutDesc.NumElements = d3dStandardInputElements.size();
+	inputLayoutDesc.NumElements = static_cast<UINT>(d3dStandardInputElements.size());
 	inputLayoutDesc.pInputElementDescs = d3dStandardInputElements.data();
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC d3dPipelineDesc{};
@@ -182,7 +183,7 @@ void DirectionalCascadeShadowMapPass::CreatePipelineState()
 		{"BLENDWEIGHTS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 	};
 
-	inputLayoutDesc.NumElements = d3dAnimatedInputElements.size();
+	inputLayoutDesc.NumElements = static_cast<UINT>(d3dAnimatedInputElements.size());
 	inputLayoutDesc.pInputElementDescs = d3dAnimatedInputElements.data();
 
 	{
@@ -250,46 +251,54 @@ void DirectionalCascadeShadowMapPass::BindGeometryData(ComPtr<ID3D12GraphicsComm
 	}
 	m_RenderQueueCached.reserve(estimatedRenderQueueSize);
 
-	m_CachedData.sbWorldTransformDatas.reserve(estimatedRenderQueueSize);
+	m_CachedData.sbWorldTransformDatas.reserve(frustumCulled.size());
+	m_CachedData.sbBoneTransformDatas.reserve(frustumCulled.size() * 10);
+	m_CachedData.nBoneOffsets.reserve(frustumCulled.size());
 
 	for (auto& [k, v] : m_CachedData.frustumCulledMap.GetElements()) {
 
 		// Prepare
 		const auto& pMeshes = k->GetMeshes();
-		const auto& materialIDs = k->GetMaterialHandles();
-		int32 nMeshes = pMeshes.size();
 
-		for (int32 meshIdx = 0; meshIdx < k->GetMeshes().size(); ++meshIdx) {
-			RenderParameter renderParameter;
-			// Set
-			renderParameter.cbInstanceData.gnWorldTransformOffset = m_CachedData.sbWorldTransformDatas.size();
-			renderParameter.nInstances = v.size();
-			for (const auto pObj : v) {
-				Matrix mtxWorld = pObj->GetWorldMatrix();
+		const uint32 unWorldTransformOffset = static_cast<uint32>(m_CachedData.sbWorldTransformDatas.size());
+		for (const auto pObj : v) {
+			const Matrix& mtxWorld = pObj->GetWorldMatrix();
 
-				WorldTransformData data{
-					mtxWorld.Transpose(),
-					Matrix::Identity,
-				};
+			m_CachedData.sbWorldTransformDatas.emplace_back(
+				mtxWorld.Transpose(),
+				Matrix::Identity
+			);
+		}
 
-				m_CachedData.sbWorldTransformDatas.emplace_back(
-					mtxWorld.Transpose(),
-					Matrix::Identity
-				);
-				
-				const auto pAnim = pObj->GetComponentFromRoot<AnimationController>().get();
-				if (!pAnim) continue;
+		std::vector<int32> nBoneOffsets;
+		nBoneOffsets.reserve(v.size());
+		for (const auto pObj : v) {
+			const auto pAnim = pObj->GetComponentFromRoot<AnimationController>().get();
+			if (!pAnim) continue;
 
-				auto [it, bInserted] = m_CachedData.animationInstancingData.emplace(pAnim, m_CachedData.sbBoneTransformDatas.size());
-				if (bInserted) {
-					renderParameter.nBoneOffsets.emplace_back(m_CachedData.sbBoneTransformDatas.size());
-					const auto& boneTransforms = pAnim->GetFinalOutput();
-					m_CachedData.sbBoneTransformDatas.insert(m_CachedData.sbBoneTransformDatas.end(), boneTransforms.begin(), boneTransforms.end());
-				}
-				else {
-					renderParameter.nBoneOffsets.emplace_back(it->second.unOffset);
-				}
+			auto [it, bInserted] = m_CachedData.animationInstancingData.emplace(pAnim, static_cast<int32>(m_CachedData.sbBoneTransformDatas.size()));
+			if (bInserted) {
+				nBoneOffsets.emplace_back(static_cast<int32>(m_CachedData.sbBoneTransformDatas.size()));
+				const auto& boneTransforms = pAnim->GetFinalOutput();
+				m_CachedData.sbBoneTransformDatas.insert(m_CachedData.sbBoneTransformDatas.end(), boneTransforms.begin(), boneTransforms.end());
 			}
+			else {
+				nBoneOffsets.emplace_back(it->second.unOffset);
+			}
+		}
+
+		const uint32 unBoneOffsetStart = static_cast<uint32>(m_CachedData.nBoneOffsets.size());
+		const uint32 unBoneOffsetCount = static_cast<uint32>(nBoneOffsets.size());
+		m_CachedData.nBoneOffsets.insert(m_CachedData.nBoneOffsets.end(), nBoneOffsets.begin(), nBoneOffsets.end());
+
+		const int32 nMeshes = static_cast<int32>(pMeshes.size());
+		for (int32 meshIdx = 0; meshIdx < nMeshes; ++meshIdx) {
+			RenderParameter renderParameter;
+			renderParameter.cbInstanceData.gnWorldTransformOffset = unWorldTransformOffset;
+			renderParameter.nInstances = static_cast<int32>(v.size());
+			renderParameter.unBoneOffsetStart = unBoneOffsetStart;
+			renderParameter.unBoneOffsetCount = unBoneOffsetCount;
+			renderParameter.pd3dPipelineState = (unBoneOffsetCount != 0) ? m_pd3dAnimatedPipelineState.Get() : m_pd3dStandardPipelineState.Get();
 
 			m_RenderQueueCached.emplace_back(pMeshes[meshIdx].get(), renderParameter);
 		}
@@ -302,15 +311,20 @@ void DirectionalCascadeShadowMapPass::BindGeometryData(ComPtr<ID3D12GraphicsComm
 
 	// rootParam[11]
 	const auto& worldTransformDatas = m_CachedData.sbWorldTransformDatas;
-	auto worldTransformSBuffer = RENDER->AllocSBuffer<WorldTransformData>(worldTransformDatas.size());
+	auto worldTransformSBuffer = RENDER->AllocSBuffer<WorldTransformData>(static_cast<uint32>(worldTransformDatas.size()));
 	worldTransformSBuffer.WriteData(worldTransformDatas);
 	DEVICE->CopyDescriptorsSimple(1, bindHandle, worldTransformSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	// rootParam[12]
 	const auto& boneTransformDatas = m_CachedData.sbBoneTransformDatas;
-	auto boneTransformSBuffer = RENDER->AllocSBuffer<Matrix>(boneTransformDatas.size());
+	auto boneTransformSBuffer = RENDER->AllocSBuffer<Matrix>(static_cast<uint32>(boneTransformDatas.size()));
 	boneTransformSBuffer.WriteData(boneTransformDatas);
 	DEVICE->CopyDescriptorsSimple(1, bindHandle.Offset(1, unDescriptorInc), boneTransformSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	const auto& boneOffsets = m_CachedData.nBoneOffsets;
+	auto boneOffsetSBuffer = RENDER->AllocSBuffer<int32>(static_cast<uint32>(boneOffsets.size()));
+	boneOffsetSBuffer.WriteData(boneOffsets);
+	m_CachedData.d3dBoneOffsetGPUAddress = boneOffsetSBuffer.GPUAddress;
 
 	// Set
 	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamPerPass, outDescHandle.gpuHandle);
@@ -323,20 +337,22 @@ void DirectionalCascadeShadowMapPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandL
 	constexpr uint32 rootParamInstanceData = std::to_underlying(ROOT_PARAMETER::PER_INSTANCE_DATA);
 	constexpr uint32 rootParamBoneOffset = std::to_underlying(ROOT_PARAMETER::BONE_TRANSFORM_OFFSETS);
 
+	ID3D12PipelineState* pd3dLastPipelineState = nullptr;
+
 	for (auto& [k, v] : m_RenderQueueCached) {
 		ConstantBuffer instanceCBuffer = RENDER->AllocCBuffer<CB_INSTANCE_DATA>();
 		instanceCBuffer.WriteData(&v.cbInstanceData);
 		pd3dCommandList->SetGraphicsRootConstantBufferView(rootParamInstanceData, instanceCBuffer.GPUAddress);
 
-		if (v.nBoneOffsets.size() != 0) {
-			auto boneOffsetSBuffer = RENDER->AllocSBuffer<int32>(v.nBoneOffsets.size());
-			boneOffsetSBuffer.WriteData(v.nBoneOffsets);
-			pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamBoneOffset, boneOffsetSBuffer.GPUAddress);
-
-			pd3dCommandList->SetPipelineState(m_pd3dAnimatedPipelineState.Get());
+		if (v.unBoneOffsetCount != 0) {
+			D3D12_GPU_VIRTUAL_ADDRESS d3dBoneOffsetGPUAddress =
+				m_CachedData.d3dBoneOffsetGPUAddress + v.unBoneOffsetStart * sizeof(int32);
+			pd3dCommandList->SetGraphicsRootShaderResourceView(rootParamBoneOffset, d3dBoneOffsetGPUAddress);
 		}
-		else {
-			pd3dCommandList->SetPipelineState(m_pd3dStandardPipelineState.Get());
+
+		if (pd3dLastPipelineState != v.pd3dPipelineState) {
+			pd3dCommandList->SetPipelineState(v.pd3dPipelineState);
+			pd3dLastPipelineState = v.pd3dPipelineState;
 		}
 
 		k->RenderPosition(pd3dCommandList, v.nInstances);
@@ -414,10 +430,10 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 		v3FrustumCenter /= static_cast<float>(nCorners);
 
 		// 4. Generate Light view matrix
-		const auto& pLights = CUR_SCENE->GetLightsInScene();	// Temporal
-		std::shared_ptr<DirectionalLight> pLight = std::static_pointer_cast<DirectionalLight>(pLights[0]);	// Temporal
-
-		Vector3 v3LightDir = pLight->m_v3Direction;
+		Vector3 v3LightDir = Vector3{ 1.f, -1.f, 1.f };
+		if (const auto pLight = CUR_SCENE->GetSunLight()) {
+			v3LightDir = pLight->m_v3Direction;
+		}
 		v3LightDir.Normalize();
 		Vector3 v3LightUpRef = (fabs(v3LightDir.Dot(Vector3::Up)) > 0.99f) ? Vector3::Backward : Vector3::Up;
 		Vector3 v3LightRight = v3LightUpRef.Cross(v3LightDir);
