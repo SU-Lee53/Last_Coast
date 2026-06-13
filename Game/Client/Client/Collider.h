@@ -70,6 +70,8 @@ public:
 
 	virtual BoundingBox GetAABBFromOBBWorld() const override;
 
+	void ResetCharacterModelCollision();
+
 private:
 	BoundingCapsule m_CapsuleOrigin;
 	BoundingCapsule m_CapsuleWorld;

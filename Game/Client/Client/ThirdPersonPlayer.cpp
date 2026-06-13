@@ -436,6 +436,8 @@ void IThirdPersonPlayer::SetPlayerModel(const std::string& strModelKey)
 	if (!m_pWeaponSocket) {
 		m_pWeaponSocket = GetComponent<Skeleton>()->CreateAttachSocket<WeaponSocket>("RightHand"s);
 	}
+
+	GetComponent<PlayerCollider>()->ResetCharacterModelCollision();
 }
 
 void IThirdPersonPlayer::InitializeCommonPlayer()

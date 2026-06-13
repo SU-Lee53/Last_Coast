@@ -271,8 +271,15 @@ PlayerCollider::PlayerCollider(std::shared_ptr<IGameObject> pOwner)
 
 void PlayerCollider::Initialize()
 {
-	auto& pOwner = m_wpOwner.lock();
-	MergeOBB(pOwner, false);
+	auto& pOwner = m_wpOwner.lock(); 
+	ResetCharacterModelCollision();
+
+	m_bInitialized = true;
+}
+
+void PlayerCollider::ResetCharacterModelCollision()
+{
+	MergeOBB(m_wpOwner.lock(), false);
 
 	BoundingCapsule::CreateFromBoundingOrientedBox(m_CapsuleOrigin, m_xmOBBOrigin);
 
@@ -282,8 +289,6 @@ void PlayerCollider::Initialize()
 	const Matrix& mtxWorld = m_wpOwner.lock()->GetWorldMatrix();
 	m_xmOBBOrigin.Transform(m_xmOBBWorld, mtxWorld);
 	m_CapsuleOrigin.Transform(m_CapsuleWorld, mtxWorld);
-
-	m_bInitialized = true;
 }
 
 void PlayerCollider::Update()
