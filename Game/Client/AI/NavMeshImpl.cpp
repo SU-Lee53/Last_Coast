@@ -642,8 +642,8 @@ namespace AIDLL
 		int nCurrentPolyID = FindPolygonContaining(From);
 		if (nCurrentPolyID < 0)
 		{
-			printf("[LOS_OffMesh] from=(%.0f,%.0f,%.0f) to=(%.0f,%.0f,%.0f)\n",
-			       From.x, From.y, From.z, To.x, To.y, To.z);
+			//printf("[LOS_OffMesh] from=(%.0f,%.0f,%.0f) to=(%.0f,%.0f,%.0f)\n",
+			//       From.x, From.y, From.z, To.x, To.y, To.z);
 			return false;  // 시작점이 NavMesh 위에 없음
 		}
 

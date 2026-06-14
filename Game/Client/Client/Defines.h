@@ -118,6 +118,7 @@ enum class WEAPON_TYPE : uint8 {
 	RIFLE,
 	PISTOL,
 	MELEE,
+	SHOTGUN,
 
 	COUNT,
 

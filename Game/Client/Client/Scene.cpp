@@ -197,6 +197,12 @@ void Scene::PostUpdate()
 	if (m_pUIBoard) {
 		m_pUIBoard->Update();
 	}
+
+	// Update 3D audio listener from the active camera.
+	if (m_pPlayer) {
+		const std::shared_ptr<Camera>& pCamera = GetCamera();
+		SOUND->SetListenerAttributes(pCamera->GetPosition(), Vector3::Zero, pCamera->GetLook(), pCamera->GetUp());
+	}
 }
 
 void Scene::PrepareRender()
@@ -585,23 +591,6 @@ void Scene::ShowDebugOptions()
 			if (auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 				m_pPlayer->ShowControlImGui();
 
-				ImGui::Text("Press `(~) to use mouse control");
-				ImGui::Text("Mouse : %s", pPlayer->IsMouseOn() ? "ON" : "OFF");
-
-				ImGui::Text("Move Speed : %f\n", pPlayer->GetMoveSpeed());
-
-				const Vector3& v3PlayerMoveDirection = pPlayer->GetMoveDirection();
-				ImGui::Text("Move Direction : (%f, %f, %f)", v3PlayerMoveDirection.x, v3PlayerMoveDirection.y, v3PlayerMoveDirection.z);
-
-				const auto& transform = pPlayer->GetTransform();
-				Vector3 v3PlayerPos = transform->GetPosition();
-				ImGui::Text("Player Position : (%f, %f, %f)", v3PlayerPos.x, v3PlayerPos.y, v3PlayerPos.z);
-
-				ImGui::Text("====== Collision Result ======");
-				for (const auto& pair : m_pCollisionPairs) {
-					ImGui::Text("Collision {%s : %s}", pair.pSelf->GetName().c_str(), pair.pOther->GetName().c_str());
-				}
-
 				ImGui::Text("====== Weapon Test ======");
 				const auto eWeaponType = pPlayer->GetCurrentWeaponType();
 				auto nWeaponIdx = std::to_underlying(eWeaponType);
@@ -629,8 +618,24 @@ void Scene::ShowDebugOptions()
 					pPlayer->GetCurrentWeaponObject()->ShowControlImGui();
 					ImGui::TreePop();
 				}
-			}
 
+				ImGui::Text("Press `(~) to use mouse control");
+				ImGui::Text("Mouse : %s", pPlayer->IsMouseOn() ? "ON" : "OFF");
+
+				ImGui::Text("Move Speed : %f\n", pPlayer->GetMoveSpeed());
+
+				const Vector3& v3PlayerMoveDirection = pPlayer->GetMoveDirection();
+				ImGui::Text("Move Direction : (%f, %f, %f)", v3PlayerMoveDirection.x, v3PlayerMoveDirection.y, v3PlayerMoveDirection.z);
+
+				const auto& transform = pPlayer->GetTransform();
+				Vector3 v3PlayerPos = transform->GetPosition();
+				ImGui::Text("Player Position : (%f, %f, %f)", v3PlayerPos.x, v3PlayerPos.y, v3PlayerPos.z);
+
+				ImGui::Text("====== Collision Result ======");
+				for (const auto& pair : m_pCollisionPairs) {
+					ImGui::Text("Collision {%s : %s}", pair.pSelf->GetName().c_str(), pair.pOther->GetName().c_str());
+				}
+			}
 			ImGui::EndTabItem();		
 		}
 

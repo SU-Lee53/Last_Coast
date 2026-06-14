@@ -44,7 +44,7 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 	MODEL->LoadGameModels();
 	ANIMATION->LoadGameAnimations();
 
-	//SOUND->Initialize();
+	SOUND->Initialize();
 
 	SHADER->ReleaseBlobs();
 

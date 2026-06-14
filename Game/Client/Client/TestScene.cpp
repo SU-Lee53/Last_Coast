@@ -173,6 +173,27 @@ void TestScene::Update()
 		else {
 			ImGui::Text("No Animation");
 		}
+
+		// ====== Sound Test ======
+		ImGui::NewLine();
+		ImGui::Text("====== Sound Test ======");
+		if (ImGui::Button("Play 2D")) {
+			SOUND->Play("Test");
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Play 3D @player")) {
+			Vector3 v3Pos = m_pPlayer ? m_pPlayer->GetTransform()->GetPosition() : Vector3::Zero;
+			SOUND->PlayAt("Test3D", v3Pos);
+		}
+
+		float fSfx = SOUND->GetCategoryVolume(SoundCategory::SFX);
+		if (ImGui::SliderFloat("SFX Vol", &fSfx, 0.0f, 1.0f)) {
+			SOUND->SetCategoryVolume(SoundCategory::SFX, fSfx);
+		}
+		float fMaster = SOUND->GetMasterVolume();
+		if (ImGui::SliderFloat("Master Vol", &fMaster, 0.0f, 1.0f)) {
+			SOUND->SetMasterVolume(fMaster);
+		}
 	}
 	ImGui::End();
 

@@ -66,6 +66,8 @@ public:
 	void send_player_reload(int player_id);
 	void send_player_melee(int attacker_id);
 	void send_melee_hit(int attacker_id, int zombie_id, float damage, const Vector3& v3Hit);
+	void send_chat(int sender_id, const char* username, const char* message);
+	void send_player_weapon(int player_id, unsigned char weapon_type);
 
 public:
 	SOCKET		m_client;
@@ -79,4 +81,5 @@ public:
 	bool          m_bRunning = false;
 	bool          m_bAiming = false;
 	float         m_fAimPitch = 0.f;
+	unsigned char m_weaponType = 3;   // 기본 PISTOL (WEAPON_TYPE::PISTOL == 3)
 };

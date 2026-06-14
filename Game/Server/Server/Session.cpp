@@ -49,6 +49,7 @@ void Session::send_add_player(int player_id)
 	packet.bRunning = pl.m_bRunning;
 	packet.bAiming = pl.m_bAiming;
 	packet.fAimPitch = pl.m_fAimPitch;
+	packet.weaponType = pl.m_weaponType;
 	do_send(packet.size, reinterpret_cast<char*>(&packet));
 }
 
@@ -158,7 +159,7 @@ bool Session::process_packet(unsigned char* p)
 		//          << ") dir(" << v3Dir.x << "," << v3Dir.y << "," << v3Dir.z << ")\n";
 
 		constexpr float fMaxDist = 5000.f;
-		constexpr float fDamage  = 25.f;
+		const float     fDamage  = packet->damage; // 무기/펠릿 데미지 (클라 전송)
 
 		// ── 1. 좀비 히트 검사 (BoundingSphere) ──────────────────────────────
 		int   nHitZombieId = -1;
@@ -283,6 +284,31 @@ bool Session::process_packet(unsigned char* p)
 		}
 	}
 	break;
+	case C2S_PLAYER_WEAPON: {
+		C2S_PlayerWeapon* packet = reinterpret_cast<C2S_PlayerWeapon*>(p);
+		m_weaponType = packet->weaponType;   // late-join 동기화용으로 저장
+
+		// 무기 교체를 전체 클라이언트에 브로드캐스트 (본인 포함; 클라가 본인 필터)
+		for (auto& cl : clients)
+			if (cl.m_is_connected)
+				cl.send_player_weapon(m_id, m_weaponType);
+	}
+	break;
+	case C2S_CHAT: {
+		C2S_Chat* packet = reinterpret_cast<C2S_Chat*>(p);
+		// 메시지 널 종단 보장
+		char msg[MAX_CHAT_LEN];
+		memcpy_s(msg, sizeof(msg), packet->message, MAX_CHAT_LEN);
+		msg[MAX_CHAT_LEN - 1] = '\0';
+
+		std::cout << "[Chat] Player[" << m_id << "] " << m_username << ": " << msg << std::endl;
+
+		// 모든 접속 클라이언트(보낸 사람 포함)에게 브로드캐스트
+		for (auto& cl : clients)
+			if (cl.m_is_connected)
+				cl.send_chat(m_id, m_username, msg);
+	}
+	break;
 	default:
 		std::cout << "Unknown packet type received from player[" << m_id << "].\n";
 		return false;
@@ -310,6 +336,27 @@ void Session::send_melee_hit(int attacker_id, int zombie_id, float damage, const
 	packet.hitX = v3Hit.x;
 	packet.hitY = v3Hit.y;
 	packet.hitZ = v3Hit.z;
+	do_send(packet.size, reinterpret_cast<char*>(&packet));
+}
+
+void Session::send_player_weapon(int player_id, unsigned char weapon_type)
+{
+	S2C_PlayerWeapon packet;
+	packet.size = sizeof(S2C_PlayerWeapon);
+	packet.type = S2C_PLAYER_WEAPON;
+	packet.playerId = player_id;
+	packet.weaponType = weapon_type;
+	do_send(packet.size, reinterpret_cast<char*>(&packet));
+}
+
+void Session::send_chat(int sender_id, const char* username, const char* message)
+{
+	S2C_Chat packet;
+	packet.size = sizeof(S2C_Chat);
+	packet.type = S2C_CHAT;
+	packet.playerId = sender_id;
+	strncpy_s(packet.username, username, MAX_NAME_LEN - 1);
+	strncpy_s(packet.message, message, MAX_CHAT_LEN - 1);
 	do_send(packet.size, reinterpret_cast<char*>(&packet));
 }
 

@@ -16,6 +16,10 @@ public:
 	bool TryFire();
 	bool BeginReload();
 	bool EndReload();
+
+	// 무기별 발사 방식. 베이스는 발사 없음 — 각 무기 서브클래스가 override.
+	// 탄약/쿨다운/머즐이펙트 등 공통 처리는 TryFire 가 담당하고, 이 함수는 실제 사격 판정만 수행.
+	virtual void FireShot(const Vector3& v3CamPos, const Vector3& v3CamDir, bool bOnline) {}
 	void UpdateMuzzlePositionWorld(const Matrix& mtxWorld);
 
 	void SetWeaponType(WEAPON_TYPE eWeaponType) { m_eWeaponType = eWeaponType; }
@@ -55,8 +59,17 @@ public:
 	void EditStat();
 	void SaveStat();
 
-private:
+protected:
+	// 단발 hitscan 공통 발사 (M4/AK/RIFLE/PISTOL 등 hitscan 무기가 FireShot 에서 호출)
+	void FireSingleHitscan(const Vector3& v3CamPos, const Vector3& v3CamDir, bool bOnline);
+
+protected:
+	// 서브클래스(FireShot override)에서 접근하는 발사 관련 멤버
 	float m_fDamage = 0.f;
+	Vector3 m_v3MuzzlePositionWorld = Vector3::Zero;
+	std::weak_ptr<IThirdPersonPlayer> m_wpOwner;
+
+private:
 	float m_fFirePerSecond = 0.f;
 	float m_fRecoil = 0.f;
 	float m_fRecoilRecovery = 0.f;
@@ -66,7 +79,6 @@ private:
 	float m_fTimeAfterFire = 0.f;
 
 	Vector3 m_v3MuzzlePositionLocal = Vector3::Zero;
-	Vector3 m_v3MuzzlePositionWorld = Vector3::Zero;
 
 	Vector3 m_v3OffsetPosition = Vector3::Zero;
 	Vector3 m_v3OffsetRotation = Vector3::Zero;
@@ -81,7 +93,5 @@ private:
 	
 
 	WEAPON_TYPE m_eWeaponType = WEAPON_TYPE::UNDEFINED;
-
-	std::weak_ptr<IThirdPersonPlayer> m_wpOwner;
 };
 

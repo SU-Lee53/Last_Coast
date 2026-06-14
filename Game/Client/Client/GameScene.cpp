@@ -22,7 +22,7 @@ void GameScene::BuildObjects()
 	m_pPlayer->Initialize();
 	m_pPlayer->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
 	if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
-		pThirdPerson->GiveWeapon(WEAPON_TYPE::AK);
+		pThirdPerson->GiveWeapon(WEAPON_TYPE::PISTOL);
 	}
 
 	m_pSkybox = std::make_shared<Skybox>();
@@ -189,6 +189,47 @@ void GameScene::Update()
 	//	}
 	//}
 	//ImGui::End();
+
+	// ====== Sound Test ======
+	ImGui::Begin("Sound Test");
+	{
+		if (ImGui::Button("Play 2D")) {
+			SOUND->Play("Test");
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Play 3D @player")) {
+			Vector3 v3Pos = m_pPlayer ? m_pPlayer->GetTransform()->GetPosition() : Vector3::Zero;
+			SOUND->PlayAt("Test3D", v3Pos);
+		}
+
+		// 3D direction test: fire 3000cm (30m) from player in world axes.
+		Vector3 v3Base = m_pPlayer ? m_pPlayer->GetTransform()->GetPosition() : Vector3::Zero;
+		const float fDist = 3000.0f;
+		if (ImGui::Button("Left  (-X)")) {
+			SOUND->PlayAt("Test3D", v3Base + Vector3(-fDist, 0.0f, 0.0f));
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Right (+X)")) {
+			SOUND->PlayAt("Test3D", v3Base + Vector3(fDist, 0.0f, 0.0f));
+		}
+		if (ImGui::Button("Front (+Z)")) {
+			SOUND->PlayAt("Test3D", v3Base + Vector3(0.0f, 0.0f, fDist));
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Back  (-Z)")) {
+			SOUND->PlayAt("Test3D", v3Base + Vector3(0.0f, 0.0f, -fDist));
+		}
+
+		float fSfx = SOUND->GetCategoryVolume(SoundCategory::SFX);
+		if (ImGui::SliderFloat("SFX Vol", &fSfx, 0.0f, 1.0f)) {
+			SOUND->SetCategoryVolume(SoundCategory::SFX, fSfx);
+		}
+		float fMaster = SOUND->GetMasterVolume();
+		if (ImGui::SliderFloat("Master Vol", &fMaster, 0.0f, 1.0f)) {
+			SOUND->SetMasterVolume(fMaster);
+		}
+	}
+	ImGui::End();
 
 	SyncSceneWithServer();
 	ProcessNetworkZombies();
@@ -545,7 +586,7 @@ void GameScene::SyncSceneWithServer()
 		remotePlayer->Initialize();
 
 		remotePlayer->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.initialTransform.m), ev.bRunning, ev.bAiming, ev.fAimPitch);
-		remotePlayer->GiveWeapon(WEAPON_TYPE::AK);
+		remotePlayer->GiveWeapon(static_cast<WEAPON_TYPE>(ev.weaponType));
 		AddObject(remotePlayer);
 		m_RemotePlayers[ev.playerId] = remotePlayer;
 	}
@@ -570,6 +611,14 @@ void GameScene::SyncSceneWithServer()
 		if (it != m_RemotePlayers.end()) {
 			std::cout << "[Scene] Playing Reload for Remote Player " << id << std::endl;
 			it->second->PlayReloadStartAction();
+		}
+	}
+
+	for (auto& ev : NETWORK->ConsumePlayerWeapons()) {
+		if (ev.playerId == NETWORK->GetPlayerID()) continue; // 본인은 입력으로 이미 교체
+		auto it = m_RemotePlayers.find(ev.playerId);
+		if (it != m_RemotePlayers.end()) {
+			it->second->GiveWeapon(static_cast<WEAPON_TYPE>(ev.weaponType));
 		}
 	}
 }

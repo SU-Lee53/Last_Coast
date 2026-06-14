@@ -56,23 +56,7 @@ bool WeaponObject::TryFire()
 
 		bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
 
-		if (bOnline) {
-			// 온라인: 서버에 사격 요청만 전송. 판정은 서버가 처리.
-			NETWORK->SendPlayerShoot(v3CamPos, v3CamDir, m_v3MuzzlePositionWorld);
-		}
-		else {
-			// 오프라인: 기존 로컬 레이트레이스 판정
-			RayTraceDesc rayDesc{};
-			rayDesc.v3Origin = v3CamPos;
-			rayDesc.v3Direction = v3CamDir;
-			rayDesc.fMaxDistance = 5000.f;
-			rayDesc.fDamage = m_fDamage;
-			rayDesc.pInstigator = m_wpOwner.lock().get();
-			rayDesc.pSourceObject = this;
-
-			RayTraceHitResult hit{};
-			CUR_SCENE->GetWorld().LineTraceSingle<StaticObject, Zombie>(rayDesc, hit);
-		}
+		FireShot(v3CamPos, v3CamDir, bOnline);
 
 		// 총구 이펙트는 항상 즉시 출력
 		ParticleEffectSpawnDesc particleDesc;
@@ -88,6 +72,27 @@ bool WeaponObject::TryFire()
 	}
 
 	return false;
+}
+
+void WeaponObject::FireSingleHitscan(const Vector3& v3CamPos, const Vector3& v3CamDir, bool bOnline)
+{
+	if (bOnline) {
+		// 온라인: 서버에 사격 요청만 전송. 판정은 서버가 처리.
+		NETWORK->SendPlayerShoot(v3CamPos, v3CamDir, m_v3MuzzlePositionWorld, m_fDamage);
+	}
+	else {
+		// 오프라인: 로컬 레이트레이스 판정
+		RayTraceDesc rayDesc{};
+		rayDesc.v3Origin = v3CamPos;
+		rayDesc.v3Direction = v3CamDir;
+		rayDesc.fMaxDistance = 5000.f;
+		rayDesc.fDamage = m_fDamage;
+		rayDesc.pInstigator = m_wpOwner.lock().get();
+		rayDesc.pSourceObject = this;
+
+		RayTraceHitResult hit{};
+		CUR_SCENE->GetWorld().LineTraceSingle<StaticObject, Zombie>(rayDesc, hit);
+	}
 }
 
 bool WeaponObject::BeginReload()
