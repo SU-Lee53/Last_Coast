@@ -131,8 +131,15 @@ public:
 	// 앱 시작 기준 단조 시간(초) — 네트워크 스레드/게임 스레드 양쪽에서 사용
 	static float			GetNetTimeSec();
 
+public:
+	void					SendLogin(const std::string& id, const std::string& pw);
+	void					SendRegister(const std::string& id, const std::string& pw);
+
+	// ── 결과 상태 확인용 ───────────────────────────────────────────────────────
+	int						m_nLoginState = 0; // 0: None, 1: Success, -1: Failed
+	int						m_nRegisterState = 0; // 0: None, 1: Success, -1: Failed
+
 private:
-	void					SendLoginPacket();
 	void					SendData();
 	void					ReceiveData();
 

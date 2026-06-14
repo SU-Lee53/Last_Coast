@@ -12,6 +12,7 @@ enum PACKET_TYPE {
 	C2S_LOGIN, C2S_MOVE,
 	C2S_TRANSFORM,
 	C2S_PLAYER_SHOOT,                             // 클라이언트 → 서버: 사격 요청
+	C2S_REGISTER,                                 // 클라이언트 → 서버: 회원가입 요청
 	S2C_LOGIN_RESULT, S2C_AVATAR_INFO,
 	S2C_ADD_PLAYER, S2C_REMOVE_PLAYER,
 	S2C_TRANSFORM,
@@ -22,6 +23,7 @@ enum PACKET_TYPE {
 	S2C_SHOOT_RESULT,                             // 서버 → 클라이언트: 사격 판정 결과
 	C2S_PLAYER_RELOAD,                            // 클라이언트 → 서버: 재장전 요청
 	S2C_PLAYER_RELOAD,                            // 서버 → 클라이언트: 재장전 알림
+	S2C_REGISTER_RESULT,                          // 서버 → 클라이언트: 회원가입 결과
 };
 enum IOType { IO_SEND, IO_RECV, IO_ACCEPT };
 
@@ -54,6 +56,14 @@ struct C2S_Login {
 	unsigned char size;
 	PACKET_TYPE   type;
 	char username[MAX_NAME_LEN];
+	char password[MAX_NAME_LEN];
+};
+
+struct C2S_Register {
+	unsigned char size;
+	PACKET_TYPE   type;
+	char username[MAX_NAME_LEN];
+	char password[MAX_NAME_LEN];
 };
 
 struct C2S_Move {
@@ -72,6 +82,13 @@ struct C2S_Transform {
 };
 
 struct S2C_LoginResult {
+	unsigned char size;
+	PACKET_TYPE   type;
+	bool success;
+	char message[50];
+};
+
+struct S2C_RegisterResult {
 	unsigned char size;
 	PACKET_TYPE   type;
 	bool success;

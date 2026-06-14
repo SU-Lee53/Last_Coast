@@ -63,7 +63,7 @@ void NetworkManager::ConnectToServer()
 				m_connectState = ConnectState::Connected;
 				m_bConnected = true;
 				m_bOfflineMode = false;
-				SendLoginPacket();
+				/*SendLoginPacket();*/
 				g_hNetworkThread = CreateThread(NULL, 0, ProcessNetwork, this, 0, NULL);
 			}
 		}
@@ -104,7 +104,7 @@ void NetworkManager::ConnectToServer()
 					m_bConnected = true;
 					m_bOfflineMode = false;
 					m_strErrorLog = "Connected!";
-					SendLoginPacket();
+					// SendLoginPacket(); // 제거: 명시적 로그인 대기
 					g_hNetworkThread = CreateThread(NULL, 0, ProcessNetwork, this, 0, NULL);
 				}
 				else
@@ -143,22 +143,34 @@ void NetworkManager::Disconnect()
 	WSACleanup();
 }
 
-// 일단 키 입력만
-void NetworkManager::SendLoginPacket()
+void NetworkManager::SendLogin(const std::string& id, const std::string& pw)
 {
 	if (m_hClientSocket == INVALID_SOCKET || !m_bConnected)
 		return;
 
+	m_nLoginState = 0; // 진행 중
 	C2S_Login packet;
 	packet.size = sizeof(C2S_Login);
 	packet.type = C2S_LOGIN;
-	strncpy_s(packet.username, "Player", sizeof(packet.username));
+	strncpy_s(packet.username, id.c_str(), sizeof(packet.username));
+	strncpy_s(packet.password, pw.c_str(), sizeof(packet.password));
 
-	DWORD dwSent = 0;
-	WSABUF wsa;
-	wsa.buf = reinterpret_cast<char*>(&packet);
-	wsa.len = packet.size;
-	WSASend(m_hClientSocket, &wsa, 1, &dwSent, 0, nullptr, nullptr);
+	SendPacket(&packet, packet.size);
+}
+
+void NetworkManager::SendRegister(const std::string& id, const std::string& pw)
+{
+	if (m_hClientSocket == INVALID_SOCKET || !m_bConnected)
+		return;
+
+	m_nRegisterState = 0; // 진행 중
+	C2S_Register packet;
+	packet.size = sizeof(C2S_Register);
+	packet.type = C2S_REGISTER;
+	strncpy_s(packet.username, id.c_str(), sizeof(packet.username));
+	strncpy_s(packet.password, pw.c_str(), sizeof(packet.password));
+
+	SendPacket(&packet, packet.size);
 }
 
 void NetworkManager::SendData()
@@ -290,7 +302,23 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	{
 		if (size < static_cast<int>(sizeof(S2C_LoginResult))) return;
 		auto* p = reinterpret_cast<const S2C_LoginResult*>(data);
-		if (p->success) m_bGameBegin = true;
+		if (p->success) {
+			m_nLoginState = 1;
+			m_bGameBegin = true;
+		} else {
+			m_nLoginState = -1;
+		}
+		break;
+	}
+	case S2C_REGISTER_RESULT:
+	{
+		if (size < static_cast<int>(sizeof(S2C_RegisterResult))) return;
+		auto* p = reinterpret_cast<const S2C_RegisterResult*>(data);
+		if (p->success) {
+			m_nRegisterState = 1;
+		} else {
+			m_nRegisterState = -1;
+		}
 		break;
 	}
 	case S2C_AVATAR_INFO:

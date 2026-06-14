@@ -1,7 +1,10 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Session.h"
 #include "ZombieManager.h"
 #include "ServerSpatialGrid.h"
+#include "DBManager.h"
+
+extern Room* find_empty_room();
 
 extern ZombieManager                g_ZombieManager;
 extern ServerSpatialGrid            g_SpatialGrid;
@@ -116,16 +119,71 @@ bool Session::process_packet(unsigned char* p)
 	switch (type) {
 	case C2S_LOGIN: {
 		C2S_Login* packet = reinterpret_cast<C2S_Login*>(p);
-		strncpy_s(m_username, packet->username, MAX_NAME_LEN);
-		// std::cout << "Player[" << m_id << "] logged in as " << m_username << std::endl;
-		send_avatar_info();
+		std::string id(packet->username);
+		std::string pw(packet->password);
 
-		// 이미 스폰된 좀비 목록을 신규 클라이언트에게 전송
-		for (auto& [nZombieId, zombie] : g_ZombieManager.GetZombies())
-		{
-			if (!zombie.bAlive || !zombie.pAgent) continue;
-			send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
+		if (DBManager::GetInstance().Login(id, pw)) {
+			strncpy_s(m_username, packet->username, MAX_NAME_LEN);
+			// std::cout << "Player[" << m_id << "] logged in as " << m_username << std::endl;
+
+			// 방 할당
+			Room* room = find_empty_room();
+			if (room == nullptr) {
+				S2C_LoginResult res;
+				res.size = sizeof(S2C_LoginResult);
+				res.type = S2C_LOGIN_RESULT;
+				res.success = false;
+				strncpy_s(res.message, "No Room Available", sizeof(res.message));
+				do_send(res.size, reinterpret_cast<char*>(&res));
+				break;
+			}
+			
+			room->add_player(m_id);
+			m_room = room;
+
+			send_login_success();
+			send_avatar_info();
+
+			// 방에 있는 다른 플레이어들에게 접속 알림
+			for (int other_id : room->players) {
+				if (other_id == -1 || other_id == m_id) continue;
+				clients[other_id].send_add_player(m_id);
+				send_add_player(other_id);
+			}
+
+			// 이미 스폰된 좀비 목록을 신규 클라이언트에게 전송
+			for (auto& [nZombieId, zombie] : g_ZombieManager.GetZombies())
+			{
+				if (!zombie.bAlive || !zombie.pAgent) continue;
+				send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
+			}
+		} else {
+			S2C_LoginResult res;
+			res.size = sizeof(S2C_LoginResult);
+			res.type = S2C_LOGIN_RESULT;
+			res.success = false;
+			strncpy_s(res.message, "Invalid ID or Password", sizeof(res.message));
+			do_send(res.size, reinterpret_cast<char*>(&res));
 		}
+	}
+	break;
+	case C2S_REGISTER: {
+		C2S_Register* packet = reinterpret_cast<C2S_Register*>(p);
+		std::string id(packet->username);
+		std::string pw(packet->password);
+
+		S2C_RegisterResult res;
+		res.size = sizeof(S2C_RegisterResult);
+		res.type = S2C_REGISTER_RESULT;
+
+		if (DBManager::GetInstance().Register(id, pw)) {
+			res.success = true;
+			strncpy_s(res.message, "Register Successful", sizeof(res.message));
+		} else {
+			res.success = false;
+			strncpy_s(res.message, "Register Failed (ID Exists?)", sizeof(res.message));
+		}
+		do_send(res.size, reinterpret_cast<char*>(&res));
 	}
 	break;
 	case C2S_TRANSFORM: {

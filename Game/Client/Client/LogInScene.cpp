@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "LogInScene.h"
 #include "DebugPlayer.h"
 #include "GameScene.h"
@@ -33,11 +33,13 @@ void LogInScene::Update()
 				ImGui::InputText("ID", &m_strIDInput);
 				ImGui::InputText("Password", &m_strPasswordInput);
 				if (ImGui::Button("Register")) {
-					m_bLastRegisterTry = TryRegister();
+					TryRegister();
 				}
 
-				if (m_bLastRegisterTry) {
-					ImGui::Text("Register Successful, Try log in");
+				if (NETWORK->m_nRegisterState == 1) {
+					ImGui::TextColored(ImVec4(0, 1, 0, 1), "Register Successful! Please log in.");
+				} else if (NETWORK->m_nRegisterState == -1) {
+					ImGui::TextColored(ImVec4(1, 0, 0, 1), "Register Failed! ID may already exist.");
 				}
 
 				ImGui::EndTabItem();
@@ -47,14 +49,16 @@ void LogInScene::Update()
 				ImGui::InputText("ID", &m_strIDInput);
 				ImGui::InputText("Password", &m_strPasswordInput);
 				if (ImGui::Button("Log in")) {
-					m_bLastLogInTry = TryLogIn();
+					TryLogIn();
 				}
 
-				if (m_bLastLogInTry) {
-					ImGui::Text("Log in Successful");
-					if (ImGui::Button("Change To Scene")) {
+				if (NETWORK->m_nLoginState == 1) {
+					ImGui::TextColored(ImVec4(0, 1, 0, 1), "Log in Successful!");
+					if (ImGui::Button("Change To Game Scene")) {
 						SCENE->ChangeScene<GameScene>();
 					}
+				} else if (NETWORK->m_nLoginState == -1) {
+					ImGui::TextColored(ImVec4(1, 0, 0, 1), "Log in Failed! Invalid ID or Password.");
 				}
 
 				ImGui::EndTabItem();
@@ -76,19 +80,12 @@ void LogInScene::Update()
 
 bool LogInScene::TryLogIn()
 {
-	// 로그인 시도
-	// 성공하면 TRUE, 실패하면 FALSE 를 리턴
-	// ID, 비번은 m_strIDInput, m_strPasswordInput 에 보관됩니다.
-
-
-	return true;
+	NETWORK->SendLogin(m_strIDInput, m_strPasswordInput);
+	return false;
 }
 
 bool LogInScene::TryRegister()
 {
-	// 회원가입 시도
-	// 성공하면 TRUE, 실패하면 FALSE 를 리턴
-	// ID, 비번은 m_strIDInput, m_strPasswordInput 에 보관됩니다.
-
-	return true;
+	NETWORK->SendRegister(m_strIDInput, m_strPasswordInput);
+	return false;
 }
