@@ -12,7 +12,7 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 	g_pD3DCore = std::make_unique<D3DCore>(bEnableDebugLayer, bEnableGBV, bEnableVSync);
 	g_pD3DCore->Initialize();
 
-	std::string strNavMesh = "TEST";
+	std::string strNavMesh = "DEMO";
 	// Init managers
 	AI->Initialize(strNavMesh);
 	COMPUTE->Initialize();
@@ -44,7 +44,7 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 	MODEL->LoadGameModels();
 	ANIMATION->LoadGameAnimations();
 
-	//SOUND->Initialize();
+	SOUND->Initialize();
 
 	SHADER->ReleaseBlobs();
 

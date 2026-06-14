@@ -210,8 +210,6 @@ PS_GBUFFER_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
 	//	flayerWeights, 
 	//	normalize(input.normalW), 
 	//	normalize(input.tangentW));
-	//float2 vNormalEnc = EncodeNormalOcta(vNormal);
-	
 	float3 vNormal = input.normalW;
 	float2 vNormalEnc = EncodeNormalOcta(vNormal);
 	

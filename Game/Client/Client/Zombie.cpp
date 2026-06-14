@@ -280,11 +280,18 @@ void Zombie::PostUpdate()
 
 		v3DbgDelta = v3Delta;
 
-		// 애니메이션
+		// 애니메이션 — 실제 XZ delta 기반 + 선형 decay
+		// state만 보면 A* 대기 중 제자리 걷기 발생,
+		// 즉시 delta만 보면 프레임마다 값이 튀어 flicker 발생
+		// → 이동 감지 시 즉시 1, 멈추면 5/s 속도로 감소 (약 0.2s 유지)
 		bool bMoving = (m_eServerBehaviorState != ZBS_Idle &&
 		                m_eServerBehaviorState != ZBS_Alert &&
 		                m_eServerBehaviorState != ZBS_Attacking);
-		m_fMoveSpeedSqXZ = bMoving ? 1.f : 0.f;
+		float fDeltaXZSq = v3Delta.x * v3Delta.x + v3Delta.z * v3Delta.z;
+		if (bMoving && fDeltaXZSq > 1.f) // 이번 프레임 XZ 이동 > 1cm
+			m_fMoveSpeedSqXZ = 1.f;
+		else
+			m_fMoveSpeedSqXZ = std::max(0.f, m_fMoveSpeedSqXZ - DT * 5.f);
 	}
 	else
 	{
@@ -349,31 +356,31 @@ void Zombie::PostUpdate()
 	// ── 디버그 ImGui (첫 번째 서버 좀비만) ───────────────────────────────────
 	/*if (bOnline && m_nServerId == 0)
 	{
-		static const char* sModes[] = { "NoSnap", "Bracket", "Before", "Extrap", "Single" };
-		static const char* sStates[] = { "Idle", "Wandering", "Alert", "Investigating", "Chasing", "Attacking" };
-		bool bMontageActive = pAC && pAC->GetMontage() && pAC->GetMontage()->GetBlendWeight() > 0.f;
-		ImGui::Begin("Zombie Interp Debug");
-		ImGui::Text("ServerState: %s", (m_eServerBehaviorState < 6) ? sStates[m_eServerBehaviorState] : "???");
-		ImGui::Text("Montage: %s (%.2f)", bMontageActive ? "PLAYING" : "off",
-		            pAC && pAC->GetMontage() ? pAC->GetMontage()->GetBlendWeight() : 0.f);
-		ImGui::Text("MoveSpeedSq: %.4f", m_fMoveSpeedSqXZ);
-		ImGui::Separator();
-		ImGui::Text("Snapshots: %d", nDbgSnapCount);
-		ImGui::Text("RenderTime: %.4f", fDbgRenderTime);
-		ImGui::Text("Front time: %.4f", fDbgFrontTime);
-		ImGui::Text("Back  time: %.4f", fDbgBackTime);
-		ImGui::Text("Gap (back-front): %.4f", fDbgBackTime - fDbgFrontTime);
-		ImGui::Text("Delay (back-render): %.4f", fDbgBackTime - fDbgRenderTime);
-		ImGui::Text("InterpDelay: %.4f", m_fInterpDelay);
-		ImGui::Text("Mode: %s", sModes[nDbgMode]);
-		ImGui::Text("Lerp t: %.4f", fDbgT);
-		ImGui::Separator();
-		ImGui::Text("CurrentPos: %.1f, %.1f, %.1f", v3CurrentPos.x, v3CurrentPos.y, v3CurrentPos.z);
-		ImGui::Text("InterpPos:  %.1f, %.1f, %.1f", v3DbgInterpPos.x, v3DbgInterpPos.y, v3DbgInterpPos.z);
-		ImGui::Text("Delta:      %.2f, %.2f, %.2f", v3DbgDelta.x, v3DbgDelta.y, v3DbgDelta.z);
-		ImGui::Text("DeltaXZ:    %.2f", sqrtf(v3DbgDelta.x*v3DbgDelta.x + v3DbgDelta.z*v3DbgDelta.z));
-		ImGui::End();
-	}*/
+		//static const char* sModes[] = { "NoSnap", "Bracket", "Before", "Extrap", "Single" };
+		//static const char* sStates[] = { "Idle", "Wandering", "Alert", "Investigating", "Chasing", "Attacking" };
+		//bool bMontageActive = pAC && pAC->GetMontage() && pAC->GetMontage()->GetBlendWeight() > 0.f;
+		//ImGui::Begin("Zombie Interp Debug");
+		//ImGui::Text("ServerState: %s", (m_eServerBehaviorState < 6) ? sStates[m_eServerBehaviorState] : "???");
+		//ImGui::Text("Montage: %s (%.2f)", bMontageActive ? "PLAYING" : "off",
+		//            pAC && pAC->GetMontage() ? pAC->GetMontage()->GetBlendWeight() : 0.f);
+		//ImGui::Text("MoveSpeedSq: %.4f", m_fMoveSpeedSqXZ);
+		//ImGui::Separator();
+		//ImGui::Text("Snapshots: %d", nDbgSnapCount);
+		//ImGui::Text("RenderTime: %.4f", fDbgRenderTime);
+		//ImGui::Text("Front time: %.4f", fDbgFrontTime);
+		//ImGui::Text("Back  time: %.4f", fDbgBackTime);
+		//ImGui::Text("Gap (back-front): %.4f", fDbgBackTime - fDbgFrontTime);
+		//ImGui::Text("Delay (back-render): %.4f", fDbgBackTime - fDbgRenderTime);
+		//ImGui::Text("InterpDelay: %.4f", m_fInterpDelay);
+		//ImGui::Text("Mode: %s", sModes[nDbgMode]);
+		//ImGui::Text("Lerp t: %.4f", fDbgT);
+		//ImGui::Separator();
+		//ImGui::Text("CurrentPos: %.1f, %.1f, %.1f", v3CurrentPos.x, v3CurrentPos.y, v3CurrentPos.z);
+		//ImGui::Text("InterpPos:  %.1f, %.1f, %.1f", v3DbgInterpPos.x, v3DbgInterpPos.y, v3DbgInterpPos.z);
+		//ImGui::Text("Delta:      %.2f, %.2f, %.2f", v3DbgDelta.x, v3DbgDelta.y, v3DbgDelta.z);
+		//ImGui::Text("DeltaXZ:    %.2f", sqrtf(v3DbgDelta.x*v3DbgDelta.x + v3DbgDelta.z*v3DbgDelta.z));
+		//ImGui::End();
+	}
 }
 
 Vector3 Zombie::GetPosition() const

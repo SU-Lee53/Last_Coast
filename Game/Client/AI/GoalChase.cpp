@@ -44,8 +44,9 @@ namespace AIDLL
 
         auto& sm = pOwner->GetSensoryMemory();
 
-        // 시야를 잃으면 완료 → Brain이 Investigate 전환
-        if (!sm.CanSee(m_nTargetId))
+        // 기억이 사라지면 완료 → Brain이 Investigate 전환
+        // CanSee 즉시 체크 대신 HasMemoryOf 사용: 기둥/모서리에 순간 LOS 차단돼도 Chase 유지
+        if (!sm.HasMemoryOf(m_nTargetId))
         {
             m_Status = Completed;
             return m_Status;

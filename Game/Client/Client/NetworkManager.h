@@ -29,6 +29,13 @@ struct PlayerJoinEvent {
 	bool          bRunning;
 	bool          bAiming;
 	float         fAimPitch;
+	unsigned char weaponType;
+};
+
+// 무기 교체 이벤트 (리모트 플레이어 무기 반영)
+struct WeaponChangeEvent {
+	int           playerId;
+	unsigned char weaponType;
 };
 
 struct PlayerTransformEvent {
@@ -83,6 +90,21 @@ struct ShootResultEvent {
 	Vector3       v3ShootDir;        // 발사 방향
 };
 
+// 근접공격 좀비 히트 이벤트
+struct MeleeHitEvent {
+	int     attackerPlayerId;
+	int     zombieId;
+	float   damage;
+	Vector3 v3HitPoint;
+};
+
+// 채팅 메시지 이벤트
+struct ChatMessageEvent {
+	int         playerId;
+	std::string username;
+	std::string message;
+};
+
 class NetworkManager {
 
 	DECLARE_SINGLE(NetworkManager)
@@ -114,11 +136,24 @@ public:
 	std::vector<AttackEvent> ConsumeAttackEvents();
 
 	// ── 사격 송수신 ──────────────────────────────────────────────────────────
-	void SendPlayerShoot(const Vector3& v3Origin, const Vector3& v3Direction, const Vector3& v3MuzzlePos);
+	void SendPlayerShoot(const Vector3& v3Origin, const Vector3& v3Direction, const Vector3& v3MuzzlePos, float damage);
 	std::vector<ShootResultEvent> ConsumeShootResults();
 
 	void SendPlayerReload();
 	std::vector<int> ConsumePlayerReloads();
+
+	// ── 근접공격 송수신 ────────────────────────────────────────────────────────
+	void SendPlayerMelee(const Vector3& v3Origin, const Vector3& v3Direction);
+	std::vector<int>           ConsumePlayerMelees(); // 근접공격 모션 (attackerPlayerId)
+	std::vector<MeleeHitEvent> ConsumeMeleeHits();    // 좀비 히트
+
+	// ── 무기 교체 송수신 ────────────────────────────────────────────────────────
+	void SendPlayerWeapon(unsigned char weaponType);
+	std::vector<WeaponChangeEvent> ConsumePlayerWeapons();
+
+	// ── 채팅 송수신 ────────────────────────────────────────────────────────────
+	void SendChat(const std::string& message);
+	std::vector<ChatMessageEvent> ConsumeChatMessages();
 
 	// ── 플레이어 이벤트 소비 (Task: Remote Player Sync) ─────────────────────────
 	std::vector<PlayerJoinEvent>      ConsumePlayerJoins();
@@ -164,7 +199,7 @@ private:
 	char					m_RecvBuf[BUF_SIZE * 4];   // 패킷 재조립 버퍼
 	int						m_nRecvPending = 0;        // m_RecvBuf에 누적된 유효 바이트 수
 	char					m_cstrServerIP[16] = "127.0.0.1";
-	bool					m_bConnected = false;
+	volatile bool			m_bConnected = false;
 	std::string				m_strErrorLog;
 	int						m_nPlayerID = -1;
 
@@ -199,5 +234,8 @@ private:
 	concurrency::concurrent_queue<int>                            m_PendingPlayerLeaves;
 	concurrency::concurrent_queue<PlayerTransformEvent>           m_PendingPlayerTransforms;
 	concurrency::concurrent_queue<int>                            m_PendingPlayerReloads;
-
+	concurrency::concurrent_queue<int>                            m_PendingPlayerMelees;
+	concurrency::concurrent_queue<MeleeHitEvent>                  m_PendingMeleeHits;
+	concurrency::concurrent_queue<ChatMessageEvent>               m_PendingChatMessages;
+	concurrency::concurrent_queue<WeaponChangeEvent>             m_PendingPlayerWeapons;
 };

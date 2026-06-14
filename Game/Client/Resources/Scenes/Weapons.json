@@ -87,6 +87,28 @@
         "Recoil": 20.0,
         "RecoilRecovery": 10.0
     },
+    "SHOTGUN": {
+        "AmmoPerClip": 8,
+        "Damage": 15.0,
+        "FirePerSecond": 70.0,
+        "MuzzlePosition": [
+            22.0,
+            7.5,
+            0.0
+        ],
+        "OffsetPosition": [
+            2.0999999046325684,
+            9.399999618530273,
+            1.399999976158142
+        ],
+        "OffsetRotation": [
+            180.60000610351563,
+            -90.0,
+            -90.0
+        ],
+        "Recoil": 90.0,
+        "RecoilRecovery": 25.0
+    },
     "RIFLE": {
         "AmmoPerClip": 10,
         "Damage": 100.0,

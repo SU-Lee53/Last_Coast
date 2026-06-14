@@ -29,7 +29,7 @@
 				"Albedo": "sand_albedo.png",
 				"Normal": "sand_normal.png"
 			},
-			"Tiling": 0.0099999997764825821
+			"Tiling": 0.00015873015217948705
 		},
 		{
 			"Index": 1,
@@ -39,7 +39,7 @@
 				"Albedo": "grass_albedo.png",
 				"Normal": "grass_normal.png"
 			},
-			"Tiling": 0.0099999997764825821
+			"Tiling": 0.00015873015217948705
 		},
 		{
 			"Index": 2,
@@ -49,7 +49,7 @@
 				"Albedo": "rock02_albedo.png",
 				"Normal": "rock02_normal.png"
 			},
-			"Tiling": 0.0099999997764825821
+			"Tiling": 0.00015873015217948705
 		},
 		{
 			"Index": 3,
@@ -59,7 +59,7 @@
 				"Albedo": "rock01_albedo.png",
 				"Normal": "rock01_normal.png"
 			},
-			"Tiling": 0.0099999997764825821
+			"Tiling": 0.00015873015217948705
 		}
 	],
 	"Components": [

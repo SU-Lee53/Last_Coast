@@ -305,7 +305,7 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	{
 		if (size < static_cast<int>(sizeof(S2C_AddPlayer))) return;
 		auto* p = reinterpret_cast<const S2C_AddPlayer*>(data);
-		m_PendingPlayerJoins.push(PlayerJoinEvent{ p->playerId, p->transform, p->bRunning, p->bAiming, p->fAimPitch });
+		m_PendingPlayerJoins.push(PlayerJoinEvent{ p->playerId, p->transform, p->bRunning, p->bAiming, p->fAimPitch, p->weaponType });
 		break;
 	}
 	case S2C_REMOVE_PLAYER:
@@ -384,6 +384,41 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		m_PendingPlayerReloads.push(p->playerId);
 		break;
 	}
+	case S2C_PLAYER_MELEE: {
+		if (size < static_cast<int>(sizeof(S2C_PlayerMelee))) return;
+		auto* p = reinterpret_cast<const S2C_PlayerMelee*>(data);
+		m_PendingPlayerMelees.push(p->attackerPlayerId);
+		break;
+	}
+	case S2C_MELEE_HIT: {
+		if (size < static_cast<int>(sizeof(S2C_MeleeHit))) return;
+		auto* p = reinterpret_cast<const S2C_MeleeHit*>(data);
+		MeleeHitEvent ev;
+		ev.attackerPlayerId = p->attackerPlayerId;
+		ev.zombieId         = p->zombieId;
+		ev.damage           = p->damage;
+		ev.v3HitPoint       = Vector3{ p->hitX, p->hitY, p->hitZ };
+		m_PendingMeleeHits.push(ev);
+		break;
+	}
+	case S2C_CHAT: {
+		if (size < static_cast<int>(sizeof(S2C_Chat))) return;
+		auto* p = reinterpret_cast<const S2C_Chat*>(data);
+		ChatMessageEvent ev;
+		ev.playerId = p->playerId;
+		char name[MAX_NAME_LEN]; memcpy_s(name, sizeof(name), p->username, MAX_NAME_LEN); name[MAX_NAME_LEN - 1] = '\0';
+		char msg[MAX_CHAT_LEN];  memcpy_s(msg, sizeof(msg), p->message, MAX_CHAT_LEN);   msg[MAX_CHAT_LEN - 1] = '\0';
+		ev.username = name;
+		ev.message  = msg;
+		m_PendingChatMessages.push(ev);
+		break;
+	}
+	case S2C_PLAYER_WEAPON: {
+		if (size < static_cast<int>(sizeof(S2C_PlayerWeapon))) return;
+		auto* p = reinterpret_cast<const S2C_PlayerWeapon*>(data);
+		m_PendingPlayerWeapons.push(WeaponChangeEvent{ p->playerId, p->weaponType });
+		break;
+	}
 	default:
 		break;
 	}
@@ -456,7 +491,7 @@ std::vector<AttackEvent> NetworkManager::ConsumeAttackEvents()
 	return out;
 }
 
-void NetworkManager::SendPlayerShoot(const Vector3& v3Origin, const Vector3& v3Direction, const Vector3& v3MuzzlePos)
+void NetworkManager::SendPlayerShoot(const Vector3& v3Origin, const Vector3& v3Direction, const Vector3& v3MuzzlePos, float damage)
 {
 	if (!m_bConnected || m_bOfflineMode) return;
 
@@ -472,6 +507,7 @@ void NetworkManager::SendPlayerShoot(const Vector3& v3Origin, const Vector3& v3D
 	p.muzzleX = v3MuzzlePos.x;
 	p.muzzleY = v3MuzzlePos.y;
 	p.muzzleZ = v3MuzzlePos.z;
+	p.damage  = damage;
 	SendPacket(&p, p.size);
 }
 
@@ -500,6 +536,81 @@ std::vector<int> NetworkManager::ConsumePlayerReloads()
 	int playerId;
 	while (m_PendingPlayerReloads.try_pop(playerId))
 		out.push_back(playerId);
+	return out;
+}
+
+void NetworkManager::SendPlayerWeapon(unsigned char weaponType)
+{
+	if (!m_bConnected || m_bOfflineMode) return;
+
+	C2S_PlayerWeapon p;
+	p.size = sizeof(C2S_PlayerWeapon);
+	p.type = C2S_PLAYER_WEAPON;
+	p.weaponType = weaponType;
+	SendPacket(&p, p.size);
+}
+
+std::vector<WeaponChangeEvent> NetworkManager::ConsumePlayerWeapons()
+{
+	std::vector<WeaponChangeEvent> out;
+	WeaponChangeEvent ev;
+	while (m_PendingPlayerWeapons.try_pop(ev))
+		out.push_back(ev);
+	return out;
+}
+
+void NetworkManager::SendChat(const std::string& message)
+{
+	if (!m_bConnected || m_bOfflineMode) return;
+	if (message.empty()) return;
+
+	C2S_Chat p;
+	p.size = sizeof(C2S_Chat);
+	p.type = C2S_CHAT;
+	strncpy_s(p.message, message.c_str(), MAX_CHAT_LEN - 1);
+	SendPacket(&p, p.size);
+}
+
+std::vector<ChatMessageEvent> NetworkManager::ConsumeChatMessages()
+{
+	std::vector<ChatMessageEvent> out;
+	ChatMessageEvent ev;
+	while (m_PendingChatMessages.try_pop(ev))
+		out.push_back(ev);
+	return out;
+}
+
+void NetworkManager::SendPlayerMelee(const Vector3& v3Origin, const Vector3& v3Direction)
+{
+	if (!m_bConnected || m_bOfflineMode) return;
+
+	C2S_PlayerMelee p;
+	p.size    = sizeof(C2S_PlayerMelee);
+	p.type    = C2S_PLAYER_MELEE;
+	p.originX = v3Origin.x;
+	p.originY = v3Origin.y;
+	p.originZ = v3Origin.z;
+	p.dirX    = v3Direction.x;
+	p.dirY    = v3Direction.y;
+	p.dirZ    = v3Direction.z;
+	SendPacket(&p, p.size);
+}
+
+std::vector<int> NetworkManager::ConsumePlayerMelees()
+{
+	std::vector<int> out;
+	int attackerId;
+	while (m_PendingPlayerMelees.try_pop(attackerId))
+		out.push_back(attackerId);
+	return out;
+}
+
+std::vector<MeleeHitEvent> NetworkManager::ConsumeMeleeHits()
+{
+	std::vector<MeleeHitEvent> out;
+	MeleeHitEvent ev;
+	while (m_PendingMeleeHits.try_pop(ev))
+		out.push_back(ev);
 	return out;
 }
 

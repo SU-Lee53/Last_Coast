@@ -49,6 +49,7 @@ void Session::send_add_player(int player_id)
 	packet.bRunning = pl.m_bRunning;
 	packet.bAiming = pl.m_bAiming;
 	packet.fAimPitch = pl.m_fAimPitch;
+	packet.weaponType = pl.m_weaponType;
 	do_send(packet.size, reinterpret_cast<char*>(&packet));
 }
 
@@ -117,7 +118,7 @@ bool Session::process_packet(unsigned char* p)
 	case C2S_LOGIN: {
 		C2S_Login* packet = reinterpret_cast<C2S_Login*>(p);
 		strncpy_s(m_username, packet->username, MAX_NAME_LEN);
-		// std::cout << "Player[" << m_id << "] logged in as " << m_username << std::endl;
+		std::cout << "Player[" << m_id << "] logged in as " << m_username << std::endl;
 		send_avatar_info();
 
 		// 이미 스폰된 좀비 목록을 신규 클라이언트에게 전송
@@ -141,7 +142,7 @@ bool Session::process_packet(unsigned char* p)
 
 		// 좀비 AI용 플레이어 위치 갱신
 		g_PlayerPositions[m_id] = Vector3{ x, y, z };
-		//// std::cout << "[Transform] Player[" << m_id << "] pos(" << x << "," << y << "," << z << ")\n";
+		//std::cout << "[Transform] Player[" << m_id << "] pos(" << x << "," << y << "," << z << ")\n";
 
 		send_transform_packet(m_id);
 	}
@@ -153,12 +154,12 @@ bool Session::process_packet(unsigned char* p)
 		Vector3 v3Dir{ packet->dirX, packet->dirY, packet->dirZ };
 		v3Dir.Normalize();
 
-		// std::cout << "[Shoot] Player[" << m_id << "] origin("
+		//std::cout << "[Shoot] Player[" << m_id << "] origin("
 		//          << v3Origin.x << "," << v3Origin.y << "," << v3Origin.z
 		//          << ") dir(" << v3Dir.x << "," << v3Dir.y << "," << v3Dir.z << ")\n";
 
 		constexpr float fMaxDist = 5000.f;
-		constexpr float fDamage  = 25.f;
+		const float     fDamage  = packet->damage; // 무기/펠릿 데미지 (클라 전송)
 
 		// ── 1. 좀비 히트 검사 (BoundingSphere) ──────────────────────────────
 		int   nHitZombieId = -1;
@@ -169,7 +170,7 @@ bool Session::process_packet(unsigned char* p)
 		ServerRayHitResult staticHit;
 		g_SpatialGrid.RayTestStatics(v3Origin, v3Dir, fMaxDist, staticHit);
 
-		// std::cout << "[Shoot] zombieHit=" << nHitZombieId
+		//std::cout << "[Shoot] zombieHit=" << nHitZombieId
 		//          << " zombieDist=" << fZombieDist
 		//          << " staticHit=" << staticHit.bHit
 		//          << " staticDist=" << staticHit.fDistance << "\n";
@@ -244,7 +245,7 @@ bool Session::process_packet(unsigned char* p)
 		break;
 	}
 	case C2S_PLAYER_RELOAD: {
-		// std::cout << "[Reload] Player[" << m_id << "] requested reload\n";
+		//std::cout << "[Reload] Player[" << m_id << "] requested reload\n";
 		for (auto& cl : clients) {
 			if (cl.m_is_connected) {
 				cl.send_player_reload(m_id);
@@ -252,11 +253,111 @@ bool Session::process_packet(unsigned char* p)
 		}
 	}
 	break;
+	case C2S_PLAYER_MELEE: {
+		C2S_PlayerMelee* packet = reinterpret_cast<C2S_PlayerMelee*>(p);
+
+		Vector3 v3Origin{ packet->originX, packet->originY, packet->originZ };
+		Vector3 v3Dir{ packet->dirX, packet->dirY, packet->dirZ };
+		v3Dir.Normalize();
+
+		constexpr float fRange  = 200.f;
+		constexpr float fDamage = 50.f;
+
+		// 단일 레이 — 전방 사거리 내 가장 가까운 좀비 1마리
+		int   nHitZombieId = -1;
+		float fHitDist     = fRange;
+		g_ZombieManager.RayTestZombies(v3Origin, v3Dir, fRange, nHitZombieId, fHitDist);
+
+		// 근접공격 모션을 전체 클라이언트에 브로드캐스트 (리모트 애니메이션)
+		for (auto& cl : clients)
+			if (cl.m_is_connected)
+				cl.send_player_melee(m_id);
+
+		// 히트 시 데미지 적용 + 피 이펙트 브로드캐스트
+		if (nHitZombieId >= 0)
+		{
+			g_ZombieManager.ApplyDamageToZombie(nHitZombieId, fDamage);
+			Vector3 v3Hit = v3Origin + v3Dir * fHitDist;
+			for (auto& cl : clients)
+				if (cl.m_is_connected)
+					cl.send_melee_hit(m_id, nHitZombieId, fDamage, v3Hit);
+		}
+	}
+	break;
+	case C2S_PLAYER_WEAPON: {
+		C2S_PlayerWeapon* packet = reinterpret_cast<C2S_PlayerWeapon*>(p);
+		m_weaponType = packet->weaponType;   // late-join 동기화용으로 저장
+
+		// 무기 교체를 전체 클라이언트에 브로드캐스트 (본인 포함; 클라가 본인 필터)
+		for (auto& cl : clients)
+			if (cl.m_is_connected)
+				cl.send_player_weapon(m_id, m_weaponType);
+	}
+	break;
+	case C2S_CHAT: {
+		C2S_Chat* packet = reinterpret_cast<C2S_Chat*>(p);
+		// 메시지 널 종단 보장
+		char msg[MAX_CHAT_LEN];
+		memcpy_s(msg, sizeof(msg), packet->message, MAX_CHAT_LEN);
+		msg[MAX_CHAT_LEN - 1] = '\0';
+
+		std::cout << "[Chat] Player[" << m_id << "] " << m_username << ": " << msg << std::endl;
+
+		// 모든 접속 클라이언트(보낸 사람 포함)에게 브로드캐스트
+		for (auto& cl : clients)
+			if (cl.m_is_connected)
+				cl.send_chat(m_id, m_username, msg);
+	}
+	break;
 	default:
-		// std::cout << "Unknown packet type received from player[" << m_id << "].\n";
+		std::cout << "Unknown packet type received from player[" << m_id << "].\n";
 		return false;
 	}
 	return true;
+}
+
+void Session::send_player_melee(int attacker_id)
+{
+	S2C_PlayerMelee packet;
+	packet.size = sizeof(S2C_PlayerMelee);
+	packet.type = S2C_PLAYER_MELEE;
+	packet.attackerPlayerId = attacker_id;
+	do_send(packet.size, reinterpret_cast<char*>(&packet));
+}
+
+void Session::send_melee_hit(int attacker_id, int zombie_id, float damage, const Vector3& v3Hit)
+{
+	S2C_MeleeHit packet;
+	packet.size = sizeof(S2C_MeleeHit);
+	packet.type = S2C_MELEE_HIT;
+	packet.attackerPlayerId = attacker_id;
+	packet.zombieId = zombie_id;
+	packet.damage = damage;
+	packet.hitX = v3Hit.x;
+	packet.hitY = v3Hit.y;
+	packet.hitZ = v3Hit.z;
+	do_send(packet.size, reinterpret_cast<char*>(&packet));
+}
+
+void Session::send_player_weapon(int player_id, unsigned char weapon_type)
+{
+	S2C_PlayerWeapon packet;
+	packet.size = sizeof(S2C_PlayerWeapon);
+	packet.type = S2C_PLAYER_WEAPON;
+	packet.playerId = player_id;
+	packet.weaponType = weapon_type;
+	do_send(packet.size, reinterpret_cast<char*>(&packet));
+}
+
+void Session::send_chat(int sender_id, const char* username, const char* message)
+{
+	S2C_Chat packet;
+	packet.size = sizeof(S2C_Chat);
+	packet.type = S2C_CHAT;
+	packet.playerId = sender_id;
+	strncpy_s(packet.username, username, MAX_NAME_LEN - 1);
+	strncpy_s(packet.message, message, MAX_CHAT_LEN - 1);
+	do_send(packet.size, reinterpret_cast<char*>(&packet));
 }
 
 void Session::send_spawn_zombie(int nZombieId, const Vector3& v3Pos)
