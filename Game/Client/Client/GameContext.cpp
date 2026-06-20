@@ -7,15 +7,17 @@
 #include "PistolWeapon.h"
 #include "MeleeWeapon.h"
 #include "ShotgunWeapon.h"
+#include "LMGWeapon.h"
 #include "NodeObject.h"
 
 const std::vector<std::string> GameContext::g_strWeaponNames = {
 	"M4",
 	"AK",
+	"SHOTGUN",
 	"RIFLE",
+	"LMG",
 	"PISTOL",
 	"MELEE",
-	"SHOTGUN",
 };
 
 const std::vector<std::string> GameContext::g_strCharacterNames = {
@@ -40,10 +42,11 @@ void GameContext::LoadWeaponData()
 		std::string strWeaponFilename[] = {
 			"SM_AR4",
 			"SM_KA47",
-			"old_sks_weapon_model",
-			"SM_SMG11_Y",
+			"SM_Modern_Weapons_Shotgun_01",          // SHOTGUN placeholder — 모델 추후 교체
+			"SM_Modern_Weapons_Sniper_03_No_Scope",
+			"SM_Modern_Weapons_LMG_03",
+			"SM_Modern_Weapons_Pistol_03",
 			"spiked_baseball_bat",
-			"SM_SMG11_Y",          // SHOTGUN placeholder — 모델 추후 교체
 		};
 
 		for (int i = 0; i < g_unWeapons; ++i) {
@@ -127,6 +130,7 @@ std::shared_ptr<WeaponObject> GameContext::GetWeaponCopy(WEAPON_TYPE eWeaponType
 	case WEAPON_TYPE::M4:      pWeapon = pModel->CopyObject<M4Weapon>();      break;
 	case WEAPON_TYPE::AK:      pWeapon = pModel->CopyObject<AkWeapon>();      break;
 	case WEAPON_TYPE::RIFLE:   pWeapon = pModel->CopyObject<RifleWeapon>();   break;
+	case WEAPON_TYPE::LMG:   pWeapon = pModel->CopyObject<LMGWeapon>();   break;
 	case WEAPON_TYPE::PISTOL:  pWeapon = pModel->CopyObject<PistolWeapon>();  break;
 	case WEAPON_TYPE::MELEE:   pWeapon = pModel->CopyObject<MeleeWeapon>();   break;
 	case WEAPON_TYPE::SHOTGUN: pWeapon = pModel->CopyObject<ShotgunWeapon>(); break;

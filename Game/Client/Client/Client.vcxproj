@@ -188,7 +188,10 @@
     <ClInclude Include="DirectionalCascadeShadowMapPass.h" />
     <ClInclude Include="DynamicObject.h" />
     <ClInclude Include="EventSequence.h" />
+    <ClInclude Include="ExplosionEffect.h" />
+    <ClInclude Include="FireEffect.h" />
     <ClInclude Include="GameEvent.h" />
+    <ClInclude Include="LMGWeapon.h" />
     <ClInclude Include="LobbyScene.h" />
     <ClInclude Include="LogInScene.h" />
     <ClInclude Include="MenuScene.h" />
@@ -285,8 +288,10 @@
     <ClInclude Include="PistolWeapon.h" />
     <ClInclude Include="MeleeWeapon.h" />
     <ClInclude Include="ShotgunWeapon.h" />
+    <ClInclude Include="SmokeEffect.h" />
     <ClInclude Include="UIPass.h" />
     <ClInclude Include="Utility.h" />
+    <ClInclude Include="WaterGridObject.h" />
     <ClInclude Include="WeaponObject.h" />
     <ClInclude Include="WinCore.h" />
     <ClInclude Include="WInSockCommon.h" />
@@ -375,6 +380,8 @@
     <ClCompile Include="DirectionalCascadeShadowMapPass.cpp" />
     <ClCompile Include="DynamicObject.cpp" />
     <ClCompile Include="EventSequence.cpp" />
+    <ClCompile Include="ExplosionEffect.cpp" />
+    <ClCompile Include="FireEffect.cpp" />
     <ClCompile Include="GameEvent.cpp" />
     <ClCompile Include="LobbyScene.cpp" />
     <ClCompile Include="LogInScene.cpp" />
@@ -438,6 +445,7 @@
     <ClCompile Include="ShaderResource.cpp" />
     <ClCompile Include="SimpleMath.cpp" />
     <ClCompile Include="Skeleton.cpp" />
+    <ClCompile Include="SmokeEffect.cpp" />
     <ClCompile Include="Skybox.cpp" />
     <ClCompile Include="SkyboxPass.cpp" />
     <ClCompile Include="SoundManager.cpp" />
@@ -465,6 +473,7 @@
     <ClCompile Include="ShotgunWeapon.cpp" />
     <ClCompile Include="UIPass.cpp" />
     <ClCompile Include="Utility.cpp" />
+    <ClCompile Include="WaterGridObject.cpp" />
     <ClCompile Include="WeaponObject.cpp" />
     <ClCompile Include="WinCore.cpp" />
     <ClCompile Include="World.cpp" />

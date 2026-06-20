@@ -354,7 +354,7 @@ void Zombie::PostUpdate()
 	DynamicObject::PostUpdate();
 
 	// ── 디버그 ImGui (첫 번째 서버 좀비만) ───────────────────────────────────
-	/*if (bOnline && m_nServerId == 0)
+	if (bOnline && m_nServerId == 0)
 	{
 		//static const char* sModes[] = { "NoSnap", "Bracket", "Before", "Extrap", "Single" };
 		//static const char* sStates[] = { "Idle", "Wandering", "Alert", "Investigating", "Chasing", "Attacking" };

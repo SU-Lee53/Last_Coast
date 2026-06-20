@@ -108,8 +108,8 @@ bool WeaponObject::EndReload()
 {
 	if (!m_bInReload) return false;
 
-	m_nTotalAmmo -= 30 - m_nAmmoInClip;
-	m_nAmmoInClip = 30;
+	m_nTotalAmmo -= m_nAmmoPerClip - m_nAmmoInClip;
+	m_nAmmoInClip = m_nAmmoPerClip;
 	m_bInReload = false;
 	return true;
 }

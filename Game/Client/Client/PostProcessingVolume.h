@@ -26,7 +26,7 @@ struct ScreenFXParameters {
 	float fGrainScale = 1.0f;
 	float fVignetteStrength = 0.25f;
 	float fVignetteRadius = 0.75f;
-	float fVignetteSoftness = 0.45;
+	float fVignetteSoftness = 0.45f;
 };
 
 struct LightShaftParameters {
@@ -38,6 +38,23 @@ struct LightShaftParameters {
 	float fExposure = 1.0f;
 	float fDepthThreshold = 0.999f;
 	int nSampleCount = 48;
+};
+
+struct FogParameters {
+	Vector4 v4FogColor = Vector4(0.62f, 0.68f, 0.72f, 1.0f);
+
+	float fFogStartDistance = 5.0f;
+	float fFogCutOffDistance = 0.0f;
+	float fFogDistanceDensity = 0.0035f;
+	float fFogDistancePower = 1.0f;
+
+	float fFogHeightDensity = 0.02f;
+	float fFogHeightFalloff = 0.06f;
+	float fFogBaseHeightOffset = 0.0f;
+	float fFogHeightStartDistance = 0.0f;
+
+	float fFogMaxOpacity = 0.0f;
+	Vector3 pad = Vector3(0.0f);
 };
 
 struct CB_BLOOM_DATA {
@@ -87,30 +104,71 @@ struct CB_LIGHT_SHAFT_DATA {
 	Vector2 pad;
 };
 
+struct CB_FOG_DATA
+{
+	Vector4 gfogColor;
+
+	float gfFogStartDistance;
+	float gfFogCutOffDistance;
+	float gfFogDistanceDensity;
+	float gFogDistancePower;
+
+	float gfFogHeightDensity;
+	float gfFogHeightFalloff;
+	float gfFogBaseHeight;
+	float gfFogHeightStartDistance;
+
+	float gfFogMaxOpacity;
+	Vector3 pad;
+};
+
+struct PostProcessingParameters {
+	BloomParameters Bloom;
+	SSAOParameters SSAO;
+	ScreenFXParameters ScreenFX;
+	LightShaftParameters LightShaft;
+	FogParameters Fog;
+
+	friend std::ifstream& operator>>(std::ifstream& in, PostProcessingParameters& params) {
+		in.read((char*)(&params), sizeof(PostProcessingParameters));
+		return in;
+	}
+
+	friend std::ofstream& operator<<(std::ofstream& out, const PostProcessingParameters& params) {
+		out.write((char*)(&params), sizeof(PostProcessingParameters));
+		return out;
+	}
+};
+
 class PostProcessingVolume
 {
 public:
 	void Update();
 	void ShowDebugOptions();
 
+	bool SaveParametersToBinary(const std::string& strSaveName) const;
+	bool LoadParametersFromBinary(const std::string& strSaveName);
+
 	CB_BLOOM_DATA GetBloomCBData(XMINT2 xmi2InputSize, XMINT2 xmi2OutputSize) const;
 	CB_SSAO_DATA GetSSAOCBData() const;
 	CB_SCREEN_FX_DATA GetScreenFXCBData() const;
 	CB_LIGHT_SHAFT_DATA GetLightShaftCBData(const Vector2& v2LightScreenPosition) const;
+	CB_FOG_DATA GetFogCBData() const;
 
-	const BloomParameters& GetBloomParameters() const { return m_Bloom; }
-	const SSAOParameters& GetSSAOParameters() const { return m_SSAO; }
-	const ScreenFXParameters& GetScreenFXParameters() const { return m_ScreenFX; }
-	const LightShaftParameters& GetLightShaftParameters() const { return m_LightShaft; }
+	const BloomParameters& GetBloomParameters() const { return m_Parameters.Bloom; }
+	const SSAOParameters& GetSSAOParameters() const { return m_Parameters.SSAO; }
+	const ScreenFXParameters& GetScreenFXParameters() const { return m_Parameters.ScreenFX; }
+	const LightShaftParameters& GetLightShaftParameters() const { return m_Parameters.LightShaft; }
+	const FogParameters& GetFogParameters() const { return m_Parameters.Fog; }
 
 private:
-	BloomParameters m_Bloom;
-	SSAOParameters m_SSAO;
-	ScreenFXParameters m_ScreenFX;
-	LightShaftParameters m_LightShaft;
+	PostProcessingParameters m_Parameters;
+
+	std::string m_strSaveName;
 
 private:
 	TextureRef<Texture> m_NoiseTexture;
 
-};
+	inline const static std::string g_strSavePath = "../Resources/Scenes/PostProcessingVolume_";
 
+};

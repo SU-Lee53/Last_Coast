@@ -57,6 +57,7 @@ void ParticlePass::SetRenderTargets(ComPtr<ID3D12GraphicsCommandList> pd3dComman
 	auto pRTV = static_pointer_cast<RenderTargetTexture>(RENDER->GetHDRBuffer(1).GetResource());
 	auto pDSV = static_pointer_cast<DepthStencilTexture>(RENDER->GetDepthStencilBuffer().GetResource());
 
+	pRTV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	pDSV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_DEPTH_WRITE);			// 이전 G-Buffer Pass 에서 ALL_SHADER_RESOURCE 로 바꾸었으므로 한번 전환이 필요함
 	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = pRTV->GetRTVHandle();
 	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dDSVCPUDescriptorHandle = pDSV->GetDSVHandle();

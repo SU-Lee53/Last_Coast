@@ -12,6 +12,9 @@ void LightShaftPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandLi
 	const auto pLightShaft = RENDER->GetPostProcessingResources().LightShaftBuffer.GetResource();
 	pLightShaft->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
+	const auto pDSV = RENDER->GetDepthStencilBuffer().GetResource();
+	pDSV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+
 	float pfClearColor[4] = { 0.f, 0.f, 0.f, 1.f };
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = pLightShaft->GetRTVHandle();
 	pd3dCommandList->ClearRenderTargetView(d3dRTVCPUDescriptorHandle, pfClearColor, 0, nullptr);

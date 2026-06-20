@@ -14,6 +14,23 @@ void BurstSpawnModule::UpdateSpawn(ParticleEmitter& emitter, const ParticleModul
 	m_bSpawned = true;
 }
 
+void RateSpawnModule::UpdateSpawn(ParticleEmitter& emitter, const ParticleModuleContext& context)
+{
+	if (context.fEmitterAge > m_fDuration) {
+		return;
+	}
+
+	m_fSpawnAccumulator += m_fSpawnRate * DT;
+
+	const uint32 unSpawnCount = static_cast<uint32>(m_fSpawnAccumulator);
+	if (unSpawnCount == 0) {
+		return;
+	}
+
+	m_fSpawnAccumulator -= static_cast<float>(unSpawnCount);
+	emitter.Emit(unSpawnCount, context);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // Initialize Modules
 
@@ -28,6 +45,19 @@ void InitPositionFromEffectModule::Initialize(Particle& particle, const Particle
 	}
 
 	particle.v3Position = context.pSpawnDesc->v3Position;
+}
+
+void InitPositionSphereModule::Initialize(Particle& particle, const ParticleModuleContext& context)
+{
+	if (!context.pSpawnDesc) {
+		return;
+	}
+
+	const float fRadius = RandomGenerator::GenerateRandomFloatInRange(m_fRadiusMin, m_fRadiusMax);
+	Vector3 v3Offset = Vector3::Zero;
+	XMStoreFloat3(&v3Offset, RandomGenerator::GenerateRandomUnitVectorOnSphere() * fRadius);
+
+	particle.v3Position = context.pSpawnDesc->v3Position + v3Offset;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -65,6 +95,11 @@ void InitColorModule::Initialize(Particle& particle, const ParticleModuleContext
 void InitRandomRotationModule::Initialize(Particle& particle, const ParticleModuleContext& context)
 {
 	particle.fRotation = RandomGenerator::GenerateRandomFloatInRange(m_fMin, m_fMax);
+}
+
+void InitAngularVelocityRandomModule::Initialize(Particle& particle, const ParticleModuleContext& context)
+{
+	particle.fAngularVelocity = RandomGenerator::GenerateRandomFloatInRange(m_fMin, m_fMax);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -106,6 +141,14 @@ void InitConeVelocityModule::Initialize(Particle& particle, const ParticleModule
 
 	const float speed = RandomGenerator::GenerateRandomFloatInRange(m_fSpeedMin, m_fSpeedMax);
 	particle.v3Velocity = randomDir * speed;
+}
+
+void InitSphereVelocityModule::Initialize(Particle& particle, const ParticleModuleContext& context)
+{
+	Vector3 v3Velocity = Vector3::Zero;
+	const float fSpeed = RandomGenerator::GenerateRandomFloatInRange(m_fSpeedMin, m_fSpeedMax);
+	XMStoreFloat3(&v3Velocity, RandomGenerator::GenerateRandomUnitVectorOnSphere() * fSpeed);
+	particle.v3Velocity = v3Velocity;
 }
 
 ///////////////////////////////////////////////////////////////////////////
