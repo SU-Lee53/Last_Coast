@@ -92,3 +92,10 @@ private:
 	float m_fTiling;
 };
 
+//////////////////////////////////////////////////////////////////////////////////
+// WaterMaterial
+
+class WaterMaterial : public IMaterial {
+public:
+	virtual void Initialize(const MATERIALLOADINFO& materialLoadInfo) override;
+};

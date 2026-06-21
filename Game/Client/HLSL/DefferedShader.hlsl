@@ -174,6 +174,55 @@ PS_GBUFFER_OUTPUT PSGBufferAlphaMask(VS_STANDARD_OUTPUT input)
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// WaterShader
+
+float SampleWaterNoise(float2 uv)
+{
+	float t = gSceneGlobal.fTotalTime;
+	float n0 = gtxtTextures[gnTextureIndex.x].Sample(gAnisotropicSamplerState, uv * 0.12f + float2(t * 0.018f, t * 0.011f)).r;
+	float n1 = gtxtTextures[gnTextureIndex.x].Sample(gAnisotropicSamplerState, uv * 0.21f + float2(-t * 0.014f, t * 0.019f)).g;
+	return (n0 + n1) * 0.5f;
+}
+
+[earlydepthstencil]
+PS_GBUFFER_OUTPUT PSGBufferWater(VS_STANDARD_OUTPUT input)
+{
+	PS_GBUFFER_OUTPUT output = (PS_GBUFFER_OUTPUT) 0;
+	MaterialData m = gMaterialDatas[gnMaterialIndex];
+	
+	float t = gSceneGlobal.fTotalTime;
+	float2 uv = input.uv;
+	float noise = SampleWaterNoise(uv);
+	
+	float waveX = sin(uv.x * 8.0f + uv.y * 2.5f + t * 1.4f);
+	float waveZ = cos(uv.y * 7.0f - uv.x * 1.8f + t * 1.1f);
+	float slopeX = (waveX * 0.55f + (noise - 0.5f) * 0.9f) * 0.10f;
+	float slopeZ = (waveZ * 0.55f - (noise - 0.5f) * 0.7f) * 0.10f;
+	
+	float3 normalW = normalize(input.normalW);
+	float3 tangentW = normalize(input.tangentW - dot(input.tangentW, normalW) * normalW);
+	float3 bitangentW = normalize(cross(normalW, tangentW));
+	float3 waterNormalW = normalize(normalW - tangentW * slopeX - bitangentW * slopeZ);
+	float2 waterNormalEnc = EncodeNormalOcta(waterNormalW);
+	
+	float3 baseWater = (length(m.cDiffuse.rgb) > 1e-4f) ? m.cDiffuse.rgb : float3(0.02f, 0.18f, 0.30f);
+	float3 shallowTint = float3(0.05f, 0.34f, 0.42f);
+	float shimmer = saturate(noise * 0.65f + (waveX + waveZ) * 0.08f + 0.25f);
+	float3 albedo = lerp(baseWater, shallowTint, shimmer);
+	
+	float fMetallic = 0.0f;
+	float fRoughness = max(1.0f - saturate(m.fSmoothness), 0.08f);
+	float fAO = 1.0f;
+	float fSpecularIntensity = max(saturate(m.cSpecular.a), 0.55f);
+	
+	output.RT0 = float4(albedo, fMetallic);
+	output.RT1 = float4(waterNormalEnc, fRoughness, fAO);
+	output.RT2 = float4(m.cEmissive.rgb, fSpecularIntensity);
+	
+	return output;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TerrainShader
 
 VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)

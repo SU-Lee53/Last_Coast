@@ -42,7 +42,7 @@ void GameContext::LoadWeaponData()
 		std::string strWeaponFilename[] = {
 			"SM_AR4",
 			"SM_KA47",
-			"SM_Modern_Weapons_Shotgun_01",          // SHOTGUN placeholder — 모델 추후 교체
+			"SM_Modern_Weapons_Shotgun_01",
 			"SM_Modern_Weapons_Sniper_03_No_Scope",
 			"SM_Modern_Weapons_LMG_03",
 			"SM_Modern_Weapons_Pistol_03",

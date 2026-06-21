@@ -205,9 +205,6 @@
     <ClInclude Include="GameFramework.h">
       <Filter>01.Core</Filter>
     </ClInclude>
-    <ClInclude Include="GameObject.h">
-      <Filter>02.Game\GameObject</Filter>
-    </ClInclude>
     <ClInclude Include="Packets.h">
       <Filter>99.Utility</Filter>
     </ClInclude>
@@ -618,6 +615,9 @@
     </ClInclude>
     <ClInclude Include="LMGWeapon.h">
       <Filter>02.Game\GameObject\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="GameObject.h">
+      <Filter>02.Game\Particle</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

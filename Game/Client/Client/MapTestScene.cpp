@@ -112,10 +112,8 @@ void MapTestScene::BuildObjects()
 
 
 	m_pEventSequence = std::make_shared<EventSequence>(this);
-	m_pEventSequence->AddEvent(std::make_shared<TimeForwardEvent>());
-	m_pEventSequence->AddEvent(std::make_shared<BleedEvent>());
-
-	auto pCinematicEvent = std::make_shared<CinematicCameraEvent>();
+	//m_pEventSequence->AddEvent(std::make_shared<TimeForwardEvent>());
+	//m_pEventSequence->AddEvent(std::make_shared<BleedEvent>());
 
 	m_pEventSequence->AddEvent(std::make_shared<CinematicCameraEvent>());
 

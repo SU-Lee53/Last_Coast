@@ -7,6 +7,7 @@
 #include "StaticObject.h"
 #include "Zombie.h"
 #include "WeaponObject.h"
+#include "WaterGridObject.h"
 
 #include "Player.h"	// Includes GameObject
 #include "Camera.h"
@@ -24,7 +25,13 @@ using CollisionPair = std::pair<std::shared_ptr<IGameObject>, std::shared_ptr<IG
 class Scene {
 	friend class SceneManager;
 
-	using WorldType = World<NetworkOwnerThirdPersonPlayer, NetworkRemoteThirdPersonPlayer, StaticObject, WeaponObject, Zombie>;
+	using WorldType = World<
+		NetworkOwnerThirdPersonPlayer, 
+		NetworkRemoteThirdPersonPlayer, 
+		StaticObject, 
+		WaterGridObject, 
+		WeaponObject, 
+		Zombie>;
 
 public:
 	virtual void BuildObjects() = 0;

@@ -48,19 +48,28 @@ void GameScene::BuildObjects()
 		m_ZombiePool.Initialize(100, true);
 	}
 
-	auto begin = high_resolution_clock::now();
+	//auto begin = high_resolution_clock::now();
 	LoadFromFiles("DEMO");
-	auto end = high_resolution_clock::now();
-	long long llLoadTime = duration_cast<milliseconds>(end - begin).count();
+	//auto end = high_resolution_clock::now();
+	//long long llLoadTime = duration_cast<milliseconds>(end - begin).count();
 
-	std::shared_ptr<TextBox> pText = std::make_shared<TextBox>(L"Malgun Gothic");
-	pText->SetText(std::format(L"로딩 시간 : {}ms", llLoadTime));
-	pText->SetLayer(0);
-	pText->SetAnchor(Vector2{ 0,0 });
-	pText->SetPivot(Vector2{ 0,0 });
-	pText->SetPosition(Vector2{ 10,150 });
-	pText->SetTextHeight(50);
-	m_pUIBoard->InsertUI(pText);
+	//std::shared_ptr<TextBox> pText = std::make_shared<TextBox>(L"Malgun Gothic");
+	//pText->SetText(std::format(L"로딩 시간 : {}ms", llLoadTime));
+	//pText->SetLayer(0);
+	//pText->SetAnchor(Vector2{ 0,0 });
+	//pText->SetPivot(Vector2{ 0,0 });
+	//pText->SetPosition(Vector2{ 10,150 });
+	//pText->SetTextHeight(50);
+	//m_pUIBoard->InsertUI(pText);
+
+	m_pWater = std::make_shared<WaterGridObject>();
+	//pWater->Initialize();
+
+	auto& pTransform = m_pWater->GetTransform();
+	m_v3WaterPos = Vector3(0.f, -47_m, 0.f);
+	pTransform->SetPosition(m_v3WaterPos);
+	AddObject(m_pWater);
+
 }
 
 void GameScene::OnEnterScene()

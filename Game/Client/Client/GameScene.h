@@ -32,6 +32,9 @@ private:
 	void ProcessMeleeResults();
 
 private:
+	std::shared_ptr<class WaterGridObject> m_pWater = nullptr;
+	Vector3 m_v3WaterPos{};
+
 	ZombiePool m_ZombiePool;
 	//std::unique_ptr<NavMeshDebugRenderer> m_pNavMeshDebugRenderer;
 

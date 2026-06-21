@@ -140,8 +140,7 @@ struct PostProcessingParameters {
 	}
 };
 
-class PostProcessingVolume
-{
+class PostProcessingVolume {
 public:
 	void Update();
 	void ShowDebugOptions();
