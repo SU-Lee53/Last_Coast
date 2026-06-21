@@ -5,8 +5,8 @@ class DirectionalCascadeShadowMapPass : public IRenderPass {
 public:
 	constexpr static uint32 g_unNumCascade = 4;
 	constexpr static uint32 g_unCascadeShadowMapSize[g_unNumCascade] = {
-		//2048, 1024, 512, 256
-		4096, 2048, 1024, 512
+		2048, 2048, 1024, 512
+		//4096, 2048, 1024, 512
 	};
 
 	constexpr static float g_fMaxShadowDistance = 100_m;
@@ -43,18 +43,18 @@ private:
 	void BindGeometryData(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const std::vector<IGameObject*>& frustumCulled,
-		OUT DescriptorHandle& outDescHandle) const;
+		OUT DescriptorHandle& outDescHandle);
 
 	void DrawGeometry(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-		OUT DescriptorHandle& outDescHandle) const;
+		OUT DescriptorHandle& outDescHandle);
 
 	void DrawTerrain(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 		const std::vector<TerrainComponent*>& frustumCulled,
-		OUT DescriptorHandle& outDescHandle) const;
+		OUT DescriptorHandle& outDescHandle);
 
-	void ComputeCascade() const;
+	void ComputeCascade();
 
 	virtual void ShowDebugInfo() override;
 
@@ -77,18 +77,17 @@ private:
 		Matrix mtxToShadowMap;
 	};
 
-	mutable std::array<CascadeCameraData, g_unNumCascade> m_CascadeCached;
-	mutable RenderQueue m_RenderQueueCached;
-	mutable std::vector<IGameObject*> m_FrustumCulledCached;
+	std::array<CascadeCameraData, g_unNumCascade> m_CascadeCached;
+	RenderQueue m_RenderQueueCached;
+	std::vector<IGameObject*> m_FrustumCulledCached;
 
 	ComPtr<ID3D12PipelineState> m_pd3dStandardPipelineState;
 	ComPtr<ID3D12PipelineState> m_pd3dAnimatedPipelineState;
 	ComPtr<ID3D12PipelineState> m_pd3dTerrainPipelineState;
 
 	TextureRef<DepthStencilTexture> m_ShadowMapRefs[g_unNumCascade];
-	mutable bool m_bShowShadowMaps;
 
-	mutable struct CachedData {
+	struct CachedData {
 		IndexMap<MeshRenderer::ID, std::pair<const MeshRenderer*, std::vector<const IGameObject*>>> frustumCulledMap;
 
 		std::vector<WorldTransformData> sbWorldTransformDatas;
@@ -115,6 +114,13 @@ private:
 
 	} m_CachedData;
 
+	// Shadow map interval update
+	std::array<bool, g_unNumCascade> m_bNeedUpdates{};
+	std::array<float, g_unNumCascade> m_fCascadeUpdateTimers{};
+	constexpr static std::array<float, g_unNumCascade> g_fCascadeUpdateFPS = {
+		60.0f, 45.0f, 30.0f, 15.0f
+	};
 
+	bool m_bFirstUpdate = true;
 };
 

@@ -57,9 +57,12 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input, uint nInstanceID : SV_Ins
 	output.positionW = positionW;
 	output.position = mul(float4(output.positionW, 1.f), mtxViewProjection);
 	
-	float3x3 mtxNormal = (float3x3) transpose(gWorldTransforms[nWorldTransformBase].mtxInvWorld);
-	output.normalW = normalize(mul(input.normal, mtxNormal));
-	output.tangentW = normalize(mul(input.tangent, mtxNormal));
+	//float3x3 mtxNormal = (float3x3) transpose(gWorldTransforms[nWorldTransformBase].mtxInvWorld);
+	//output.normalW = normalize(mul(input.normal, mtxNormal));
+	//output.tangentW = normalize(mul(input.tangent, mtxNormal));
+	
+	output.normalW = mul(float4(input.normal, 1.f), mtxWorld).xyz;
+	output.tangentW = mul(float4(input.tangent, 1.f), mtxWorld).xyz;
 	output.uv = input.uv;
     
 	return output;
@@ -99,11 +102,19 @@ VS_STANDARD_OUTPUT VSAnimated(VS_SKINNED_INPUT input, uint nInstanceID : SV_Inst
 	output.positionW = positionW;
 	output.position = mul(float4(positionW, 1.f), mtxViewProjection);
 	
-	float3x3 mtxNormal = (float3x3) transpose(gWorldTransforms[nWorldTransformBase].mtxInvWorld);
-	output.normalW = normalize(mul(normal, mtxNormal));
-	output.tangentW = normalize(mul(tangent, mtxNormal));
-	output.uv = input.uv;
+	//float3x3 mtxNormal = (float3x3) transpose(gWorldTransforms[nWorldTransformBase].mtxInvWorld);
+	//output.normalW = normalize(mul(normal, mtxNormal));
+	//output.tangentW = normalize(mul(tangent, mtxNormal));
+	//output.uv = input.uv;
     
+	//float3x3 mtxNormal = (float3x3) transpose(gWorldTransforms[nWorldTransformBase].mtxInvWorld);
+	//output.normalW = normalize(mul(input.normal, mtxNormal));
+	//output.tangentW = normalize(mul(input.tangent, mtxNormal));
+	
+	output.normalW = mul(float4(input.normal, 1.f), mtxWorld).xyz;
+	output.tangentW = mul(float4(input.tangent, 1.f), mtxWorld).xyz;
+	output.uv = input.uv;
+	
 	return output;
 }
 

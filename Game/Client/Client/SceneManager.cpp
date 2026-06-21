@@ -11,7 +11,7 @@
 
 void SceneManager::Initialize()
 {
-	m_pSceneStack.push_back(std::make_unique<LogInScene>());
+	m_pSceneStack.push_back(std::make_unique<GameScene>());
 	m_pSceneStack.back()->OnEnterScene();
 	m_pSceneStack.back()->BuildLights();
 	m_pSceneStack.back()->BuildObjects();

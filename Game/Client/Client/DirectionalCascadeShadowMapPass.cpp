@@ -20,11 +20,38 @@ void DirectionalCascadeShadowMapPass::Initialize()
 
 void DirectionalCascadeShadowMapPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
-	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
+	const float fDeltaTime = DT;
 
-	std::vector<CD3DX12_RESOURCE_BARRIER> d3dResourceBarriers;
-	d3dResourceBarriers.reserve(g_unNumCascade);
+	for (uint32 i = 0; i < g_unNumCascade; ++i) {
+		const float fUpdatePeriod = 1.0f / g_fCascadeUpdateFPS[i];
+
+		m_fCascadeUpdateTimers[i] += fDeltaTime;
+
+		if (m_fCascadeUpdateTimers[i] >= fUpdatePeriod) {
+			m_bNeedUpdates[i] = true;
+
+			m_fCascadeUpdateTimers[i] -= fUpdatePeriod;
+
+			if (m_fCascadeUpdateTimers[i] >= fUpdatePeriod) {
+				m_fCascadeUpdateTimers[i] = 0.0f;
+			}
+		}
+		else {
+			m_bNeedUpdates[i] = false;
+		}
+	}
+
+	if (m_bFirstUpdate) {
+		m_bNeedUpdates.fill(true);
+		m_fCascadeUpdateTimers.fill(0.0f);
+		m_bFirstUpdate = false;
+	}
+
 	for (int i = 0; i < g_unNumCascade; ++i) {
+		if (!m_bNeedUpdates[i]) {
+			continue;
+		}
+
 		auto pTex = m_ShadowMapRefs[i].GetResource();
 		pTex->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	}
@@ -37,6 +64,10 @@ void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> p
 	constexpr uint32 rootParamLightCameraData = std::to_underlying(ROOT_PARAMETER::LIGHT_CAMERA_DATA);
 
 	for (int i = 0; i < g_unNumCascade; ++i) {
+		if (!m_bNeedUpdates[i]) {
+			continue;
+		}
+
 		m_RenderQueueCached.clear();
 		SetRenderTargets(pd3dCommandList, i);
 		BoundingFrustum xmFrsutum = m_CascadeCached[i].xmCasterCullFrustum;
@@ -60,7 +91,6 @@ void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> p
 			// Add Player
 			CUR_SCENE->GetPlayer()->AddToQueue(m_FrustumCulledCached);
 		}
-
 
 		BindGeometryData(pd3dCommandList, m_FrustumCulledCached, outDescHandle);
 
@@ -91,8 +121,12 @@ void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandL
 {
 	const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
 
-	for (const auto& texRef : m_ShadowMapRefs) {
-		texRef.GetResource()->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+	for (uint32 i = 0; i < g_unNumCascade; ++i) {
+		if (!m_bNeedUpdates[i]) {
+			continue;
+		}
+
+		m_ShadowMapRefs[i].GetResource()->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 	}
 
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
@@ -123,7 +157,6 @@ void DirectionalCascadeShadowMapPass::OnPostRender(ComPtr<ID3D12GraphicsCommandL
 	// Viewport & Scissor rect 복구
 	auto pCamera = CUR_SCENE->GetCamera();
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
-
 }
 
 void DirectionalCascadeShadowMapPass::CreatePipelineState()
@@ -229,7 +262,7 @@ void DirectionalCascadeShadowMapPass::SetRenderTargets(ComPtr<ID3D12GraphicsComm
 
 }
 
-void DirectionalCascadeShadowMapPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<IGameObject*>& frustumCulled, OUT DescriptorHandle& outDescHandle) const
+void DirectionalCascadeShadowMapPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<IGameObject*>& frustumCulled, OUT DescriptorHandle& outDescHandle)
 {
 	m_CachedData.Clear();
 
@@ -332,7 +365,7 @@ void DirectionalCascadeShadowMapPass::BindGeometryData(ComPtr<ID3D12GraphicsComm
 	outDescHandle.gpuHandle.Offset(3, unDescriptorInc);
 }
 
-void DirectionalCascadeShadowMapPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) const
+void DirectionalCascadeShadowMapPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle)
 {
 	constexpr uint32 rootParamInstanceData = std::to_underlying(ROOT_PARAMETER::PER_INSTANCE_DATA);
 	constexpr uint32 rootParamBoneOffset = std::to_underlying(ROOT_PARAMETER::BONE_TRANSFORM_OFFSETS);
@@ -359,7 +392,7 @@ void DirectionalCascadeShadowMapPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandL
 	}
 }
 
-void DirectionalCascadeShadowMapPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<TerrainComponent*>& frustumCulled, OUT DescriptorHandle& outDescHandle) const
+void DirectionalCascadeShadowMapPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<TerrainComponent*>& frustumCulled, OUT DescriptorHandle& outDescHandle)
 {
 	const auto& pTerrain = CUR_SCENE->GetTerrain();
 	const auto& pTerrainComponents = pTerrain->GetTerrainComponents();
@@ -381,7 +414,7 @@ void DirectionalCascadeShadowMapPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandLi
 	}
 }
 
-void DirectionalCascadeShadowMapPass::ComputeCascade() const
+void DirectionalCascadeShadowMapPass::ComputeCascade()
 {
 	auto pCamera = CUR_SCENE->GetCamera();
 	auto xmFrustum = pCamera->GetFrustumWorld();
@@ -394,6 +427,9 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 	float fAspectRatio = pCamera->GetAspectRatio();
 
 	for (uint32 i = 0; i < g_unNumCascade; ++i) {
+		if (!m_bNeedUpdates[i]) {
+			continue;
+		}
 		// 1. Generate cascade camera frustum
 		BoundingFrustum xmCascadeFrustum;
 
@@ -542,7 +578,7 @@ void DirectionalCascadeShadowMapPass::ComputeCascade() const
 
 void DirectionalCascadeShadowMapPass::ShowDebugInfo()
 {
-	if (ImGui::Button(std::format("Show Shadow Maps : {}", m_bShowShadowMaps ? "TRUE" : "FALSE").c_str())) {
+	/*if (ImGui::Button(std::format("Show Shadow Maps : {}", m_bShowShadowMaps ? "TRUE" : "FALSE").c_str())) {
 		m_bShowShadowMaps = !m_bShowShadowMaps;
-	}
+	}*/
 }
