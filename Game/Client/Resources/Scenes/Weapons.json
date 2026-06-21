@@ -24,7 +24,7 @@
     "LMG": {
         "AmmoPerClip": 100,
         "Damage": 20.0,
-        "FirePerSecond": 600.0,
+        "FirePerSecond": 550.0,
         "MuzzlePosition": [
             110.4000015258789,
             6.199999809265137,
