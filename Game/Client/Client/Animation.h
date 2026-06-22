@@ -15,6 +15,8 @@ class Animation {
 public:
 	Matrix GetKeyFrameMatrix(const std::string& strChannelName, float fTime, const Matrix& mtxTransformation);	// Channel Name == Bone Name
 	AnimationKey GetKeyFrameSRT(const std::string& strChannelName, float fTime, const Matrix& mtxTransformation);	// Channel Name == Bone Name
+	AnimationKey GetKeyFrameSRT(size_t nChannelIndex, float fTime, const Matrix& mtxTransformation);
+	size_t GetChannelIndex(const std::string& strChannelName) const;
 	
 	const std::string& GetName() const { return m_strName; }
 	float GetDuration() const { return m_fDuration; }
@@ -33,6 +35,6 @@ private:
 	float m_fDuration;
 	float m_fTicksPerSecond;
 
-	std::unordered_map<std::string, std::vector<KeyFrame>> m_keyFrameMap;
+	IndexMap<std::string, std::vector<KeyFrame>> m_keyFrameMap;
 };
 

@@ -207,6 +207,13 @@ void Scene::PostUpdate()
 
 	m_World.PostUpdate();
 
+	ANIMATION->UpdateAnimationParallel();
+
+	if (m_pPlayer) {
+		m_pPlayer->PostAnimationUpdate();
+	}
+	m_World.PostAnimationUpdate();
+
 	if (m_pSkybox) {
 		m_pSkybox->Update();
 	}

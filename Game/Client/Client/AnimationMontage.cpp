@@ -20,6 +20,12 @@ void AnimationMontage::Initialize(std::shared_ptr<IGameObject> pOwner)
 		section.fEndTime = fTime + section.pAnimationToPlay->GetDuration();
 		fTime = section.fEndTime;
 
+		section.channelIndices.resize(bones.size(), INVALID_ID);
+		for (const auto& bone : bones) {
+			section.channelIndices[bone.nIndex] =
+				section.pAnimationToPlay->GetChannelIndex(bone.strBoneName);
+		}
+
 		m_SectionIndexMap.insert({ section.strName, nIndex });
 		nIndex++;
 	}
@@ -108,7 +114,11 @@ void AnimationMontage::Update()
 	float fTimeToPlay = m_fSectionPlayTime;  // 섹션 내 로컬 시간으로 샘플링
 	const auto& bones = m_wpOwner.lock()->GetComponent<Skeleton>()->GetBones();
 	for (const auto& bone : bones) {
-		m_OutputPose[bone.nIndex] = currentSection.pAnimationToPlay->GetKeyFrameSRT(bone.strBoneName, fTimeToPlay, bone.mtxTransform);
+		m_OutputPose[bone.nIndex] = currentSection.pAnimationToPlay->GetKeyFrameSRT(
+			currentSection.channelIndices[bone.nIndex], 
+			fTimeToPlay, 
+			bone.mtxTransform
+		);
 	}
 }
 

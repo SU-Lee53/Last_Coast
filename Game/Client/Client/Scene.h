@@ -26,12 +26,12 @@ class Scene {
 	friend class SceneManager;
 
 	using WorldType = World<
-		NetworkOwnerThirdPersonPlayer, 
-		NetworkRemoteThirdPersonPlayer, 
-		StaticObject, 
-		WaterGridObject, 
-		WeaponObject, 
-		Zombie>;
+							NetworkOwnerThirdPersonPlayer, 
+							NetworkRemoteThirdPersonPlayer, 
+							StaticObject, 
+							WaterGridObject, 
+							WeaponObject, 
+							Zombie>;
 
 public:
 	virtual void BuildObjects() = 0;

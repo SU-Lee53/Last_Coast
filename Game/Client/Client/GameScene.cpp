@@ -41,8 +41,8 @@ void GameScene::BuildObjects()
 	m_pTerrain->LoadFromFiles("Game");
 
 	if (!bOnline) {
-		/*for (auto& pZombie : m_ZombiePool.Initialize(100, bOnline))
-			AddObject(pZombie);*/
+		for (auto& pZombie : m_ZombiePool.Initialize(100, bOnline))
+			AddObject(pZombie);
 	}
 	else {
 		m_ZombiePool.Initialize(100, true);

@@ -101,6 +101,16 @@ using namespace Microsoft::WRL;
 #pragma comment(lib, "dwrite.lib")
 //#pragma comment(lib, "d3d11on12.lib")
 
+#include <TBB/tbb/parallel_for.h>
+#include <TBB/tbb/blocked_range.h>
+#include <TBB/tbb/task_group.h>
+
+#ifdef _DEBUG
+#pragma comment(lib, "TBB/tbb12_debug.lib")
+#else
+#pragma comment(lib, "TBB/tbb12.lib")
+#endif
+
 
 // fmod sound library
 #include <fmod/fmod.h>

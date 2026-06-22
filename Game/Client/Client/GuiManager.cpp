@@ -53,6 +53,10 @@ void GuiManager::Update()
 					m_eManagerDebug = (m_eManagerDebug != MANAGER_DEBUG::SCENE_MANAGER) ? MANAGER_DEBUG::SCENE_MANAGER : MANAGER_DEBUG::NONE;
 				}
 
+				if (ImGui::MenuItem("Animation")) {
+					m_eManagerDebug = (m_eManagerDebug != MANAGER_DEBUG::ANIMATION_MANAGER) ? MANAGER_DEBUG::ANIMATION_MANAGER : MANAGER_DEBUG::NONE;
+				}
+
 				if (ImGui::MenuItem("Texture")) {
 					m_eManagerDebug = (m_eManagerDebug != MANAGER_DEBUG::TEXTURE_MANAGER) ? MANAGER_DEBUG::TEXTURE_MANAGER : MANAGER_DEBUG::NONE;
 				}
@@ -88,6 +92,11 @@ void GuiManager::Update()
 	case MANAGER_DEBUG::SCENE_MANAGER:
 	{
 		SCENE->ShowDebugOptions();
+		break;
+	}
+	case MANAGER_DEBUG::ANIMATION_MANAGER:
+	{
+		ANIMATION->ShowDebugOptions();
 		break;
 	}
 	case MANAGER_DEBUG::TEXTURE_MANAGER:

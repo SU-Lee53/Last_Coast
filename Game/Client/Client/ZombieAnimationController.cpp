@@ -64,6 +64,8 @@ void ZombieAnimationController::Initialize()
 	m_mtxCachedLocalBoneTransforms.resize(nBones);
 	m_mtxFinalBoneTransforms.resize(nBones);
 	m_mtxFinalModelLocalTransforms.resize(nBones);
+
+	AnimationController::Initialize();
 }
 
 void ZombieAnimationController::ComputeAnimation()

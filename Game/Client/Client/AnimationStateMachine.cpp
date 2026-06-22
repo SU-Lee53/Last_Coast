@@ -14,6 +14,22 @@ void AnimationStateMachine::Initialize(std::shared_ptr<IGameObject> pOwner, floa
 
 	InitializeStateGraph();
 
+	auto pSkeleton = pOwner->GetComponent<Skeleton>();
+	if (pSkeleton) {
+		const std::vector<Bone>& ownerBones = pSkeleton->GetBones();
+		for (auto& pState : m_pStates) {
+			if (!pState || !pState->pAnimationToPlay) {
+				continue;
+			}
+
+			pState->channelIndices.resize(ownerBones.size(), INVALID_ID);
+			for (const auto& bone : ownerBones) {
+				pState->channelIndices[bone.nIndex] =
+					pState->pAnimationToPlay->GetChannelIndex(bone.strBoneName);
+			}
+		}
+	}
+
 	m_fLastAnimationChangedTime = m_fTotalAnimationTime;
 	m_fCurrentTransitionTime = 0.0f;
 	m_fCurrentAnimationStartOffset = 0.0f;
@@ -100,14 +116,14 @@ void AnimationStateMachine::Update()
 		for (const auto& bone : ownerBones) {
 			AnimationKey key0 =
 				pBeforeAnimation->GetKeyFrameSRT(
-					bone.strBoneName,
+					m_pBeforeState->channelIndices[bone.nIndex],
 					fBeforeAnimTime,
 					bone.mtxTransform
 				);
 
 			AnimationKey key1 =
 				pCurrentAnimation->GetKeyFrameSRT(
-					bone.strBoneName,
+					m_pCurrentState->channelIndices[bone.nIndex],
 					fCurrentAnimTime,
 					bone.mtxTransform
 				);
@@ -121,7 +137,7 @@ void AnimationStateMachine::Update()
 		for (const auto& bone : ownerBones) {
 			m_OutputPose[bone.nIndex] =
 				pCurrentAnimation->GetKeyFrameSRT(
-					bone.strBoneName,
+					m_pCurrentState->channelIndices[bone.nIndex],
 					fCurrentAnimTime,
 					bone.mtxTransform
 				);
