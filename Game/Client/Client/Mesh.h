@@ -180,6 +180,24 @@ protected:
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// TerrainQuadMesh
+
+class TerrainQuadMesh : public IMesh {
+public:
+	TerrainQuadMesh(uint32 unWidth, uint32 unHeight);
+
+	virtual void Render(
+		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
+		uint32 nInstanceCount = 1, 
+		uint32 unStartIndex = 0, 
+		int32 nIndexCount = -1) const override;
+
+protected:
+	VertexBuffer m_Normals;
+	VertexBuffer m_Tangents;
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GridMesh
 
 class GridMesh : public IMesh {

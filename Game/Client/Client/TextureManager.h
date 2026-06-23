@@ -37,10 +37,16 @@ public:
 	
 	TextureRef<Texture> LoadTextureFromRawData(
 		const std::string& strTextureName, 
-		std::vector<Vector4> data,
+		const std::vector<Vector4>& data,
 		uint32 unWidth, 
 		uint32 unHeight,
 		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN);
+	
+	TextureRef<Texture> LoadTextureFromHeightData(
+		const std::string& strTextureName, 
+		const std::vector<uint16>& data,
+		uint32 unWidth, 
+		uint32 unHeight);
 
 	TextureRef<RenderTargetTexture> LoadRenderTargetTexture(
 		const std::string& strTextureName, 

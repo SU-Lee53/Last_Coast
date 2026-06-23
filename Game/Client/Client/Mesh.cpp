@@ -422,3 +422,79 @@ void CubeMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 
 	pd3dCommandList->IASetVertexBuffers(0, _countof(vertexBufferViews), vertexBufferViews);
 	pd3dCommandList->DrawInstanced(m_Positions.nVertices, nInstanceCount, 0, 0);
 }
+
+TerrainQuadMesh::TerrainQuadMesh(uint32 unWidth, uint32 unHeight)
+{
+	unWidth = std::max<uint32>(1, unWidth);
+	unHeight = std::max<uint32>(1, unHeight);
+
+	const uint32 unNumVerticesX = unWidth + 1;
+	const uint32 unNumVerticesZ = unHeight + 1;
+	const uint32 unNumVertices = unNumVerticesX * unNumVerticesZ;
+
+	std::vector<Vector3> v3Positions;
+	std::vector<Vector3> v3Normals;
+	std::vector<Vector3> v3Tangents;
+	std::vector<uint32> unIndices;
+
+	v3Positions.reserve(unNumVertices);
+	v3Normals.reserve(unNumVertices);
+	v3Tangents.reserve(unNumVertices);
+	unIndices.reserve(static_cast<size_t>(unWidth) * unHeight * 6);
+
+	for (uint32 z = 0; z < unNumVerticesZ; ++z) {
+		for (uint32 x = 0; x < unNumVerticesX; ++x) {
+			v3Positions.emplace_back(static_cast<float>(z), 0.0f, static_cast<float>(x));
+			v3Normals.emplace_back(0.0f, 1.0f, 0.0f);
+			v3Tangents.emplace_back(0.0f, 0.0f, 1.0f);
+		}
+	}
+
+	auto fnVertexToIndex = [unNumVerticesX](uint32 x, uint32 z) -> uint32 {
+		return z * unNumVerticesX + x;
+	};
+
+	for (uint32 z = 0; z < unHeight; ++z) {
+		for (uint32 x = 0; x < unWidth; ++x) {
+			const uint32 v0 = fnVertexToIndex(x, z);
+			const uint32 v1 = fnVertexToIndex(x + 1, z);
+			const uint32 v2 = fnVertexToIndex(x, z + 1);
+			const uint32 v3 = fnVertexToIndex(x + 1, z + 1);
+
+			unIndices.push_back(v0);
+			unIndices.push_back(v1);
+			unIndices.push_back(v2);
+
+			unIndices.push_back(v1);
+			unIndices.push_back(v3);
+			unIndices.push_back(v2);
+		}
+	}
+
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	m_nVertices = unNumVertices;
+	m_xmOBB.Center = Vector3(static_cast<float>(unHeight) * 0.5f, 0.0f, static_cast<float>(unWidth) * 0.5f);
+	m_xmOBB.Extents = Vector3(static_cast<float>(unHeight) * 0.5f, 0.01f, static_cast<float>(unWidth) * 0.5f);
+
+	m_Positions = RESOURCE->CreateVertexBuffer(v3Positions, std::to_underlying(MESH_ELEMENT_TYPE::POSITION));
+	m_Normals = RESOURCE->CreateVertexBuffer(v3Normals, std::to_underlying(MESH_ELEMENT_TYPE::NORMAL));
+	m_Tangents = RESOURCE->CreateVertexBuffer(v3Tangents, std::to_underlying(MESH_ELEMENT_TYPE::TANGENT));
+	m_IndexBuffer = RESOURCE->CreateIndexBuffer(unIndices);
+}
+
+void TerrainQuadMesh::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 nInstanceCount, uint32 unStartIndex, int32 nIndexCount) const
+{
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+
+	D3D12_VERTEX_BUFFER_VIEW vertexBufferViews[3] = {
+		m_Positions.VertexBufferView,
+		m_Normals.VertexBufferView,
+		m_Tangents.VertexBufferView,
+	};
+	pd3dCommandList->IASetVertexBuffers(0, _countof(vertexBufferViews), vertexBufferViews);
+
+	const uint32 unIndices = (nIndexCount == -1) ? m_IndexBuffer.nIndices : nIndexCount;
+	pd3dCommandList->IASetIndexBuffer(&m_IndexBuffer.IndexBufferView);
+	pd3dCommandList->DrawIndexedInstanced(unIndices, nInstanceCount, unStartIndex, 0, 0);
+}
+

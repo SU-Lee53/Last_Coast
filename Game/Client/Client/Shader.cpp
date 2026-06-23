@@ -188,7 +188,7 @@ D3D12_INPUT_LAYOUT_DESC AnimatedShader::CreateInputLayout()
 
 void TerrainShader::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12RootSignature> pd3dRootSignature)
 {
-	m_pd3dPipelineStates.resize(1);
+	m_pd3dPipelineStates.resize(2);
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC d3dPipelineDesc{};
 	{
@@ -211,6 +211,15 @@ void TerrainShader::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Roo
 	}
 
 	HRESULT hr = pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dPipelineStates[0].GetAddressOf()));
+	if (FAILED(hr)) {
+		__debugbreak();
+	}
+
+	{
+		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("TerrainInstancedVS");
+	}
+
+	hr = pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dPipelineStates[1].GetAddressOf()));
 	if (FAILED(hr)) {
 		__debugbreak();
 	}

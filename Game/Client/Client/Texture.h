@@ -64,10 +64,17 @@ private:
 	
 	bool CreateTextureFromRawData(
 		const std::wstring& wstrTexturePath, 
-		const std::vector<Vector4> data,
+		const std::vector<Vector4>& data,
 		uint32 unWidth, 
 		uint32 unHeight, 
 		DXGI_FORMAT dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM);
+	
+	
+	bool CreateTextureFromHeightData(
+		const std::wstring& wstrTexturePath, 
+		const std::vector<uint16>& data,
+		uint32 unWidth, 
+		uint32 unHeight);
 	
 	[[nodiscard]] 
 	HRESULT LoadFromDDSFile(

@@ -14,9 +14,12 @@ public:
 
 private:
 	std::vector<std::shared_ptr<IRenderPass>> m_pAdjLists;
+	std::vector<long long> m_llPassTime;
 	uint32 m_unEntryNodeIndex = 0;
 
 	RenderPassOutput m_OutputCache{};
 
+	float m_fLastRecordTime = 0.f;
+	const float m_fRecordInterval = 1.f;
 };
 

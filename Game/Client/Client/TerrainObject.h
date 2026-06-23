@@ -2,6 +2,7 @@
 #include "StaticObject.h"
 #include "TerrainComponent.h"
 #include "HeightMapRawImage.h"
+#include "Mesh.h"
 
 struct TERRAINLAYERLOADINFO {
 	uint32 unIndex;
@@ -30,6 +31,9 @@ public:
 
 	bool GetHeightNormalWorld(const Vector3& v3WorldPos, OUT float& outfHeight, OUT Vector3& outv3Normal);
 	CB_TERRAIN_LAYER_DATA MakeLayerCBData();
+	const Vector3& GetTerrainScale() const { return m_v3TerrainScale; }
+	TextureRef<Texture> GetHeightMapTexture() const { return (m_pHeightMapRawImage) ? m_pHeightMapRawImage->GetHeightMapTexture() : TextureRef<Texture>{}; }
+	const std::shared_ptr<TerrainQuadMesh>& GetTerrainQuadMesh() const { return m_pTerrainQuadMesh; }
 
 	float GetMinHeight() const { return m_fMinTerrainHeight; };
 	float GetMaxHeight() const { return m_fMaxTerrainHeight; };
@@ -49,6 +53,7 @@ private:
 private:
 	std::unique_ptr<HeightMapRawImage> m_pHeightMapRawImage;
 	std::vector<std::shared_ptr<TerrainComponent>> m_pTerrainComponents;
+	std::shared_ptr<TerrainQuadMesh> m_pTerrainQuadMesh;
 	Vector3 m_v3TerrainScale;
 
 	float m_fMinTerrainHeight = std::numeric_limits<float>::max();

@@ -57,6 +57,7 @@ struct VS_TERRAIN_OUTPUT
 	float3 tangentW : TANGENT;
 	
 	float2 positionLocalXZ : TEXCOORD0;
+	nointerpolation uint nComponentIndex : TEXCOORD1;
 };
 
 struct VS_QUAD_INPUT
@@ -369,6 +370,7 @@ struct TerrainComponentData
 	float2 v2ComponentSizeXZ;
 	int4 i4LayerIndex;
 	int2 v2NumQuadsXZ;
+	uint nWeightMapIndex;
 	int2 pad0;
 };
 
@@ -395,7 +397,7 @@ struct ParticleDrawData
 };
 
 #define MAX_BONES 100
-#define MAX_TERRAIN_COMPONENTS 8*8
+#define MAX_TERRAIN_COMPONENTS 64
 
 // ============ cbuffers ============
 
@@ -422,23 +424,16 @@ cbuffer cbTerrainLayerData : register(b1, space2)
 	float3 pad2;
 };
 
-cbuffer cbTerrainComponentData : register(b2, space2)
-{
-	float2 gv2ComponentOriginXZ;
-	float2 gv2ComponentSizeXZ;
-	int4 gi4LayerIndex;
-	int2 gv2NumQuadsXZ;
-	int2 pad3;
-};
-
 cbuffer cbLightCameraData : register(b3, space2)
 {
 	matrix gmtxLightViewProj;
 }
 
-cbuffer cbTerrainWorldTransform : register(b4, space2)
+cbuffer cbTerrainWorldData : register(b4, space2)
 {
 	matrix gmtxTerrainWorld;
+	float3 gv3TerrainScale;
+	float gfTerrainWorldPad0;
 };
 
 // ============ StructuredBuffers ============
@@ -446,12 +441,15 @@ cbuffer cbTerrainWorldTransform : register(b4, space2)
 StructuredBuffer<int> gBoneTransformOffsets : register(t2, space2);
 Texture2D gtxtTerrainAlbedo[4] : register(t3, space2); // t3, t4, t5, t6
 Texture2D gtxtTerrainNormal[4] : register(t7, space2); // t7, t8, t9, t10
-Texture2D gtxtTerrainWeightMap : register(t11, space2);
 
 // UI
 StructuredBuffer<UIRectData> gUIData : register(t12, space2);
 StructuredBuffer<ParticleDrawData> gParticleData : register(t13, space2);
 
+// Terrain
+StructuredBuffer<TerrainComponentData> gTerrainComponentData : register(t14, space2);
+Texture2D<uint> gtxtTerrainHeightMap : register(t15, space2);
+Texture2D gtxtTerrainWeightMaps[MAX_TERRAIN_COMPONENTS] : register(t16, space2);
 
 // ================================================================================
 // Functions / Helpers
@@ -487,7 +485,18 @@ float3 BlendTerrainNormal(float2 localXZ, float weights[MAX_LAYER], float3 norma
 	return normalize(blended);
 }
 
-float4 BlendTerrainAlbedo(float2 localXZ, out float weights[MAX_LAYER])
+float LoadTerrainHeightLocal(int2 heightCoord)
+{
+	uint unWidth = 0;
+	uint unHeight = 0;
+	gtxtTerrainHeightMap.GetDimensions(unWidth, unHeight);
+	
+	heightCoord = clamp(heightCoord, int2(0, 0), int2((int)unWidth - 1, (int)unHeight - 1));
+	uint raw = gtxtTerrainHeightMap.Load(int3(heightCoord, 0));
+	return ((int)raw - 32768) * (gv3TerrainScale.y / 128.0f);
+}
+
+float4 BlendTerrainAlbedo(float2 localXZ, uint nComponentIndex, out float weights[MAX_LAYER])
 {
 	[unroll(MAX_LAYER)]
 	for (int i = 0; i < MAX_LAYER; ++i)
@@ -495,22 +504,23 @@ float4 BlendTerrainAlbedo(float2 localXZ, out float weights[MAX_LAYER])
 		weights[i] = 0.0f;
 	}
 	
-	float2 vWeightUV = (localXZ - gv2ComponentOriginXZ) / gv2ComponentSizeXZ;
+	TerrainComponentData componentData = gTerrainComponentData[nComponentIndex];
+	float2 vWeightUV = (localXZ - componentData.v2ComponentOriginXZ) / componentData.v2ComponentSizeXZ;
 	vWeightUV = saturate(vWeightUV);
 	
 	// Half tiling
 	// 안맞추면 경계면 이상함
 	// 조건 : gvNumQuadsXZ + 1.0f 가 WeightMap의 해상도와 일치해야 함
-	float2 vWeightMapSize = float2(gv2NumQuadsXZ) + 1.0f;
+	float2 vWeightMapSize = float2(componentData.v2NumQuadsXZ) + 1.0f;
 	vWeightUV += 0.5f / vWeightMapSize;
 	
-	float4 vWeight = gtxtTerrainWeightMap.Sample(gWeightMapSamplerState, vWeightUV);
+	float4 vWeight = gtxtTerrainWeightMaps[componentData.nWeightMapIndex].Sample(gWeightMapSamplerState, vWeightUV);
 	
 	// Layer Remapping
 	[unroll(MAX_LAYER)]
 	for (int channel = 0; channel < MAX_LAYER; ++channel)
 	{
-		int nLayer = gi4LayerIndex[channel];
+		int nLayer = componentData.i4LayerIndex[channel];
 		if (nLayer >= 0)
 		{
 			weights[nLayer] += vWeight[channel];

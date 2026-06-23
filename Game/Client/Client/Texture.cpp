@@ -167,7 +167,7 @@ bool Texture::CreateTextureFromRawFile(const std::wstring& wstrTexturePath, uint
 	return true;
 }
 
-bool Texture::CreateTextureFromRawData(const std::wstring& wstrTexturePath, const std::vector<Vector4> data, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiFormat)
+bool Texture::CreateTextureFromRawData(const std::wstring& wstrTexturePath, const std::vector<Vector4>& data, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiFormat)
 {
 	// 리소스 포인터 생성
 	D3D12_RESOURCE_DESC resourceDesc = {};
@@ -214,7 +214,7 @@ bool Texture::CreateTextureFromRawData(const std::wstring& wstrTexturePath, cons
 	uint8* pMappedPtr = nullptr;
 	CD3DX12_RANGE d3dReadRange(0, 0);
 	pd3dUploadBuffer->Map(0, &d3dReadRange, reinterpret_cast<void**>(&pMappedPtr));
-	::memcpy(pMappedPtr, data.data(), data.size() * sizeof(decltype(data)::value_type));
+	::memcpy(pMappedPtr, data.data(), data.size() * sizeof(std::remove_cvref_t<decltype(data)>::value_type));
 	pd3dUploadBuffer->Unmap(0, nullptr);
 
 	std::vector<D3D12_SUBRESOURCE_DATA> subResources(1);
@@ -223,6 +223,47 @@ bool Texture::CreateTextureFromRawData(const std::wstring& wstrTexturePath, cons
 	subResources[0].SlicePitch = subResources[0].RowPitch * unHeight;
 
 	TEXTURE->UpdateResources(m_pd3dResource, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, subResources, nBytes, pd3dUploadBuffer);
+
+	return true;
+}
+
+bool Texture::CreateTextureFromHeightData(const std::wstring& wstrTexturePath, const std::vector<uint16>& data, uint32 unWidth, uint32 unHeight)
+{
+	// 리소스 포인터 생성
+	D3D12_RESOURCE_DESC resourceDesc = {};
+	{
+		resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		resourceDesc.Alignment = 0;
+		resourceDesc.Width = unWidth;
+		resourceDesc.Height = unHeight;
+		resourceDesc.DepthOrArraySize = 1;
+		resourceDesc.MipLevels = 1;
+		resourceDesc.Format = DXGI_FORMAT_R16_UINT;
+		resourceDesc.SampleDesc.Count = 1;
+		resourceDesc.SampleDesc.Quality = 0;
+		resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+	}
+
+	CD3DX12_HEAP_PROPERTIES d3dHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
+
+	DEVICE->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&resourceDesc,
+		D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
+		nullptr,
+		IID_PPV_ARGS(m_pd3dResource.GetAddressOf())
+	);
+
+	UINT64 nBytes = GetRequiredIntermediateSize(m_pd3dResource.Get(), 0, 1);
+
+	std::vector<D3D12_SUBRESOURCE_DATA> subResources(1);
+	subResources[0].pData = data.data();
+	subResources[0].RowPitch = unWidth * sizeof(uint16);
+	subResources[0].SlicePitch = subResources[0].RowPitch * unHeight;
+
+	TEXTURE->UpdateResources(m_pd3dResource, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, subResources, nBytes);
 
 	return true;
 }

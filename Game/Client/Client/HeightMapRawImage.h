@@ -21,6 +21,7 @@ public:
 	Vector3 GetNormalWorld(float fWorldX, float fWorldZ) const;
 	Vector3 GetTangentWorld(float fWorldX, float fWorldZ) const;
 	bool IsInsideWorld(float fWorldX, float fWorldZ);
+	TextureRef<Texture> GetHeightMapTexture() const { return m_HeightMapRef; }
 
 
 private:
@@ -35,6 +36,7 @@ private:
 private:
 	// RAW data
 	std::vector<uint16> m_HeightMapRawData;
+	TextureRef<Texture> m_HeightMapRef;
 
 	// Resolution (NumQuadX + 1) * (NumQuadZ + 1)
 	uint32 m_unWidth = 0;

@@ -162,6 +162,25 @@ struct CB_TERRAIN_COMPONENT_DATA
 	Vector2 pad0;
 };
 
+constexpr uint32 g_unMaxTerrainComponents = 8 * 8;
+
+struct TerrainComponentData
+{
+	Vector2 v2ComponentOriginXZ;
+	Vector2 v2ComponentSizeXZ;
+	XMINT4 xmi4LayerIndex;
+	XMINT2 xmi2NumQuadsXZ;
+	uint32 nWeightMapIndex = 0;
+	XMINT2 pad0 = XMINT2(0, 0);
+};
+
+struct CB_TERRAIN_WORLD_DATA
+{
+	Matrix mtxTerrainWorld;
+	Vector3 v3TerrainScale;
+	float pad0 = 0.0f;
+};
+
 
 
 

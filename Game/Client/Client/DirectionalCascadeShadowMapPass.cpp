@@ -202,7 +202,7 @@ void DirectionalCascadeShadowMapPass::CreatePipelineState()
 	}
 
 	{
-		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("ShadowTerrainVS");
+		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("ShadowTerrainInstancedVS");
 	}
 
 	hr = DEVICE->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dTerrainPipelineState.GetAddressOf()));
@@ -395,22 +395,64 @@ void DirectionalCascadeShadowMapPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandL
 void DirectionalCascadeShadowMapPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const std::vector<TerrainComponent*>& frustumCulled, OUT DescriptorHandle& outDescHandle)
 {
 	const auto& pTerrain = CUR_SCENE->GetTerrain();
-	const auto& pTerrainComponents = pTerrain->GetTerrainComponents();
-	const auto& pTerrainMesh = pTerrain->GetComponent<MeshRenderer>()->GetMeshes()[0];
+	const auto& pTerrainQuadMesh = pTerrain->GetTerrainQuadMesh();
+	if (!pTerrainQuadMesh) {
+		return;
+	}
 
 	constexpr uint32 rootParamWorldTransform = std::to_underlying(ROOT_PARAMETER::TERRAIN_WORLD_TRANSFORM);
+	constexpr uint32 rootParamTerrainComponent = std::to_underlying(ROOT_PARAMETER::TERRAIN_COMPONENT_DATA_AND_TEXTURES);
 	const uint32 unDescriptorInc = D3DCore::g_nCBVSRVDescriptorIncrementSize;
 
 	pd3dCommandList->SetPipelineState(m_pd3dTerrainPipelineState.Get());
 
-	Matrix mtxTerrainWorld = pTerrain->GetWorldMatrix().Transpose();
-	auto worldTransformCBuffer = RENDER->AllocCBuffer<Matrix>();
-	worldTransformCBuffer.WriteData(&mtxTerrainWorld);
+	std::vector<TerrainComponentData> terrainComponentDatas;
+	const uint32 unVisibleComponents = static_cast<uint32>(std::min<size_t>(
+		frustumCulled.size(),
+		g_unMaxTerrainComponents));
+	terrainComponentDatas.reserve(unVisibleComponents);
+
+	for (uint32 i = 0; i < unVisibleComponents; ++i) {
+		terrainComponentDatas.push_back(frustumCulled[i]->MakeTerrainComponentData(i));
+	}
+
+	auto terrainComponentSBuffer = RENDER->AllocSBuffer<TerrainComponentData>(unVisibleComponents);
+	terrainComponentSBuffer.WriteData(terrainComponentDatas);
+
+	CD3DX12_GPU_DESCRIPTOR_HANDLE terrainComponentGPUHandle = outDescHandle.gpuHandle;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE terrainComponentCPUHandle = outDescHandle.cpuHandle;
+
+	DEVICE->CopyDescriptorsSimple(1, terrainComponentCPUHandle, terrainComponentSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	terrainComponentCPUHandle.Offset(1, unDescriptorInc);
+
+	auto heightMapHandle = pTerrain->GetHeightMapTexture();
+	CD3DX12_CPU_DESCRIPTOR_HANDLE heightMapCPUHandle{};
+	if (heightMapHandle.IsValid()) {
+		heightMapCPUHandle = heightMapHandle.GetResource()->GetSRVHandle();
+		DEVICE->CopyDescriptorsSimple(1, terrainComponentCPUHandle, heightMapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	}
+	terrainComponentCPUHandle.Offset(1, unDescriptorInc);
+
+	for (uint32 i = 0; i < g_unMaxTerrainComponents; ++i) {
+		if (heightMapCPUHandle.ptr != 0) {
+			DEVICE->CopyDescriptorsSimple(1, terrainComponentCPUHandle, heightMapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		}
+		terrainComponentCPUHandle.Offset(1, unDescriptorInc);
+	}
+
+	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamTerrainComponent, terrainComponentGPUHandle);
+	outDescHandle.cpuHandle.Offset(2 + g_unMaxTerrainComponents, unDescriptorInc);
+	outDescHandle.gpuHandle.Offset(2 + g_unMaxTerrainComponents, unDescriptorInc);
+
+	CB_TERRAIN_WORLD_DATA terrainWorldData{};
+	terrainWorldData.mtxTerrainWorld = pTerrain->GetWorldMatrix().Transpose();
+	terrainWorldData.v3TerrainScale = pTerrain->GetTerrainScale();
+	auto worldTransformCBuffer = RENDER->AllocCBuffer<CB_TERRAIN_WORLD_DATA>();
+	worldTransformCBuffer.WriteData(&terrainWorldData);
 	pd3dCommandList->SetGraphicsRootConstantBufferView(rootParamWorldTransform, worldTransformCBuffer.GPUAddress);
 
-	for (const auto& pComponent : frustumCulled) {
-		const auto& terrainIndexRange = pComponent->GetIndexRange();
-		pTerrainMesh->RenderPosition(pd3dCommandList, 1, terrainIndexRange.unStartIndex, terrainIndexRange.unIndexCount);
+	if (unVisibleComponents > 0) {
+		pTerrainQuadMesh->RenderPosition(pd3dCommandList, unVisibleComponents);
 	}
 }
 

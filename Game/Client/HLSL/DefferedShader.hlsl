@@ -251,6 +251,43 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 	output.tangentW = mul(float4(input.tangent, 0.f), mtxWorld).xyz;
 	
 	output.positionLocalXZ = input.position.zx;
+	output.nComponentIndex = 0;
+	return output;
+}
+
+VS_TERRAIN_OUTPUT VSTerrainInstanced(VS_TERRAIN_INPUT input, uint instanceID : SV_InstanceID)
+{
+	VS_TERRAIN_OUTPUT output = (VS_TERRAIN_OUTPUT) 0;
+	TerrainComponentData comp = gTerrainComponentData[instanceID];
+
+	float2 gridXZ = input.position.zx;
+	float2 componentGridOriginXZ = round(comp.v2ComponentOriginXZ / gv3TerrainScale.xz);
+	float2 heightGridXZ = componentGridOriginXZ + gridXZ;
+	float2 localXZ = heightGridXZ * gv3TerrainScale.xz;
+
+	int2 heightCoord = int2(heightGridXZ);
+	float height = LoadTerrainHeightLocal(heightCoord);
+
+	float hLeft = LoadTerrainHeightLocal(heightCoord + int2(-1, 0));
+	float hRight = LoadTerrainHeightLocal(heightCoord + int2(1, 0));
+	float hBottom = LoadTerrainHeightLocal(heightCoord + int2(0, -1));
+	float hTop = LoadTerrainHeightLocal(heightCoord + int2(0, 1));
+
+	float3 positionLocal = float3(localXZ.y, height, localXZ.x);
+	float3 positionW = mul(float4(positionLocal, 1), gmtxTerrainWorld).xyz;
+
+	float3 tangentLocal = normalize(float3(0.0f, hRight - hLeft, 2.0f * gv3TerrainScale.x));
+	float3 bitangentLocal = normalize(float3(2.0f * gv3TerrainScale.z, hTop - hBottom, 0.0f));
+	float3 normalLocal = normalize(cross(tangentLocal, bitangentLocal));
+
+	matrix mtxViewProjection = mul(gCamera.mtxView, gCamera.mtxProjection);
+	output.position = mul(float4(positionW, 1), mtxViewProjection);
+	output.positionW = positionW;
+	output.normalW = mul(float4(normalLocal, 0.f), gmtxTerrainWorld).xyz;
+	output.tangentW = mul(float4(tangentLocal, 0.f), gmtxTerrainWorld).xyz;
+	output.positionLocalXZ = localXZ;
+	output.nComponentIndex = instanceID;
+
 	return output;
 }
 
@@ -262,7 +299,7 @@ PS_GBUFFER_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
 	float flayerWeights[MAX_LAYER] = { 0.f, 0.f, 0.f, 0.f };
 	
 	// Albedo
-	float4 cAlbedo = BlendTerrainAlbedo(input.positionLocalXZ, flayerWeights);
+	float4 cAlbedo = BlendTerrainAlbedo(input.positionLocalXZ, input.nComponentIndex, flayerWeights);
 	
 	// Normal
 	//float3 vNormal = BlendTerrainNormal(
