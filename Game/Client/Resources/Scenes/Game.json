@@ -23415,7 +23415,7 @@
 			"MeshName": "SM_CityBeach_BackgroundBuilding_02",
 			"Transform":
 			{
-				"WorldMatrix": [ 0.36405078738404817, 0, -0.93137909800738738, 0, 0, 1, 0, 0, 0.93137909800738738, 0, 0.36405078738404817, 0, 4090.6730294533281, -3554.9000016190171, 18412.648725217983, 1 ]
+				"WorldMatrix": [ 0.40931287817655559, 0, -0.91239408577589109, 0, 0, 1, 0, 0, 0.91239408577589109, 0, 0.40931287817655559, 0, 6190.6730294533281, -3554.9000016190171, 19502.648725217983, 1 ]
 			}
 		},
 		{
@@ -23452,6 +23452,672 @@
 			"Transform":
 			{
 				"WorldMatrix": [ 0.26491022690155897, 0, 0.9642730794142107, 0, 0, 1, 0, 0, -0.9642730794142107, 0, 0.26491022690155897, 0, 41929.532971963308, -3554.9000019999999, 21220.74266103331, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2757",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Classic_Car_9",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.99619469602964794, 0, -0.08715576631754085, 0, 0, 1, 0, 0, 0.08715576631754085, 0, -0.99619469602964794, 0, 22120, -3590, 27200, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2759",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Hatchback_Car_15",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.70710678548856998, 0, 0.70710677688452495, 0, 0, 1, 0, 0, -0.70710677688452495, 0, 0.70710678548856998, 0, 22690, -3590, 26690, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2761",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Van_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.99619469815066219, 0, -0.087155742074238166, 0, 0, 1, 0, 0, 0.087155742074238166, 0, 0.99619469815066219, 0, 22270, -3590, 26520, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2763",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Pick_Up_11",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.90630777818029085, 0, 0.42261828073322399, 0, 0, 1, 0, 0, -0.42261828073322399, 0, -0.90630777818029085, 0, 22940, -3590, 27260, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2950",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Sport_Car_39",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.70710678548856654, 0, 0.70710677688452839, 0, 0, 1, 0, 0, -0.70710677688452839, 0, 0.70710678548856654, 0, 23590, -3590, 26690, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2952",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Monster_Truck_15",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.08715575419588828, 0, -0.99619469709015518, 0, 0, 1, 0, 0, 0.99619469709015518, 0, 0.08715575419588828, 0, 21050, -3560, 24520, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2954",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Van_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 1.2167957308406585e-08, 0, -1, 0, 0, 1, 0, 0, 1, 0, 1.2167957308406585e-08, 0, 21400, -3570, 24560, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2956",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Classic_Car_9",
+			"Transform":
+			{
+				"WorldMatrix": [ 1.2167954532849024e-08, 0, -1, 0, 0, 1, 0, 0, 1, 0, 1.2167954532849024e-08, 0, 21760, -3570, 24580, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2958",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Van_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 1.2167951979336067e-08, 0, 1.0000000000000002, 0, 0, 1, 0, 0, -1.0000000000000002, 0, 1.2167951979336067e-08, 0, 23670, -3563.1324836181666, 23150, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2959",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Van_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 1.7453292366909068e-08, 0, 1, 0, 0, 1, 0, 0, -1, 0, 1.7453292366909068e-08, 0, 23990, -3563.1324812339808, 23180, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2963",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Muscle_Car_10",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.90630779874990175, 0, -0.42261823662154946, 0, 0, 1, 0, 0, 0.42261823662154946, 0, -0.90630779874990175, 0, 23880, -3590, 27060, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2965",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Monster_Truck_15",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.66750771145399823, 0, 0.74460288419361165, 0, 0, 1, 0, 0, -0.74460288419361165, 0, -0.66750771145399823, 0, 21070, -3590, 26790, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2967",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Pick_Up_11",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.9028590137615764, 0.07437526974860291, -0.42345474435799663, 0, -0.087155742074232753, 0.99613542954816359, -0.010866582829273573, 0, 0.42101006863608798, 0.04671750473557211, 0.90585208332172995, 0, 20900, -3575.0856276916529, 26040, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2969",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Monster_Truck_15",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.95694033639448994, 0.29028467507120975, 2.4335926191138447e-08, 0, 0.29028467507120986, 0.95694033639449128, -3.2375851243277035e-17, 0, -2.3288029405217752e-08, 7.0643463959698148e-09, -0.99999999999999867, 0, 24180, -3540, 27020, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2971",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Van_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 23950, -3570, 29480, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2973",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Pick_Up_11",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.99999999999999956, 0, 2.4335925397418882e-08, 0, 0, 1, 0, 0, -2.4335925397418882e-08, 0, -0.99999999999999956, 0, 24930, -3580, 29960, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2975",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Classic_Car_9",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.94154406607973495, 0, 0.33688985088607187, 0, 0, 1, 0, 0, -0.33688985088607187, 0, 0.94154406607973495, 0, 26040, -3590, 26530, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2976",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Classic_Car_9",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.5555702213214857, 0, 0.8314696201189764, 0, 0, 1, 0, 0, -0.8314696201189764, 0, -0.5555702213214857, 0, 26590, -3590, 27970, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2978",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Sport_Car_39",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.67155894160495833, 0, 0.74095113735686202, 0, 0, 1, 0, 0, -0.74095113735686202, 0, -0.67155894160495833, 0, 25770, -3590, 27150, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2982",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Hatchback_Car_15",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.77301045673992008, 0, -0.63439328004853601, 0, 0, 1, 0, 0, 0.63439328004853601, 0, 0.77301045673992008, 0, 25060, -3590, 26720, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2984",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Muscle_Car_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 27500, -3570, 28580, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2986",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Sport_Car_39",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 27550, -3570, 29160, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2988",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Classic_Car_9",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.99518472436140115, 0, 0.098017163791463857, 0, 0, 1, 0, 0, -0.098017163791463857, 0, -0.99518472436140115, 0, 28320, -3570, 28860, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2990",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Van_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 1.2167958307607307e-08, 0, 1, 0, 0, 1, 0, 0, -1, 0, 1.2167958307607307e-08, 0, 27030, -3590, 27150, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2992",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Pick_Up_11",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.51410275104237668, 0, -0.8577286058950464, 0, 0, 1, 0, 0, 0.8577286058950464, 0, 0.51410275104237668, 0, 27480, -3590, 26430, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2994",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Classic_Car_9",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.4275551013363208, 0, -0.90398928938416534, 0, 0, 1, 0, 0, 0.90398928938416534, 0, 0.4275551013363208, 0, 12070, -3570, 26220, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2996",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Muscle_Car_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 7770, -3590, 22630, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2998",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Classic_Car_9",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.098017127463357889, 0, 0.99518472793940749, 0, 0, 1, 0, 0, -0.99518472793940749, 0, -0.098017127463357889, 0, 23310, -3563.1323996948267, 23170, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3002",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Hatchback_Car_15",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.98917650656134071, 0, 0.14673049739948807, 0, 0, 1, 0, 0, -0.14673049739948807, 0, -0.98917650656134071, 0, 27850, -3590, 27090, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3006",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Sport_Car_39",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.98917651013216334, 0, 0.14673047332696168, 0, 0, 1, 0, 0, -0.14673047332696168, 0, 0.98917651013216334, 0, 28060, -3590, 26400, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3010",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Monster_Truck_15",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.90398928418168856, 0, 0.4275551123360346, 0, 0, 1, 0, 0, -0.4275551123360346, 0, -0.90398928418168856, 0, 28990, -3590, 27000, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3012",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Hatchback_Car_15",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.42755510133632024, 0, -0.90398928938416556, 0, 0, 1, 0, 0, 0.90398928938416556, 0, 0.42755510133632024, 0, 29200, -3590, 26220, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3027",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "SM_Sign_OneWay01",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.51410275104237579, 0, -0.85772860589504685, 0, 0, 1, 0, 0, 0.85772860589504685, 0, 0.51410275104237579, 0, 9170, -3560, 21960, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3029",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "SM_Sign_OneWay01",
+			"Transform":
+			{
+				"WorldMatrix": [ 1.2167951979336067e-08, 0, -1, 0, 0, 1, 0, 0, 1, 0, 1.2167951979336067e-08, 0, 30670, -3560, 27250, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3032",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "SM_Hydrant",
+			"Transform":
+			{
+				"WorldMatrix": [ 1.2167961083164869e-08, 0, 1, 0, 0, 1, 0, 0, -1, 0, 1.2167961083164869e-08, 0, 25620, -3560, 27700, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3040",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Muscle_Car_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.99879545622383115, 0, 0.049067673947611218, 0, 0, 1, 0, 0, -0.049067673947611218, 0, 0.99879545622383115, 0, 30680, -3570, 23680, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3042",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Pick_Up_11",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 30770, -3570, 23360, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3044",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Hatchback_Car_15",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 30730, -3570, 23010, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3046",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Classic_Car_9",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 30760, -3570, 22690, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3048",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Monster_Truck_15",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.1467304853632232, 0, 0.98917650834675264, 0, 0, 1, 0, 0, -0.98917650834675264, 0, 0.1467304853632232, 0, 31140, -3570, 22310, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3051",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Sport_Car_39",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.09801717590084702, 0, -0.99518472316873041, 0, 0, 1, 0, 0, 0.99518472316873041, 0, -0.09801717590084702, 0, 31510, -3570, 22370, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3055",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Muscle_Car_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.098017151682091908, 0, 0.99518472555407034, 0, 0, 1, 0, 0, -0.99518472555407034, 0, 0.098017151682091908, 0, 31810, -3570, 22270, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3057",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Classic_Car_9",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.098017151682094017, 0, 0.99518472555407, 0, 0, 1, 0, 0, -0.99518472555407, 0, 0.098017151682094017, 0, 32110, -3570, 22270, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3369",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Pick_Up_11",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.98078527595225617, 0, 0.19509034439268164, 0, 0, 1, 0, 0, -0.19509034439268164, 0, -0.98078527595225617, 0, 32430, -3570, 22730, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3371",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Van_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.98917651013216323, 0, -0.14673047332696212, 0, 0, 1, 0, 0, 0.14673047332696212, 0, 0.98917651013216323, 0, 32660, -3570, 23510, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3374",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Van_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.098017151682094017, 0, -0.99518472555407, 0, 0, 1, 0, 0, 0.99518472555407, 0, 0.098017151682094017, 0, 17810, -3560, 28450, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3378",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "SM_Sign_DoNotEnter",
+			"Transform":
+			{
+				"WorldMatrix": [ 1.2167961083164869e-08, 0, -1, 0, 0, 1, 0, 0, 1, 0, 1.2167961083164869e-08, 0, 16800, -3570, 29290, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3381",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "SM_Sign_DoNotEnter",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.19509033245851615, 0, -0.98078527832611051, 0, 0, 1, 0, 0, 0.98078527832611051, 0, 0.19509033245851615, 0, 12500, -3570, 27370, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3383",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "SM_Sign_DoNotEnter",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.049067661794323758, 0, -0.998795456820884, 0, 0, 1, 0, 0, 0.998795456820884, 0, -0.049067661794323758, 0, 28040, -3580, 29990, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3387",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "SM_Sign_DoNotEnter",
+			"Transform":
+			{
+				"WorldMatrix": [ 1.2167953200581394e-08, 0, 1, 0, 0, 1, 0, 0, -1, 0, 1.2167953200581394e-08, 0, 18230, -3570, 22870, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3396",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "SM_Sign_DoNotEnter",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, -4.2784520242239206e-15, 0, 0, 1, 0, 0, 4.2784520242239206e-15, 0, 1, 0, 8200, -3560, 21320, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3399",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Muscle_Car_10",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.94154405788120665, 0, -0.3368898737994227, 0, 0, 1, 0, 0, 0.3368898737994227, 0, -0.94154405788120665, 0, 13400, -3590, 25300, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3401",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Van_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.95694033639449161, 0, 0.29028467507120886, 0, 0, 1, 0, 0, -0.29028467507120886, 0, 0.95694033639449161, 0, 17330, -3590, 25770, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3403",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Van_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.98078528069996196, 0, -0.19509032052435837, 0, 0, 1, 0, 0, 0.19509032052435837, 0, 0.98078528069996196, 0, 31560, -3590, 25840, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3405",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Pick_Up_11",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.98917650656134026, 0, 0.14673049739949204, 0, 0, 1, 0, 0, -0.14673049739949204, 0, -0.98917650656134026, 0, 34860, -3590, 26050, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3406",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Monster_Truck_15",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.14673049171974872, 0, 0.9891765074038511, 0, 0, 1, 0, 0, -0.9891765074038511, 0, 0.14673049171974872, 0, 38670, -3570, 21340, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3407",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Sport_Car_39",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.098017175068060958, 0, -0.99518472325075269, 0, 0, 1, 0, 0, 0.99518472325075269, 0, -0.098017175068060958, 0, 39040, -3570, 21400, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3408",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Muscle_Car_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.098017157698810586, 0, 0.99518472496147525, 0, 0, 1, 0, 0, -0.99518472496147525, 0, 0.098017157698810586, 0, 39340, -3570, 21300, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3409",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Classic_Car_9",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.098017157698810586, 0, 0.99518472496147525, 0, 0, 1, 0, 0, -0.99518472496147525, 0, 0.098017157698810586, 0, 39640, -3570, 21300, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3414",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Muscle_Car_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.98917651018795727, 0, -0.14673047295082911, 0, 0, 1, 0, 0, 0.14673047295082911, 0, 0.98917651018795727, 0, 38390, -3570, 22630, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3415",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Pick_Up_11",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.98078528069996185, 0, -0.19509032052435862, 0, 0, 1, 0, 0, 0.19509032052435862, 0, 0.98078528069996185, 0, 38415.841773199281, -3570, 22298.590581368124, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3416",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Hatchback_Car_15",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.98078528069996185, 0, -0.19509032052435862, 0, 0, 1, 0, 0, 0.19509032052435862, 0, 0.98078528069996185, 0, 38308.328750297995, -3570, 21963.119345780578, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3417",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Classic_Car_9",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.98078528069996185, 0, -0.19509032052435862, 0, 0, 1, 0, 0, 0.19509032052435862, 0, 0.98078528069996185, 0, 38275.323406637472, -3570, 21643.415346290665, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3418",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Pick_Up_11",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.98078527699826146, 0, 0.19509033913406057, 0, 0, 1, 0, 0, -0.19509033913406057, 0, -0.98078527699826146, 0, 39980, -3570, 21720, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3420",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "SM_Sign_DoNotEnter",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.95694034345883883, 0, 0.29028465178317403, 0, 0, 1, 0, 0, -0.29028465178317403, 0, -0.95694034345883883, 0, 48950, -3590, 22200, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3423",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "SM_Sign_DoNotEnter",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.04906768610093637, 0, 0.99879545562677652, 0, 0, 1, 0, 0, -0.99879545562677652, 0, 0.04906768610093637, 0, 11650, -3670, 20280, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3424",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Pick_Up_11",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 30770, -3570, 23360, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3425",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Hatchback_Car_15",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 30730, -3570, 23010, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3426",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Classic_Car_9",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 30760, -3570, 22690, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3427",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Muscle_Car_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.90398929442406073, 0, 0.4275550906803578, 0, 0, 1, 0, 0, -0.4275550906803578, 0, 0.90398929442406073, 0, 8327.2330447360528, -3570, 26014.026065351591, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3428",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Pick_Up_11",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.92387953367540543, 0, 0.38268342955465856, 0, 0, 1, 0, 0, -0.38268342955465856, 0, 0.92387953367540543, 0, 8532.8408994297661, -3570, 25752.826122609931, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3429",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Hatchback_Car_15",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.92387953367540543, 0, 0.38268342955465856, 0, 0, 1, 0, 0, -0.38268342955465856, 0, 0.92387953367540543, 0, 8629.8249173966633, -3570, 25414.160948346322, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3430",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Classic_Car_9",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.92387953367540543, 0, 0.38268342955465856, 0, 0, 1, 0, 0, -0.38268342955465856, 0, 0.92387953367540543, 0, 8780, -3570, 25130, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_3434",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Sport_Car_39",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.97003125365650866, 0, -0.24298017805899771, 0, 0, 1, 0, 0, 0.24298017805899771, 0, 0.97003125365650866, 0, 40240, -3590, 24200, 1 ]
 			}
 		},
 		{
@@ -24801,7 +25467,7 @@
 			"MeshName": "SM_Lamppost7_Object_01",
 			"Transform":
 			{
-				"WorldMatrix": [ 0.98480775324697944, 0, 0.17364817633547594, 0, 0, 1, 0, 0, -0.17364817633547594, 0, 0.98480775324697944, 0, 16715.341463822806, -3426.0216594558715, 25152.527598262786, 1 ]
+				"WorldMatrix": [ 0.98480775324697944, 0, 0.17364817633547594, 0, 0, 1, 0, 0, -0.17364817633547594, 0, 0.98480775324697944, 0, 18215.341463822806, -3426.0216594558715, 25462.527598262786, 1 ]
 			}
 		},
 		{
@@ -24810,7 +25476,7 @@
 			"MeshName": "SM_Lamppost7_Object_02",
 			"Transform":
 			{
-				"WorldMatrix": [ 0.98480775324697944, 0, 0.17364817633547594, 0, 0, 1, 0, 0, -0.17364817633547594, 0, 0.98480775324697944, 0, 16715.370200624388, -3229.3505168777465, 25152.521013712547, 1 ]
+				"WorldMatrix": [ 0.98480775324697944, 0, 0.17364817633547594, 0, 0, 1, 0, 0, -0.17364817633547594, 0, 0.98480775324697944, 0, 18215.370200624388, -3229.3505168777465, 25462.521013712547, 1 ]
 			}
 		},
 		{
@@ -24819,7 +25485,7 @@
 			"MeshName": "SM_Lamppost7_Object_03",
 			"Transform":
 			{
-				"WorldMatrix": [ 0.98480775324697944, 0, 0.17364817633547594, 0, 0, 1, 0, 0, -0.17364817633547594, 0, 0.98480775324697944, 0, 16715.125298619219, -3249.3356242996215, 25155.055287804258, 1 ]
+				"WorldMatrix": [ 0.98480775324697944, 0, 0.17364817633547594, 0, 0, 1, 0, 0, -0.17364817633547594, 0, 0.98480775324697944, 0, 18215.125298619219, -3249.3356242996215, 25465.055287804258, 1 ]
 			}
 		},
 		{
@@ -24828,7 +25494,7 @@
 			"MeshName": "SM_Lamppost7_Object_04",
 			"Transform":
 			{
-				"WorldMatrix": [ 0.98480775324697944, 0, 0.17364817633547594, 0, 0, 1, 0, 0, -0.17364817633547594, 0, 0.98480775324697944, 0, 16713.153826391161, -3214.9037395339965, 25152.221312915564, 1 ]
+				"WorldMatrix": [ 0.98480775324697944, 0, 0.17364817633547594, 0, 0, 1, 0, 0, -0.17364817633547594, 0, 0.98480775324697944, 0, 18213.153826391161, -3214.9037395339965, 25462.221312915564, 1 ]
 			}
 		},
 		{
@@ -28182,7 +28848,7 @@
 		{
 			"ActorName": "StaticMeshActor_502",
 			"ComponentName": "StaticMeshComponent0",
-			"MeshName": "SM_Roof",
+			"MeshName": "SM_Roof02",
 			"Transform":
 			{
 				"WorldMatrix": [ -0.96189060297939588, 0, -0.27343457700139839, 0, 0, 1, 0, 0, 0.27343457700139839, 0, -0.96189060297939588, 0, 14649.685806735522, -3033.8357782445814, 28370.578154720151, 1 ]
@@ -28200,7 +28866,7 @@
 		{
 			"ActorName": "StaticMeshActor_504",
 			"ComponentName": "StaticMeshComponent0",
-			"MeshName": "SM_Wall",
+			"MeshName": "SM_Wall02",
 			"Transform":
 			{
 				"WorldMatrix": [ -0.96189060297939588, 0, -0.27343457700139839, 0, 0, 1, 0, 0, 0.27343457700139839, 0, -0.96189060297939588, 0, 14494.12934158389, -3312.7406244359877, 28329.645080653838, 1 ]
@@ -29256,7 +29922,7 @@
 			"MeshName": "MatineeCam_SM",
 			"Transform":
 			{
-				"WorldMatrix": [ 0.3669068883299198, 0, -0.93025767145240779, 0, 0, 1, 0, 0, 0.93025767145240779, 0, 0.3669068883299198, 0, 9548.6098748167678, -3339.8333722201801, 20623.639429101546, 1 ]
+				"WorldMatrix": [ 0.3669068883299198, 0, -0.93025767145240779, 0, 0, 1, 0, 0, 0.93025767145240779, 0, 0.3669068883299198, 0, 9548.6098748167678, -3460.4929759517195, 20623.639429101546, 1 ]
 			}
 		}
 	],
