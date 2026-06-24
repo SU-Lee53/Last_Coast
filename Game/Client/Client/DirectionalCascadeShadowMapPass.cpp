@@ -101,7 +101,7 @@ void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> p
 
 		DrawGeometry(pd3dCommandList, outDescHandle);
 
-		if (CUR_SCENE->GetTerrain() != nullptr) {
+		if (i <= g_unNumCascade / 2 && CUR_SCENE->GetTerrain() != nullptr) {
 			SpatialQueryDesc terrainShadowDesc{};
 			terrainShadowDesc.unLayerMask = SPATIAL_TERRAIN | SPATIAL_CAST_SHADOW;
 

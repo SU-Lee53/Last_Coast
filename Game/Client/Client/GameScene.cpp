@@ -41,7 +41,7 @@ void GameScene::BuildObjects()
 	m_pTerrain->LoadFromFiles("Game");
 
 	if (!bOnline) {
-		for (auto& pZombie : m_ZombiePool.Initialize(50, bOnline))
+		for (auto& pZombie : m_ZombiePool.Initialize(80, bOnline))
 			AddObject(pZombie);
 	}
 	else {
@@ -49,7 +49,7 @@ void GameScene::BuildObjects()
 	}
 
 	//auto begin = high_resolution_clock::now();
-	LoadFromFiles("DEMO");
+	LoadFromFiles("Game");
 	//auto end = high_resolution_clock::now();
 	//long long llLoadTime = duration_cast<milliseconds>(end - begin).count();
 
