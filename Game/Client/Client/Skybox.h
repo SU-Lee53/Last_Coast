@@ -20,15 +20,20 @@ public:
 
 	SkyboxData MakeCBData() const;
 	void ShowControllImGui();
+	bool SaveSkyboxParameters() const;
+	bool LoadSkyboxParameters();
+	bool SaveSkyboxParameters(const std::string& strSaveName) const;
+	bool LoadSkyboxParameters(const std::string& strSaveName);
 
 	void SetDayNightBlend(float fTime) { m_fTimeOfDayHours = std::clamp(fTime, 0.0f, 1.0f) * 24.0f; }
 	void SetTimeOfDayHours(float fHours) { m_fTimeOfDayHours = NormalizeTimeOfDayHours(fHours); }
 
 private:
-	void SaveParametersToJson() const;
+	void SetDefaultSkyboxParameters();
 	void UpdateTimeDerivedValues();
 	void SyncSunLightWithScene() const;
 
+	static std::string MakeSkyboxParametersPath(const std::string& strSaveName);
 	static float NormalizeTimeOfDayHours(float fHours);
 	static float GetEffectiveTwilightWidth(float fWidth);
 
@@ -76,6 +81,6 @@ private:
 	Vector3 m_v3NightHorizonColor;
 
 	std::shared_ptr<IComputePass> m_pPass;
-	inline const static  std::string g_strSkyboxBasePath = "../Resources/Skybox/";
+	inline const static  std::string g_strSavePath = "../Resources/Skybox/Skybox_";
+	std::string m_strSaveName = "Parameters";
 };
-

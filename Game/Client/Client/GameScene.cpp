@@ -33,6 +33,7 @@ void GameScene::BuildObjects()
 
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize();
+	m_pSkybox->LoadSkyboxParameters("SkyboxParameters");
 
 	//m_pPlayer = std::make_shared<DebugPlayer>();
 	//m_pPlayer->Initialize();
@@ -251,7 +252,6 @@ void GameScene::Update()
 	ProcessMeleeResults();
 	RemoveDeadZombies();
 }
-
 
 void GameScene::ProcessPlayerShoot()
 {
