@@ -161,6 +161,9 @@
     <Filter Include="02.Game\Scene\Sequence">
       <UniqueIdentifier>{6bf59c52-fb7d-484a-80f8-8c10c4f43567}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02.Game\Sound">
+      <UniqueIdentifier>{dc62a49b-fcb1-4eff-ab25-f98e641ba40c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h">
@@ -619,6 +622,7 @@
     <ClInclude Include="GameObject.h">
       <Filter>02.Game\Particle</Filter>
     </ClInclude>
+    <ClInclude Include="Sound.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -1039,6 +1043,7 @@
     <ClCompile Include="WaterGridObject.cpp">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClCompile>
+    <ClCompile Include="Sound.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">

@@ -26,6 +26,7 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 
 	MODEL->Initialize();
 	ANIMATION->Initialize();
+	SOUND->Initialize();
 
 	g_GameContext = std::make_unique<GameContext>();
 	GCTX->Initialize();
@@ -43,8 +44,6 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 	TEXTURE->LoadGameTextures();
 	MODEL->LoadGameModels();
 	ANIMATION->LoadGameAnimations();
-
-	SOUND->Initialize();
 
 	SHADER->ReleaseBlobs();
 

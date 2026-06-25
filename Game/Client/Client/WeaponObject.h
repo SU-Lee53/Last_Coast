@@ -3,6 +3,7 @@
 #include "ThirdPersonPlayer.h"
 
 class HitMarker;
+class Sound;
 
 class WeaponObject : public DynamicObject {
 public:
@@ -53,7 +54,11 @@ public:
 
 	const Matrix& GetOffsetTransform();
 
-	RayTraceDesc GenerateRayTraceDesc();
+	//RayTraceDesc GenerateRayTraceDesc();
+
+	virtual bool PlayFireSound();
+	virtual bool PlayBeginReloadSound();
+	virtual bool PlayEndReloadSound();
 
 public:
 	void EditStat();
@@ -68,6 +73,13 @@ protected:
 	float m_fDamage = 0.f;
 	Vector3 m_v3MuzzlePositionWorld = Vector3::Zero;
 	std::weak_ptr<IThirdPersonPlayer> m_wpOwner;
+
+protected:
+	// Sounds
+	std::shared_ptr<Sound> m_pFireSound = nullptr;
+	std::shared_ptr<Sound> m_pBeginReloadSound = nullptr;
+	std::shared_ptr<Sound> m_pEndReloadSound = nullptr;
+
 
 private:
 	float m_fFirePerSecond = 0.f;
@@ -91,7 +103,6 @@ private:
 	float m_fReloadTimer = 0.f;
 	bool m_bInReload = false;
 	
-
 	WEAPON_TYPE m_eWeaponType = WEAPON_TYPE::UNDEFINED;
 };
 

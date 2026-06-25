@@ -32,6 +32,7 @@ void GameContext::Initialize()
 {
 	LoadWeaponData();
 	LoadZombieModels();
+	LoadWeaponSounds();
 }
 
 void GameContext::LoadWeaponData()
@@ -86,6 +87,31 @@ void GameContext::LoadWeaponData()
 			}
 		}
 	}
+}
+
+void GameContext::LoadWeaponSounds()
+{
+	// Rifle1
+	SOUND->AddSound("rifle_shot_close", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_Noise-Exterior-Close_01.wav", false, true, SoundCategory::SFX);
+	//SOUND->AddSound("rifle_shot_distant1", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_Noise-Exterior-Distant_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("rifle_on_reload", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_ClipIn_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("rifle_end_reload", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_Bolt_01.wav", false, true, SoundCategory::SFX);
+	
+	// Shotgun
+	SOUND->AddSound("shotgun_shot_close", "../Resources/Sounds/Shotgun/SW_Weapons_Shotgun_Noise-Interior-Close_01.wav", false, true, SoundCategory::SFX);
+	//SOUND->AddSound("shotgun_shot_distant", "../Resources/Sounds/Shotgun/SW_Weapons_Shotgun_Noise-Interior-Distant_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("shotgun_on_reload", "../Resources/Sounds/Shotgun/SW_Weapons_Shotgun_ClipIn_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("shotgun_end_reload", "../Resources/Sounds/Shotgun/shotgun_trimmed_longtail.wav", false, true, SoundCategory::SFX);
+	
+	// Pistol
+	SOUND->AddSound("pistol_shot_close", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_Noise-Interior-Close_01.wav", false, true, SoundCategory::SFX);
+	//SOUND->AddSound("pistol_shot_distant", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_Noise-Interior-Distant_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("pistol_on_reload", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_ClipIn_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("pistol_end_reload", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_Slide_01.wav", false, true, SoundCategory::SFX);
+
+	// Impact
+	SOUND->AddSound("impact_on_zombie", "../Resources/Sounds/Pistol/SW_ImpactHeadshot_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("impact_on_object", "../Resources/Sounds/Pistol/SW_ImpactPlasterDebris_01.wav", false, true, SoundCategory::SFX);
 }
 
 void GameContext::LoadPlayerModels()

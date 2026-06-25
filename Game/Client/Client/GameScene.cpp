@@ -218,7 +218,7 @@ void GameScene::Update()
 
 		// 3D direction test: fire 3000cm (30m) from player in world axes.
 		Vector3 v3Base = m_pPlayer ? m_pPlayer->GetTransform()->GetPosition() : Vector3::Zero;
-		const float fDist = 3000.0f;
+		const float fDist = 3_m;
 		if (ImGui::Button("Left  (-X)")) {
 			SOUND->PlayAt("Test3D", v3Base + Vector3(-fDist, 0.0f, 0.0f));
 		}
@@ -563,6 +563,9 @@ void GameScene::ProcessShootResults()
 			auto it = m_RemotePlayers.find(ev.shooterPlayerId);
 			if (it != m_RemotePlayers.end()) {
 				it->second->PlayFireAction();
+				if (auto pWeapon = it->second->GetCurrentWeaponObject()) {
+					pWeapon->PlayFireSound();
+				}
 			}
 
 			Vector3 v3MuzzleDir = ev.v3ShootDir;

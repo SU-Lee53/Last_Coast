@@ -4,6 +4,7 @@
 ///		- UI 용 이미지
 ///		- 무기 모델
 ///		- 기타 상수
+///		+ 사운드 (06.25)
 
 class WeaponObject;
 class NodeObject;
@@ -32,6 +33,7 @@ public:
 	void Initialize();
 
 	void LoadWeaponData();
+	void LoadWeaponSounds();
 	void LoadPlayerModels();
 	void LoadZombieModels();
 
