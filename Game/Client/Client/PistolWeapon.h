@@ -7,6 +7,7 @@ public:
 	PistolWeapon() {
 		m_pFireSound = SOUND->GetSound("pistol_shot_close");
 		m_pBeginReloadSound = SOUND->GetSound("pistol_on_reload");
+		m_pMidReloadSound = SOUND->GetSound("pistol_mid_reload");
 		m_pEndReloadSound = SOUND->GetSound("pistol_end_reload");
 	}
 	virtual ~PistolWeapon() {}

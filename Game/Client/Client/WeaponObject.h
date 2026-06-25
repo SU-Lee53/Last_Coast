@@ -78,6 +78,7 @@ protected:
 	// Sounds
 	std::shared_ptr<Sound> m_pFireSound = nullptr;
 	std::shared_ptr<Sound> m_pBeginReloadSound = nullptr;
+	std::shared_ptr<Sound> m_pMidReloadSound = nullptr;
 	std::shared_ptr<Sound> m_pEndReloadSound = nullptr;
 
 

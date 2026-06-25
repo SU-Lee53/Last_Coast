@@ -122,12 +122,17 @@ bool WeaponObject::EndReload()
 
 bool WeaponObject::PlayFireSound()
 {
-	return SOUND->PlayAt(m_pFireSound, m_v3MuzzlePositionWorld) != nullptr;
+	if(m_pFireSound)
+		return SOUND->PlayAt(m_pFireSound, m_v3MuzzlePositionWorld) != nullptr;
 }
 
 bool WeaponObject::PlayBeginReloadSound()
 {
-	return SOUND->PlayAt(m_pBeginReloadSound, m_v3MuzzlePositionWorld) != nullptr;
+	auto bRes = SOUND->PlayAt(m_pBeginReloadSound, m_v3MuzzlePositionWorld) != nullptr;
+	if (bRes) {
+		SOUND->QueueSoundAt(m_pMidReloadSound, 0.5f, m_v3MuzzlePositionWorld);
+	}
+	return bRes;
 }
 
 bool WeaponObject::PlayEndReloadSound()

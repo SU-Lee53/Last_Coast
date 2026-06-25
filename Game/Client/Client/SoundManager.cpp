@@ -55,6 +55,30 @@ void SoundManager::Update()
 	FMOD_System_Update(m_gpSoundSystem);
 }
 
+void SoundManager::UpdateSoundQueue()
+{
+	auto fnCheck = [](const QueuedSound& queued) -> bool {
+		return TIME->GetTotalTime() >= queued.fTimeQueued + queued.fTimePlayAfter;
+	};
+
+	while (!m_SoundQueued.empty()) {
+		const auto& curQueued = m_SoundQueued.top();
+		if (fnCheck(curQueued)) {
+			if (curQueued.v3PlayAt == Vector3::Zero) {
+				Play(curQueued.pSoundToPlay);
+			}
+			else {
+				PlayAt(curQueued.pSoundToPlay, curQueued.v3PlayAt);
+			}
+
+			m_SoundQueued.pop();
+		}
+		else {
+			break;
+		}
+	}
+}
+
 void SoundManager::LoadSounds()
 {
 	AddSound("Test", "../Resources/Sounds/Test.wav", false, false, SoundCategory::SFX);
@@ -116,12 +140,17 @@ FMOD_CHANNEL* SoundManager::PlayAt(const std::string& strName, const Vector3& v3
 
 FMOD_CHANNEL* SoundManager::Play(const std::shared_ptr<Sound>& pSound)
 {
-	return PlayInternal(pSound.get(), false, Vector3::Zero);
+	return pSound ? PlayInternal(pSound.get(), false, Vector3::Zero) : nullptr;
 }
 
 FMOD_CHANNEL* SoundManager::PlayAt(const std::shared_ptr<Sound>& pSound, const Vector3& v3Position)
 {
-	return PlayInternal(pSound.get(), true, v3Position);
+	return pSound ? PlayInternal(pSound.get(), true, v3Position) : nullptr;
+}
+ 
+void SoundManager::QueueSoundAt(const std::shared_ptr<Sound>& pSound, float fTimeAfter, const Vector3& v3Position)
+{
+	m_SoundQueued.emplace(pSound, v3Position, TIME->GetTotalTime(), fTimeAfter);
 }
 
 void SoundManager::Pause(FMOD_CHANNEL* pChannel) const

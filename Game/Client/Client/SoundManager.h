@@ -26,6 +26,7 @@ class SoundManager {
 public:
 	void Initialize();
 	void Update();
+	void UpdateSoundQueue();
 	void LoadSounds();
 
 public:
@@ -34,8 +35,11 @@ public:
 
 	FMOD_CHANNEL* Play(const std::string& strName);
 	FMOD_CHANNEL* PlayAt(const std::string& strName, const Vector3& v3Position);
+
 	FMOD_CHANNEL* Play(const std::shared_ptr<Sound>& pSound);
 	FMOD_CHANNEL* PlayAt(const std::shared_ptr<Sound>& pSound, const Vector3& v3Position);
+
+	void QueueSoundAt(const std::shared_ptr<Sound>& pSound, float fTimeAfter, const Vector3& v3Position = Vector3::Zero);
 
 	void Pause(FMOD_CHANNEL* pChannel) const;
 	void Resume(FMOD_CHANNEL* pChannel) const;
@@ -66,6 +70,24 @@ private:
 	FMOD_CHANNELGROUP*	m_pMasterGroup = nullptr;
 	FMOD_CHANNELGROUP*	m_pCategoryGroups[static_cast<int>(SoundCategory::Count)] = {};
 	float				m_fCategoryVolume[static_cast<int>(SoundCategory::Count)] = {};
+
+private:
+	struct QueuedSound {
+		float fTimeQueued;
+		float fTimePlayAfter;
+		Vector3 v3PlayAt;
+		std::shared_ptr<Sound> pSoundToPlay;
+
+		QueuedSound(const std::shared_ptr<Sound>& pSound, const Vector3& v3At, float fQueued, float fAfter)
+			: fTimeQueued{ fQueued }, fTimePlayAfter{ fAfter }, v3PlayAt{ v3At }, pSoundToPlay{ pSound } {
+		}
+
+		bool operator<(const QueuedSound& other) const noexcept {
+			return fTimeQueued + fTimePlayAfter < other.fTimeQueued + other.fTimePlayAfter;
+		}
+	};
+
+	std::priority_queue<QueuedSound> m_SoundQueued;
 
 public:
 	static FMOD_SYSTEM* m_gpSoundSystem;
