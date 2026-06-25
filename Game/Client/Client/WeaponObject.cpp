@@ -122,8 +122,11 @@ bool WeaponObject::EndReload()
 
 bool WeaponObject::PlayFireSound()
 {
-	if(m_pFireSound)
+	if (m_pFireSound) {
 		return SOUND->PlayAt(m_pFireSound, m_v3MuzzlePositionWorld) != nullptr;
+	}
+
+	return false;
 }
 
 bool WeaponObject::PlayBeginReloadSound()

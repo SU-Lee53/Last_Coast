@@ -1,18 +1,28 @@
 ﻿#include "pch.h"
 #include "DirectionalCascadeShadowMapPass.h"
 #include "TerrainObject.h"
+#include "Sprite.h"
 
 void DirectionalCascadeShadowMapPass::Initialize()
 {
 	for (uint32 i = 0; i < g_unNumCascade; ++i) {
 		uint32 unShadowMapSize = g_unCascadeShadowMapSize[i];
+		std::string strName = std::format("Cascade_{}", i);
 		m_ShadowMapRefs[i] = TEXTURE->LoadDepthStencilTexture(
-			std::format("Cascade_{}", i),
+			strName,
 			unShadowMapSize,
 			unShadowMapSize,
 			DXGI_FORMAT_R32_FLOAT,
 			DXGI_FORMAT_D32_FLOAT
 		);
+
+		m_pShadowMapUI[i] = std::make_shared<ImageBox>(strName);
+		m_pShadowMapUI[i]->SetAnchor(Vector2{ 0.f, 0.f });
+		m_pShadowMapUI[i]->SetPivot(Vector2{ 0.f, 1.f });
+		m_pShadowMapUI[i]->SetPosition(Vector2{ 300.f * i, 900.f });
+		m_pShadowMapUI[i]->SetSize(Vector2{ 300.f, 300.f });
+		m_pShadowMapUI[i]->SetLayer(2);
+		m_pShadowMapUI[i]->SetVisible(true);
 	}
 
 	CreatePipelineState();
@@ -175,10 +185,11 @@ void DirectionalCascadeShadowMapPass::CreatePipelineState()
 		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("ShadowStandardVS");
 		d3dPipelineDesc.PS = { nullptr, 0 };
 		d3dPipelineDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_FRONT;
 		d3dPipelineDesc.RasterizerState.FrontCounterClockwise = FALSE;
 		d3dPipelineDesc.RasterizerState.DepthBias = 5000;
 		d3dPipelineDesc.RasterizerState.DepthBiasClamp = 0.05f;
+		d3dPipelineDesc.RasterizerState.DepthClipEnable = FALSE;
 		d3dPipelineDesc.RasterizerState.SlopeScaledDepthBias = 4.0f;
 		d3dPipelineDesc.RasterizerState.DepthClipEnable = TRUE;
 		d3dPipelineDesc.RasterizerState.MultisampleEnable = FALSE;
@@ -493,6 +504,20 @@ void DirectionalCascadeShadowMapPass::ComputeCascade()
 
 		float fCascadeNear = std::lerp(fUniformNear, fLogNear, g_fLambda);
 		float fCascadeFar = std::lerp(fUniformFar, fLogFar, g_fLambda);
+		if (i > 0) {
+			auto CalcCascadeSplit = [n, f](uint32 unCascadeIndex) {
+				float p = static_cast<float>(unCascadeIndex + 1) / static_cast<float>(g_unNumCascade);
+				float fLog = n * std::powf(f / n, p);
+				float fUniform = n + (f - n) * p;
+				return std::lerp(fUniform, fLog, g_fLambda);
+			};
+
+			const float fPrevSplitStart = (i == 1) ? 0.0f : CalcCascadeSplit(i - 2);
+			const float fPrevSplitEnd = CalcCascadeSplit(i - 1);
+			const float fPrevBlendWidth = (fPrevSplitEnd - fPrevSplitStart) * 0.10f;
+			const float fPrevBlendStart = std::max(n, fPrevSplitEnd - fPrevBlendWidth);
+			fCascadeNear = std::min(fCascadeNear, fPrevBlendStart);
+		}
 
 		Matrix mtxCascadeCameraProj = XMMatrixPerspectiveFovLH(fFovY, fAspectRatio, fCascadeNear, fCascadeFar);
 		BoundingFrustum::CreateFromMatrix(xmCascadeFrustum, mtxCascadeCameraProj);
@@ -620,7 +645,11 @@ void DirectionalCascadeShadowMapPass::ComputeCascade()
 
 void DirectionalCascadeShadowMapPass::ShowDebugInfo()
 {
-	/*if (ImGui::Button(std::format("Show Shadow Maps : {}", m_bShowShadowMaps ? "TRUE" : "FALSE").c_str())) {
-		m_bShowShadowMaps = !m_bShowShadowMaps;
-	}*/
+	if (ImGui::Button(std::format("Show Shadow Maps : {}", m_bShowShadowMaps ? "TRUE" : "FALSE").c_str())) {
+		m_bShowShadowMaps = !m_bShowShadowMaps; 
+		for (int i = 0; i < _countof(m_pShadowMapUI); ++i) {
+			m_bShowShadowMaps ? CUR_SCENE->GetUIBoard()->InsertUI(m_pShadowMapUI[i]) 
+							  : CUR_SCENE->GetUIBoard()->RemoveUI(m_pShadowMapUI[i]);
+		}
+	}
 }

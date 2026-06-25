@@ -82,12 +82,16 @@ private:
 			: fTimeQueued{ fQueued }, fTimePlayAfter{ fAfter }, v3PlayAt{ v3At }, pSoundToPlay{ pSound } {
 		}
 
-		bool operator<(const QueuedSound& other) const noexcept {
-			return fTimeQueued + fTimePlayAfter < other.fTimeQueued + other.fTimePlayAfter;
-		}
+		struct Comp {
+			bool operator()(const QueuedSound& lhs, const QueuedSound& rhs) const noexcept {
+				return lhs.fTimeQueued + lhs.fTimePlayAfter > rhs.fTimeQueued + rhs.fTimePlayAfter;
+
+			}
+		};
+
 	};
 
-	std::priority_queue<QueuedSound> m_SoundQueued;
+	std::priority_queue<QueuedSound, std::vector<QueuedSound>, QueuedSound::Comp> m_SoundQueued;
 
 public:
 	static FMOD_SYSTEM* m_gpSoundSystem;

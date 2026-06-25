@@ -134,7 +134,7 @@
     "SHOTGUN": {
         "AmmoPerClip": 8,
         "Damage": 15.0,
-        "FirePerSecond": 70.0,
+        "FirePerSecond": 75.0,
         "MuzzlePosition": [
             100.0,
             6.199999809265137,

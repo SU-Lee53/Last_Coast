@@ -33,6 +33,7 @@ public:
 	static HANDLE g_NewFrameEvent;
 
 	bool m_bShowDebugMenu = true;
+	bool m_bDraw = true;
 	MANAGER_DEBUG m_eManagerDebug = MANAGER_DEBUG::NONE;
 
 	// ── 채팅 ────────────────────────────────────────────────────────────────

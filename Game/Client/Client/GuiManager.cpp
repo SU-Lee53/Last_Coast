@@ -41,6 +41,10 @@ void GuiManager::Update()
 		m_bShowDebugMenu = !m_bShowDebugMenu;
 	}
 
+	if (INPUT->GetButtonDown(VK_F3)) {
+		m_bDraw = !m_bDraw;
+	}
+
 	if (m_bShowDebugMenu) {
 		if (ImGui::BeginMainMenuBar()) {
 			if (ImGui::BeginMenu("Managers")) {
@@ -121,12 +125,11 @@ void GuiManager::Update()
 
 void GuiManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 {
-    ImGui::Render();
-
-    pd3dCommandList->SetDescriptorHeaps(1, m_pFontSrvDescriptorHeap->GetD3DDescriptorHeap().GetAddressOf());
-
-    ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), pd3dCommandList.Get());
-
+	if (m_bDraw) {
+		ImGui::Render();
+		pd3dCommandList->SetDescriptorHeaps(1, m_pFontSrvDescriptorHeap->GetD3DDescriptorHeap().GetAddressOf());
+		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), pd3dCommandList.Get());
+	}
 }
 
 void GuiManager::DrawChatWindow()

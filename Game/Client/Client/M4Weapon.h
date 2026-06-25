@@ -5,7 +5,7 @@
 class M4Weapon : public WeaponObject {
 public:
 	M4Weapon() {
-		m_pFireSound = SOUND->GetSound("rifle_shot_close");
+		m_pFireSound = SOUND->GetSound("m4_shot_close");
 		m_pBeginReloadSound = SOUND->GetSound("rifle_on_reload");
 		m_pMidReloadSound = SOUND->GetSound("rifle_mid_reload");
 		m_pEndReloadSound= SOUND->GetSound("rifle_end_reload");

@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "RenderPass.h"
 
+class ImageBox;
+
 class DirectionalCascadeShadowMapPass : public IRenderPass {
 public:
 	constexpr static uint32 g_unNumCascade = 4;
@@ -122,5 +124,11 @@ private:
 	};
 
 	bool m_bFirstUpdate = true;
+
+private:
+	std::shared_ptr<ImageBox> m_pShadowMapUI[g_unNumCascade];
+	bool m_bShowShadowMaps = false;
+	bool m_bShowing = false;
+
 };
 
