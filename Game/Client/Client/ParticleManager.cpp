@@ -75,6 +75,16 @@ void ParticleManager::RegisterParticleTextures()
 	);
 
 	m_TextureCache.Register(
+		PARTICLE_TEXTURE_ID::FIRE_FLAME,
+		"../Resources/Particles/Fire_Flame.png"
+	);
+
+	m_TextureCache.Register(
+		PARTICLE_TEXTURE_ID::EXPLOSION_FIREBALL,
+		"../Resources/Particles/Explosion_Fireball.png"
+	);
+
+	m_TextureCache.Register(
 		PARTICLE_TEXTURE_ID::BLOOD_MIST,
 		"../Resources/Particles/Blood_Mist.png"
 	);

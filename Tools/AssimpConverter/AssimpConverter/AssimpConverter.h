@@ -91,8 +91,8 @@ class AssimpConverter {
 public:
 	AssimpConverter();
 
-	bool IsOpened() { return m_pScene; }
-	void LoadFromFiles(const std::string& strPath, float fScaleFactor = 1.f);
+	bool IsOpened() { return m_pScene && m_pRootNode; }
+	bool LoadFromFiles(const std::string& strPath, float fScaleFactor = 1.f);
 
 	void SerializeModel(const std::string& strPath, const std::string& strName);
 	void SerializeAnimation(const std::string& strPath, const std::string& strName);

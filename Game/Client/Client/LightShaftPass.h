@@ -34,4 +34,5 @@ private:
 
 	Vector2 m_v2LightScreenPosition = Vector2{ 0.5f, 0.5f };
 	bool m_bLightInFront = false;
+	bool m_bShouldRender = false;
 };

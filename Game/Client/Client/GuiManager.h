@@ -7,6 +7,7 @@ class GuiManager {
 	enum class MANAGER_DEBUG {
 		RENDER_MANAGER = 0,
 		SCENE_MANAGER,
+		ANIMATION_MANAGER,
 		TEXTURE_MANAGER,
 		MATERIAL_MANAGER,
 		MODEL_MANAGER,
@@ -28,6 +29,7 @@ public:
 	static HANDLE g_NewFrameEvent;
 
 	bool m_bShowDebugMenu = true;
+	bool m_bDraw = true;
 	MANAGER_DEBUG m_eManagerDebug = MANAGER_DEBUG::NONE;
 };
 

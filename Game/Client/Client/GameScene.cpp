@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "GameScene.h"
 #include "DebugPlayer.h"
 #include "ThirdPersonPlayer.h"
@@ -33,6 +33,7 @@ void GameScene::BuildObjects()
 
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize();
+	m_pSkybox->LoadSkyboxParameters("SkyboxParameters");
 
 	//m_pPlayer = std::make_shared<DebugPlayer>();
 	//m_pPlayer->Initialize();
@@ -68,6 +69,36 @@ void GameScene::BuildObjects()
 	// 서버 트리거 게임 이벤트용 시퀀스 (런타임에 이벤트 AddEvent).
 	// Scene::FixedUpdate()가 매 프레임 m_pEventSequence->Update() 호출.
 	m_pEventSequence = std::make_shared<EventSequence>(this);
+	if (!bOnline) {
+		for (auto& pZombie : m_ZombiePool.Initialize(80, bOnline))
+			AddObject(pZombie);
+	}
+	else {
+		m_ZombiePool.Initialize(100, true);
+	}
+
+	//auto begin = high_resolution_clock::now();
+	LoadFromFiles("Game");
+	//auto end = high_resolution_clock::now();
+	//long long llLoadTime = duration_cast<milliseconds>(end - begin).count();
+
+	//std::shared_ptr<TextBox> pText = std::make_shared<TextBox>(L"Malgun Gothic");
+	//pText->SetText(std::format(L"로딩 시간 : {}ms", llLoadTime));
+	//pText->SetLayer(0);
+	//pText->SetAnchor(Vector2{ 0,0 });
+	//pText->SetPivot(Vector2{ 0,0 });
+	//pText->SetPosition(Vector2{ 10,150 });
+	//pText->SetTextHeight(50);
+	//m_pUIBoard->InsertUI(pText);
+
+	m_pWater = std::make_shared<WaterGridObject>();
+	//pWater->Initialize();
+
+	auto& pTransform = m_pWater->GetTransform();
+	m_v3WaterPos = Vector3(0.f, -47_m, 0.f);
+	pTransform->SetPosition(m_v3WaterPos);
+	AddObject(m_pWater);
+
 }
 
 void GameScene::OnEnterScene()
@@ -215,7 +246,7 @@ void GameScene::Update()
 
 		// 3D direction test: fire 3000cm (30m) from player in world axes.
 		Vector3 v3Base = m_pPlayer ? m_pPlayer->GetTransform()->GetPosition() : Vector3::Zero;
-		const float fDist = 3000.0f;
+		const float fDist = 3_m;
 		if (ImGui::Button("Left  (-X)")) {
 			SOUND->PlayAt("Test3D", v3Base + Vector3(-fDist, 0.0f, 0.0f));
 		}
@@ -354,7 +385,6 @@ void GameScene::UpdateChat()
 	// 4) 채팅창이 포커스를 가진 동안 게임플레이 입력 차단
 	INPUT->SetTextInputMode(m_pChatInput->IsFocused());
 }
-
 
 void GameScene::ProcessPlayerShoot()
 {
@@ -705,6 +735,9 @@ void GameScene::ProcessShootResults()
 			auto it = m_RemotePlayers.find(ev.shooterPlayerId);
 			if (it != m_RemotePlayers.end()) {
 				it->second->PlayFireAction();
+				if (auto pWeapon = it->second->GetCurrentWeaponObject()) {
+					pWeapon->PlayFireSound();
+				}
 			}
 
 			Vector3 v3MuzzleDir = ev.v3ShootDir;

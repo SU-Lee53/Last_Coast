@@ -82,6 +82,7 @@ HRESULT TerrainObject::LoadFromFiles(const std::string& strFilename)
 	std::ifstream in{ strFilePath };
 	nlohmann::json jTerrain = nlohmann::json::parse(in);
 	ReadTerrainData(jTerrain, terrainInfo);
+	m_v3TerrainScale = terrainInfo.v3TerrainScale;
 
 	// 2. Height map
 	m_pHeightMapRawImage = std::make_unique<HeightMapRawImage>();
@@ -180,6 +181,13 @@ void TerrainObject::BuildTerrainMesh(const TERRAINLOADINFO& terrainInfo)
 	unIndices.reserve(unNumIndices);
 
 	m_pTerrainComponents.resize(terrainInfo.ComponentInfos.size());
+	if (!terrainInfo.ComponentInfos.empty()) {
+		const auto& firstComponentInfo = terrainInfo.ComponentInfos.front();
+		m_pTerrainQuadMesh = std::make_shared<TerrainQuadMesh>(
+			static_cast<uint32>(firstComponentInfo.xmi2NumQuadsXZ.x),
+			static_cast<uint32>(firstComponentInfo.xmi2NumQuadsXZ.y));
+	}
+
 	for (uint32 i = 0; i < terrainInfo.ComponentInfos.size(); ++i) {
 		const auto& componentInfo = terrainInfo.ComponentInfos[i];
 		TerrainIndexRange indexRange{};

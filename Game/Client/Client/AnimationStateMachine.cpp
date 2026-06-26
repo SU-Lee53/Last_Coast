@@ -14,6 +14,22 @@ void AnimationStateMachine::Initialize(std::shared_ptr<IGameObject> pOwner, floa
 
 	InitializeStateGraph();
 
+	auto pSkeleton = pOwner->GetComponent<Skeleton>();
+	if (pSkeleton) {
+		const std::vector<Bone>& ownerBones = pSkeleton->GetBones();
+		for (auto& pState : m_pStates) {
+			if (!pState || !pState->pAnimationToPlay) {
+				continue;
+			}
+
+			pState->channelIndices.resize(ownerBones.size(), INVALID_ID);
+			for (const auto& bone : ownerBones) {
+				pState->channelIndices[bone.nIndex] =
+					pState->pAnimationToPlay->GetChannelIndex(bone.strBoneName);
+			}
+		}
+	}
+
 	m_fLastAnimationChangedTime = m_fTotalAnimationTime;
 	m_fCurrentTransitionTime = 0.0f;
 	m_fCurrentAnimationStartOffset = 0.0f;
@@ -100,14 +116,14 @@ void AnimationStateMachine::Update()
 		for (const auto& bone : ownerBones) {
 			AnimationKey key0 =
 				pBeforeAnimation->GetKeyFrameSRT(
-					bone.strBoneName,
+					m_pBeforeState->channelIndices[bone.nIndex],
 					fBeforeAnimTime,
 					bone.mtxTransform
 				);
 
 			AnimationKey key1 =
 				pCurrentAnimation->GetKeyFrameSRT(
-					bone.strBoneName,
+					m_pCurrentState->channelIndices[bone.nIndex],
 					fCurrentAnimTime,
 					bone.mtxTransform
 				);
@@ -121,61 +137,12 @@ void AnimationStateMachine::Update()
 		for (const auto& bone : ownerBones) {
 			m_OutputPose[bone.nIndex] =
 				pCurrentAnimation->GetKeyFrameSRT(
-					bone.strBoneName,
+					m_pCurrentState->channelIndices[bone.nIndex],
 					fCurrentAnimTime,
 					bone.mtxTransform
 				);
 		}
 	}
-
-
-	//m_fTotalAnimationTime += DT;			// Test
-	//
-	//// Update StateMachine
-	//std::shared_ptr<AnimationState> pNextState = nullptr;
-	//for (const auto& pEdges : m_pCurrentState->pConnectedEdges) {
-	//	if (!pEdges.pConnectedState.expired()) {
-	//		if (pEdges.pConnectedState.lock()->fnStateTransitionCallback(m_wpOwner.lock())) {
-	//			pNextState = pEdges.pConnectedState.lock();
-	//			m_fCurrentTransitionTime = pEdges.dTransitionTime;
-	//			break;
-	//		}
-	//	}
-	//}
-	//
-	//if (pNextState) {
-	//	m_pBeforeState = m_pCurrentState;
-	//	m_pCurrentState = pNextState;
-	//
-	//	m_fLastAnimationChangedTime = m_fTotalAnimationTime;
-	//}
-	//
-	//const std::vector<Bone>& ownerBones = m_wpOwner.lock()->GetComponent<Skeleton>()->GetBones();
-	//int nBones = ownerBones.size();
-	//auto pAnimation = m_pCurrentState->pAnimationToPlay;
-	//
-	//float fCurrentTime = m_fTotalAnimationTime - m_fLastAnimationChangedTime;
-	//float fTime = std::fmod(m_fTotalAnimationTime, pAnimation->GetDuration());
-	//
-	//m_OutputPose.resize(nBones);
-	//if (fCurrentTime < m_fCurrentTransitionTime) {
-	//	auto pLastAnimation = m_pBeforeState->pAnimationToPlay;
-	//	float fLastTime = std::fmod(m_fLastAnimationChangedTime + fCurrentTime, pLastAnimation->GetDuration());
-	//
-	//	float fWeight = std::clamp(fCurrentTime / m_fCurrentTransitionTime, 0.f, 1.f);
-	//	fWeight = ::SmoothStep(fWeight, 0.f, 1.f);
-	//
-	//	for (const auto& bone : ownerBones) {
-	//		AnimationKey key0 = pLastAnimation->GetKeyFrameSRT(bone.strBoneName, fLastTime, bone.mtxTransform);
-	//		AnimationKey key1 = pAnimation->GetKeyFrameSRT(bone.strBoneName, fTime, bone.mtxTransform);
-	//		m_OutputPose[bone.nIndex] = AnimationKey::Lerp(key0, key1, fWeight);
-	//	}
-	//}
-	//else {
-	//	for (const auto& bone : ownerBones) {
-	//		m_OutputPose[bone.nIndex] = pAnimation->GetKeyFrameSRT(bone.strBoneName, fTime, bone.mtxTransform);
-	//	}
-	//}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////

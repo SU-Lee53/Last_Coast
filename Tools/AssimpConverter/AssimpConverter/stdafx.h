@@ -148,20 +148,55 @@ inline HWND		g_hScaleEdit;		// Scale Factor Edit
 inline HWND		g_hModelRadio;		// Model Radio
 inline HWND		g_hAnimRadio;		// Animation Radio
 inline HWND		g_hBakeOptionCheck;	
+inline std::ofstream g_LogFile;
+inline std::filesystem::path g_LogFilePath;
+
+inline bool BeginConversionLog(const std::filesystem::path& saveDirectoryPath)
+{
+	if (g_LogFile.is_open()) {
+		g_LogFile.close();
+	}
+
+	std::error_code ec;
+	std::filesystem::create_directories(saveDirectoryPath, ec);
+	g_LogFilePath = saveDirectoryPath / "AssimpConverterLog.txt";
+	g_LogFile.open(g_LogFilePath, std::ios::out | std::ios::trunc);
+
+	return g_LogFile.is_open();
+}
+
+inline void EndConversionLog()
+{
+	if (g_LogFile.is_open()) {
+		g_LogFile.flush();
+		g_LogFile.close();
+	}
+}
+
+inline const std::filesystem::path& GetConversionLogPath()
+{
+	return g_LogFilePath;
+}
 
 inline void DisplayText(const char* fmt, ...)
 {
 	va_list arg;
 	va_start(arg, fmt);
-	char cbuf[512 * 2];
-	vsprintf_s(cbuf, fmt, arg);
+	char cbuf[4096];
+	vsnprintf_s(cbuf, _countof(cbuf), _TRUNCATE, fmt, arg);
 	va_end(arg);
 
-	int nLength = GetWindowTextLength(g_hMainEdit);
-	SendMessage(g_hMainEdit, EM_SETSEL, nLength, nLength);
-	SendMessageA(g_hMainEdit, EM_REPLACESEL, FALSE, (LPARAM)cbuf);
-}
+	if (g_LogFile.is_open()) {
+		g_LogFile << cbuf;
+		g_LogFile.flush();
+	}
 
+	if (g_hMainEdit && IsWindow(g_hMainEdit)) {
+		int nLength = GetWindowTextLength(g_hMainEdit);
+		SendMessage(g_hMainEdit, EM_SETSEL, nLength, nLength);
+		SendMessageA(g_hMainEdit, EM_REPLACESEL, FALSE, (LPARAM)cbuf);
+	}
+}
 inline int ParseFilePaths(wchar_t* pwstrBuffer, std::vector<std::wstring>& outwstrFilePathes)
 {
 	wchar_t* p = pwstrBuffer;

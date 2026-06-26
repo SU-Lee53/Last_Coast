@@ -1,36 +1,12 @@
 ﻿#include "pch.h"
 #include "SoundManager.h"
+#include "Sound.h"
 
 namespace {
 	FMOD_VECTOR ToFmod(const Vector3& v)
 	{
 		FMOD_VECTOR out{ v.x, v.y, v.z };
 		return out;
-	}
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Sound
-
-Sound::Sound(const std::string& strPath, bool bLoop, bool b3D, SoundCategory eCategory)
-	: m_bLoop(bLoop)
-	, m_b3D(b3D)
-	, m_eCategory(eCategory)
-{
-	FMOD_MODE eFlag = b3D ? FMOD_3D : FMOD_2D;
-	eFlag |= bLoop ? FMOD_LOOP_NORMAL : FMOD_LOOP_OFF;
-
-	FMOD_System_CreateSound(SoundManager::m_gpSoundSystem, strPath.c_str(), eFlag, 0, &m_pSound);
-
-	if (m_pSound && b3D) {
-		FMOD_Sound_Set3DMinMaxDistance(m_pSound, SOUND_3D_MIN_DISTANCE, SOUND_3D_MAX_DISTANCE);
-	}
-}
-
-Sound::~Sound()
-{
-	if (m_pSound) {
-		FMOD_Sound_Release(m_pSound);
 	}
 }
 
@@ -79,6 +55,30 @@ void SoundManager::Update()
 	FMOD_System_Update(m_gpSoundSystem);
 }
 
+void SoundManager::UpdateSoundQueue()
+{
+	auto fnCheck = [](const QueuedSound& queued) -> bool {
+		return TIME->GetTotalTime() >= queued.fTimeQueued + queued.fTimePlayAfter;
+	};
+
+	while (!m_SoundQueued.empty()) {
+		const auto& curQueued = m_SoundQueued.top();
+		if (fnCheck(curQueued)) {
+			if (curQueued.v3PlayAt == Vector3::Zero) {
+				Play(curQueued.pSoundToPlay);
+			}
+			else {
+				PlayAt(curQueued.pSoundToPlay, curQueued.v3PlayAt);
+			}
+
+			m_SoundQueued.pop();
+		}
+		else {
+			break;
+		}
+	}
+}
+
 void SoundManager::LoadSounds()
 {
 	AddSound("Test", "../Resources/Sounds/Test.wav", false, false, SoundCategory::SFX);
@@ -91,7 +91,7 @@ void SoundManager::AddSound(const std::string& strName, const std::string& strPa
 		return;
 	}
 
-	m_pSoundMap.insert({ strName, std::make_unique<Sound>(strPath, bLoop, b3D, eCategory) });
+	m_pSoundMap.insert({ strName, std::make_shared<Sound>(strPath, bLoop, b3D, eCategory) });
 }
 
 FMOD_CHANNEL* SoundManager::PlayInternal(const std::string& strName, bool b3D, const Vector3& v3Position)
@@ -100,7 +100,15 @@ FMOD_CHANNEL* SoundManager::PlayInternal(const std::string& strName, bool b3D, c
 		return nullptr;
 	}
 
-	Sound* pSound = m_pSoundMap[strName].get();
+	return PlayInternal(m_pSoundMap[strName].get(), b3D, v3Position);
+}
+
+FMOD_CHANNEL* SoundManager::PlayInternal(Sound* pSound, bool b3D, const Vector3& v3Position)
+{
+	if (!pSound) {
+		return nullptr;
+	}
+
 	FMOD_CHANNELGROUP* pGroup = GetGroup(pSound->m_eCategory);
 
 	// Start paused so 3D attributes are applied before the first audible sample.
@@ -128,6 +136,21 @@ FMOD_CHANNEL* SoundManager::Play(const std::string& strName)
 FMOD_CHANNEL* SoundManager::PlayAt(const std::string& strName, const Vector3& v3Position)
 {
 	return PlayInternal(strName, true, v3Position);
+}
+
+FMOD_CHANNEL* SoundManager::Play(const std::shared_ptr<Sound>& pSound)
+{
+	return pSound ? PlayInternal(pSound.get(), false, Vector3::Zero) : nullptr;
+}
+
+FMOD_CHANNEL* SoundManager::PlayAt(const std::shared_ptr<Sound>& pSound, const Vector3& v3Position)
+{
+	return pSound ? PlayInternal(pSound.get(), true, v3Position) : nullptr;
+}
+ 
+void SoundManager::QueueSoundAt(const std::shared_ptr<Sound>& pSound, float fTimeAfter, const Vector3& v3Position)
+{
+	m_SoundQueued.emplace(pSound, v3Position, TIME->GetTotalTime(), fTimeAfter);
 }
 
 void SoundManager::Pause(FMOD_CHANNEL* pChannel) const
@@ -210,6 +233,12 @@ void SoundManager::SetListenerAttributes(const Vector3& v3Position, const Vector
 	FMOD_VECTOR up = ToFmod(v3Up);
 
 	FMOD_System_Set3DListenerAttributes(m_gpSoundSystem, 0, &pos, &vel, &forward, &up);
+}
+
+std::shared_ptr<Sound> SoundManager::GetSound(const std::string& strName) const
+{
+	auto it = m_pSoundMap.find(strName);
+	return (it != m_pSoundMap.end()) ? it->second : nullptr;
 }
 
 bool SoundManager::CheckExisting(const std::string& strName) const

@@ -2,6 +2,7 @@
 #include "SpatialTypes.h"
 #include "Zombie.h"
 #include "StaticObject.h"
+#include "WaterGridObject.h"
 #include "WeaponObject.h"
 #include "ThirdPersonPlayer.h"
 #include "CrashDebris.h"
@@ -24,6 +25,17 @@ struct SpatialObjectTraits<StaticObject>
         SPATIAL_CAST_SHADOW;
 
     static constexpr bool bDynamic = false;
+};
+
+template<>
+struct SpatialObjectTraits<WaterGridObject>
+{
+    static constexpr bool bSpatial = true;
+    static constexpr uint32 unLayerMask =
+        SPATIAL_RENDERABLE |
+        SPATIAL_RAY_TARGET;
+
+    static constexpr bool bDynamic = true;
 };
 
 template<>

@@ -30,22 +30,19 @@ void SkyboxPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const
 
 void SkyboxPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
-	//const uint32 unCurrentContext = RENDER->GetCurrentContextIndex();
-	//auto pRTV = RENDER->GetHDRBuffer(1).GetResource();
-	//pRTV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+	auto pRTV = RENDER->GetHDRBuffer(1).GetResource();
+	pRTV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
-	//// Set HDR result
-	//const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
-	//CD3DX12_CPU_DESCRIPTOR_HANDLE hdrHandle = outDescHandle.cpuHandle;
-	//constexpr uint32 rootParamHDR = std::to_underlying(ROOT_PARAMETER::HDR_RESULT);
+	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE hdrHandle = outDescHandle.cpuHandle;
+	constexpr uint32 rootParamHDR = std::to_underlying(ROOT_PARAMETER::HDR_RESULT);
 
-	//CD3DX12_CPU_DESCRIPTOR_HANDLE rtSRVHandle = pRTV->GetSRVHandle();
-	//DEVICE->CopyDescriptorsSimple(1, hdrHandle, rtSRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	//hdrHandle.Offset(1, unDescriptorInc);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtSRVHandle = pRTV->GetSRVHandle();
+	DEVICE->CopyDescriptorsSimple(1, hdrHandle, rtSRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	//pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamHDR, outDescHandle.gpuHandle);
-	//outDescHandle.cpuHandle.Offset(1, unDescriptorInc);
-	//outDescHandle.gpuHandle.Offset(1, unDescriptorInc);
+	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamHDR, outDescHandle.gpuHandle);
+	outDescHandle.cpuHandle.Offset(1, unDescriptorInc);
+	outDescHandle.gpuHandle.Offset(1, unDescriptorInc);
 }
 
 void SkyboxPass::CreatePipelineState()

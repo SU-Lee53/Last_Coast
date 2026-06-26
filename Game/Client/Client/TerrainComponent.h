@@ -24,6 +24,7 @@ public:
 		const BoundingBox& xmBound);
 
 	CB_TERRAIN_COMPONENT_DATA MakeCBData() const;
+	TerrainComponentData MakeTerrainComponentData(uint32 unWeightMapIndex) const;
 	const TerrainIndexRange& GetIndexRange() const { return m_IndexRange; };
 	TextureRef<Texture> GetWeightMapRefs() const { return m_WeightMapHandles; }
 

@@ -30,7 +30,7 @@ enum class ROOT_PARAMETER : uint32 {
 
 	LIGHT_CAMERA_DATA						= 18,
 	TERRAIN_LAYER							= 19,
-	TERRAIN_COMPONENT_AND_WEIGHTMAP			= 20,
+	TERRAIN_COMPONENT_DATA_AND_TEXTURES		= 20,
 
 	TERRAIN_WORLD_TRANSFORM					= 21,
 	UI_DATA									= 22,
@@ -84,7 +84,7 @@ class RenderManager {
 	DECLARE_SINGLE(RenderManager)
 
 public:
-	constexpr static uint32 g_unMaxPendingFrames = 3;
+	constexpr static uint32 g_unMaxPendingFrames = 4;
 
 public:
 	void Initialize(ComPtr<ID3D12Device> pd3dDevice);

@@ -60,6 +60,14 @@ void RenderGraph::BuildGraph()
 	pTransparentForwardPass->Initialize();
 	m_pAdjLists.push_back(pTransparentForwardPass);
 
+	std::shared_ptr<IRenderPass> pSkyboxPass = std::make_shared<SkyboxPass>();
+	pSkyboxPass->Initialize();
+	m_pAdjLists.push_back(pSkyboxPass);
+
+	std::shared_ptr<IRenderPass> pLightShaftPass = std::make_shared<LightShaftPass>();
+	pLightShaftPass->Initialize();
+	m_pAdjLists.push_back(pLightShaftPass);
+
 	std::shared_ptr<IRenderPass> pParticlePass = std::make_shared<ParticlePass>();
 	pParticlePass->Initialize();
 	m_pAdjLists.push_back(pParticlePass);
@@ -71,14 +79,6 @@ void RenderGraph::BuildGraph()
 	std::shared_ptr<AutoExposurePass> pAutoExposurePass = std::make_shared<AutoExposurePass>();
 	pAutoExposurePass->Initialize();
 	m_pAdjLists.push_back(pAutoExposurePass);
-
-	std::shared_ptr<IRenderPass> pLightShaftPass = std::make_shared<LightShaftPass>();
-	pLightShaftPass->Initialize();
-	m_pAdjLists.push_back(pLightShaftPass);
-
-	std::shared_ptr<IRenderPass> pSkyboxPass = std::make_shared<SkyboxPass>();
-	pSkyboxPass->Initialize();
-	m_pAdjLists.push_back(pSkyboxPass);
 
 	std::shared_ptr<IRenderPass> pToneMappingPass = std::make_shared<ToneMappingPass>();
 	pToneMappingPass->Initialize();
@@ -130,36 +130,82 @@ void RenderGraph::BuildGraph()
 	pBoundingBoxDebugPass->Connect(pUIPass);
 
 	m_unEntryNodeIndex = 0;
+	m_llPassTime.resize(m_pAdjLists.size(), 0);
 }
 
 void RenderGraph::Run(OUT DescriptorHandle& outDescHandle, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, void* pAdditionalContext)
 {
+	using namespace std::chrono;
+
+	m_fLastRecordTime += DT;
 	std::queue<std::shared_ptr<IRenderPass>> pBFSQueue;
 	pBFSQueue.push(m_pAdjLists[m_unEntryNodeIndex]);
 
 	RenderPassInput passInput = input;
 
-	while (pBFSQueue.size() != 0) {
-		// 1. Pop
-		const std::shared_ptr<IRenderPass> pCurPass = pBFSQueue.front();
-		pBFSQueue.pop();
-		
-		// 2. Run
+
+	for (uint32 i = 0; i < m_pAdjLists.size(); ++i) {
+		auto beginTime = high_resolution_clock::now();
 		RenderPassOutput passOutput;
-		pCurPass->Execute(pd3dCommandList, passInput, passOutput, outDescHandle);
+		m_pAdjLists[i]->Execute(pd3dCommandList, passInput, passOutput, outDescHandle);
 
 		passInput = passOutput.ToInput();
+		auto endTime = high_resolution_clock::now();
 
-		// 3. Push queue
-		const auto& pEdges = pCurPass->GetEdges();
-		for (auto& pEdge : pEdges) {
-			pBFSQueue.push(pEdge);
+		if (m_fLastRecordTime >= m_fRecordInterval) {
+			m_llPassTime[i] = duration_cast<microseconds>(endTime - beginTime).count();
 		}
 	}
+
+	if (m_fLastRecordTime >= m_fRecordInterval) {
+		m_fLastRecordTime = 0.f;
+	}
+
+	//while (pBFSQueue.size() != 0) {
+	//	// 1. Pop
+	//	const std::shared_ptr<IRenderPass> pCurPass = pBFSQueue.front();
+	//	pBFSQueue.pop();
+	//	
+	//	// 2. Run
+	//	RenderPassOutput passOutput;
+	//	pCurPass->Execute(pd3dCommandList, passInput, passOutput, outDescHandle);
+	//
+	//	passInput = passOutput.ToInput();
+	//
+	//	// 3. Push queue
+	//	const auto& pEdges = pCurPass->GetEdges();
+	//	for (auto& pEdge : pEdges) {
+	//		pBFSQueue.push(pEdge);
+	//	}
+	//}
 }
 
 void RenderGraph::ShowDebugInfo() const
 {
+	std::string strPassNames[] = {
+		"DirectionalCascadeShadowMapPass",
+		"GBufferPass",
+		"SSAOPass",
+		"DefferedLightingPass",
+		"DefferedFogPass",
+		"TransparentForwardPass",
+		"SkyboxPass",
+		"LightShaftPass",
+		"ParticlePass",
+		"BloomPass",
+		"AutoExposurePass",
+		"ToneMappingPass",
+		"BoundingBoxDebugPass",
+		"pUIPass"
+	};
+
+	long long totalTime = std::accumulate(m_llPassTime.begin(), m_llPassTime.end(), 0LL);
+	ImGui::Text("Total : %lld", totalTime);
+	for (uint32 i = 0; i < m_llPassTime.size(); ++i) {
+		const float fRatio = (totalTime > 0) ? ((float)m_llPassTime[i] / (float)totalTime) * 100.0f : 0.0f;
+		ImGui::Text("%s : Time : %lld us (%f)", strPassNames[i].c_str(), m_llPassTime[i], fRatio);
+	}
+
 	for (const auto& pPass : m_pAdjLists) {
 		if (ImGui::TreeNode(typeid(*pPass).name())) {
 			pPass->ShowDebugInfo();

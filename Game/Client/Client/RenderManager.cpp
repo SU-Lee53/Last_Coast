@@ -167,7 +167,7 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 
 void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 {
-	CD3DX12_DESCRIPTOR_RANGE d3dDescriptorRanges[28]; 
+	CD3DX12_DESCRIPTOR_RANGE d3dDescriptorRanges[29]; 
 	// space0 : Per Scene (Frame) 
 	d3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, 0); // cbSceneData 
 	d3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gLightData 
@@ -218,9 +218,10 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	d3dDescriptorRanges[24].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 3, 2, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainAlbedo[4] 
 	d3dDescriptorRanges[25].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 7, 2, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainNormal[4]
 
-	// space2 : cbTerrainComponentData
-	d3dDescriptorRanges[26].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 2, 0); // cbTerrainComponentData 
-	d3dDescriptorRanges[27].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 11, 2, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainWeightMap
+	// space2 : Terrain component instancing data
+	d3dDescriptorRanges[26].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 14, 2, 0); // gTerrainComponentData
+	d3dDescriptorRanges[27].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 15, 2, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainHeightMap
+	d3dDescriptorRanges[28].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, g_unMaxTerrainComponents, 16, 2, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainWeightMaps
 
 	CD3DX12_ROOT_PARAMETER d3dRootParameters[24];
 	// Per Scene
@@ -248,9 +249,10 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	d3dRootParameters[17].InitAsShaderResourceView(2, 2, D3D12_SHADER_VISIBILITY_ALL);		// gBoneTransformOffsets
 	d3dRootParameters[18].InitAsConstantBufferView(3, 2, D3D12_SHADER_VISIBILITY_ALL);		// cbLightCameraData
 
-	d3dRootParameters[19].InitAsDescriptorTable(3, &d3dDescriptorRanges[23], D3D12_SHADER_VISIBILITY_ALL);								// TerrainLayer
-	d3dRootParameters[20].InitAsDescriptorTable(2, &d3dDescriptorRanges[26], D3D12_SHADER_VISIBILITY_ALL);								// TerrainComponent
+	d3dRootParameters[19].InitAsDescriptorTable(3, &d3dDescriptorRanges[23], D3D12_SHADER_VISIBILITY_ALL);	// TerrainLayer
+	d3dRootParameters[20].InitAsDescriptorTable(3, &d3dDescriptorRanges[26], D3D12_SHADER_VISIBILITY_ALL);	// TerrainComponentData + HeightMap + WeightMaps
 	d3dRootParameters[21].InitAsConstantBufferView(4, 2, D3D12_SHADER_VISIBILITY_ALL);		// gnWorldTransformIndex
+
 	d3dRootParameters[22].InitAsShaderResourceView(12, 2, D3D12_SHADER_VISIBILITY_ALL);		// gUIData
 	d3dRootParameters[23].InitAsShaderResourceView(13, 2, D3D12_SHADER_VISIBILITY_ALL);		// gParticleData
 
@@ -681,7 +683,7 @@ void RenderManager::OnPrepareRender()
 
 	float pfClearColor[4] = { 0.f, 0.0f, 0.0f, 1.0f };
 	pd3dCommandList->ClearRenderTargetView(d3dRTVCPUDescriptorHandle, pfClearColor, 0, NULL);
-	pd3dCommandList->ClearDepthStencilView(d3dDSVDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, NULL);
+	pd3dCommandList->ClearDepthStencilView(d3dDSVDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, NULL);
 	
 	pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, &d3dDSVDescriptorHandle);
 }

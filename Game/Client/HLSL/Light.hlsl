@@ -122,7 +122,8 @@ int GetCascadeIndex(float fViewDepth)
 float Compute3x3PCF(float3 shadowPos, int nCascadeIndex)
 {
 	//const float fCascadeSize[4] = { 2048, 1024, 512, 256 };
-	const float fCascadeSize[4] = { 4096, 2048, 1024, 512 };
+	//const float fCascadeSize[4] = { 4096, 2048, 1024, 512 };
+	const float fCascadeSize[4] = { 2048, 2048, 1024, 512 };
 	float fSum = 0.f;
 	
 	const float2 texelSize = (1.0f / fCascadeSize[nCascadeIndex]).xx;

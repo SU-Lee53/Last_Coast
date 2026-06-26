@@ -7,6 +7,9 @@
 #include "TextBox.h"
 #include "WeaponObject.h"
 #include "EventSequence.h"
+#include "ExplosionEffect.h"
+#include "FireEffect.h"
+#include "SmokeEffect.h"
 
 void MapTestScene::BuildObjects()
 {
@@ -109,10 +112,8 @@ void MapTestScene::BuildObjects()
 
 
 	m_pEventSequence = std::make_shared<EventSequence>(this);
-	m_pEventSequence->AddEvent(std::make_shared<TimeForwardEvent>());
-	m_pEventSequence->AddEvent(std::make_shared<BleedEvent>());
-
-	auto pCinematicEvent = std::make_shared<CinematicCameraEvent>();
+	//m_pEventSequence->AddEvent(std::make_shared<TimeForwardEvent>());
+	//m_pEventSequence->AddEvent(std::make_shared<BleedEvent>());
 
 	m_pEventSequence->AddEvent(std::make_shared<CinematicCameraEvent>());
 
@@ -163,6 +164,45 @@ void MapTestScene::Update()
 	std::wstring wstrTime;
 	wstrTime = std::format(L"TIME : {:.3f}", TIME->GetTotalTime());
 	m_pTimeText->SetText(wstrTime);
+
+	ImGui::Begin("Particle Test");
+	{
+		if (auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
+			const auto& transform = pPlayer->GetTransform();
+			Vector3 v3PlayerPos = transform->GetPosition();
+
+			auto MakeParticleSpawnDesc = [&]() {
+				ParticleEffectSpawnDesc desc{};
+				desc.v3Direction = transform->GetLook();
+				desc.v3Direction.Normalize();
+				desc.v3Normal = Vector3::Up;
+				desc.v3Position = v3PlayerPos + desc.v3Direction * 180.0f;
+				desc.mtxWorld = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
+				return desc;
+				};
+
+			ImGui::Text("Spawn Position : (%.1f, %.1f, %.1f)", v3PlayerPos.x, v3PlayerPos.y, v3PlayerPos.z);
+
+			if (ImGui::Button("Spawn Explosion")) {
+				PARTICLE->Spawn<ExplosionEffect>(MakeParticleSpawnDesc());
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Spawn Fire")) {
+				ParticleEffectSpawnDesc desc = MakeParticleSpawnDesc();
+				desc.v3Direction = Vector3::Up;
+				desc.mtxWorld = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
+				PARTICLE->Spawn<FireEffect>(desc);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Spawn Smoke")) {
+				ParticleEffectSpawnDesc desc = MakeParticleSpawnDesc();
+				desc.v3Direction = Vector3::Up;
+				desc.mtxWorld = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
+				PARTICLE->Spawn<SmokeEffect>(desc);
+			}
+		}
+	}
+	ImGui::End();
 
 
 	//	ImGui::Begin("Test");

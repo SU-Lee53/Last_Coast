@@ -26,6 +26,7 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 
 	MODEL->Initialize();
 	ANIMATION->Initialize();
+	SOUND->Initialize();
 
 	g_GameContext = std::make_unique<GameContext>();
 	GCTX->Initialize();
@@ -43,8 +44,6 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 	TEXTURE->LoadGameTextures();
 	MODEL->LoadGameModels();
 	ANIMATION->LoadGameAnimations();
-
-	SOUND->Initialize();
 
 	SHADER->ReleaseBlobs();
 
@@ -70,6 +69,7 @@ void GameFramework::Update()
 	AI->UpdateAll(DT);   // 에이전트 이동 먼저 → Zombie::PostUpdate에서 최신 위치 사용
 	SCENE->Update();
 
+	SOUND->UpdateSoundQueue();
 	PARTICLE->Update();
 
 	// 게임 중간에 리소스 생성이 필요할 수 있으므로 대기

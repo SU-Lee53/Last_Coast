@@ -41,25 +41,31 @@ private:
 
 	void BindGeometryData(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-		OUT DescriptorHandle& outDescHandle) const;
+		OUT DescriptorHandle& outDescHandle);
 	
 	void BindTerrainData(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-		OUT DescriptorHandle& outDescHandle) const;
+		OUT DescriptorHandle& outDescHandle);
 
 	void DrawGeometry(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
-		OUT DescriptorHandle& outDescHandle) const;
+		OUT DescriptorHandle& outDescHandle);
 	
 	void DrawTerrain(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
-		OUT DescriptorHandle& outDescHandle) const;
+		OUT DescriptorHandle& outDescHandle);
 
 private:
-	mutable RenderQueue m_RenderQueueCached;
-	mutable uint32 m_unFrustumCulled = 0;
+	void FrustumCulling();
+	void BuildGeometryCache();
+	void UploadGeometryCache(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle);
 
-	mutable struct CachedData {
+
+private:
+	RenderQueue m_RenderQueueCached;
+	uint32 m_unFrustumCulled = 0;
+
+	struct CachedData {
 		std::vector<std::shared_ptr<IGameObject>> pObjFrustumCulled;
 		std::vector<TerrainComponent*> pTerrainComponentFrustumCulled;
 
@@ -78,6 +84,8 @@ private:
 
 		std::unordered_map<const AnimationController*, AnimationInstancingData> animationInstancingData;
 
+		std::vector<TerrainComponentData> terrainComponentDatas;
+
 		void Clear() {
 			frustumCulledMap.Clear();
 			materialMap.Clear();
@@ -92,6 +100,8 @@ private:
 
 			pObjFrustumCulled.clear();
 			pTerrainComponentFrustumCulled.clear();
+
+			terrainComponentDatas.clear();
 		}
 
 	} m_CachedData;

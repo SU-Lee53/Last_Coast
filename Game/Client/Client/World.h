@@ -92,6 +92,7 @@ public:
 	void PreUpdate();
 	void FixedUpdate();
 	void PostUpdate();
+	void PostAnimationUpdate();
 	void PrepareRender();
 
 
@@ -429,6 +430,15 @@ void World<ObjTypes...>::PostUpdate()
 {
 	ForEachAliveAll([](auto& obj) {
 		obj->PostUpdate();
+	});
+}
+
+template<typename... ObjTypes>
+	requires (std::derived_from<ObjTypes, IGameObject> && ...)
+void World<ObjTypes...>::PostAnimationUpdate()
+{
+	ForEachAliveAll([](auto& obj) {
+		obj->PostAnimationUpdate();
 	});
 }
 

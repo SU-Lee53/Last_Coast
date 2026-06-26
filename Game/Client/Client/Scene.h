@@ -8,6 +8,7 @@
 #include "Zombie.h"
 #include "WeaponObject.h"
 #include "CrashDebris.h"
+#include "WaterGridObject.h"
 
 #include "Player.h"	// Includes GameObject
 #include "Camera.h"

@@ -55,15 +55,15 @@ void StaticObject::Update()
 
 void StaticObject::PostUpdate()
 {
-	for (auto& component : m_pComponents | std::views::drop(std::to_underlying(COMPONENT_TYPE::TRANSFORM) + 1)) {
-		if (component) {
-			component->Update();
-		}
-	}
+	//for (auto& component : m_pComponents | std::views::drop(std::to_underlying(COMPONENT_TYPE::TRANSFORM) + 1)) {
+	//	if (component) {
+	//		component->Update();
+	//	}
+	//}
 
-	for (auto& pChild : m_pChildren) {
-		pChild->PostUpdate();
-	}
+	//for (auto& pChild : m_pChildren) {
+	//	pChild->PostUpdate();
+	//}
 }
 
 void StaticObject::OnTraceHit(const RayTraceHitResult& hitResult)

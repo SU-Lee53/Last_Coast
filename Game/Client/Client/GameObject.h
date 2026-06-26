@@ -27,6 +27,7 @@ public:
 	virtual void PreUpdate() = 0;
 	virtual void Update() = 0;
 	virtual void PostUpdate() = 0;
+	virtual void PostAnimationUpdate() {}
 
 	virtual void Render();
 	virtual void AddToQueue(OUT std::vector<IGameObject*>& pRenderQueue);

@@ -30,6 +30,7 @@ void ShaderManager::Initialize(ComPtr<ID3D12Device> pDevice)
 	Load<StandardShader>();
 	Load<AnimatedShader>();
 	Load<TerrainShader>();
+	Load<WaterShader>();
 	//Load<FullScreenShader>();
 }
 
@@ -190,11 +191,13 @@ void ShaderManager::CompileShaders()
 	Compile("AnimatedVS", L"DefferedShader.hlsl", L"VSAnimated", SHADER_TYPE::VS);
 	Compile("GBufferOpaquePS", L"DefferedShader.hlsl", L"PSGBufferOpaque", SHADER_TYPE::PS);
 	Compile("GBufferAlphaMaskPS", L"DefferedShader.hlsl", L"PSGBufferAlphaMask", SHADER_TYPE::PS);
+	Compile("GBufferWaterPS", L"DefferedShader.hlsl", L"PSGBufferWater", SHADER_TYPE::PS);
 	
 	//Compile("StandardPS", L"DefferedShader.hlsl", L"PSStandard", SHADER_TYPE::PS);
 	//Compile("AnimatedPS", L"DefferedShader.hlsl", L"PSAnimated", SHADER_TYPE::PS);
 	
 	Compile("TerrainVS", L"DefferedShader.hlsl", L"VSTerrain", SHADER_TYPE::VS);
+	Compile("TerrainInstancedVS", L"DefferedShader.hlsl", L"VSTerrainInstanced", SHADER_TYPE::VS);
 	Compile("TerrainPS", L"DefferedShader.hlsl", L"PSTerrain", SHADER_TYPE::PS);
 	
 	//Compile("LightingVS", L"DefferedShader.hlsl", L"VSDefferedLighting", SHADER_TYPE::VS);
@@ -213,6 +216,7 @@ void ShaderManager::CompileShaders()
 
 	Compile("ShadowStandardVS", L"ShadowMapShader.hlsl", L"VSShadowStandard", SHADER_TYPE::VS);
 	Compile("ShadowTerrainVS", L"ShadowMapShader.hlsl", L"VSShadowTerrain", SHADER_TYPE::VS);
+	Compile("ShadowTerrainInstancedVS", L"ShadowMapShader.hlsl", L"VSShadowTerrainInstanced", SHADER_TYPE::VS);
 	Compile("ShadowAnimatedVS", L"ShadowMapShader.hlsl", L"VSShadowAnimated", SHADER_TYPE::VS);
 
 	Compile("UIRectVS", L"Sprite.hlsl", L"VSUIRect", SHADER_TYPE::VS);

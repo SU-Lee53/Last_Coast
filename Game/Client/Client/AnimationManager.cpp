@@ -58,6 +58,52 @@ std::shared_ptr<Animation> AnimationManager::Get(const std::string& strName)
 	return it->second;
 }
 
+void AnimationManager::RegisterAnimationController(AnimationController* pAnimCtrl)
+{
+	if (m_pUpdateQueue.end() == std::find(m_pUpdateQueue.begin(), m_pUpdateQueue.end(), pAnimCtrl)) {
+		m_pUpdateQueue.push_back(pAnimCtrl);
+	}
+}
+
+void AnimationManager::RemoveAnimationController(const AnimationController* pAnimCtrl)
+{
+	std::erase(m_pUpdateQueue, pAnimCtrl);
+}
+
+void AnimationManager::UpdateAnimationParallel()
+{
+	using namespace std::chrono;
+	auto beginTime = high_resolution_clock::now();
+
+	// 100 Updates
+	// 180 ~ 220 us
+	if (m_pUpdateQueue.size() <= 10) {
+		for (uint32 i = 0; i < m_pUpdateQueue.size(); ++i) {
+			m_pUpdateQueue[i]->Update();
+		}
+	}
+	else {
+		tbb::parallel_for(
+			tbb::blocked_range<size_t>(0, m_pUpdateQueue.size()),
+			[&](const tbb::blocked_range<size_t>& r) {
+				for (size_t i = r.begin(); i != r.end(); ++i) {
+					m_pUpdateQueue[i]->Update();
+				}
+			}
+		);
+	}
+
+
+	// 100 Updates
+	// 600 ~ 700 us
+	//for (uint32 i = 0; i < m_pUpdateQueue.size(); ++i) {
+	//	m_pUpdateQueue[i]->Update();
+	//}
+
+	auto endTime = high_resolution_clock::now();
+	m_llUpdateTime = duration_cast<microseconds>(endTime - beginTime).count();
+}
+
 std::shared_ptr<Animation> AnimationManager::LoadFromFile(const std::string& strName)
 {
 	namespace fs = std::filesystem;
@@ -84,9 +130,7 @@ std::shared_ptr<Animation> AnimationManager::LoadFromFile(const std::string& str
 	unsigned nChannels = jAnimation["nChannels"].get<unsigned>();
 	const nlohmann::json& jChannels = jAnimation["Channels"];
 
-	if constexpr (requires{ pAnimation->m_keyFrameMap.reserve(nChannels); }) {
-		pAnimation->m_keyFrameMap.reserve(nChannels);
-	}
+	pAnimation->m_keyFrameMap.Reserve(nChannels);
 
 	for (uint32 i = 0; i < nChannels; ++i) {
 		const nlohmann::json& jChannel = jChannels[i];
@@ -108,7 +152,17 @@ std::shared_ptr<Animation> AnimationManager::LoadFromFile(const std::string& str
 
 
 		std::string boneName = jChannels[i]["Name"].get<std::string>();
-		pAnimation->m_keyFrameMap.emplace(boneName, keyFrames);
+		pAnimation->m_keyFrameMap.Insert(boneName, keyFrames);
 	}
 	return pAnimation;
+}
+
+void AnimationManager::ShowDebugOptions()
+{
+	ImGui::Begin("AnimationManager");
+	{
+		ImGui::Text("Anim Controllers in Queue : %d", m_pUpdateQueue.size());
+		ImGui::Text("Update time : %lld microseconds", m_llUpdateTime);
+	}
+	ImGui::End();
 }

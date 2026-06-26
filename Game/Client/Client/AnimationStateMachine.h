@@ -13,6 +13,7 @@ struct AnimationState {
 	std::string strName;
 	std::shared_ptr<Animation> pAnimationToPlay;
 	UINT eAnimationPlayType;
+	std::vector<size_t> channelIndices;
 
 	std::vector<TransitionEdges> pConnectedEdges;
 	std::function<bool(std::shared_ptr<IGameObject>)> fnStateTransitionCallback;

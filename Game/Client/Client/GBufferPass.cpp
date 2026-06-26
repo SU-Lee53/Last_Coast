@@ -7,22 +7,6 @@
 
 void GBufferPass::Initialize()
 {
-	//const uint32 unRTVs = 3;
-	//for (uint32 i = 0; i < RenderManager::g_unMaxPendingFrames; ++i) {
-	//	m_pRTVs[i].reserve(unRTVs);
-	//	
-	//	for (uint32 j = 0; j < unRTVs; ++j) {
-	//		auto& [srvID, rtvID] = TEXTURE->LoadRenderTargetTexture(
-	//			"GBuffer_" + std::to_string(i) + "_" + std::to_string(j),
-	//			WinCore::g_dwClientWidth,
-	//			WinCore::g_dwClientHeight,
-	//			DXGI_FORMAT_R8G8B8A8_UNORM,
-	//			DXGI_FORMAT_R8G8B8A8_UNORM);
-	//
-	//		auto pRTV = std::static_pointer_cast<RenderTargetTexture>(TEXTURE->GetTextureByID(rtvID, TEXTURE_RESOURCE_TYPE::RTV));
-	//		m_pRTVs[i].push_back(pRTV);
-	//	}
-	//}
 }
 
 void GBufferPass::SetRenderTargets(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList) const
@@ -37,7 +21,6 @@ void GBufferPass::SetRenderTargets(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 
 	// Clear Render Targets
 	float pfClearColor[4] = { 0.f, 0.0f, 0.0f, 1.0f };
-
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE pd3dRTVCPUDescriptorHandle[] = {
 		currentGBuffer.GBuffers[0].GetResource()->GetRTVHandle(),
@@ -54,7 +37,7 @@ void GBufferPass::SetRenderTargets(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 	const auto& dsvRef = RENDER->GetDepthStencilBuffer();
 	auto pDSV = dsvRef.GetResource();
 	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dDSVDescriptorHandle = pDSV->GetDSVHandle();
-	pd3dCommandList->ClearDepthStencilView(d3dDSVDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, NULL);
+	pd3dCommandList->ClearDepthStencilView(d3dDSVDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, NULL);
 
 	pd3dCommandList->OMSetRenderTargets(_countof(pd3dRTVCPUDescriptorHandle), pd3dRTVCPUDescriptorHandle, FALSE, &d3dDSVDescriptorHandle);
 }
@@ -66,7 +49,6 @@ void GBufferPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 
 	// Frustum Culling
 	const BoundingFrustum& xmFrustumWorld = CUR_SCENE->GetCamera()->GetFrustumWorld();
-
 	{
 		const std::vector<std::shared_ptr<IGameObject>>& inputResource = RENDER->GetObjectsToRender();
 		m_CachedData.pObjFrustumCulled.reserve(inputResource.size());
@@ -101,7 +83,14 @@ void GBufferPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
 	SetRenderTargets(pd3dCommandList);
 }
 
-void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) const
+void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) 
+{
+	FrustumCulling();
+	BuildGeometryCache();
+	UploadGeometryCache(pd3dCommandList, outDescHandle);
+}
+
+void GBufferPass::FrustumCulling()
 {
 	for (const auto& pObj : m_CachedData.pObjFrustumCulled) {
 		const auto& pMeshRenderer = pObj->GetComponent<MeshRenderer>();
@@ -110,7 +99,10 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 			m_CachedData.frustumCulledMap[idx].second.push_back(pObj.get());
 		}
 	}
+}
 
+void GBufferPass::BuildGeometryCache()
+{
 	// materialData
 	size_t newSize = m_CachedData.frustumCulledMap.Size();
 	m_CachedData.materialMap.Reserve(newSize);
@@ -200,7 +192,10 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 			m_RenderQueueCached.emplace_back(pMeshes[meshIdx].get(), renderParameter);
 		}
 	}
+}
 
+void GBufferPass::UploadGeometryCache(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle)
+{
 	// Bind Per pass data
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE bindHandle = outDescHandle.cpuHandle;
@@ -248,13 +243,12 @@ void GBufferPass::BindGeometryData(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 	outDescHandle.gpuHandle.Offset(unNumTextures, unDescriptorInc);
 }
 
-void GBufferPass::BindTerrainData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) const
+void GBufferPass::BindTerrainData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) 
 {
 	const auto& pTerrain = CUR_SCENE->GetTerrain();
-	const auto& pTerrainComponents = pTerrain->GetTerrainComponents();
-	const auto& pTerrainMesh = pTerrain->GetComponent<MeshRenderer>()->GetMeshes()[0];
 
 	constexpr uint32 rootParamTerrainLayer = std::to_underlying(ROOT_PARAMETER::TERRAIN_LAYER);
+	constexpr uint32 rootParamTerrainComponent = std::to_underlying(ROOT_PARAMETER::TERRAIN_COMPONENT_DATA_AND_TEXTURES);
 	const uint32 unDescriptorInc = D3DCore::g_nCBVSRVDescriptorIncrementSize;
 
 	// cbTerrainLayerData
@@ -292,6 +286,51 @@ void GBufferPass::BindTerrainData(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamTerrainLayer, outDescHandle.gpuHandle);
 	outDescHandle.cpuHandle.Offset(9, unDescriptorInc);
 	outDescHandle.gpuHandle.Offset(9, unDescriptorInc);
+
+	const uint32 unVisibleComponents = static_cast<uint32>(std::min<size_t>(
+		m_CachedData.pTerrainComponentFrustumCulled.size(),
+		g_unMaxTerrainComponents));
+	m_CachedData.terrainComponentDatas.reserve(unVisibleComponents);
+
+	for (uint32 i = 0; i < unVisibleComponents; ++i) {
+		m_CachedData.terrainComponentDatas.push_back(m_CachedData.pTerrainComponentFrustumCulled[i]->MakeTerrainComponentData(i));
+	}
+
+	auto terrainComponentSBuffer = RENDER->AllocSBuffer<TerrainComponentData>(unVisibleComponents);
+	terrainComponentSBuffer.WriteData(m_CachedData.terrainComponentDatas);
+
+	CD3DX12_GPU_DESCRIPTOR_HANDLE terrainComponentGPUHandle = outDescHandle.gpuHandle;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE terrainComponentCPUHandle = outDescHandle.cpuHandle;
+
+	DEVICE->CopyDescriptorsSimple(1, terrainComponentCPUHandle, terrainComponentSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	terrainComponentCPUHandle.Offset(1, unDescriptorInc);
+
+	auto heightMapHandle = pTerrain->GetHeightMapTexture();
+	CD3DX12_CPU_DESCRIPTOR_HANDLE defaultTerrainTextureHandle{};
+	if (heightMapHandle.IsValid()) {
+		defaultTerrainTextureHandle = heightMapHandle.GetResource()->GetSRVHandle();
+		DEVICE->CopyDescriptorsSimple(1, terrainComponentCPUHandle, defaultTerrainTextureHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	}
+	terrainComponentCPUHandle.Offset(1, unDescriptorInc);
+
+	for (uint32 i = 0; i < g_unMaxTerrainComponents; ++i) {
+		CD3DX12_CPU_DESCRIPTOR_HANDLE weightMapCPUHandle = defaultTerrainTextureHandle;
+		if (i < unVisibleComponents) {
+			auto weightMapHandle = m_CachedData.pTerrainComponentFrustumCulled[i]->GetWeightMapRefs();
+			if (weightMapHandle.IsValid()) {
+				weightMapCPUHandle = weightMapHandle.GetResource()->GetSRVHandle();
+			}
+		}
+
+		if (weightMapCPUHandle.ptr != 0) {
+			DEVICE->CopyDescriptorsSimple(1, terrainComponentCPUHandle, weightMapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		}
+		terrainComponentCPUHandle.Offset(1, unDescriptorInc);
+	}
+
+	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamTerrainComponent, terrainComponentGPUHandle);
+	outDescHandle.cpuHandle.Offset(2 + g_unMaxTerrainComponents, unDescriptorInc);
+	outDescHandle.gpuHandle.Offset(2 + g_unMaxTerrainComponents, unDescriptorInc);
 }
 
 void GBufferPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
@@ -303,7 +342,7 @@ void GBufferPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, cons
 	}
 }
 
-void GBufferPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) const
+void GBufferPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) 
 {
 	constexpr uint32 rootParamInstanceData = std::to_underlying(ROOT_PARAMETER::PER_INSTANCE_DATA);
 	constexpr uint32 rootParamBoneOffset = std::to_underlying(ROOT_PARAMETER::BONE_TRANSFORM_OFFSETS);
@@ -331,44 +370,31 @@ void GBufferPass::DrawGeometry(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList
 	}
 }
 
-void GBufferPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) const
+void GBufferPass::DrawTerrain(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle) 
 {
 	const auto& pTerrain = CUR_SCENE->GetTerrain();
-	const auto& pTerrainComponents = pTerrain->GetTerrainComponents();
-	const auto& pTerrainMesh = pTerrain->GetComponent<MeshRenderer>()->GetMeshes()[0];
+	const auto& pTerrainQuadMesh = pTerrain->GetTerrainQuadMesh();
+	if (!pTerrainQuadMesh) {
+		return;
+	}
 
 	constexpr uint32 rootParamWorldTransform = std::to_underlying(ROOT_PARAMETER::TERRAIN_WORLD_TRANSFORM);
-	constexpr uint32 rootParamTerrainComponent = std::to_underlying(ROOT_PARAMETER::TERRAIN_COMPONENT_AND_WEIGHTMAP);
-	const uint32 unDescriptorInc = D3DCore::g_nCBVSRVDescriptorIncrementSize;
 
-	auto pd3dTerrainPipelineState = SHADER->Get<TerrainShader>()->GetPipelineStates()[0];
+	auto pd3dTerrainPipelineState = SHADER->Get<TerrainShader>()->GetPipelineStates()[1];
 	pd3dCommandList->SetPipelineState(pd3dTerrainPipelineState.Get());
 
-	Matrix mtxTerrainWorld = pTerrain->GetWorldMatrix().Transpose();
-	auto worldTransformCBuffer = RENDER->AllocCBuffer<Matrix>();
-	worldTransformCBuffer.WriteData(&mtxTerrainWorld);
+	CB_TERRAIN_WORLD_DATA terrainWorldData{};
+	terrainWorldData.mtxTerrainWorld = pTerrain->GetWorldMatrix().Transpose();
+	terrainWorldData.v3TerrainScale = pTerrain->GetTerrainScale();
+	auto worldTransformCBuffer = RENDER->AllocCBuffer<CB_TERRAIN_WORLD_DATA>();
+	worldTransformCBuffer.WriteData(&terrainWorldData);
 	pd3dCommandList->SetGraphicsRootConstantBufferView(rootParamWorldTransform, worldTransformCBuffer.GPUAddress);
 
-	for (const auto& pComponent : m_CachedData.pTerrainComponentFrustumCulled) {
-		// Component
-		CB_TERRAIN_COMPONENT_DATA cbData = pComponent->MakeCBData();
-		ConstantBuffer cbTerrainComponents = RENDER->AllocCBuffer<CB_TERRAIN_COMPONENT_DATA>();
-		cbTerrainComponents.WriteData(&cbData);
-
-		DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, cbTerrainComponents.CBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		outDescHandle.cpuHandle.Offset(1, unDescriptorInc);
-
-		// Texture
-		auto weightMapHandle = pComponent->GetWeightMapRefs();
-		CD3DX12_CPU_DESCRIPTOR_HANDLE weightMapCPUHandle = weightMapHandle.GetResource()->GetSRVHandle();
-		DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, weightMapCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		outDescHandle.cpuHandle.Offset(1, unDescriptorInc);
-
-		pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamTerrainComponent, outDescHandle.gpuHandle);
-		outDescHandle.gpuHandle.Offset(2, unDescriptorInc);
-
-		const auto& terrainIndexRange = pComponent->GetIndexRange();
-		pTerrainMesh->Render(pd3dCommandList, 1, terrainIndexRange.unStartIndex, terrainIndexRange.unIndexCount);
+	const uint32 unVisibleComponents = static_cast<uint32>(std::min<size_t>(
+		m_CachedData.pTerrainComponentFrustumCulled.size(),
+		g_unMaxTerrainComponents));
+	if (unVisibleComponents > 0) {
+		pTerrainQuadMesh->Render(pd3dCommandList, unVisibleComponents);
 	}
 }
 

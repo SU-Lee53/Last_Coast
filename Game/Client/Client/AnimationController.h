@@ -8,6 +8,7 @@ class Skeleton;
 class AnimationController : public IComponent {
 public:
 	AnimationController(std::shared_ptr<IGameObject> pOwner);
+	~AnimationController();
 
 	virtual void Initialize() override;
 	virtual void Update() override;

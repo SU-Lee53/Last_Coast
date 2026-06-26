@@ -7,15 +7,17 @@
 #include "PistolWeapon.h"
 #include "MeleeWeapon.h"
 #include "ShotgunWeapon.h"
+#include "LMGWeapon.h"
 #include "NodeObject.h"
 
 const std::vector<std::string> GameContext::g_strWeaponNames = {
 	"M4",
 	"AK",
+	"SHOTGUN",
 	"RIFLE",
+	"LMG",
 	"PISTOL",
 	"MELEE",
-	"SHOTGUN",
 };
 
 const std::vector<std::string> GameContext::g_strCharacterNames = {
@@ -30,6 +32,7 @@ void GameContext::Initialize()
 {
 	LoadWeaponData();
 	LoadZombieModels();
+	LoadWeaponSounds();
 }
 
 void GameContext::LoadWeaponData()
@@ -40,10 +43,11 @@ void GameContext::LoadWeaponData()
 		std::string strWeaponFilename[] = {
 			"SM_AR4",
 			"SM_KA47",
-			"old_sks_weapon_model",
-			"SM_SMG11_Y",
+			"SM_Modern_Weapons_Shotgun_01",
+			"SM_Modern_Weapons_Sniper_03_No_Scope",
+			"SM_Modern_Weapons_LMG_03",
+			"SM_Modern_Weapons_Pistol_03",
 			"spiked_baseball_bat",
-			"SM_SMG11_Y",          // SHOTGUN placeholder — 모델 추후 교체
 		};
 
 		for (int i = 0; i < g_unWeapons; ++i) {
@@ -83,6 +87,40 @@ void GameContext::LoadWeaponData()
 			}
 		}
 	}
+}
+
+void GameContext::LoadWeaponSounds()
+{
+	// Rifle1
+	SOUND->AddSound("m4_shot_close", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_Noise-Exterior-Close_01.wav", false, true, SoundCategory::SFX);
+	//SOUND->AddSound("rifle_shot_distant1", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_Noise-Exterior-Distant_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("rifle_on_reload", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_ClipIn_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("rifle_mid_reload", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_ClipOut_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("rifle_end_reload", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_Bolt_01.wav", false, true, SoundCategory::SFX);
+	
+	SOUND->AddSound("ak_shot_close", "../Resources/Sounds/Rifle/ak_fire.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("lmg_shot_close", "../Resources/Sounds/Rifle/lmg_fire.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("rifle_shot_close", "../Resources/Sounds/Rifle/rifle_fire.wav", false, true, SoundCategory::SFX);
+
+
+
+	// Shotgun
+	SOUND->AddSound("shotgun_shot_close", "../Resources/Sounds/Shotgun/shotgun_fire.wav", false, true, SoundCategory::SFX);
+	//SOUND->AddSound("shotgun_shot_distant", "../Resources/Sounds/Shotgun/SW_Weapons_Shotgun_Noise-Interior-Distant_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("shotgun_on_reload", "../Resources/Sounds/Shotgun/SW_Weapons_Shotgun_ClipIn_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("shotgun_mid_reload", "../Resources/Sounds/Rifle/SW_Weapons_Shotgun_ClipOut_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("shotgun_end_reload", "../Resources/Sounds/Shotgun/shotgun_trimmed_longtail.wav", false, true, SoundCategory::SFX);
+	
+	// Pistol
+	SOUND->AddSound("pistol_shot_close", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_Noise-Interior-Close_01.wav", false, true, SoundCategory::SFX);
+	//SOUND->AddSound("pistol_shot_distant", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_Noise-Interior-Distant_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("pistol_on_reload", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_ClipIn_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("pistol_mid_reload", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_ClipOut_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("pistol_end_reload", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_Slide_01.wav", false, true, SoundCategory::SFX);
+
+	// Impact
+	SOUND->AddSound("impact_on_zombie", "../Resources/Sounds/Impacts/SW_ImpactHeadshot_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("impact_on_object", "../Resources/Sounds/Impacts/SW_ImpactPlasterDebris_01.wav", false, true, SoundCategory::SFX);
 }
 
 void GameContext::LoadPlayerModels()
@@ -127,6 +165,7 @@ std::shared_ptr<WeaponObject> GameContext::GetWeaponCopy(WEAPON_TYPE eWeaponType
 	case WEAPON_TYPE::M4:      pWeapon = pModel->CopyObject<M4Weapon>();      break;
 	case WEAPON_TYPE::AK:      pWeapon = pModel->CopyObject<AkWeapon>();      break;
 	case WEAPON_TYPE::RIFLE:   pWeapon = pModel->CopyObject<RifleWeapon>();   break;
+	case WEAPON_TYPE::LMG:   pWeapon = pModel->CopyObject<LMGWeapon>();   break;
 	case WEAPON_TYPE::PISTOL:  pWeapon = pModel->CopyObject<PistolWeapon>();  break;
 	case WEAPON_TYPE::MELEE:   pWeapon = pModel->CopyObject<MeleeWeapon>();   break;
 	case WEAPON_TYPE::SHOTGUN: pWeapon = pModel->CopyObject<ShotgunWeapon>(); break;

@@ -39,3 +39,12 @@ void ShotgunWeapon::FireShot(const Vector3& v3CamPos, const Vector3& v3CamDir, b
 		}
 	}
 }
+
+bool ShotgunWeapon::PlayFireSound()
+{
+	bool bRes = SOUND->PlayAt(m_pFireSound, m_v3MuzzlePositionWorld) != nullptr;
+	if (bRes) {
+		SOUND->QueueSoundAt(m_pEndReloadSound, 0.5f, m_v3MuzzlePositionWorld);
+	}
+	return bRes;
+}

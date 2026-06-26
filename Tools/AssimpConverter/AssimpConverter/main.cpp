@@ -7,9 +7,9 @@
 #include <shobjidl.h>   // IFileDialog
 
 TCHAR g_str[1024] = L"";
-TCHAR g_lpstrFile[8192] = L"";
+TCHAR g_lpstrFile[32768] = L"";
 TCHAR g_lpstrFilter[256] = L"fbx File(*.fbx)\0*.fbx\0gltf File(*.gltf)\0*.gltf\0glb File(*.glb)\0*.glb\0";
-TCHAR g_lpstrFileTitle[256] = L"";
+TCHAR g_lpstrFileTitle[8192] = L"";
 
 bool g_bModelConvertOn = false;
 bool g_bAnimationConvertOn = false;
@@ -75,7 +75,7 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			OFN.lpstrFile = g_lpstrFile;
 			OFN.nMaxFile = _countof(g_lpstrFile);
 			OFN.lpstrFileTitle = g_lpstrFileTitle;
-			OFN.nMaxFileTitle = 256;
+			OFN.nMaxFileTitle = _countof(g_lpstrFileTitle);
 			OFN.lpstrInitialDir = L".";
 			OFN.Flags = OFN_EXPLORER |
 				OFN_ALLOWMULTISELECT |
@@ -99,8 +99,9 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				char cstrFilepath[1024];
 				WideCharToMultiByte(CP_ACP, 0, g_lpstrFile, -1, cstrFilepath, sizeof(cstrFilepath), NULL, NULL);
 
-				g_Converter.LoadFromFiles(cstrFilepath, fValue);
-				DisplayText("File opened (%s)\r\n", cstrFilepath);
+				if (g_Converter.LoadFromFiles(cstrFilepath, fValue)) {
+					DisplayText("File opened (%s)\r\n", cstrFilepath);
+				}
 			}
 			else {
 				DisplayText("Seleted %d files. Nothing is opened yet\n", nPathes);
@@ -169,7 +170,35 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 			pDialog->Release();
 
+			std::filesystem::path logDirectoryPath = std::filesystem::path{ cstrFilepath } / "Exported";
+			if (BeginConversionLog(logDirectoryPath)) {
+				DisplayText("Conversion log: %s\r\n", GetConversionLogPath().string().c_str());
+			}
+			else {
+				DisplayText("Failed to create conversion log at %s\r\n", logDirectoryPath.string().c_str());
+			}
+			DisplayText("Output folder: %s\r\n", cstrFilepath);
+			DisplayText("Mode: %s\r\n", g_bModelConvertOn ? "Model" : "Animation");
+
 			if (g_wstrFileSelected.size() == 1) {
+				if (!g_Converter.IsOpened()) {
+					wchar_t buffer[64] = {};
+					GetWindowTextW(g_hScaleEdit, buffer, _countof(buffer));
+					float fValue = static_cast<float>(_wtof(buffer));
+					fValue = fValue <= 0.f ? 1.f : fValue;
+
+					char cstrSelectedPath[1024];
+					WideCharToMultiByte(CP_ACP, 0, g_wstrFileSelected[0].c_str(), -1, cstrSelectedPath, sizeof(cstrSelectedPath), NULL, NULL);
+
+					if (!g_Converter.LoadFromFiles(cstrSelectedPath, fValue)) {
+						DisplayText("Conversion skipped because the selected file could not be opened.\r\n");
+						DisplayText("Log saved at %s\r\n", GetConversionLogPath().string().c_str());
+						EndConversionLog();
+						return TRUE;
+					}
+					DisplayText("File opened (%s)\r\n", cstrSelectedPath);
+				}
+
 				char cstrFilename[1024];
 				WideCharToMultiByte(CP_ACP, 0, g_lpstrFileTitle, -1, cstrFilename, sizeof(cstrFilename), NULL, NULL);
 				std::filesystem::path p{ cstrFilename };
@@ -188,13 +217,18 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				float fValue = static_cast<float>(_wtof(buffer));
 				fValue = fValue <= 0.f ? 1.f : fValue;
 
+				int nSucceeded = 0;
+				int nFailed = 0;
 				for (const auto& wstrPath : g_wstrFileSelected) {
 					char cstrPath[1024];
 					WideCharToMultiByte(CP_ACP, 0, wstrPath.c_str(), -1, cstrPath, sizeof(cstrPath), NULL, NULL);
 					std::string strFileName = std::filesystem::path{ cstrPath }.filename().string();
 					std::string strExportName = std::filesystem::path{ cstrPath }.stem().string();
 
-					g_Converter.LoadFromFiles(cstrPath, fValue);
+					if (!g_Converter.LoadFromFiles(cstrPath, fValue)) {
+						++nFailed;
+						continue;
+					}
 					DisplayText("File opened (%s)\r\n", cstrPath);
 
 					if (g_bModelConvertOn) {
@@ -203,8 +237,14 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 					else {
 						g_Converter.SerializeAnimation(cstrFilepath, strExportName);
 					}
+					++nSucceeded;
 				}
+
+				DisplayText("Batch conversion finished. Success: %d, Failed: %d\r\n", nSucceeded, nFailed);
 			}
+
+			DisplayText("Log saved at %s\r\n", GetConversionLogPath().string().c_str());
+			EndConversionLog();
 
 			wsprintf(g_str, L"Conversion Complete");
 			MessageBox(hDlg, g_str, L"Convert", MB_OK);

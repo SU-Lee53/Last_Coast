@@ -31,6 +31,7 @@ IndexBuffer ResourceManager::CreateIndexBuffer(const std::vector<UINT>& Indices)
 	);
 
 	if (FAILED(hr)) {
+		auto hr = DEVICE->GetDeviceRemovedReason();
 		__debugbreak();
 	}
 

@@ -12,10 +12,11 @@
 void SceneManager::Initialize()
 {
 	m_pSceneStack.push_back(std::make_unique<LogInScene>());
-	m_pSceneStack.back()->OnEnterScene();
-	m_pSceneStack.back()->BuildLights();
-	m_pSceneStack.back()->BuildObjects();
-	m_pSceneStack.back()->PostInitialize();
+	auto& pCurScene = m_pSceneStack.back();
+	pCurScene->OnEnterScene();
+	pCurScene->BuildLights();
+	pCurScene->BuildObjects();
+	pCurScene->PostInitialize();
 
 	//RESOURCE->WaitForCopyComplete();
 	//TEXTURE->WaitForCopyComplete();
@@ -23,20 +24,25 @@ void SceneManager::Initialize()
 
 void SceneManager::ProcessInput() 
 {
-	m_pSceneStack.back()->PreProcessInput();
-	m_pSceneStack.back()->ProcessInput();
-	m_pSceneStack.back()->PostProcessInput();
+	auto& pCurScene = m_pSceneStack.back();
+	pCurScene->PreProcessInput();
+	pCurScene->ProcessInput();
+	pCurScene->PostProcessInput();
 }
 
 void SceneManager::Update()
 {
-	m_pSceneStack.back()->PreUpdate();
-	m_pSceneStack.back()->Update();
+	auto& pCurScene = m_pSceneStack.back();
+	pCurScene->PreUpdate();
+	pCurScene->Update();
 	if (m_bSceneChanged) {
 		return;
 	}
-	m_pSceneStack.back()->FixedUpdate();
-	m_pSceneStack.back()->PostUpdate();
+
+	// Get new refernce in case of scene changed
+	auto& pNewScene = m_pSceneStack.back();
+	pNewScene->FixedUpdate();
+	pNewScene->PostUpdate();
 }
 
 void SceneManager::PrepareRender()
@@ -45,12 +51,15 @@ void SceneManager::PrepareRender()
 		m_bSceneChanged = false;
 		return;
 	}
-	m_pSceneStack.back()->PrepareRender();
+
+	auto& pCurScene = m_pSceneStack.back();
+	pCurScene->PrepareRender();
 }
 
 void SceneManager::ShowDebugOptions()
 {
+	auto& pCurScene = m_pSceneStack.back();
 	ImGui::Begin("Scene");
-	m_pSceneStack.back()->ShowDebugOptions();
+	pCurScene->ShowDebugOptions();
 	ImGui::End();
 }

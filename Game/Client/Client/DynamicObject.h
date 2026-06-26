@@ -8,6 +8,7 @@ public:
 
 	virtual void PreUpdate() override;
 	virtual void PostUpdate() override;
+	virtual void PostAnimationUpdate() override;
 	void ResolveTerrain(OUT Vector3& outv3Delta, OUT TerrainHit& outHitResult, bool bWasGrounded);
 
 };

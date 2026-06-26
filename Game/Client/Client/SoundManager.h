@@ -5,30 +5,17 @@
 #define SOUND_DEFAULT 0.5f
 #define SOUND_WEIGHT 0.1f
 
-
 #define SOUND_DISTANCE_FACTOR 100.0f
 #define SOUND_3D_MIN_DISTANCE 100.0f		
 #define SOUND_3D_MAX_DISTANCE 5000.0f		
+
+class Sound;
 
 enum class SoundCategory {
 	BGM,
 	SFX,
 	UIS,
 	Count
-};
-
-class Sound {
-	friend class SoundManager;
-
-public:
-	Sound(const std::string& strPath, bool bLoop, bool b3D, SoundCategory eCategory);
-	~Sound();
-
-private:
-	FMOD_SOUND*		m_pSound = nullptr;
-	bool			m_bLoop = false;
-	bool			m_b3D = false;
-	SoundCategory	m_eCategory = SoundCategory::SFX;
 };
 
 class SoundManager {
@@ -39,6 +26,7 @@ class SoundManager {
 public:
 	void Initialize();
 	void Update();
+	void UpdateSoundQueue();
 	void LoadSounds();
 
 public:
@@ -47,6 +35,11 @@ public:
 
 	FMOD_CHANNEL* Play(const std::string& strName);
 	FMOD_CHANNEL* PlayAt(const std::string& strName, const Vector3& v3Position);
+
+	FMOD_CHANNEL* Play(const std::shared_ptr<Sound>& pSound);
+	FMOD_CHANNEL* PlayAt(const std::shared_ptr<Sound>& pSound, const Vector3& v3Position);
+
+	void QueueSoundAt(const std::shared_ptr<Sound>& pSound, float fTimeAfter, const Vector3& v3Position = Vector3::Zero);
 
 	void Pause(FMOD_CHANNEL* pChannel) const;
 	void Resume(FMOD_CHANNEL* pChannel) const;
@@ -63,17 +56,42 @@ public:
 
 	void SetListenerAttributes(const Vector3& v3Position, const Vector3& v3Velocity, const Vector3& v3Forward, const Vector3& v3Up);
 
+	std::shared_ptr<Sound> GetSound(const std::string& strName) const;
+
 private:
 	bool CheckExisting(const std::string& strName) const;
 	FMOD_CHANNELGROUP* GetGroup(SoundCategory eCategory) const;
 	FMOD_CHANNEL* PlayInternal(const std::string& strName, bool b3D, const Vector3& v3Position);
+	FMOD_CHANNEL* PlayInternal(Sound* pSound, bool b3D, const Vector3& v3Position);
 
 private:
-	std::unordered_map<std::string, std::unique_ptr<Sound>> m_pSoundMap;
+	std::unordered_map<std::string, std::shared_ptr<Sound>> m_pSoundMap;
 
 	FMOD_CHANNELGROUP*	m_pMasterGroup = nullptr;
 	FMOD_CHANNELGROUP*	m_pCategoryGroups[static_cast<int>(SoundCategory::Count)] = {};
 	float				m_fCategoryVolume[static_cast<int>(SoundCategory::Count)] = {};
+
+private:
+	struct QueuedSound {
+		float fTimeQueued;
+		float fTimePlayAfter;
+		Vector3 v3PlayAt;
+		std::shared_ptr<Sound> pSoundToPlay;
+
+		QueuedSound(const std::shared_ptr<Sound>& pSound, const Vector3& v3At, float fQueued, float fAfter)
+			: fTimeQueued{ fQueued }, fTimePlayAfter{ fAfter }, v3PlayAt{ v3At }, pSoundToPlay{ pSound } {
+		}
+
+		struct Comp {
+			bool operator()(const QueuedSound& lhs, const QueuedSound& rhs) const noexcept {
+				return lhs.fTimeQueued + lhs.fTimePlayAfter > rhs.fTimeQueued + rhs.fTimePlayAfter;
+
+			}
+		};
+
+	};
+
+	std::priority_queue<QueuedSound, std::vector<QueuedSound>, QueuedSound::Comp> m_SoundQueued;
 
 public:
 	static FMOD_SYSTEM* m_gpSoundSystem;

@@ -3,11 +3,11 @@
 
 Matrix Animation::GetKeyFrameMatrix(const std::string& strChannelName, float fTime, const Matrix& mtxTransformation)
 {
-	auto it = m_keyFrameMap.find(strChannelName);
-	if (it == m_keyFrameMap.end()) {
+	const auto* pKeyFrames = m_keyFrameMap.Find(strChannelName);
+	if (!pKeyFrames) {
 		return mtxTransformation;
 	}
-	const std::vector<KeyFrame>& keyFrames = it->second;
+	const std::vector<KeyFrame>& keyFrames = *pKeyFrames;
 
 	if (keyFrames.size() == 0) {
 		return mtxTransformation;
@@ -73,8 +73,13 @@ Matrix Animation::GetKeyFrameMatrix(const std::string& strChannelName, float fTi
 
 AnimationKey Animation::GetKeyFrameSRT(const std::string& strChannelName, float fTime, const Matrix& mtxTransformation)
 {
-	auto it = m_keyFrameMap.find(strChannelName);
-	if (it == m_keyFrameMap.end()) {
+	return GetKeyFrameSRT(GetChannelIndex(strChannelName), fTime, mtxTransformation);
+}
+
+AnimationKey Animation::GetKeyFrameSRT(size_t nChannelIndex, float fTime, const Matrix& mtxTransformation)
+{
+	const auto& keyFrameElements = m_keyFrameMap.GetElements();
+	if (nChannelIndex == INVALID_ID || nChannelIndex >= keyFrameElements.size()) {
 		XMVECTOR xmvTranslation;
 		XMVECTOR xmvRotation;
 		XMVECTOR xmvScale;
@@ -87,7 +92,7 @@ AnimationKey Animation::GetKeyFrameSRT(const std::string& strChannelName, float 
 
 		return { v3Translation, v4Rotation, v3Scale };
 	}
-	const std::vector<KeyFrame>& keyFrames = it->second;
+	const std::vector<KeyFrame>& keyFrames = keyFrameElements[nChannelIndex];
 
 	if (keyFrames.size() == 0) {
 		XMVECTOR xmvTranslation;
@@ -159,4 +164,9 @@ AnimationKey Animation::GetKeyFrameSRT(const std::string& strChannelName, float 
 
 	return { v3Translation, v4Rotation, v3Scale };
 
+}
+
+size_t Animation::GetChannelIndex(const std::string& strChannelName) const
+{
+	return m_keyFrameMap.GetIndex(strChannelName);
 }

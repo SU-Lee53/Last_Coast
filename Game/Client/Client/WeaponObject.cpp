@@ -68,6 +68,8 @@ bool WeaponObject::TryFire()
 		};
 
 		PARTICLE->Spawn<MuzzleFlashEffect>(particleDesc);
+		PlayFireSound();
+
 		return true;
 	}
 
@@ -101,6 +103,8 @@ bool WeaponObject::BeginReload()
 
 	m_bInReload = true;
 	m_fReloadTimer = 0.f;
+
+	PlayBeginReloadSound();
 	return true;
 }
 
@@ -108,10 +112,35 @@ bool WeaponObject::EndReload()
 {
 	if (!m_bInReload) return false;
 
-	m_nTotalAmmo -= 30 - m_nAmmoInClip;
-	m_nAmmoInClip = 30;
+	m_nTotalAmmo -= m_nAmmoPerClip - m_nAmmoInClip;
+	m_nAmmoInClip = m_nAmmoPerClip;
 	m_bInReload = false;
+
+	PlayEndReloadSound();
 	return true;
+}
+
+bool WeaponObject::PlayFireSound()
+{
+	if (m_pFireSound) {
+		return SOUND->PlayAt(m_pFireSound, m_v3MuzzlePositionWorld) != nullptr;
+	}
+
+	return false;
+}
+
+bool WeaponObject::PlayBeginReloadSound()
+{
+	auto bRes = SOUND->PlayAt(m_pBeginReloadSound, m_v3MuzzlePositionWorld) != nullptr;
+	if (bRes) {
+		SOUND->QueueSoundAt(m_pMidReloadSound, 0.5f, m_v3MuzzlePositionWorld);
+	}
+	return bRes;
+}
+
+bool WeaponObject::PlayEndReloadSound()
+{
+	return SOUND->PlayAt(m_pEndReloadSound, m_v3MuzzlePositionWorld) != nullptr;
 }
 
 void WeaponObject::UpdateMuzzlePositionWorld(const Matrix& mtxWorld)

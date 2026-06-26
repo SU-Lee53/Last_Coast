@@ -130,3 +130,28 @@ void TerrainMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 
 	m_pShader = SHADER->Get<TerrainShader>();
 }
+
+//////////////////////////////////////////////////////////////////////////////////
+// WaterMaterial
+
+void WaterMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
+{
+	InitializeColors(materialLoadInfo);
+
+	if (m_MaterialData.v4Diffuse == Vector4(0.0f, 0.0f, 0.0f, 0.0f)) {
+		m_MaterialData.v4Diffuse = Vector4(0.02f, 0.20f, 0.32f, 1.0f);
+	}
+	if (m_MaterialData.v4Specular == Vector4(0.0f, 0.0f, 0.0f, 0.0f)) {
+		m_MaterialData.v4Specular = Vector4(1.0f, 1.0f, 1.0f, 0.65f);
+	}
+	m_MaterialData.fSmoothness = (m_MaterialData.fSmoothness <= 0.0f) ? 0.86f : m_MaterialData.fSmoothness;
+	m_MaterialData.fMetallic = 0.0f;
+	m_MaterialData.eAlphaMode = std::to_underlying(Texture::ALPHA_MODE::Opaque);
+
+	m_TextureIDs.resize(4);
+	if (!materialLoadInfo.strAlbedoMapName.empty() && materialLoadInfo.strAlbedoMapName != "None") {
+		m_TextureIDs[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName, false);
+	}
+
+	m_pShader = SHADER->Get<WaterShader>();
+}

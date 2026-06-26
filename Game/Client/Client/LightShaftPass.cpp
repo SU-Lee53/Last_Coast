@@ -12,6 +12,9 @@ void LightShaftPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandLi
 	const auto pLightShaft = RENDER->GetPostProcessingResources().LightShaftBuffer.GetResource();
 	pLightShaft->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
+	const auto pDSV = RENDER->GetDepthStencilBuffer().GetResource();
+	pDSV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+
 	float pfClearColor[4] = { 0.f, 0.f, 0.f, 1.f };
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = pLightShaft->GetRTVHandle();
 	pd3dCommandList->ClearRenderTargetView(d3dRTVCPUDescriptorHandle, pfClearColor, 0, nullptr);
@@ -21,6 +24,13 @@ void LightShaftPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandLi
 	const uint32 unDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
 
 	auto cbLightShaftData = MakeLightShaftCBData();
+	m_bShouldRender =
+		cbLightShaftData.gnEnable != 0 &&
+		cbLightShaftData.gnSampleCount > 0 &&
+		cbLightShaftData.gfIntensity > 0.0f &&
+		cbLightShaftData.gfWeight > 0.0f &&
+		cbLightShaftData.gfExposure > 0.0f;
+
 	auto cBuffer = RENDER->AllocCBuffer<CB_LIGHT_SHAFT_DATA>();
 	cBuffer.WriteData(&cbLightShaftData);
 
@@ -32,6 +42,10 @@ void LightShaftPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandLi
 
 void LightShaftPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
+	if (!m_bShouldRender) {
+		return;
+	}
+
 	pd3dCommandList->SetPipelineState(m_pd3dPipelineState.Get());
 
 	auto pQuadMesh = RENDER->GetQuadMesh();
@@ -55,6 +69,7 @@ void LightShaftPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 void LightShaftPass::ShowDebugInfo()
 {
 	ImGui::Text("Light in front : %s", (m_bLightInFront) ? "TRUE" : "FALSE");
+	ImGui::Text("Render enabled : %s", (m_bShouldRender) ? "TRUE" : "FALSE");
 	ImGui::Text("Light Screen Position : %f, %f", m_v2LightScreenPosition.x, m_v2LightScreenPosition.y);
 }
 

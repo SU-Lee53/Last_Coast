@@ -44,6 +44,9 @@ private:
 	void UpdateChat();
 
 private:
+	std::shared_ptr<class WaterGridObject> m_pWater = nullptr;
+	Vector3 m_v3WaterPos{};
+
 	ZombiePool m_ZombiePool;
 
 	// 오프라인 드립 스폰 설정
