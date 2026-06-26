@@ -291,7 +291,8 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	{
 		if (size < static_cast<int>(sizeof(S2C_LoginResult))) return;
 		auto* p = reinterpret_cast<const S2C_LoginResult*>(data);
-		if (p->success) m_bGameBegin = true;
+		if (p->success) 
+			m_bGameBegin = true;
 		break;
 	}
 	case S2C_AVATAR_INFO:
@@ -417,6 +418,12 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		if (size < static_cast<int>(sizeof(S2C_PlayerWeapon))) return;
 		auto* p = reinterpret_cast<const S2C_PlayerWeapon*>(data);
 		m_PendingPlayerWeapons.push(WeaponChangeEvent{ p->playerId, p->weaponType });
+		break;
+	}
+	case S2C_GAME_EVENT: {
+		if (size < static_cast<int>(sizeof(S2C_GameEvent))) return;
+		auto* p = reinterpret_cast<const S2C_GameEvent*>(data);
+		m_PendingGameEvents.push(GameEventMsg{ p->eventId, Vector3{ p->x, p->y, p->z }, p->fTargetValue, p->fDuration });
 		break;
 	}
 	default:
@@ -576,6 +583,15 @@ std::vector<ChatMessageEvent> NetworkManager::ConsumeChatMessages()
 	std::vector<ChatMessageEvent> out;
 	ChatMessageEvent ev;
 	while (m_PendingChatMessages.try_pop(ev))
+		out.push_back(ev);
+	return out;
+}
+
+std::vector<GameEventMsg> NetworkManager::ConsumeGameEvents()
+{
+	std::vector<GameEventMsg> out;
+	GameEventMsg ev;
+	while (m_PendingGameEvents.try_pop(ev))
 		out.push_back(ev);
 	return out;
 }

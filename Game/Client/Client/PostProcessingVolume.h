@@ -103,6 +103,12 @@ public:
 	const ScreenFXParameters& GetScreenFXParameters() const { return m_ScreenFX; }
 	const LightShaftParameters& GetLightShaftParameters() const { return m_LightShaft; }
 
+	// 게임 이벤트 런타임 조정용 (쓰기 가능). 값은 매 프레임 라이브로 반영됨.
+	BloomParameters& GetBloomParameters() { return m_Bloom; }
+	SSAOParameters& GetSSAOParameters() { return m_SSAO; }
+	ScreenFXParameters& GetScreenFXParameters() { return m_ScreenFX; }
+	LightShaftParameters& GetLightShaftParameters() { return m_LightShaft; }
+
 private:
 	BloomParameters m_Bloom;
 	SSAOParameters m_SSAO;

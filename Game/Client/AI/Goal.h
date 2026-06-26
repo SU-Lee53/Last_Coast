@@ -8,6 +8,7 @@ namespace AIDLL
     {
         Think,
         MoveToPosition,
+        Idle,
         Wander,
         Alert,
         Investigate,

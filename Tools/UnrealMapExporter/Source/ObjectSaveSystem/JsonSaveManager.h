@@ -35,6 +35,16 @@ public:
     UFUNCTION(BlueprintCallable, Category = "JSON Save System")
     static bool SaveActorsToJson(const TArray<AActor*>& Actors, const FString& FileName);
 
+    // Export ONLY TargetPoint actors as zombie spawn points to a separate JSON file.
+    // Lets you update spawn points without re-exporting the whole scene.
+    UFUNCTION(BlueprintCallable, Category = "JSON Save System")
+    static bool SaveSpawnPointsToJson(const TArray<AActor*>& Actors, const FString& FileName);
+
+    // Export ONLY TargetPoint actors whose name starts with "HeliPath" as an ordered
+    // helicopter flight path (sorted by the trailing number in the name) to a separate JSON.
+    UFUNCTION(BlueprintCallable, Category = "JSON Save System")
+    static bool SaveHeliPathToJson(const TArray<AActor*>& Actors, const FString& FileName);
+
 
     UFUNCTION(BlueprintCallable, Category = "JSON Save System")
     static bool SaveActorsMesh(

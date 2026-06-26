@@ -40,18 +40,19 @@ void GameScene::BuildObjects()
 	m_pTerrain = std::make_shared<TerrainObject>();
 	m_pTerrain->LoadFromFiles("Game");
 
-	if (!bOnline) {
-		for (auto& pZombie : m_ZombiePool.Initialize(100, bOnline))
-			AddObject(pZombie);
-	}
-	else {
-		m_ZombiePool.Initialize(100, true);
-	}
+	// 풀은 항상 dormant로 시작 — 오프라인은 스폰 포인트마다, 온라인은 서버 이벤트로 Acquire
+	m_ZombiePool.Initialize(100, true);
 
 	auto begin = high_resolution_clock::now();
-	LoadFromFiles("DEMO");
+	LoadFromFiles("DEMO");	// 좀비 스폰 포인트(ZombieSpawnPoints)도 여기서 로드됨
 	auto end = high_resolution_clock::now();
 	long long llLoadTime = duration_cast<milliseconds>(end - begin).count();
+
+	// 좀비 스폰 포인트는 씬과 분리된 별도 JSON에서 로드 (언리얼 SaveSpawnPointsToJson 출력).
+	// 오프라인은 UpdateOfflineSpawner()가 드립 방식으로 채운다 (online은 서버가 담당).
+	LoadZombieSpawnPoints("DEMO_SpawnPoints");
+	// 헬기 추락 컷씬 비행 경로 (언리얼 HeliPath_N TargetPoint 익스포트). 없으면 직선 폴백.
+	LoadHeliPath("DEMO_HeliPath");
 
 	std::shared_ptr<TextBox> pText = std::make_shared<TextBox>(L"Malgun Gothic");
 	pText->SetText(std::format(L"로딩 시간 : {}ms", llLoadTime));
@@ -61,6 +62,12 @@ void GameScene::BuildObjects()
 	pText->SetPosition(Vector2{ 10,150 });
 	pText->SetTextHeight(50);
 	m_pUIBoard->InsertUI(pText);
+
+	BuildChatUI();
+
+	// 서버 트리거 게임 이벤트용 시퀀스 (런타임에 이벤트 AddEvent).
+	// Scene::FixedUpdate()가 매 프레임 m_pEventSequence->Update() 호출.
+	m_pEventSequence = std::make_shared<EventSequence>(this);
 }
 
 void GameScene::OnEnterScene()
@@ -235,12 +242,117 @@ void GameScene::Update()
 	}
 	ImGui::End();
 
+	UpdateOfflineSpawner();
 	SyncSceneWithServer();
 	ProcessNetworkZombies();
 	ProcessPlayerMelee();
 	ProcessShootResults();
 	ProcessMeleeResults();
+	ProcessServerGameEvents();
 	RemoveDeadZombies();
+	UpdateChat();
+}
+
+void GameScene::ProcessServerGameEvents()
+{
+	if (!NETWORK->IsConnected() || NETWORK->IsOffline()) return;
+	if (!m_pEventSequence) return;
+
+	for (const auto& ev : NETWORK->ConsumeGameEvents())
+	{
+		switch (ev.eventId)
+		{
+		case GE_EXPLOSION:
+			m_pEventSequence->AddEvent(std::make_shared<ExplosionEvent>(ev.pos));
+			break;
+		case GE_POSTFX_DARKEN:
+			// fTargetValue = 목표 outputScale, fDuration = 지속(초)
+			m_pEventSequence->AddEvent(std::make_shared<PostFXFadeEvent>(ev.fTargetValue, ev.fDuration));
+			break;
+		case GE_HORROR_LOOK:
+			m_pEventSequence->AddEvent(std::make_shared<HorrorLookEvent>(ev.fDuration > 0.f ? ev.fDuration : 1.5f));
+			break;
+		case GE_RESTORE_LOOK:
+			m_pEventSequence->AddEvent(std::make_shared<RestoreLookEvent>(ev.fDuration > 0.f ? ev.fDuration : 1.5f));
+			break;
+		case GE_HELICOPTER_CRASH:
+			// 헬기 추락 컷씬: 시네마틱 카메라가 추락 헬기 추적 (fDuration=0 → 기본 5초)
+			m_pEventSequence->AddEvent(std::make_shared<HelicopterCrashEvent>(ev.fDuration));
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+void GameScene::BuildChatUI()
+{
+	const float fLineH  = 24.f;
+	const float fInputH = 28.f;
+	const float fLeft   = 20.f;
+
+	// 입력창: 화면 좌하단 앵커, 피벗도 자기 좌하단
+	m_pChatInput = std::make_shared<InputTextBox>(L"Malgun Gothic");
+	m_pChatInput->SetPlaceholder(L"Press Enter to chat");
+	m_pChatInput->SetLayer(0);
+	m_pChatInput->SetAnchor(Vector2{ 0.f, 1.f });
+	m_pChatInput->SetPivot(Vector2{ 0.f, 1.f });
+	m_pChatInput->SetPosition(Vector2{ fLeft, -20.f });
+	m_pChatInput->SetTextHeight(fInputH);
+	m_pUIBoard->InsertUI(m_pChatInput);
+
+	// 히스토리 줄: 입력창 위로 쌓임. 인덱스 0 = 맨 아래(최신), 클수록 과거
+	for (int i = 0; i < CHAT_VISIBLE_LINES; ++i) {
+		auto pLine = std::make_shared<TextBox>(L"Malgun Gothic");
+		pLine->SetText(L"");
+		pLine->SetLayer(0);
+		pLine->SetAnchor(Vector2{ 0.f, 1.f });
+		pLine->SetPivot(Vector2{ 0.f, 1.f });
+		pLine->SetPosition(Vector2{ fLeft, -52.f - fLineH * i });
+		pLine->SetTextHeight(fLineH);
+		m_pUIBoard->InsertUI(pLine);
+		m_pChatLines[i] = pLine;
+	}
+}
+
+void GameScene::UpdateChat()
+{
+	if (!m_pChatInput) return;
+
+	// 1) 네트워크 스레드가 큐에 넣은 수신 메시지를 히스토리로 흡수
+	for (const ChatMessageEvent& ev : NETWORK->ConsumeChatMessages()) {
+		std::wstring wstrLine =
+			L"[" + StringToWString(ev.username) + L"] " + StringToWString(ev.message);
+		m_ChatHistory.push_back(std::move(wstrLine));
+		if (m_ChatHistory.size() > CHAT_MAX_HISTORY)
+			m_ChatHistory.erase(m_ChatHistory.begin());
+	}
+
+	// 2) 표시 줄 갱신: 최신 메시지가 맨 아래 줄(인덱스 0)
+	const int nHistory = static_cast<int>(m_ChatHistory.size());
+	for (int i = 0; i < CHAT_VISIBLE_LINES; ++i) {
+		int nIdx = nHistory - 1 - i;
+		m_pChatLines[i]->SetText(nIdx >= 0 ? m_ChatHistory[nIdx] : std::wstring{});
+	}
+
+	// 3) Enter로 입력창 토글: 포커스 -> 타이핑 -> Enter로 전송 후 포커스 해제.
+	//    키 입력과 그것이 변환된 WM_CHAR 사이의 이중 발동을 피하려고
+	//    WM_CHAR enter 콜백이 아닌 폴링으로만 처리한다.
+	if (INPUT->GetButtonDown(VK_RETURN)) {
+		if (m_pChatInput->IsFocused()) {
+			const std::wstring& wstrText = m_pChatInput->GetCommittedText();
+			if (!wstrText.empty())
+				NETWORK->SendChat(WStringToString(wstrText));
+			m_pChatInput->ClearText();
+			m_pUIBoard->ClearFocus();
+		}
+		else {
+			m_pUIBoard->SetFocus(m_pChatInput);
+		}
+	}
+
+	// 4) 채팅창이 포커스를 가진 동안 게임플레이 입력 차단
+	INPUT->SetTextInputMode(m_pChatInput->IsFocused());
 }
 
 
@@ -416,6 +528,45 @@ void GameScene::SpawnZombie()
 
 	pZombie->SetPosition(AI->GetNavMesh()->GetRandomPoint());
 	pZombie->SetTarget(m_pPlayer);
+}
+
+// 오프라인 드립 스포너: 일정 간격마다 스폰 포인트 중 랜덤 하나에 좀비 1마리 배치.
+// 동시 존재 수가 최대치 미만일 때만. 기본 상태는 AI DLL이 Idle로 시작.
+void GameScene::UpdateOfflineSpawner()
+{
+	// 온라인은 서버가 스폰 — 오프라인에서만 동작
+	if (NETWORK->IsConnected() && !NETWORK->IsOffline())
+		return;
+
+	const auto& points = GetZombieSpawnPoints();
+	if (points.empty())
+		return; // 스폰 포인트 없으면 스폰 안 함
+
+	if (m_ZombiePool.GetActiveCount() >= OFFLINE_MAX_ZOMBIES)
+		return; // 최대치 도달
+
+	m_fOfflineSpawnTimer += DT;
+	if (m_fOfflineSpawnTimer < OFFLINE_SPAWN_INTERVAL)
+		return;
+	m_fOfflineSpawnTimer = 0.f;
+
+	auto pZombie = m_ZombiePool.Acquire();
+	if (!pZombie)
+		return; // 풀 고갈
+
+	const Vector3& v3Spawn = points[rand() % points.size()]; // 랜덤 타겟포인트
+
+	pZombie->Initialize();
+	pZombie->SetServerId(-1);       // 로컬(오프라인) 좀비
+	pZombie->SetPosition(v3Spawn);
+	pZombie->SetTarget(m_pPlayer);
+
+	// world matrix 즉시 계산 → AddObject의 Spatial 등록 시 올바른 바운드
+	pZombie->GetTransform()->Update();
+	if (auto pCol = pZombie->GetComponent<PlayerCollider>())
+		pCol->Update();
+
+	AddObject(pZombie);
 }
 
 void GameScene::ProcessNetworkZombies()
@@ -619,7 +770,8 @@ void GameScene::SyncSceneWithServer()
 	}
 
 	for (auto& ev : NETWORK->ConsumePlayerWeapons()) {
-		if (ev.playerId == NETWORK->GetPlayerID()) continue; // 본인은 입력으로 이미 교체
+		if (ev.playerId == NETWORK->GetPlayerID()) 
+			continue; // 본인은 입력으로 이미 교체
 		auto it = m_RemotePlayers.find(ev.playerId);
 		if (it != m_RemotePlayers.end()) {
 			it->second->GiveWeapon(static_cast<WEAPON_TYPE>(ev.weaponType));

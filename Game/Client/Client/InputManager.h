@@ -49,6 +49,11 @@ public:
 
 	BOOL IsCursorShown() { return m_bShowCursor; }
 
+	// 텍스트 입력 모드: true 동안 게임플레이 입력(플레이어 이동/시점/사격)은 조기 종료하여
+	// 타이핑 키가 캐릭터를 조작하지 않도록 한다. 문자 입력(WM_CHAR)과 직접 GetButton* 폴링은 영향 없음.
+	void SetTextInputMode(bool bEnable) { m_bTextInputMode = bEnable; }
+	bool IsTextInputMode() const { return m_bTextInputMode; }
+
 private:
 	inline KEY_STATE GetState(UCHAR key) { return m_eKeyStates[key]; }
 
@@ -61,5 +66,6 @@ private:
 	POINT m_ptOldCursorPos = {};
 
 	BOOL		m_bShowCursor = TRUE;
+	bool		m_bTextInputMode = false;
 };
 

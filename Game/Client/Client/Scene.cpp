@@ -242,6 +242,11 @@ void Scene::PrepareRender()
 		m_pPlayer->Render();
 	}
 
+	// 컷씬 임시 오브젝트(스폐셜 미등록) 직접 렌더
+	if (m_pCinematicProp) {
+		m_pCinematicProp->Render();
+	}
+
 	for (auto* pObj : visibleGrid.pObjects) {
 		if (pObj) {
 			pObj->Render();
@@ -590,6 +595,63 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 		}
 	}
 
+	return S_OK;
+}
+
+// 좀비 스폰 포인트를 별도 JSON 파일에서 로드 (씬 .bin 과 분리).
+// 언리얼 SaveSpawnPointsToJson 출력 → { "ZombieSpawnPoints": [ { Transform.WorldMatrix } ] }
+// WorldMatrix translation(_41,_42,_43)에서 위치만 추출. 파일 없으면 빈 목록.
+HRESULT Scene::LoadZombieSpawnPoints(const std::string& strFileName)
+{
+	m_v3ZombieSpawnPoints.clear();
+
+	std::string strFilePath = std::format("{}/{}.json", g_strSceneBasePath, strFileName);
+	std::ifstream in(strFilePath);
+	if (!in)
+		return E_INVALIDARG; // 스폰 포인트 파일 없음 → 스폰 안 함
+
+	nlohmann::json j = nlohmann::json::parse(in, nullptr, false);
+	if (j.is_discarded() || !j.contains("ZombieSpawnPoints"))
+		return E_FAIL;
+
+	m_v3ZombieSpawnPoints.reserve(j["ZombieSpawnPoints"].size());
+	for (const auto& jSpawn : j["ZombieSpawnPoints"]) {
+		Matrix mtxWorld = ::ReadMatrixFromJson(jSpawn["Transform"]["WorldMatrix"]);
+		m_v3ZombieSpawnPoints.emplace_back(mtxWorld._41, mtxWorld._42, mtxWorld._43);
+	}
+
+	return S_OK;
+}
+
+// 헬기 비행 경로점을 별도 JSON에서 로드 (씬 .bin 과 분리).
+// 언리얼 SaveHeliPathToJson 출력 → { "HeliPath": [ { Transform.WorldMatrix } ] }
+// 익스포터가 이름 접두사(HeliPath_N) 숫자 순으로 정렬해 내보내므로 순서를 그대로 보존.
+// WorldMatrix translation(_41,_42,_43)에서 위치만 추출. 파일 없으면 빈 목록.
+HRESULT Scene::LoadHeliPath(const std::string& strFileName)
+{
+	m_v3HeliPath.clear();
+
+	std::string strFilePath = std::format("{}/{}.json", g_strSceneBasePath, strFileName);
+	std::ifstream in(strFilePath);
+	if (!in) {
+		OutputDebugStringA(std::format("[HeliPath] FAIL open: {}\n", strFilePath).c_str());
+		return E_INVALIDARG; // 경로 파일 없음 → 직선 폴백
+	}
+
+	nlohmann::json j = nlohmann::json::parse(in, nullptr, false);
+	if (j.is_discarded() || !j.contains("HeliPath")) {
+		OutputDebugStringA(std::format("[HeliPath] FAIL parse/key: {}\n", strFilePath).c_str());
+		return E_FAIL;
+	}
+
+	m_v3HeliPath.reserve(j["HeliPath"].size());
+	for (const auto& jPoint : j["HeliPath"]) {
+		Matrix mtxWorld = ::ReadMatrixFromJson(jPoint["Transform"]["WorldMatrix"]);
+		m_v3HeliPath.emplace_back(mtxWorld._41, mtxWorld._42, mtxWorld._43);
+	}
+
+	OutputDebugStringA(std::format("[HeliPath] LOADED {} points from {}\n",
+		m_v3HeliPath.size(), strFilePath).c_str());
 	return S_OK;
 }
 

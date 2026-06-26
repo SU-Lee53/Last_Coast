@@ -72,13 +72,6 @@ void GuiManager::Update()
 		}
 	}
 
-	// 채팅 창 토글 (F2)
-	if (INPUT->GetButtonDown(VK_F2)) {
-		m_bShowChat = !m_bShowChat;
-	}
-
-	DrawChatWindow();
-
 	switch (m_eManagerDebug) {
 	case MANAGER_DEBUG::RENDER_MANAGER:
 	{
@@ -118,63 +111,6 @@ void GuiManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), pd3dCommandList.Get());
 
-}
-
-void GuiManager::DrawChatWindow()
-{
-	// 1) 네트워크 스레드가 큐에 넣은 수신 메시지를 메인 스레드에서 소비
-	for (const ChatMessageEvent& ev : NETWORK->ConsumeChatMessages()) {
-		std::string line = "[" + ev.username + "] " + ev.message;
-		m_ChatHistory.push_back(line);
-		if (m_ChatHistory.size() > MAX_CHAT_HISTORY)
-			m_ChatHistory.erase(m_ChatHistory.begin());
-		m_bChatScrollToBottom = true;
-	}
-
-	if (!m_bShowChat) return;
-
-	ImGui::SetNextWindowSize(ImVec2(400, 250), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowPos(ImVec2(20, 400), ImGuiCond_FirstUseEver);
-	if (ImGui::Begin("Chat (F2)", &m_bShowChat)) {
-
-		// 연결 상태 표시
-		if (NETWORK->IsOffline() || !NETWORK->IsConnected()) {
-			ImGui::TextDisabled("Offline - chat works only when connected online.");
-		}
-
-		// 메시지 히스토리 (입력줄 높이만큼 남기고 스크롤 영역)
-		const float fFooterHeight = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
-		if (ImGui::BeginChild("ChatScroll", ImVec2(0, -fFooterHeight), true,
-			ImGuiWindowFlags_HorizontalScrollbar)) {
-			for (const std::string& line : m_ChatHistory) {
-				ImGui::TextWrapped("%s", line.c_str());
-			}
-			if (m_bChatScrollToBottom) {
-				ImGui::SetScrollHereY(1.0f);
-				m_bChatScrollToBottom = false;
-			}
-		}
-		ImGui::EndChild();
-
-		// 입력줄 — Enter 로 전송. 직전 프레임에 전송했다면 입력창에 다시 포커스
-		if (m_bChatReclaimFocus) {
-			ImGui::SetKeyboardFocusHere(0); // 다음 위젯(InputText)에 포커스
-			m_bChatReclaimFocus = false;
-		}
-		ImGui::PushItemWidth(-60.0f);
-		bool bSend = ImGui::InputText("##ChatInput", m_ChatInputBuf, sizeof(m_ChatInputBuf),
-			ImGuiInputTextFlags_EnterReturnsTrue);
-		ImGui::PopItemWidth();
-		ImGui::SameLine();
-		if (ImGui::Button("Send")) bSend = true;
-
-		if (bSend && m_ChatInputBuf[0] != '\0') {
-			NETWORK->SendChat(m_ChatInputBuf);
-			m_ChatInputBuf[0] = '\0';
-			m_bChatReclaimFocus = true; // 다음 프레임에 입력창 재포커스
-		}
-	}
-	ImGui::End();
 }
 
 void GuiManager::HelpMarker(const char* desc)

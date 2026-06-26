@@ -30,6 +30,16 @@ enum PACKET_TYPE {
 	S2C_CHAT,                                     // 서버 → 클라이언트: 채팅 메시지 브로드캐스트
 	C2S_PLAYER_WEAPON,                            // 클라이언트 → 서버: 무기 교체 요청
 	S2C_PLAYER_WEAPON,                            // 서버 → 클라이언트: 무기 교체 브로드캐스트
+	S2C_GAME_EVENT,                               // 서버 → 클라이언트: 스크립트 게임 이벤트 (폭파/포스트FX 등)
+};
+
+// ── 게임 이벤트 ID (서버 트리거, 클라 효과 카탈로그) ──────────────────────────
+enum GameEventId : int {
+	GE_EXPLOSION       = 0,   // 위치(x,y,z)에 폭발 연출 (파티클 + 사운드)
+	GE_POSTFX_DARKEN   = 1,   // 화면 어둡게 페이드 (단일값). fTargetValue = 목표 outputScale, fDuration = 지속(초)
+	GE_HORROR_LOOK     = 2,   // 작성형: exposure↓+outputScale↓+saturation↓+vignette↑ 동시 페이드. fDuration = 지속(초)
+	GE_RESTORE_LOOK    = 3,   // 작성형: 포스트값 기본으로 복구 페이드. fDuration = 지속(초)
+	GE_HELICOPTER_CRASH = 4,  // 헬기 추락 컷씬: 시네마틱 카메라가 추락하는 헬기를 추적. fDuration = 연출 길이(0이면 기본값)
 };
 enum IOType { IO_SEND, IO_RECV, IO_ACCEPT };
 
@@ -272,6 +282,19 @@ struct S2C_Chat {
 	int           playerId;
 	char          username[MAX_NAME_LEN];
 	char          message[MAX_CHAT_LEN];
+};
+
+// ── 게임 이벤트 패킷 ────────────────────────────────────────────────────────
+
+// 서버 → 클라이언트: 스크립트 게임 이벤트 트리거.
+// eventId(GameEventId)로 효과 종류 구분, x/y/z는 월드 위치(cm), fTargetValue/fDuration은 이벤트별 인자.
+struct S2C_GameEvent {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           eventId;            // GameEventId
+	float         x, y, z;            // 월드 위치 (cm) — 위치 무관 이벤트는 무시
+	float         fTargetValue;       // 목표값 (예: outputScale)
+	float         fDuration;          // 페이드 지속(초)
 };
 
 #pragma pack(pop) // Restore default packing

@@ -34,6 +34,7 @@ namespace AIDLL
         bool notPresent(GoalType type) const;
 
         // Evaluator의 SetGoal()에서 호출하는 공개 전환 메서드
+        void AddGoalIdle();
         void AddGoalWander();
         void AddGoalInvestigate();
         void AddGoalChase();

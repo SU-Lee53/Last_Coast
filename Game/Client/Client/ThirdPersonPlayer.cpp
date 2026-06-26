@@ -1105,6 +1105,10 @@ bool IThirdPersonPlayer::TryStepUp(const BoundingCapsule& capsule, const Boundin
 
 void LocalThirdPersonPlayer::ProcessInput()
 {
+	// 텍스트 입력(채팅 등) 중에는 게임플레이 입력 차단
+	if (INPUT->IsTextInputMode())
+		return;
+
 	// 디버그용 마우스 사용/헤제
 	if (INPUT->GetButtonDown(VK_OEM_3)) {	// " ` " -> 물결표 그 버튼임
 		ToggleMouseLook();
@@ -1120,6 +1124,10 @@ void LocalThirdPersonPlayer::ProcessInput()
 
 void NetworkOwnerThirdPersonPlayer::ProcessInput()
 {
+	// 텍스트 입력(채팅 등) 중에는 게임플레이 입력 차단
+	if (INPUT->IsTextInputMode())
+		return;
+
 	// 디버그용 마우스 사용/헤제
 	if (INPUT->GetButtonDown(VK_OEM_3)) {	// " ` " -> 물결표 그 버튼임
 		ToggleMouseLook();

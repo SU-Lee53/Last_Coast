@@ -82,6 +82,9 @@
     <ClInclude Include="GoalMoveToPosition.h">
       <Filter>03.Goal</Filter>
     </ClInclude>
+    <ClInclude Include="GoalIdle.h">
+      <Filter>03.Goal</Filter>
+    </ClInclude>
     <ClInclude Include="GoalWander.h">
       <Filter>03.Goal</Filter>
     </ClInclude>
@@ -104,6 +107,9 @@
       <Filter>05.Sensory</Filter>
     </ClInclude>
     <ClInclude Include="GoalEvaluator.h">
+      <Filter>06.Evaluator</Filter>
+    </ClInclude>
+    <ClInclude Include="EvaluatorIdle.h">
       <Filter>06.Evaluator</Filter>
     </ClInclude>
     <ClInclude Include="EvaluatorWander.h">
@@ -153,6 +159,9 @@
     <ClCompile Include="GoalMoveToPosition.cpp">
       <Filter>03.Goal</Filter>
     </ClCompile>
+    <ClCompile Include="GoalIdle.cpp">
+      <Filter>03.Goal</Filter>
+    </ClCompile>
     <ClCompile Include="GoalWander.cpp">
       <Filter>03.Goal</Filter>
     </ClCompile>
@@ -170,6 +179,9 @@
     </ClCompile>
     <ClCompile Include="GoalZombieThink.cpp">
       <Filter>03.Goal</Filter>
+    </ClCompile>
+    <ClCompile Include="EvaluatorIdle.cpp">
+      <Filter>06.Evaluator</Filter>
     </ClCompile>
     <ClCompile Include="EvaluatorWander.cpp">
       <Filter>06.Evaluator</Filter>

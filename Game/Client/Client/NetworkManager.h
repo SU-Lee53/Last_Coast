@@ -105,6 +105,14 @@ struct ChatMessageEvent {
 	std::string message;
 };
 
+// 서버 스크립트 게임 이벤트 (폭파/포스트FX 등). eventId = GameEventId.
+struct GameEventMsg {
+	int     eventId;
+	Vector3 pos;
+	float   fTargetValue;
+	float   fDuration;
+};
+
 class NetworkManager {
 
 	DECLARE_SINGLE(NetworkManager)
@@ -154,6 +162,9 @@ public:
 	// ── 채팅 송수신 ────────────────────────────────────────────────────────────
 	void SendChat(const std::string& message);
 	std::vector<ChatMessageEvent> ConsumeChatMessages();
+
+	// ── 서버 게임 이벤트 소비 ──────────────────────────────────────────────────
+	std::vector<GameEventMsg> ConsumeGameEvents();
 
 	// ── 플레이어 이벤트 소비 (Task: Remote Player Sync) ─────────────────────────
 	std::vector<PlayerJoinEvent>      ConsumePlayerJoins();
@@ -238,4 +249,5 @@ private:
 	concurrency::concurrent_queue<MeleeHitEvent>                  m_PendingMeleeHits;
 	concurrency::concurrent_queue<ChatMessageEvent>               m_PendingChatMessages;
 	concurrency::concurrent_queue<WeaponChangeEvent>             m_PendingPlayerWeapons;
+	concurrency::concurrent_queue<GameEventMsg>                  m_PendingGameEvents;
 };

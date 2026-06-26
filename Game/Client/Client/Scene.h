@@ -7,6 +7,7 @@
 #include "StaticObject.h"
 #include "Zombie.h"
 #include "WeaponObject.h"
+#include "CrashDebris.h"
 
 #include "Player.h"	// Includes GameObject
 #include "Camera.h"
@@ -24,7 +25,7 @@ using CollisionPair = std::pair<std::shared_ptr<IGameObject>, std::shared_ptr<IG
 class Scene {
 	friend class SceneManager;
 
-	using WorldType = World<NetworkOwnerThirdPersonPlayer, NetworkRemoteThirdPersonPlayer, StaticObject, WeaponObject, Zombie>;
+	using WorldType = World<NetworkOwnerThirdPersonPlayer, NetworkRemoteThirdPersonPlayer, StaticObject, WeaponObject, Zombie, CrashDebris>;
 
 public:
 	virtual void BuildObjects() = 0;
@@ -44,6 +45,10 @@ public:
 	}
 
 	HRESULT LoadFromFiles(const std::string& strFileName);
+	// 좀비 스폰 포인트를 별도 JSON 파일에서 로드 (씬과 분리)
+	HRESULT LoadZombieSpawnPoints(const std::string& strFileName);
+	// 헬기 비행 경로점을 별도 JSON 파일에서 로드 (씬과 분리, 순서 보존)
+	HRESULT LoadHeliPath(const std::string& strFileName);
 
 
 public:
@@ -83,9 +88,13 @@ public:
 	const Vector4& GetGlobalAmbient() const { return m_v4GlobalAmbient; }
 	void SetGlobalAmbient(const Vector4& v4Ambient) { m_v4GlobalAmbient = v4Ambient; }
 	const std::unique_ptr<UIBoard>& GetUIBoard() const { return m_pUIBoard; }
+	const std::vector<Vector3>& GetZombieSpawnPoints() const { return m_v3ZombieSpawnPoints; }
+	const std::vector<Vector3>& GetHeliPath() const { return m_v3HeliPath; }
 
 	const ToneMappingVolume& GetToneMappingVolume() const { return m_ToneMappingVolume; }
+	ToneMappingVolume& GetToneMappingVolume() { return m_ToneMappingVolume; } // 게임 이벤트 런타임 조정용
 	const PostProcessingVolume& GetPostProcessingVolume() const { return m_PostProcessingVolume; }
+	PostProcessingVolume& GetPostProcessingVolume() { return m_PostProcessingVolume; } // 게임 이벤트 런타임 조정용
 
 	bool IsGravityOn() const { return m_bEnableGravity; }
 
@@ -94,6 +103,12 @@ public:
 	TerrainHit QueryTerrainHit(const Vector3& v3WorldPos);
 
 	std::shared_ptr<Camera> SwapCamera(std::shared_ptr<Camera>& pNewCamera);
+
+	// 컷씬용 임시 오브젝트(월드/스폐셜 미등록). PrepareRender에서 직접 Render 호출.
+	// 이벤트(예: HelicopterCrashEvent)가 매 프레임 Transform 갱신 후 사용.
+	void SetCinematicProp(const std::shared_ptr<IGameObject>& pProp) { m_pCinematicProp = pProp; }
+	void ClearCinematicProp() { m_pCinematicProp = nullptr; }
+	const std::shared_ptr<IGameObject>& GetCinematicProp() const { return m_pCinematicProp; }
 
 protected:
 	void RemoveCollisionPairsOf(IGameObject* pDeadObject);
@@ -117,8 +132,11 @@ protected:
 	std::shared_ptr<TerrainObject>				m_pTerrain = nullptr;
 	std::shared_ptr<Skybox>						m_pSkybox = nullptr;
 	std::shared_ptr<EventSequence>				m_pEventSequence = nullptr;
-	
+	std::shared_ptr<IGameObject>				m_pCinematicProp = nullptr;	// 컷씬 임시 오브젝트
+
 	BoundingBox m_xmSceneBound{};
+	std::vector<Vector3> m_v3ZombieSpawnPoints;	// 언리얼에서 내보낸 좀비 스폰 위치 (cm)
+	std::vector<Vector3> m_v3HeliPath;			// 언리얼에서 내보낸 헬기 비행 경로점 (cm, 순서대로)
 	std::unique_ptr<UIBoard> m_pUIBoard{};
 	std::unordered_set<CollisionResult> m_pCollisionPairs;
 	Vector4 m_v4GlobalAmbient;

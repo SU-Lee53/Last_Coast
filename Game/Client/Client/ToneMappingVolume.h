@@ -37,6 +37,16 @@ public:
 	void SetDirtyFlag(uint8 eFlag, bool bValue);
 	bool IsDirty(uint8 eFlag) const;
 
+	// 화면 밝기 배율 (1.0 = 기본, <1 = 어둡게). 게임 이벤트 페이드용.
+	void  SetOutputScale(float fScale) { m_Parameters.Common.fOutputScale = fScale; }
+	float GetOutputScale() const { return m_Parameters.Common.fOutputScale; }
+
+	// 톤매핑 Common 파라미터 직접 접근 (쓰기 가능). 작성형 게임 이벤트용.
+	// exposure/gamma/saturation/outputScale/gradingStrength/autoExposure 등 라이브 반영.
+	// (AgX/GT 등 톤커브 파라미터는 LUT 베이크 → 별도 DirtyFlag 필요, 여기선 미포함)
+	ToneMappingCommonParameters& GetCommonParameters() { return m_Parameters.Common; }
+	const ToneMappingCommonParameters& GetCommonParameters() const { return m_Parameters.Common; }
+
 public:
 	void ShowDebugOptions();
 

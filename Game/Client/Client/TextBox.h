@@ -101,6 +101,7 @@ public:
 	virtual UIRectData MakeSBData() const override;
 
 	const std::wstring& GetCommittedText() const { return m_wstrCommittedText; }
+	void ClearText() { m_wstrCommittedText.clear(); RefreshDisplayText(); }	// 입력 내용 비우기
 
 	virtual const std::wstring& GetName() const override { return m_wstrCommittedText; }
 	virtual void ShowControllImGui() override;

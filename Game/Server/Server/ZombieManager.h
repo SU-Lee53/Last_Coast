@@ -50,6 +50,15 @@ public:
 	// 좀비를 스폰. NavMesh 위 임의 위치에 배치. 반환값: 새 좀비 ID (-1 = 실패)
 	int  SpawnZombie(Vector3 SpawnPos);
 
+	// 별도 스폰 포인트 JSON("ZombieSpawnPoints")에서 좀비 스폰 위치 목록을 로드.
+	// 씬과 분리된 파일(언리얼 SaveSpawnPointsToJson 출력). 반환: 로드된 개수.
+	int  LoadSpawnPoints(const std::string& strSpawnJsonPath);
+	const std::vector<Vector3>& GetSpawnPoints() const { return m_SpawnPoints; }
+
+	// 스폰 포인트 중 하나를 랜덤으로 반환. 포인트가 없으면 Vector3::Zero
+	// (SpawnZombie가 Zero를 받으면 랜덤 NavMesh 위치로 폴백)
+	Vector3 GetRandomSpawnPoint() const;
+
 	// 특정 ID 좀비를 디스폰
 	void DespawnZombie(int nId);
 
@@ -80,15 +89,21 @@ public:
 	bool ApplyDamageToZombie(int nZombieId, float fDamage);
 
 private:
-	// FOV 없이 거리 + LOS 만으로 서버 측 가시성 판정
-	bool IsVisible(const Vector3& v3From, const Vector3& v3To, float fSightRange) const;
+	// 서버 측 가시성 판정: FOV 콘(전방 ±60°, 단 근거리 예외) + 거리 + LOS
+	// v3Forward: 좀비 전방 단위벡터 (XZ 평면). 클라 오프라인 로직과 동일.
+	bool IsVisible(const Vector3& v3From, const Vector3& v3To,
+	               const Vector3& v3Forward, float fSightRange) const;
 
 	std::shared_ptr<IAIManager>          m_pAIManager;
 	std::unordered_map<int, ServerZombie> m_Zombies;
+	std::vector<Vector3>                 m_SpawnPoints;   // 씬에서 로드한 고정 스폰 위치 (cm)
 	int                                  m_nNextId = 0;
 
 	static constexpr float m_fSightRange       = 1000000.f;  // cm
 	static constexpr float m_fHearingRange     = 0.f;
+	// FOV 콘 파라미터 (클라이언트 Zombie 와 동일)
+	static constexpr float m_fFOVCosHalf       = 0.5f;   // cos(60°) — 전방 ±60°
+	static constexpr float m_fCloseRange       = 150.f;  // 이 거리 이내는 시야각 무시 (cm)
 	// 좀비 히트 캡슐 파라미터 (클라이언트 PlayerCollider 캡슐과 유사)
 	static constexpr float m_fZombieCapsuleRadius     = 30.f;   // 반지름 (cm)
 	static constexpr float m_fZombieCapsuleHalfHeight = 70.f;   // 반높이 (cm)

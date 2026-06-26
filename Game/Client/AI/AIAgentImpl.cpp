@@ -300,7 +300,7 @@ namespace AIDLL
         if (!m_pBrain)
         {
             m_pBrain = std::make_shared<GoalZombieThink>(shared_from_this(), nTargetEntityId);
-            m_BehaviorState = AIBehaviorState::Wandering;
+            m_BehaviorState = AIBehaviorState::Idle;
         }
         else
         {

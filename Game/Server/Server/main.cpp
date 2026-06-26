@@ -12,6 +12,7 @@ using namespace std;
 // NavMesh JSON 경로 — 서버 작업 디렉터리(프로젝트 폴더) 기준 상대 경로
 static constexpr const char* NAVMESH_PATH      = "../../Client/Resources/NavMesh/DEMO.json";
 static constexpr const char* SCENE_JSON_PATH   = "../../Client/Resources/Scenes/DEMO.json";
+static constexpr const char* SPAWN_JSON_PATH   = "../../Client/Resources/Scenes/DEMO_SpawnPoints.json";
 static constexpr const char* MODEL_DIRECTORY   = "../../Client/Resources/Models";
 static constexpr const char* ATTACK_ANIM_PATH  = "../../Client/Resources/Animations/Zombie Attack.bin";
 static constexpr int         INITIAL_ZOMBIES = 100;    // 서버 시작 시 스폰할 좀비 수
@@ -85,6 +86,13 @@ static DWORD WINAPI GameTickThread(LPVOID)
 	timeBeginPeriod(1); // 1ms 정밀도 타이머 활성화
 	DWORD dwPrevTickTime = timeGetTime();
 	DWORD dwLastSpawnTime = dwPrevTickTime;
+
+	// ── 테스트용 게임 이벤트 emit (end-to-end 확인용) ──────────────────────────
+	// 8초마다 첫 연결 플레이어 위치에 폭발 ↔ 화면 어둡게 를 번갈아 브로드캐스트.
+	// 실제 게임 로직 연결 시 이 블록을 트리거 지점으로 교체.
+	constexpr DWORD TEST_GAME_EVENT_INTERVAL_MS = 8000;
+	DWORD dwLastGameEventTime = dwPrevTickTime;
+	int   nTestEventToggle = 0;
 	while (g_bRunning)
 	{
 		DWORD dwTickStart = timeGetTime();
@@ -151,7 +159,8 @@ static DWORD WINAPI GameTickThread(LPVOID)
 				dwLastSpawnTime = dwTickStart;
 			}
 			else {
-				int nZombieId = g_ZombieManager.SpawnZombie(m_v3SpawnPosition);
+				// 스폰 포인트 중 랜덤 하나 선택 (없으면 랜덤 NavMesh로 폴백)
+				int nZombieId = g_ZombieManager.SpawnZombie(g_ZombieManager.GetRandomSpawnPoint());
 				dwLastSpawnTime = dwTickStart;
 				auto& zombie = g_ZombieManager.GetZombies()[nZombieId];
 				BroadcastAll([&](Session& cl) {
@@ -174,6 +183,37 @@ static DWORD WINAPI GameTickThread(LPVOID)
 			BroadcastAll([&](Session& cl) {
 				cl.send_zombie_attack(nZombieId, nTargetId, 10.f);
 			});
+		}
+
+		// ── 테스트 게임 이벤트 emit ──────────────────────────────────────────
+		if (dwTickStart - dwLastGameEventTime >= TEST_GAME_EVENT_INTERVAL_MS && !playerSnapshots.empty())
+		{
+			dwLastGameEventTime = dwTickStart;
+			Vector3 v3At = playerSnapshots.begin()->second;
+
+			switch (nTestEventToggle) {
+			case 0: // 폭발: 플레이어 위치에 연출
+				BroadcastAll([&](Session& cl) {
+					cl.send_game_event(GE_EXPLOSION, v3At, 0.f, 0.f);
+				});
+				break;
+			case 1: // 호러 룩: exposure/outputScale/saturation↓ + vignette↑ 2초 페이드
+				BroadcastAll([&](Session& cl) {
+					cl.send_game_event(GE_HORROR_LOOK, Vector3{ 0,0,0 }, 0.f, 2.0f);
+				});
+				break;
+			case 2: // 룩 복구: 기본값으로 1.5초 페이드
+				BroadcastAll([&](Session& cl) {
+					cl.send_game_event(GE_RESTORE_LOOK, Vector3{ 0,0,0 }, 0.f, 1.5f);
+				});
+				break;
+			case 3: // 헬기 추락 컷씬: 시네마틱 카메라가 추락 헬기 추적 (기본 연출 길이)
+				BroadcastAll([&](Session& cl) {
+					cl.send_game_event(GE_HELICOPTER_CRASH, Vector3{ 0,0,0 }, 0.f, 0.f);
+				});
+				break;
+			}
+			nTestEventToggle = (nTestEventToggle + 1) % 4;
 		}
 
 		// ── 다음 틱까지 대기 ─────────────────────────────────────────────────
@@ -340,8 +380,9 @@ int main()
 	}
 	else
 	{
-		for (int i = 0; i < INITIAL_ZOMBIES; ++i)
-			g_ZombieManager.SpawnZombie(Vector3::Zero);
+		// 별도 파일에서 좀비 스폰 포인트 로드 (언리얼 SaveSpawnPointsToJson 출력)
+		// 실제 스폰은 게임 틱의 드립 스포너가 랜덤 포인트에서 INITIAL_ZOMBIES까지 채운다
+		g_ZombieManager.LoadSpawnPoints(SPAWN_JSON_PATH);
 	}
 
 	// ── 공격 애니메이션 길이 로드 ────────────────────────────────────────────

@@ -9,7 +9,7 @@ bool ZombieManager::LoadAttackAnimDuration(const std::string& strAnimBinPath)
 {
 	std::ifstream in(strAnimBinPath, std::ios::binary);
 	if (!in) {
-		std::cout << "[ZombieManager] Attack anim not found: " << strAnimBinPath << "\n";
+		//std::cout << "[ZombieManager] Attack anim not found: " << strAnimBinPath << "\n";
 		return false;
 	}
 
@@ -24,9 +24,9 @@ bool ZombieManager::LoadAttackAnimDuration(const std::string& strAnimBinPath)
 	float fDuration = j["Animations"][0]["Duration"].get<float>();
 	m_fAttackAnimDuration = fDuration + m_fBlendOutTime;
 
-	std::cout << "[ZombieManager] Attack anim duration=" << fDuration
-	          << "s + blendOut=" << m_fBlendOutTime
-	          << "s = " << m_fAttackAnimDuration << "s\n";
+	//std::cout << "[ZombieManager] Attack anim duration=" << fDuration
+	//          << "s + blendOut=" << m_fBlendOutTime
+	//          << "s = " << m_fAttackAnimDuration << "s\n";
 	return true;
 }
 
@@ -81,6 +81,39 @@ int ZombieManager::SpawnZombie(Vector3 SpawnPos)
 	//std::cout << "[ZombieManager] 좀비 스폰 id=" << nId
 	//          << " pos=(" << v3SpawnPos.x << "," << v3SpawnPos.z << ")\n";
 	return nId;
+}
+
+int ZombieManager::LoadSpawnPoints(const std::string& strSpawnJsonPath)
+{
+	m_SpawnPoints.clear();
+
+	std::ifstream in(strSpawnJsonPath);
+	if (!in) {
+		std::cout << "[ZombieManager] Spawn point file not found: " << strSpawnJsonPath << "\n";
+		return 0;
+	}
+
+	nlohmann::json j = nlohmann::json::parse(in, nullptr, false);
+	if (j.is_discarded() || !j.contains("ZombieSpawnPoints"))
+		return 0;
+
+	for (const auto& jSpawn : j["ZombieSpawnPoints"])
+	{
+		const auto& wm = jSpawn["Transform"]["WorldMatrix"];
+		// 행 우선 4x4 — translation은 인덱스 12,13,14 (_41,_42,_43)
+		Vector3 v3Pos(wm[12].get<float>(), wm[13].get<float>(), wm[14].get<float>());
+		m_SpawnPoints.push_back(v3Pos);
+	}
+
+	std::cout << "[ZombieManager] 스폰 포인트 로드: " << m_SpawnPoints.size() << "개\n";
+	return static_cast<int>(m_SpawnPoints.size());
+}
+
+Vector3 ZombieManager::GetRandomSpawnPoint() const
+{
+	if (m_SpawnPoints.empty())
+		return Vector3::Zero;   // 폴백: SpawnZombie가 랜덤 NavMesh로 처리
+	return m_SpawnPoints[rand() % m_SpawnPoints.size()];
 }
 
 void ZombieManager::DespawnZombie(int nId)
@@ -157,15 +190,17 @@ void ZombieManager::Tick(float fDeltaTime,
 		// 가장 가까운 플레이어 위치를 entity 0에 주입
 		if (nTargetId >= 0)
 		{
-			bool bVisible = IsVisible(v3ZombiePos, v3TargetPos, m_fSightRange);
+			// 전방 벡터는 직전 프레임 yaw 기준 (fYaw는 이 틱 후반에 갱신됨 → 1틱 지연, 무해)
+			Vector3 v3Forward(std::sinf(zombie.fYaw), 0.f, std::cosf(zombie.fYaw));
+			bool bVisible = IsVisible(v3ZombiePos, v3TargetPos, v3Forward, m_fSightRange);
 			bool bHeard   = (fDist <= m_fHearingRange);
 			zombie.pAgent->UpdateSensoryStimulus(0, v3TargetPos, bVisible, bHeard);
 
-			if (bDebugPrint && nId == 0)
-				std::cout << "  zombie[0] dist=" << fDist
-				          << " visible=" << bVisible
-				          << " heard=" << bHeard
-				          << " state=" << (int)zombie.pAgent->GetBehaviorState() << "\n";
+			//if (bDebugPrint && nId == 0)
+			//	std::cout << "  zombie[0] dist=" << fDist
+			//	          << " visible=" << bVisible
+			//	          << " heard=" << bHeard
+			//	          << " state=" << (int)zombie.pAgent->GetBehaviorState() << "\n";
 		}
 
 		// 공격 데미지 딜레이 처리 (애니메이션 Notify 타이밍 모사)
@@ -220,11 +255,11 @@ void ZombieManager::Tick(float fDeltaTime,
 			zombie.fStuckTimer += fDeltaTime;
 			if (zombie.fStuckTimer >= 1.f) // 1초 이상 멈춰 있을 때만 출력
 			{
-				printf("[Stuck] zombie=%d  pos=(%.0f,%.0f,%.0f)  pathState=%d\n",
+				/*printf("[Stuck] zombie=%d  pos=(%.0f,%.0f,%.0f)  pathState=%d\n",
 				       nId,
 				       v3NewPos.x, v3NewPos.y, v3NewPos.z,
 				       (int)zombie.pAgent->GetPathState());
-				zombie.fStuckTimer = 0.f;
+				zombie.fStuckTimer = 0.f;*/
 			}
 		}
 		else
@@ -341,10 +376,23 @@ bool ZombieManager::ApplyDamageToZombie(int nZombieId, float fDamage)
 	return false;
 }
 
-bool ZombieManager::IsVisible(const Vector3& v3From, const Vector3& v3To, float fSightRange) const
+bool ZombieManager::IsVisible(const Vector3& v3From, const Vector3& v3To,
+                              const Vector3& v3Forward, float fSightRange) const
 {
 	float fDist = Vector3::Distance(v3From, v3To);
 	if (fDist > fSightRange) return false;
+
+	// FOV 콘: 근거리(m_fCloseRange)는 시야각 무시, 그 밖은 전방 ±60° 이내일 때만
+	// (클라이언트 Zombie::PostUpdate 오프라인 로직과 동일)
+	bool bInFOV = (fDist <= m_fCloseRange);
+	if (!bInFOV)
+	{
+		Vector3 v3ToTargetXZ(v3To.x - v3From.x, 0.f, v3To.z - v3From.z);
+		float fLenXZ = v3ToTargetXZ.Length();
+		if (fLenXZ > 0.001f)
+			bInFOV = v3Forward.Dot(v3ToTargetXZ / fLenXZ) >= m_fFOVCosHalf;
+	}
+	if (!bInFOV) return false;
 
 	auto pNavMesh = m_pAIManager ? m_pAIManager->GetNavMesh() : nullptr;
 	if (!pNavMesh) return true; // NavMesh 없으면 LOS 체크 생략

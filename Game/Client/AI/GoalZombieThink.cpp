@@ -1,11 +1,12 @@
 ﻿#include "pch.h"
 #include "GoalZombieThink.h"
+#include "GoalIdle.h"
 #include "GoalWander.h"
 #include "GoalAlert.h"
 #include "GoalInvestigate.h"
 #include "GoalChase.h"
 #include "GoalAttack.h"
-#include "EvaluatorWander.h"
+#include "EvaluatorIdle.h"
 #include "EvaluatorInvestigate.h"
 #include "EvaluatorChase.h"
 #include "EvaluatorAttack.h"
@@ -16,9 +17,9 @@ namespace AIDLL
     GoalZombieThink::GoalZombieThink(std::shared_ptr<AIAgentImpl> pOwner, int nTargetEntityId)
         : GoalComposite(pOwner, GoalType::Think)
         , m_nTargetId(nTargetEntityId)
-        , m_LastSwitchedType(GoalType::Wander)
+        , m_LastSwitchedType(GoalType::Idle)
     {
-        m_Evaluators.push_back(std::make_unique<EvaluatorWander>());
+        m_Evaluators.push_back(std::make_unique<EvaluatorIdle>());
         m_Evaluators.push_back(std::make_unique<EvaluatorInvestigate>(m_nTargetId));
         m_Evaluators.push_back(std::make_unique<EvaluatorChase>(m_nTargetId));
         m_Evaluators.push_back(std::make_unique<EvaluatorAttack>(m_nTargetId));
@@ -27,7 +28,7 @@ namespace AIDLL
     void GoalZombieThink::Activate()
     {
         m_Status = Active;
-		m_LastSwitchedType = GoalType::Wander;
+		m_LastSwitchedType = GoalType::Idle;
     }
 
     Goal::Status GoalZombieThink::Process()
@@ -91,6 +92,17 @@ namespace AIDLL
     // AddGoal_* : Evaluator의 SetGoal()에서 호출
     // ─────────────────────────────────────────────────────────────────────────
 
+    void GoalZombieThink::AddGoalIdle()
+    {
+        if (notPresent(GoalType::Idle))
+        {
+            auto pOwner = m_pOwner.lock();
+            if (!pOwner) return;
+            SwitchToGoal(GoalType::Idle, pOwner);
+            pOwner->SetBehaviorState(AIBehaviorState::Idle);
+        }
+    }
+
     void GoalZombieThink::AddGoalWander()
     {
         if (notPresent(GoalType::Wander))
@@ -109,17 +121,17 @@ namespace AIDLL
             auto pOwner = m_pOwner.lock();
             if (!pOwner) return;
 
-            if (m_LastSwitchedType == GoalType::Wander)
+            if (m_LastSwitchedType == GoalType::Idle)
             {
-                // 배회 중 첫 감지 → Alert 후 Investigate
+                // 대기 중 첫 감지 → Alert 후 Investigate
                 SwitchToGoal(GoalType::Alert, pOwner);
                 pOwner->SetBehaviorState(AIBehaviorState::Alert);
             }
             else if (m_LastSwitchedType == GoalType::Investigate)
             {
-                // 조사 완료 후 재호출 → 목적지 도달했으므로 배회로 전환
-                SwitchToGoal(GoalType::Wander, pOwner);
-                pOwner->SetBehaviorState(AIBehaviorState::Wandering);
+                // 조사 완료 후 재호출 → 목적지 도달했으므로 다시 대기(Idle)로 전환
+                SwitchToGoal(GoalType::Idle, pOwner);
+                pOwner->SetBehaviorState(AIBehaviorState::Idle);
             }
             else
             {
@@ -137,8 +149,8 @@ namespace AIDLL
 			auto pOwner = m_pOwner.lock();
 			if (!pOwner) return;
 
-			// Wander 중 첫 감지 → Alert 먼저 삽입
-			if (m_LastSwitchedType == GoalType::Wander)
+			// Idle 중 첫 감지 → Alert 먼저 삽입
+			if (m_LastSwitchedType == GoalType::Idle)
 			{
 				SwitchToGoal(GoalType::Alert, pOwner);
 				pOwner->SetBehaviorState(AIBehaviorState::Alert);
@@ -174,6 +186,9 @@ namespace AIDLL
 
         switch (type)
         {
+        case GoalType::Idle:
+            AddSubgoal(std::make_unique<GoalIdle>(pOwner));
+            break;
         case GoalType::Wander:
             AddSubgoal(std::make_unique<GoalWander>(pOwner));
             break;
