@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "NetworkManager.h"
 #include "Packets.h"
 #include "TextBox.h"
@@ -333,7 +333,12 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	{
 		if (size < static_cast<int>(sizeof(S2C_AddPlayer))) return;
 		auto* p = reinterpret_cast<const S2C_AddPlayer*>(data);
-		m_PendingPlayerJoins.push(PlayerJoinEvent{ p->playerId, p->transform, p->bRunning, p->bAiming, p->fAimPitch, p->weaponType });
+		
+		char nameBuf[MAX_NAME_LEN];
+		memcpy_s(nameBuf, sizeof(nameBuf), p->username, MAX_NAME_LEN);
+		nameBuf[MAX_NAME_LEN - 1] = '\0';
+		
+		m_PendingPlayerJoins.push(PlayerJoinEvent{ p->playerId, p->transform, p->bRunning, p->bAiming, p->fAimPitch, p->weaponType, nameBuf, p->bReady });
 		break;
 	}
 	case S2C_REMOVE_PLAYER:
@@ -445,6 +450,16 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		if (size < static_cast<int>(sizeof(S2C_PlayerWeapon))) return;
 		auto* p = reinterpret_cast<const S2C_PlayerWeapon*>(data);
 		m_PendingPlayerWeapons.push(WeaponChangeEvent{ p->playerId, p->weaponType });
+		break;
+	}
+	case S2C_READY_STATE: {
+		if (size < static_cast<int>(sizeof(S2C_ReadyState))) return;
+		auto* p = reinterpret_cast<const S2C_ReadyState*>(data);
+		m_PendingReadyStates.push(ReadyStateEvent{ p->playerId, p->bReady });
+		break;
+	}
+	case S2C_GAME_START: {
+		m_bPendingGameStart.store(true);
 		break;
 	}
 	default:
@@ -607,6 +622,32 @@ std::vector<ChatMessageEvent> NetworkManager::ConsumeChatMessages()
 		out.push_back(ev);
 	return out;
 }
+
+void NetworkManager::SendReady(bool bReady)
+{
+	if (!m_bConnected || m_bOfflineMode) return;
+
+	C2S_Ready p;
+	p.size   = sizeof(C2S_Ready);
+	p.type   = C2S_READY;
+	p.bReady = bReady;
+	SendPacket(&p, p.size);
+}
+
+std::vector<ReadyStateEvent> NetworkManager::ConsumeReadyStates()
+{
+	std::vector<ReadyStateEvent> out;
+	ReadyStateEvent ev;
+	while (m_PendingReadyStates.try_pop(ev))
+		out.push_back(ev);
+	return out;
+}
+
+bool NetworkManager::ConsumeGameStart()
+{
+	return m_bPendingGameStart.exchange(false);
+}
+
 
 void NetworkManager::SendPlayerMelee(const Vector3& v3Origin, const Vector3& v3Direction)
 {

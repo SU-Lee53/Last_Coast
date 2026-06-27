@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #define SERVERPORT 9000
 #include "ServerCore/Session.h"
 
@@ -30,6 +30,14 @@ struct PlayerJoinEvent {
 	bool          bAiming;
 	float         fAimPitch;
 	unsigned char weaponType;
+	std::string   username;
+	bool          bReady;
+};
+
+// 레디 상태 변경 이벤트
+struct ReadyStateEvent {
+	int  playerId;
+	bool bReady;
 };
 
 // 무기 교체 이벤트 (리모트 플레이어 무기 반영)
@@ -155,6 +163,14 @@ public:
 	void SendChat(const std::string& message);
 	std::vector<ChatMessageEvent> ConsumeChatMessages();
 
+	// ↳ 패킷 보내기
+	void SendReady(bool bReady);
+
+	// 어떤 플레이어의 레디 상태 변경을 수신
+	std::vector<ReadyStateEvent> ConsumeReadyStates();
+	// 게임 시작 신호 (서버 발송)
+	bool                         ConsumeGameStart();
+
 	// ── 플레이어 이벤트 소비 (Task: Remote Player Sync) ─────────────────────────
 	std::vector<PlayerJoinEvent>      ConsumePlayerJoins();
 	std::vector<int>                  ConsumePlayerLeaves();
@@ -245,4 +261,6 @@ private:
 	concurrency::concurrent_queue<MeleeHitEvent>                  m_PendingMeleeHits;
 	concurrency::concurrent_queue<ChatMessageEvent>               m_PendingChatMessages;
 	concurrency::concurrent_queue<WeaponChangeEvent>             m_PendingPlayerWeapons;
+	concurrency::concurrent_queue<ReadyStateEvent>               m_PendingReadyStates;
+	std::atomic<bool>                                            m_bPendingGameStart{ false };
 };

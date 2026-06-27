@@ -53,6 +53,7 @@ void Session::send_add_player(int player_id)
 	packet.bAiming = pl.m_bAiming;
 	packet.fAimPitch = pl.m_fAimPitch;
 	packet.weaponType = pl.m_weaponType;
+	packet.bReady = pl.m_bReady;
 	do_send(packet.size, reinterpret_cast<char*>(&packet));
 }
 
@@ -367,6 +368,36 @@ bool Session::process_packet(unsigned char* p)
 				cl.send_chat(m_id, m_username, msg);
 	}
 	break;
+	case C2S_READY: {
+		C2S_Ready* packet = reinterpret_cast<C2S_Ready*>(p);
+		m_bReady = packet->bReady;
+		std::cout << "[Ready] Player[" << m_id << "] is " << (m_bReady ? "READY" : "NOT READY") << std::endl;
+
+		// 방 안의 모든 클라이언트에게 레디 상태 브로드캐스트
+		if (m_room) {
+			for (int other_id : m_room->players) {
+				if (other_id == -1) continue;
+				clients[other_id].send_ready_state(m_id, m_bReady);
+			}
+
+			// 4명이 모두 레디인지 확인
+			int nReadyCount = 0;
+			int nConnectedCount = 0;
+			for (int other_id : m_room->players) {
+				if (other_id == -1) continue;
+				++nConnectedCount;
+				if (clients[other_id].m_bReady) ++nReadyCount;
+			}
+			if (nConnectedCount == 4 && nReadyCount == 4) {
+				std::cout << "[Room] All 4 players ready! Starting game." << std::endl;
+				for (int other_id : m_room->players) {
+					if (other_id == -1) continue;
+					clients[other_id].send_game_start();
+				}
+			}
+		}
+	}
+	break;
 	default:
 		std::cout << "Unknown packet type received from player[" << m_id << "].\n";
 		return false;
@@ -467,5 +498,23 @@ void Session::send_zombie_attack(int nZombieId, int nTargetPlayerId, float fDama
 	p.zombieId = nZombieId;
 	p.targetPlayerId = nTargetPlayerId;
 	p.damage = fDamage;
+	do_send(p.size, reinterpret_cast<char*>(&p));
+}
+
+void Session::send_ready_state(int player_id, bool bReady)
+{
+	S2C_ReadyState p;
+	p.size = sizeof(S2C_ReadyState);
+	p.type = S2C_READY_STATE;
+	p.playerId = player_id;
+	p.bReady = bReady;
+	do_send(p.size, reinterpret_cast<char*>(&p));
+}
+
+void Session::send_game_start()
+{
+	S2C_GameStart p;
+	p.size = sizeof(S2C_GameStart);
+	p.type = S2C_GAME_START;
 	do_send(p.size, reinterpret_cast<char*>(&p));
 }

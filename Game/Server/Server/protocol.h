@@ -3,7 +3,7 @@
 constexpr short PORT = 9000;
 //constexpr int WORLD_WIDTH = 8;
 //constexpr int WORLD_HEIGHT = 8;
-constexpr int MAX_PLAYERS = 3;
+constexpr int MAX_PLAYERS = 1000;
 constexpr int MAX_ROOMS = 300;
 constexpr int MAX_NAME_LEN = 20;
 constexpr int MAX_CHAT_LEN = 200;
@@ -31,7 +31,10 @@ enum PACKET_TYPE {
 	S2C_CHAT,                                     // 서버 → 클라이언트: 채팅 메시지 브로드캐스트
 	C2S_PLAYER_WEAPON,                            // 클라이언트 → 서버: 무기 교체 요청
 	S2C_PLAYER_WEAPON,                            // 서버 → 클라이언트: 무기 교체 브로드캐스트
-	S2C_REGISTER_RESULT
+	S2C_REGISTER_RESULT,
+	C2S_READY,                                    // 클라이언트 → 서버: 레디 상태 변경
+	S2C_READY_STATE,                              // 서버 → 클라이언트: 누군가 레디 상태 변경
+	S2C_GAME_START                                // 서버 → 클라이언트: 4명 레디 완료, 게임 시작
 };
 enum IOType { IO_SEND, IO_RECV, IO_ACCEPT };
 
@@ -110,6 +113,24 @@ struct S2C_AvatarInfo {
 	TransformData transform;
 };
 
+struct C2S_Ready {
+	unsigned char size;
+	PACKET_TYPE   type;
+	bool          bReady;
+};
+
+struct S2C_ReadyState {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           playerId;
+	bool          bReady;
+};
+
+struct S2C_GameStart {
+	unsigned char size;
+	PACKET_TYPE   type;
+};
+
 struct S2C_AddPlayer {
 	unsigned char size;
 	PACKET_TYPE   type;
@@ -120,6 +141,7 @@ struct S2C_AddPlayer {
 	bool          bAiming;
 	float         fAimPitch;
 	unsigned char weaponType;   // 현재 장착 무기 (late-join 동기화용)
+	bool          bReady;       // 현재 레디 상태
 };
 
 struct S2C_RemovePlayer {

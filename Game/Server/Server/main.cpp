@@ -148,7 +148,7 @@ static DWORD WINAPI GameTickThread(LPVOID)
 
 		if(bSpawnElapsed){
 			if(g_ZombieManager.GetZombies().size() >= INITIAL_ZOMBIES) {
-				// std::cout << "[Server] 최대 좀비 수 도달. 추가 스폰 생략.\n";
+				//std::cout << "[Server] 최대 좀비 수 도달. 추가 스폰 생략.\n";
 				dwLastSpawnTime = dwTickStart;
 			}
 			else {
@@ -193,7 +193,7 @@ void disconnect(int id)
 
 	if (!cl.m_is_connected) return;
 
-	// std::cout << "Client[" << id << "] disconnected.\n";
+	//std::cout << "Client[" << id << "] disconnected.\n";
 
 	// Room에서 제거
 	if (cl.m_room != nullptr) {
@@ -255,8 +255,13 @@ void worker_thread()
 
 				clients[player_index].init(exp_over->m_client_socket, player_index, nullptr);
 
-				clients[player_index].do_recv();
-				// std::cout << "Client[" << player_index << "] Connected. Wait for login.\n";
+						clients[other_id].send_add_player(player_index);
+						clients[player_index].send_add_player(other_id);
+					}
+
+					clients[player_index].do_recv();
+					// std::cout << "Client[" << player_index << "] Connected. " << "Room assigned.\n";
+				}
 			}
 
 			// 다음 Accept 준비
@@ -276,7 +281,7 @@ void worker_thread()
 			Session& cl = clients[key];
 
 			if (!cl.m_is_connected) {
-				// std::cout << "Session not found for client[" << key << "].\n";
+				std::cout << "Session not found for client[" << key << "].\n";
 				break;
 			}
 
@@ -318,7 +323,7 @@ int main()
 	// ── ZombieManager 초기화 + 초기 좀비 스폰 ───────────────────────────────
 	if (!g_ZombieManager.Initialize(NAVMESH_PATH))
 	{
-		// std::cout << "[Server] ZombieManager 초기화 실패. NavMesh 경로 확인: " << NAVMESH_PATH << "\n";
+		//std::cout << "[Server] ZombieManager 초기화 실패. NavMesh 경로 확인: " << NAVMESH_PATH << "\n";
 	}
 	else
 	{
@@ -338,7 +343,7 @@ int main()
 	// ── 정적 OBB 공간 분할 초기화 (사격 차폐 판정용) ────────────────────────
 	if (!g_SpatialGrid.LoadFromSceneFile(SCENE_JSON_PATH, MODEL_DIRECTORY))
 	{
-		// std::cout << "[Server] SpatialGrid 초기화 실패. 씬/모델 경로 확인.\n";
+		//std::cout << "[Server] SpatialGrid 초기화 실패. 씬/모델 경로 확인.\n";
 	}
 
 	// ── 게임 틱 스레드 시작 (30Hz) ───────────────────────────────────────────
