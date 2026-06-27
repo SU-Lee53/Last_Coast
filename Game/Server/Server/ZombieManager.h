@@ -24,6 +24,9 @@ struct ServerZombie
 	// 이전 프레임 XZ 위치 (yaw 계산용)
 	Vector3                     v3PrevPos   = {};
 
+	// Chase 상태 정지 감지용 누적 타이머
+	float                       fStuckTimer      = 0.f;
+
 	// ── 네트워크 전송 스로틀링 ────────────────────────────────────────────────
 	DWORD                       dwLastSendTime   = 0;      // timeGetTime() 기준
 	int                         nLastSentState   = -1;     // 마지막 전송한 behaviorState

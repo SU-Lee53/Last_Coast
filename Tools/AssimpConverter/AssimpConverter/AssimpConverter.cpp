@@ -7,10 +7,15 @@ AssimpConverter::AssimpConverter()
 	m_pImporter = std::make_shared<Assimp::Importer>();
 }
 
-void AssimpConverter::LoadFromFiles(const std::string& strPath, float fScaleFactor)
+bool AssimpConverter::LoadFromFiles(const std::string& strPath, float fScaleFactor)
 {
 	m_fScale = fScaleFactor;
 	m_strFilePath = strPath;
+	m_pScene = nullptr;
+	m_pRootNode = nullptr;
+	m_dUnitScaleCM = 1.0;
+	m_bSourceWasRH = false;
+	XMStoreFloat4x4(&m_xmf4x4SourceToEngine, XMMatrixIdentity());
 
 	m_Bones.clear();
 	m_DFSBones.clear();
@@ -27,10 +32,16 @@ void AssimpConverter::LoadFromFiles(const std::string& strPath, float fScaleFact
 		aiProcess_LimitBoneWeights | 
 		aiProcess_FlipUVs;
 
-	m_pScene = m_pImporter->ReadFile(strPath, flags);
-
-	if (m_pScene->mMetaData) {
-		m_pScene->mMetaData->Get("UnitScaleFactor", m_dUnitScaleCM);
+	try {
+		m_pScene = m_pImporter->ReadFile(strPath, flags);
+	}
+	catch (const std::exception& e) {
+		DisplayText("Failed to import %s\r\nAssimp exception: %s\r\n", strPath.c_str(), e.what());
+		return false;
+	}
+	catch (...) {
+		DisplayText("Failed to import %s\r\nAssimp exception: unknown\r\n", strPath.c_str());
+		return false;
 	}
 
 	//m_pScene = m_pImporter->ReadFile(
@@ -48,7 +59,18 @@ void AssimpConverter::LoadFromFiles(const std::string& strPath, float fScaleFact
 	//);
 
 	if (!m_pScene) {
-		__debugbreak();
+		DisplayText("Failed to import %s\r\nAssimp error: %s\r\n", strPath.c_str(), m_pImporter->GetErrorString());
+		return false;
+	}
+
+	if (!m_pScene->mRootNode) {
+		DisplayText("Failed to import %s\r\nAssimp returned a scene without a root node.\r\n", strPath.c_str());
+		m_pScene = nullptr;
+		return false;
+	}
+
+	if (m_pScene->mMetaData) {
+		m_pScene->mMetaData->Get("UnitScaleFactor", m_dUnitScaleCM);
 	}
 
 	m_pRootNode = m_pScene->mRootNode;
@@ -69,6 +91,8 @@ void AssimpConverter::LoadFromFiles(const std::string& strPath, float fScaleFact
 			m_DFSBones[i].nDepth = m_DFSBones[nParentIndex].nDepth + 1;
 		}
 	}
+
+	return true;
 }
 
 SceneAxis AssimpConverter::ReadSceneAxisMetaData(const aiScene* pScene)

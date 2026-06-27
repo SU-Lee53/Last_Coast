@@ -29,7 +29,7 @@
 				"Albedo": "sand_albedo.png",
 				"Normal": "sand_normal.png"
 			},
-			"Tiling": 0.0099999997764825821
+			"Tiling": 0.00015873015217948705
 		},
 		{
 			"Index": 1,
@@ -39,7 +39,7 @@
 				"Albedo": "grass_albedo.png",
 				"Normal": "grass_normal.png"
 			},
-			"Tiling": 0.0099999997764825821
+			"Tiling": 0.00015873015217948705
 		},
 		{
 			"Index": 2,
@@ -49,7 +49,7 @@
 				"Albedo": "rock02_albedo.png",
 				"Normal": "rock02_normal.png"
 			},
-			"Tiling": 0.0099999997764825821
+			"Tiling": 0.00015873015217948705
 		},
 		{
 			"Index": 3,
@@ -59,7 +59,7 @@
 				"Albedo": "rock01_albedo.png",
 				"Normal": "rock01_normal.png"
 			},
-			"Tiling": 0.0099999997764825821
+			"Tiling": 0.00015873015217948705
 		}
 	],
 	"Components": [
@@ -99,7 +99,7 @@
 				{
 					"Path": "weight_c1_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, 2, 0, -1 ]
+					"LayerIndex": [ -1, 1, 2, 0 ]
 				}
 			]
 		},
@@ -159,7 +159,7 @@
 				{
 					"Path": "weight_c4_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, 3, -1, -1 ]
+					"LayerIndex": [ -1, -1, 1, 3 ]
 				}
 			]
 		},
@@ -179,7 +179,7 @@
 				{
 					"Path": "weight_c5_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 1, -1 ]
+					"LayerIndex": [ 1, -1, -1, -1 ]
 				}
 			]
 		},
@@ -199,7 +199,7 @@
 				{
 					"Path": "weight_c6_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, -1, -1, -1 ]
+					"LayerIndex": [ -1, 1, -1, -1 ]
 				}
 			]
 		},
@@ -219,7 +219,7 @@
 				{
 					"Path": "weight_c7_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, 2, -1, -1 ]
+					"LayerIndex": [ -1, -1, 1, 2 ]
 				}
 			]
 		},
@@ -239,7 +239,7 @@
 				{
 					"Path": "weight_c8_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, 0, -1, -1 ]
+					"LayerIndex": [ 0, -1, -1, -1 ]
 				}
 			]
 		},
@@ -259,7 +259,7 @@
 				{
 					"Path": "weight_c9_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, -1, -1, -1 ]
+					"LayerIndex": [ -1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -399,7 +399,7 @@
 				{
 					"Path": "weight_c16_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, -1, -1, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -479,7 +479,7 @@
 				{
 					"Path": "weight_c20_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, 3, -1, -1 ]
+					"LayerIndex": [ -1, -1, 1, 3 ]
 				}
 			]
 		},
@@ -559,7 +559,7 @@
 				{
 					"Path": "weight_c24_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, -1, -1, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -579,7 +579,7 @@
 				{
 					"Path": "weight_c25_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, -1, -1, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -839,7 +839,7 @@
 				{
 					"Path": "weight_c38_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, 1, 2, 3 ]
+					"LayerIndex": [ 1, 2, 3, -1 ]
 				}
 			]
 		},
@@ -859,7 +859,7 @@
 				{
 					"Path": "weight_c39_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, -1, -1, -1 ]
+					"LayerIndex": [ -1, -1, -1, 1 ]
 				}
 			]
 		},
@@ -879,7 +879,7 @@
 				{
 					"Path": "weight_c40_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, 1, 0, -1 ]
+					"LayerIndex": [ 1, 0, -1, -1 ]
 				}
 			]
 		},
@@ -899,7 +899,7 @@
 				{
 					"Path": "weight_c41_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, 0, -1, -1 ]
+					"LayerIndex": [ -1, -1, 0, -1 ]
 				}
 			]
 		},
@@ -919,7 +919,7 @@
 				{
 					"Path": "weight_c42_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, 2, 0, 3 ]
+					"LayerIndex": [ 2, 0, 3, -1 ]
 				}
 			]
 		},
@@ -1019,7 +1019,7 @@
 				{
 					"Path": "weight_c47_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, 3, -1, -1 ]
+					"LayerIndex": [ -1, -1, 1, 3 ]
 				}
 			]
 		},
@@ -1039,7 +1039,7 @@
 				{
 					"Path": "weight_c48_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, 0, -1, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -1059,7 +1059,7 @@
 				{
 					"Path": "weight_c49_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 0, -1, -1, -1 ]
+					"LayerIndex": [ -1, -1, -1, 0 ]
 				}
 			]
 		},
@@ -1099,7 +1099,7 @@
 				{
 					"Path": "weight_c51_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, 1, 2, 3 ]
+					"LayerIndex": [ 1, 2, 3, -1 ]
 				}
 			]
 		},
@@ -1179,7 +1179,7 @@
 				{
 					"Path": "weight_c55_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, 3, -1, -1 ]
+					"LayerIndex": [ -1, -1, 1, 3 ]
 				}
 			]
 		},
@@ -1219,7 +1219,7 @@
 				{
 					"Path": "weight_c57_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, 0, -1, -1 ]
+					"LayerIndex": [ -1, -1, 1, 0 ]
 				}
 			]
 		},
@@ -1259,7 +1259,7 @@
 				{
 					"Path": "weight_c59_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, 1, 2, 3 ]
+					"LayerIndex": [ 1, 2, 3, -1 ]
 				}
 			]
 		},
@@ -1279,7 +1279,7 @@
 				{
 					"Path": "weight_c60_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 1, 3 ]
+					"LayerIndex": [ 1, 3, -1, -1 ]
 				}
 			]
 		},
@@ -1299,7 +1299,7 @@
 				{
 					"Path": "weight_c61_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ 1, -1, -1, -1 ]
+					"LayerIndex": [ -1, -1, 1, -1 ]
 				}
 			]
 		},
@@ -1319,7 +1319,7 @@
 				{
 					"Path": "weight_c62_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, 1, -1, -1 ]
+					"LayerIndex": [ -1, -1, -1, 1 ]
 				}
 			]
 		},
@@ -1339,7 +1339,7 @@
 				{
 					"Path": "weight_c63_0",
 					"Format": "RGBA8",
-					"LayerIndex": [ -1, -1, 1, -1 ]
+					"LayerIndex": [ -1, -1, -1, 1 ]
 				}
 			]
 		}

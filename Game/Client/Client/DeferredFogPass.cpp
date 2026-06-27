@@ -1,9 +1,9 @@
 ﻿#include "pch.h"
 #include "DeferredFogPass.h"
+#include "PostProcessingVolume.h"
 
 void DeferredFogPass::Initialize()
 {
-	m_cbFogData = g_DefaultParameters;
 	CreatePipelineState();
 }
 
@@ -31,8 +31,10 @@ void DeferredFogPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
 {
 	constexpr auto rootParamFog = std::to_underlying(ROOT_PARAMETER::FOG_DATA);
 	
+	const auto& volume = CUR_SCENE->GetPostProcessingVolume();
+	CB_FOG_DATA fogData = volume.GetFogCBData();
 	auto fogCBuffer = RENDER->AllocCBuffer<CB_FOG_DATA>();
-	fogCBuffer.WriteData(&m_cbFogData);
+	fogCBuffer.WriteData(&fogData);
 	pd3dCommandList->SetGraphicsRootConstantBufferView(rootParamFog, fogCBuffer.GPUAddress);
 
 	pd3dCommandList->SetPipelineState(m_pd3dPipelineState.Get());
@@ -47,38 +49,7 @@ void DeferredFogPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommand
 
 void DeferredFogPass::ShowDebugInfo()
 {
-	if (ImGui::Button("Reset Parameters")) {
-		m_cbFogData = g_DefaultParameters;
-	}
-	
-	ImGui::InputText("Save Name", &m_strSaveName);
-	if (ImGui::Button("Save Parameters")) {
-		SaveParametersToJson();
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Load Parameters")) {
-		LoadParametersFromJson();
-	}
-	
-	float fHeightOffset = 0.f;
-
-	ImGui::DragFloat4("FogColor", reinterpret_cast<float*>(&m_cbFogData.gfogColor), 0.01f, 0.f, 1.f);
-
-	ImGui::DragFloat("fFogStartDistance", reinterpret_cast<float*>(&m_cbFogData.gfFogStartDistance), 1.f, 0.f, std::numeric_limits<float>::max());
-	ImGui::DragFloat("fFogCutOffDistance", reinterpret_cast<float*>(&m_cbFogData.gfFogCutOffDistance), 1.f, 0.f, std::numeric_limits<float>::max());
-	ImGui::DragFloat("fFogDistanceDensity", reinterpret_cast<float*>(&m_cbFogData.gfFogDistanceDensity), 0.0001f, 0.0001f, 0.05f, "%.4f");
-	ImGui::DragFloat("FogDistancePower", reinterpret_cast<float*>(&m_cbFogData.gFogDistancePower), 0.01f, 0.25f, 4.0f);
-
-	ImGui::DragFloat("fFogHeightDensity", reinterpret_cast<float*>(&m_cbFogData.gfFogHeightDensity), 0.001f, 0.f, 0.2f);
-	ImGui::DragFloat("fFogHeightFalloff", reinterpret_cast<float*>(&m_cbFogData.gfFogHeightFalloff), 0.001f, 0.001, 3.0f);
-	ImGui::DragFloat("fFogBaseHeight(Offet from player y)", reinterpret_cast<float*>(&fHeightOffset), 0.1f);
-	ImGui::Text("fFogBaseHeight : %f", m_cbFogData.gfFogBaseHeight);
-	ImGui::DragFloat("fFogHeightStartDistance", reinterpret_cast<float*>(&m_cbFogData.gfFogHeightStartDistance), 0.1f, 0.f, std::numeric_limits<float>::max());
-
-	ImGui::DragFloat("fFogMaxOpacity", reinterpret_cast<float*>(&m_cbFogData.gfFogMaxOpacity), 0.01f, 0.f, 1.f);
-
-	float fHeightBase = CUR_SCENE->GetPlayer()->GetTransform()->GetPosition().y;
-	m_cbFogData.gfFogBaseHeight = fHeightBase + fHeightOffset;
+	ImGui::Text("Fog parameters are controlled by Post Processing Volume.");
 }
 
 void DeferredFogPass::CreatePipelineState()
@@ -119,48 +90,3 @@ void DeferredFogPass::CreatePipelineState()
 	}
 }
 
-void DeferredFogPass::SaveParametersToJson() const
-{
-	using namespace nlohmann;
-
-	json j;
-	j["fogColor"] = { m_cbFogData.gfogColor.x,  m_cbFogData.gfogColor.y,  m_cbFogData.gfogColor.z,  m_cbFogData.gfogColor.w };
-	j["fFogStartDistance"] = m_cbFogData.gfFogStartDistance;
-	j["fFogCutOffDistance"] = m_cbFogData.gfFogCutOffDistance;
-	j["fFogDistanceDensity"] = m_cbFogData.gfFogDistanceDensity;
-	j["FogDistancePower"] = m_cbFogData.gFogDistancePower;
-	j["fFogHeightDensity"] = m_cbFogData.gfFogHeightDensity;
-	j["fFogHeightFalloff"] = m_cbFogData.gfFogHeightFalloff;
-	j["fFogBaseHeight"] = m_cbFogData.gfFogBaseHeight;
-	j["fFogHeightStartDistance"] = m_cbFogData.gfFogHeightStartDistance;
-	j["fFogMaxOpacity"] = m_cbFogData.gfFogMaxOpacity;
-
-	std::string strSavePath = std::format("{}/fog_{}.bin", g_strSavePath, m_strSaveName);
-	std::ofstream out{ strSavePath, std::ios::binary };
-
-	std::vector<uint8_t> bson = nlohmann::json::to_bson(j);
-	out.write(reinterpret_cast<const char*>(bson.data()), bson.size());
-}
-
-void DeferredFogPass::LoadParametersFromJson()
-{
-	std::string strParametersPath = std::format("{}/fog_{}.bin", g_strSavePath, m_strSaveName);
-	std::ifstream inFile{ strParametersPath, std::ios::binary };
-	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
-	nlohmann::json inJson = nlohmann::json::from_bson(bson);;
-
-	m_cbFogData.gfFogStartDistance = inJson["fFogStartDistance"].get<float>();
-	m_cbFogData.gfFogCutOffDistance = inJson["fFogCutOffDistance"].get<float>();
-	m_cbFogData.gfFogDistanceDensity = inJson["fFogDistanceDensity"].get<float>();
-	m_cbFogData.gFogDistancePower = inJson["FogDistancePower"].get<float>();
-	m_cbFogData.gfFogHeightDensity = inJson["fFogHeightDensity"].get<float>();
-	m_cbFogData.gfFogHeightFalloff = inJson["fFogHeightFalloff"].get<float>();
-	m_cbFogData.gfFogBaseHeight = inJson["fFogBaseHeight"].get<float>();
-	m_cbFogData.gfFogHeightStartDistance = inJson["fFogHeightStartDistance"].get<float>();
-	m_cbFogData.gfFogMaxOpacity = inJson["fFogMaxOpacity"].get<float>();
-
-	std::vector<float> f;
-	f = inJson["fogColor"].get<std::vector<float>>();
-	m_cbFogData.gfogColor = Vector4(f.data());
-
-}

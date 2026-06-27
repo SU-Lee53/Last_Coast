@@ -70,6 +70,14 @@ void PostProcessingResources::Initialize()
 			DXGI_FORMAT_R16_FLOAT,
 			DXGI_FORMAT_R16_FLOAT
 		);
+
+		LightShaftBuffer = TEXTURE->LoadRenderTargetTexture(
+			"LightShaft",
+			nWidth,
+			nHeight,
+			DXGI_FORMAT_R16G16B16A16_FLOAT,
+			DXGI_FORMAT_R16G16B16A16_FLOAT
+		);
 	}
 	
 	// Luminance
@@ -159,58 +167,63 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 
 void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 {
-	CD3DX12_DESCRIPTOR_RANGE1 d3dDescriptorRanges[26]; 
+	CD3DX12_DESCRIPTOR_RANGE d3dDescriptorRanges[29]; 
 	// space0 : Per Scene (Frame) 
-	d3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbSceneData 
-	d3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gLightData 
+	d3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, 0); // cbSceneData 
+	d3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gLightData 
 
 	// space0 : Cascade shadow maps
-	d3dDescriptorRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0);					// cbCascadeShadowMatrix
-	d3dDescriptorRanges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtCascadeShadowMaps[NUM_CASCADES]
+	d3dDescriptorRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0, 0);					// cbCascadeShadowMatrix
+	d3dDescriptorRanges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 1, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtCascadeShadowMaps[NUM_CASCADES]
 	
 	// space0 : Shadow maps
-	d3dDescriptorRanges[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, 0); // cbShadowMatrix
-	d3dDescriptorRanges[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 5, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtShadows[4]
+	d3dDescriptorRanges[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 0, 0); // cbShadowMatrix
+	d3dDescriptorRanges[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 5, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtShadows[4]
 
 	// space0 : GBuffer[3] + Depth[1]
-	d3dDescriptorRanges[6].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 9, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0);
-	d3dDescriptorRanges[7].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 12, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
+	d3dDescriptorRanges[6].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 9, 0, 0);
+	d3dDescriptorRanges[7].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 12, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
 
 	// space0 : HDR Result
-	d3dDescriptorRanges[8].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 13, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE, 0);
+	d3dDescriptorRanges[8].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 13, 0, 0);
 
 	// space0 : Bloom Result
-	d3dDescriptorRanges[9].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 14, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE, 0);
+	d3dDescriptorRanges[9].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 14, 0, 0);
 
 	// space0 : SSAO
-	d3dDescriptorRanges[10].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 6, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE, 0);	// SSAO data
-	d3dDescriptorRanges[11].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 17, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);	// Noise
-	d3dDescriptorRanges[12].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 18, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE, 0);	// SSAO
-	d3dDescriptorRanges[13].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 19, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE, 0);	// SSAO blur
+	d3dDescriptorRanges[10].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 6, 0, 0);	// SSAO data
+	d3dDescriptorRanges[11].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 17, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);	// Noise
+	d3dDescriptorRanges[12].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 18, 0, 0);	// SSAO
+	d3dDescriptorRanges[13].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 19, 0, 0);	// SSAO blur
 
 	// space0 : Luminance
-	d3dDescriptorRanges[14].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 20, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE, 0);	// Luminance 
+	d3dDescriptorRanges[14].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 20, 0, 0);	// Luminance 
+
+	// space0 : Light Shaft
+	d3dDescriptorRanges[15].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 7, 0, 0);	// Light shaft data
+	d3dDescriptorRanges[16].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 23, 0, 0);	// Light shaft result
 
 	// space0 : ToneMapping
-	d3dDescriptorRanges[15].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2, 4, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0);
-	d3dDescriptorRanges[16].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 21, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
+	d3dDescriptorRanges[17].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2, 4, 0, 0);
+	d3dDescriptorRanges[18].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 21, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
 	
 	// space1 : Per Pass 
-	d3dDescriptorRanges[17].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1,		0, 1, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // gWorldTransforms
-	d3dDescriptorRanges[18].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1,		1, 1, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gBoneTransforms
-	d3dDescriptorRanges[19].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1,		2, 1, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gMaterialDatas
-	d3dDescriptorRanges[20].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, 3, 1, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTextures
+	d3dDescriptorRanges[19].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1,		0, 1, 0); // gWorldTransforms
+	d3dDescriptorRanges[20].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1,		1, 1, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gBoneTransforms
+	d3dDescriptorRanges[21].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1,		2, 1, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gMaterialDatas
+	d3dDescriptorRanges[22].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, 3, 1, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTextures
 
 	// space2 : cbTerrainLayerData
-	d3dDescriptorRanges[21].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbTerrainLayerData
-	d3dDescriptorRanges[22].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 3, 2, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainAlbedo[4] 
-	d3dDescriptorRanges[23].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 7, 2, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainNormal[4]
+	d3dDescriptorRanges[23].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 2, 0); // cbTerrainLayerData
+	d3dDescriptorRanges[24].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 3, 2, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainAlbedo[4] 
+	d3dDescriptorRanges[25].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 7, 2, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainNormal[4]
 
-	// space2 : cbTerrainComponentData
-	d3dDescriptorRanges[24].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, 0); // cbTerrainComponentData 
-	d3dDescriptorRanges[25].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 11, 2, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainWeightMap
+	// space2 : Terrain component instancing data
+	d3dDescriptorRanges[26].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 14, 2, 0); // gTerrainComponentData
+	d3dDescriptorRanges[27].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 15, 2, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainHeightMap
+	d3dDescriptorRanges[28].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, g_unMaxTerrainComponents, 16, 2, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // gtxtTerrainWeightMaps
 
-	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[22];
+	CD3DX12_ROOT_PARAMETER d3dRootParameters[24];
 	// Per Scene
 	d3dRootParameters[0].InitAsDescriptorTable(2, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);	// Per Draw
 	d3dRootParameters[1].InitAsDescriptorTable(2, &d3dDescriptorRanges[2], D3D12_SHADER_VISIBILITY_ALL);	// Cascade Shadow maps
@@ -222,23 +235,26 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	d3dRootParameters[7].InitAsDescriptorTable(1, &d3dDescriptorRanges[12], D3D12_SHADER_VISIBILITY_ALL);	// SSAO In
 	d3dRootParameters[8].InitAsDescriptorTable(1, &d3dDescriptorRanges[13], D3D12_SHADER_VISIBILITY_ALL);	// SSAO Out (Blur)
 	d3dRootParameters[9].InitAsDescriptorTable(1, &d3dDescriptorRanges[14], D3D12_SHADER_VISIBILITY_ALL);	// Luminance
-	d3dRootParameters[10].InitAsDescriptorTable(2, &d3dDescriptorRanges[15], D3D12_SHADER_VISIBILITY_ALL);	// Tone Mapping
-	d3dRootParameters[11].InitAsConstantBufferView(3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	// Fog parameters
+	d3dRootParameters[10].InitAsDescriptorTable(1, &d3dDescriptorRanges[15], D3D12_SHADER_VISIBILITY_ALL);	// Light Shaft Data
+	d3dRootParameters[11].InitAsDescriptorTable(1, &d3dDescriptorRanges[16], D3D12_SHADER_VISIBILITY_ALL);	// Light Shaft Result
+	d3dRootParameters[12].InitAsDescriptorTable(2, &d3dDescriptorRanges[17], D3D12_SHADER_VISIBILITY_ALL);	// Tone Mapping
+	d3dRootParameters[13].InitAsConstantBufferView(3, 0, D3D12_SHADER_VISIBILITY_ALL);	// Fog parameters
 	
 	// Per Pass
-	d3dRootParameters[12].InitAsDescriptorTable(3, &d3dDescriptorRanges[17], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass
-	d3dRootParameters[13].InitAsDescriptorTable(1, &d3dDescriptorRanges[20], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass textures
+	d3dRootParameters[14].InitAsDescriptorTable(3, &d3dDescriptorRanges[19], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass
+	d3dRootParameters[15].InitAsDescriptorTable(1, &d3dDescriptorRanges[22], D3D12_SHADER_VISIBILITY_ALL);	// Per Pass textures
 
 	// Per Instance(Draw)
-	d3dRootParameters[14].InitAsConstantBufferView(0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE,			D3D12_SHADER_VISIBILITY_ALL);		// cbInstanceData
-	d3dRootParameters[15].InitAsShaderResourceView(2, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE,	D3D12_SHADER_VISIBILITY_ALL);		// gBoneTransformOffsets
-	d3dRootParameters[16].InitAsConstantBufferView(3, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE,			D3D12_SHADER_VISIBILITY_ALL);		// cbLightCameraData
+	d3dRootParameters[16].InitAsConstantBufferView(0, 2, D3D12_SHADER_VISIBILITY_ALL);		// cbInstanceData
+	d3dRootParameters[17].InitAsShaderResourceView(2, 2, D3D12_SHADER_VISIBILITY_ALL);		// gBoneTransformOffsets
+	d3dRootParameters[18].InitAsConstantBufferView(3, 2, D3D12_SHADER_VISIBILITY_ALL);		// cbLightCameraData
 
-	d3dRootParameters[17].InitAsDescriptorTable(3, &d3dDescriptorRanges[21], D3D12_SHADER_VISIBILITY_ALL);								// TerrainLayer
-	d3dRootParameters[18].InitAsDescriptorTable(2, &d3dDescriptorRanges[24], D3D12_SHADER_VISIBILITY_ALL);								// TerrainComponent
-	d3dRootParameters[19].InitAsConstantBufferView(4, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_ALL);		// gnWorldTransformIndex
-	d3dRootParameters[20].InitAsShaderResourceView(12, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_ALL);		// gUIData
-	d3dRootParameters[21].InitAsShaderResourceView(13, 2, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_ALL);		// gParticleData
+	d3dRootParameters[19].InitAsDescriptorTable(3, &d3dDescriptorRanges[23], D3D12_SHADER_VISIBILITY_ALL);	// TerrainLayer
+	d3dRootParameters[20].InitAsDescriptorTable(3, &d3dDescriptorRanges[26], D3D12_SHADER_VISIBILITY_ALL);	// TerrainComponentData + HeightMap + WeightMaps
+	d3dRootParameters[21].InitAsConstantBufferView(4, 2, D3D12_SHADER_VISIBILITY_ALL);		// gnWorldTransformIndex
+
+	d3dRootParameters[22].InitAsShaderResourceView(12, 2, D3D12_SHADER_VISIBILITY_ALL);		// gUIData
+	d3dRootParameters[23].InitAsShaderResourceView(13, 2, D3D12_SHADER_VISIBILITY_ALL);		// gParticleData
 
 	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[6];
 	// s0 : SkyboxSampler
@@ -306,12 +322,12 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 		| D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS;
 
 	D3D12_VERSIONED_ROOT_SIGNATURE_DESC d3dRootSignatureDesc{};
-	d3dRootSignatureDesc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
-	d3dRootSignatureDesc.Desc_1_1.NumParameters = _countof(d3dRootParameters);
-	d3dRootSignatureDesc.Desc_1_1.pParameters = d3dRootParameters;
-	d3dRootSignatureDesc.Desc_1_1.NumStaticSamplers = _countof(d3dSamplerDesc);
-	d3dRootSignatureDesc.Desc_1_1.pStaticSamplers = d3dSamplerDesc;
-	d3dRootSignatureDesc.Desc_1_1.Flags = d3dRootSignatureFlags;
+	d3dRootSignatureDesc.Version = D3D_ROOT_SIGNATURE_VERSION_1_0;
+	d3dRootSignatureDesc.Desc_1_0.NumParameters = _countof(d3dRootParameters);
+	d3dRootSignatureDesc.Desc_1_0.pParameters = d3dRootParameters;
+	d3dRootSignatureDesc.Desc_1_0.NumStaticSamplers = _countof(d3dSamplerDesc);
+	d3dRootSignatureDesc.Desc_1_0.pStaticSamplers = d3dSamplerDesc;
+	d3dRootSignatureDesc.Desc_1_0.Flags = d3dRootSignatureFlags;
 
 	ComPtr<ID3DBlob> pd3dSignatureBlob = nullptr;
 	ComPtr<ID3DBlob> pd3dErrorBlob = nullptr;
@@ -335,16 +351,16 @@ void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 
 void RenderManager::CreateComputeRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 {
-	CD3DX12_DESCRIPTOR_RANGE1 d3dDescriptorRanges[4];
+	CD3DX12_DESCRIPTOR_RANGE d3dDescriptorRanges[4];
 	// space0 : Input SRV, Output UAV
-	d3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE, 0);
-	d3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
+	d3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, 0);
+	d3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
 	
-	d3dDescriptorRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE, 0);
-	d3dDescriptorRanges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
+	d3dDescriptorRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, 0);
+	d3dDescriptorRanges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
 
 
-	CD3DX12_ROOT_PARAMETER1 d3dRootParameters[6];
+	CD3DX12_ROOT_PARAMETER d3dRootParameters[6];
 	// space0 : Input/Output
 	d3dRootParameters[0].InitAsDescriptorTable(1, &d3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_ALL);
 	d3dRootParameters[1].InitAsDescriptorTable(1, &d3dDescriptorRanges[1], D3D12_SHADER_VISIBILITY_ALL);
@@ -352,8 +368,8 @@ void RenderManager::CreateComputeRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 	d3dRootParameters[3].InitAsDescriptorTable(1, &d3dDescriptorRanges[3], D3D12_SHADER_VISIBILITY_ALL);
 
 	// space1 : buffers
-	d3dRootParameters[4].InitAsConstantBufferView(0, 1, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
-	d3dRootParameters[5].InitAsConstantBufferView(1, 1, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+	d3dRootParameters[4].InitAsConstantBufferView(0, 1, D3D12_SHADER_VISIBILITY_ALL);
+	d3dRootParameters[5].InitAsConstantBufferView(1, 1, D3D12_SHADER_VISIBILITY_ALL);
 
 
 	CD3DX12_STATIC_SAMPLER_DESC d3dSamplerDesc[1];
@@ -375,12 +391,12 @@ void RenderManager::CreateComputeRootSignature(ComPtr<ID3D12Device> pd3dDevice)
 		D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
 
 	D3D12_VERSIONED_ROOT_SIGNATURE_DESC d3dRootSignatureDesc{};
-	d3dRootSignatureDesc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
-	d3dRootSignatureDesc.Desc_1_1.NumParameters = _countof(d3dRootParameters);
-	d3dRootSignatureDesc.Desc_1_1.pParameters = d3dRootParameters;
-	d3dRootSignatureDesc.Desc_1_1.NumStaticSamplers = _countof(d3dSamplerDesc);
-	d3dRootSignatureDesc.Desc_1_1.pStaticSamplers = d3dSamplerDesc;
-	d3dRootSignatureDesc.Desc_1_1.Flags = d3dRootSignatureFlags;
+	d3dRootSignatureDesc.Version = D3D_ROOT_SIGNATURE_VERSION_1_0;
+	d3dRootSignatureDesc.Desc_1_0.NumParameters = _countof(d3dRootParameters);
+	d3dRootSignatureDesc.Desc_1_0.pParameters = d3dRootParameters;
+	d3dRootSignatureDesc.Desc_1_0.NumStaticSamplers = _countof(d3dSamplerDesc);
+	d3dRootSignatureDesc.Desc_1_0.pStaticSamplers = d3dSamplerDesc;
+	d3dRootSignatureDesc.Desc_1_0.Flags = d3dRootSignatureFlags;
 
 	ComPtr<ID3DBlob> pd3dSignatureBlob = nullptr;
 	ComPtr<ID3DBlob> pd3dErrorBlob = nullptr;
@@ -667,7 +683,7 @@ void RenderManager::OnPrepareRender()
 
 	float pfClearColor[4] = { 0.f, 0.0f, 0.0f, 1.0f };
 	pd3dCommandList->ClearRenderTargetView(d3dRTVCPUDescriptorHandle, pfClearColor, 0, NULL);
-	pd3dCommandList->ClearDepthStencilView(d3dDSVDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, NULL);
+	pd3dCommandList->ClearDepthStencilView(d3dDSVDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, NULL);
 	
 	pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, &d3dDSVDescriptorHandle);
 }

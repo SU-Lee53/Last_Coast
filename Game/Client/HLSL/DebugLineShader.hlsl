@@ -1,4 +1,4 @@
-#include "Common.hlsl"
+#include "NewCommon.hlsl"
 
 // 라인 디버그 렌더링용 셰이더
 // POSITION만 사용하여 단색 라인 렌더링
@@ -19,7 +19,7 @@ VS_DEBUG_LINE_OUTPUT VSDebugLine(VS_DEBUG_LINE_INPUT input)
 
     // 월드 변환 없이 직접 뷰-프로젝션 적용
     // NavMesh 좌표는 이미 월드 좌표
-    matrix mtxVP = mul(gmtxView, gmtxProjection);
+    matrix mtxVP = mul(gCamera.mtxView, gCamera.mtxProjection);
     output.position = mul(float4(input.position, 1.0f), mtxVP);
 
     return output;

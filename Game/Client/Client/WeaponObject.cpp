@@ -56,23 +56,7 @@ bool WeaponObject::TryFire()
 
 		bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
 
-		if (bOnline) {
-			// 온라인: 서버에 사격 요청만 전송. 판정은 서버가 처리.
-			NETWORK->SendPlayerShoot(v3CamPos, v3CamDir, m_v3MuzzlePositionWorld);
-		}
-		else {
-			// 오프라인: 기존 로컬 레이트레이스 판정
-			RayTraceDesc rayDesc{};
-			rayDesc.v3Origin = v3CamPos;
-			rayDesc.v3Direction = v3CamDir;
-			rayDesc.fMaxDistance = 5000.f;
-			rayDesc.fDamage = m_fDamage;
-			rayDesc.pInstigator = m_wpOwner.lock().get();
-			rayDesc.pSourceObject = this;
-
-			RayTraceHitResult hit{};
-			CUR_SCENE->GetWorld().LineTraceSingle<StaticObject, Zombie>(rayDesc, hit);
-		}
+		FireShot(v3CamPos, v3CamDir, bOnline);
 
 		// 총구 이펙트는 항상 즉시 출력
 		ParticleEffectSpawnDesc particleDesc;
@@ -84,10 +68,33 @@ bool WeaponObject::TryFire()
 		};
 
 		PARTICLE->Spawn<MuzzleFlashEffect>(particleDesc);
+		PlayFireSound();
+
 		return true;
 	}
 
 	return false;
+}
+
+void WeaponObject::FireSingleHitscan(const Vector3& v3CamPos, const Vector3& v3CamDir, bool bOnline)
+{
+	if (bOnline) {
+		// 온라인: 서버에 사격 요청만 전송. 판정은 서버가 처리.
+		NETWORK->SendPlayerShoot(v3CamPos, v3CamDir, m_v3MuzzlePositionWorld, m_fDamage);
+	}
+	else {
+		// 오프라인: 로컬 레이트레이스 판정
+		RayTraceDesc rayDesc{};
+		rayDesc.v3Origin = v3CamPos;
+		rayDesc.v3Direction = v3CamDir;
+		rayDesc.fMaxDistance = 5000.f;
+		rayDesc.fDamage = m_fDamage;
+		rayDesc.pInstigator = m_wpOwner.lock().get();
+		rayDesc.pSourceObject = this;
+
+		RayTraceHitResult hit{};
+		CUR_SCENE->GetWorld().LineTraceSingle<StaticObject, Zombie>(rayDesc, hit);
+	}
 }
 
 bool WeaponObject::BeginReload()
@@ -96,6 +103,8 @@ bool WeaponObject::BeginReload()
 
 	m_bInReload = true;
 	m_fReloadTimer = 0.f;
+
+	PlayBeginReloadSound();
 	return true;
 }
 
@@ -103,10 +112,35 @@ bool WeaponObject::EndReload()
 {
 	if (!m_bInReload) return false;
 
-	m_nTotalAmmo -= 30 - m_nAmmoInClip;
-	m_nAmmoInClip = 30;
+	m_nTotalAmmo -= m_nAmmoPerClip - m_nAmmoInClip;
+	m_nAmmoInClip = m_nAmmoPerClip;
 	m_bInReload = false;
+
+	PlayEndReloadSound();
 	return true;
+}
+
+bool WeaponObject::PlayFireSound()
+{
+	if (m_pFireSound) {
+		return SOUND->PlayAt(m_pFireSound, m_v3MuzzlePositionWorld) != nullptr;
+	}
+
+	return false;
+}
+
+bool WeaponObject::PlayBeginReloadSound()
+{
+	auto bRes = SOUND->PlayAt(m_pBeginReloadSound, m_v3MuzzlePositionWorld) != nullptr;
+	if (bRes) {
+		SOUND->QueueSoundAt(m_pMidReloadSound, 0.5f, m_v3MuzzlePositionWorld);
+	}
+	return bRes;
+}
+
+bool WeaponObject::PlayEndReloadSound()
+{
+	return SOUND->PlayAt(m_pEndReloadSound, m_v3MuzzlePositionWorld) != nullptr;
 }
 
 void WeaponObject::UpdateMuzzlePositionWorld(const Matrix& mtxWorld)
@@ -148,7 +182,7 @@ void WeaponObject::SaveStat()
 		j = nlohmann::json::parse(in);
 	}
 
-	std::string strWeaponName = GameContext::g_strWeaponName[std::to_underlying(m_eWeaponType)];
+	std::string strWeaponName = GameContext::g_strWeaponNames[std::to_underlying(m_eWeaponType)];
 	auto& jStat = j[strWeaponName];
 
 	jStat["Damage"] = m_fDamage;

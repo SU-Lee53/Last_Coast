@@ -14,6 +14,7 @@ public:
 	ParticleEmitter(const ParticleEmitterDesc& desc);
 
 	void Initialize(const ParticleEmitterDesc& desc);
+	void Reset();
 	void Update(const ParticleEffectSpawnDesc& spawnDesc);
 	void Emit(uint32 unCount, const ParticleModuleContext& context);
 

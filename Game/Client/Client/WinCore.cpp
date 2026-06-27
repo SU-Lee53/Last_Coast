@@ -111,23 +111,42 @@ LRESULT WinCore::WndProc(HWND handle, UINT message, WPARAM wParam, LPARAM lParam
     switch (message)
     {
 	case WM_KEYDOWN:
+	{
 		switch (wParam) {
 		case VK_ESCAPE:
+		{
 			::PostQuitMessage(0);
 			break;
+		}
 		default:
+		{
 			break;
 		}
+		}
+
 		break;
+	}
 
 	case WM_KILLFOCUS:
+	{
 		::ClipCursor(nullptr);
 		INPUT->ShowCursor();
 		break;
+	}
 
     case WM_DESTROY:
-        PostQuitMessage(0);
-        break;
+	{
+		PostQuitMessage(0);
+		break;
+	}
+
+	case WM_CHAR:
+	{
+		wchar_t ch = static_cast<wchar_t>(wParam);
+		CUR_SCENE->GetUIBoard()->OnChar(ch);
+		break;
+	}
+
     default:
         return DefWindowProc(handle, message, wParam, lParam);
     }

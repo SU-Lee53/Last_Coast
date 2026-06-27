@@ -12,7 +12,7 @@ void ResourceManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 	m_CommandListPool.Initialize(pd3dDevice);
 }
 
-IndexBuffer ResourceManager::CreateIndexBuffer(std::vector<UINT> Indices)
+IndexBuffer ResourceManager::CreateIndexBuffer(const std::vector<UINT>& Indices)
 {
 	HRESULT hr;
 
@@ -31,6 +31,7 @@ IndexBuffer ResourceManager::CreateIndexBuffer(std::vector<UINT> Indices)
 	);
 
 	if (FAILED(hr)) {
+		auto hr = DEVICE->GetDeviceRemovedReason();
 		__debugbreak();
 	}
 

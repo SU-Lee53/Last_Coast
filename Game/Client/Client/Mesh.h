@@ -14,6 +14,7 @@ enum class MESH_TYPE {
 	STATIC = 0,
 	SKINNED,
 	TERRAIN,
+	WATER,
 
 
 	COUNT,
@@ -176,6 +177,58 @@ public:
 protected:
 	VertexBuffer m_Normals;
 	VertexBuffer m_Tangents;
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// TerrainQuadMesh
+
+class TerrainQuadMesh : public IMesh {
+public:
+	TerrainQuadMesh(uint32 unWidth, uint32 unHeight);
+
+	virtual void Render(
+		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
+		uint32 nInstanceCount = 1, 
+		uint32 unStartIndex = 0, 
+		int32 nIndexCount = -1) const override;
+
+protected:
+	VertexBuffer m_Normals;
+	VertexBuffer m_Tangents;
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// GridMesh
+
+class GridMesh : public IMesh {
+public:
+	GridMesh(
+		uint32 unNumQuadsX,
+		uint32 unNumQuadsZ,
+		float fSizeX,
+		float fSizeZ,
+		float fUVTiling = 1.0f);
+
+	static MESHLOADINFO CreateLoadInfo(
+		uint32 unNumQuadsX,
+		uint32 unNumQuadsZ,
+		float fSizeX,
+		float fSizeZ,
+		float fUVTiling = 1.0f,
+		MESH_TYPE eMeshType = MESH_TYPE::WATER);
+
+	virtual void Render(
+		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
+		uint32 nInstanceCount = 1,
+		uint32 unStartIndex = 0,
+		int32 nIndexCount = -1) const override;
+
+	virtual void ShowControlImGui() override;
+
+protected:
+	VertexBuffer m_Normals;
+	VertexBuffer m_Tangents;
+	VertexBuffer m_TexCoords;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -9,14 +9,34 @@ ParticleEmitter::ParticleEmitter(const ParticleEmitterDesc& desc)
 void ParticleEmitter::Initialize(const ParticleEmitterDesc& desc)
 {
 	m_EmitterDesc = desc;
+	Reset();
+}
+
+void ParticleEmitter::Reset()
+{
 	m_fAge = 0.f;
 	m_bDead = false;
 
-	m_Particles.clear();
-	m_Particles.resize(m_EmitterDesc.unMaxParticles);
+	if (m_Particles.size() != m_EmitterDesc.unMaxParticles) {
+		m_Particles.clear();
+		m_Particles.resize(m_EmitterDesc.unMaxParticles);
+	}
 
 	for (auto& particle : m_Particles) {
+		particle = Particle{};
 		particle.bAlive = false;
+	}
+
+	for (auto& pSpawnModule : m_pSpawnModules) {
+		pSpawnModule->Reset();
+	}
+
+	for (auto& pInitializeModule : m_pInitializeModules) {
+		pInitializeModule->Reset();
+	}
+
+	for (auto& pUpdateModule : m_pUpdateModules) {
+		pUpdateModule->Reset();
 	}
 }
 

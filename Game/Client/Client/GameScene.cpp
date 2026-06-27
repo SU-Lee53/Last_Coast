@@ -12,6 +12,7 @@
 #include "ZombieAnimationController.h"
 #include "ThirdPersonCamera.h"
 #include "BulletImpactEffect.h"
+#include "EventSequence.h"
 
 void GameScene::BuildObjects()
 {
@@ -19,14 +20,20 @@ void GameScene::BuildObjects()
 
 	m_pUIBoard = std::make_unique<UIBoard>();
 	m_pPlayer = std::make_shared<NetworkOwnerThirdPersonPlayer>();
+
+	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
 	m_pPlayer->Initialize();
 	m_pPlayer->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
-	if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
-		pThirdPerson->GiveWeapon(WEAPON_TYPE::AK);
+	if (auto pThirdPerson = static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
+		const auto& data = GCTX->GetGameData();
+		pThirdPerson->SetPlayerModel(GameContext::g_strCharacterNames[data.m_nCurModelIndex]);
+		pThirdPerson->GiveWeapon((WEAPON_TYPE)data.m_nCurWeaponIndex);
 	}
+
 
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize();
+	m_pSkybox->LoadSkyboxParameters("SkyboxParameters");
 
 	//m_pPlayer = std::make_shared<DebugPlayer>();
 	//m_pPlayer->Initialize();
@@ -34,28 +41,35 @@ void GameScene::BuildObjects()
 	m_pTerrain = std::make_shared<TerrainObject>();
 	m_pTerrain->LoadFromFiles("Game");
 
-	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
 	if (!bOnline) {
-		for (auto& pZombie : m_ZombiePool.Initialize(100, bOnline))
+		for (auto& pZombie : m_ZombiePool.Initialize(80, bOnline))
 			AddObject(pZombie);
 	}
 	else {
 		m_ZombiePool.Initialize(100, true);
 	}
 
-	auto begin = high_resolution_clock::now();
-	LoadFromFiles("DEMO");
-	auto end = high_resolution_clock::now();
-	long long llLoadTime = duration_cast<milliseconds>(end - begin).count();
+	//auto begin = high_resolution_clock::now();
+	LoadFromFiles("Game");
+	//auto end = high_resolution_clock::now();
+	//long long llLoadTime = duration_cast<milliseconds>(end - begin).count();
 
-	std::shared_ptr<TextBox> pText = std::make_shared<TextBox>(L"Malgun Gothic");
-	pText->SetText(std::format(L"로딩 시간 : {}ms", llLoadTime));
-	pText->SetLayer(0);
-	pText->SetAnchor(Vector2{ 0,0 });
-	pText->SetPivot(Vector2{ 0,0 });
-	pText->SetPosition(Vector2{ 10,150 });
-	pText->SetSizePerLetter(Vector2{ 15,50 });
-	m_pUIBoard->InsertUI(pText);
+	//std::shared_ptr<TextBox> pText = std::make_shared<TextBox>(L"Malgun Gothic");
+	//pText->SetText(std::format(L"로딩 시간 : {}ms", llLoadTime));
+	//pText->SetLayer(0);
+	//pText->SetAnchor(Vector2{ 0,0 });
+	//pText->SetPivot(Vector2{ 0,0 });
+	//pText->SetPosition(Vector2{ 10,150 });
+	//pText->SetTextHeight(50);
+	//m_pUIBoard->InsertUI(pText);
+
+	m_pWater = std::make_shared<WaterGridObject>();
+	//pWater->Initialize();
+
+	auto& pTransform = m_pWater->GetTransform();
+	m_v3WaterPos = Vector3(0.f, -47_m, 0.f);
+	pTransform->SetPosition(m_v3WaterPos);
+	AddObject(m_pWater);
 
 }
 
@@ -170,8 +184,8 @@ void GameScene::Update()
 	//
 	//}
 	//ImGui::End();
-	//
-	//// ── 좀비 네트워크 디버그 ────────────────────────────────────────────────
+
+	// ── 좀비 네트워크 디버그 ────────────────────────────────────────────────
 	//ImGui::Begin("Zombie Network Debug");
 	//{
 	//	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
@@ -190,12 +204,54 @@ void GameScene::Update()
 	//}
 	//ImGui::End();
 
+	// ====== Sound Test ======
+	ImGui::Begin("Sound Test");
+	{
+		if (ImGui::Button("Play 2D")) {
+			SOUND->Play("Test");
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Play 3D @player")) {
+			Vector3 v3Pos = m_pPlayer ? m_pPlayer->GetTransform()->GetPosition() : Vector3::Zero;
+			SOUND->PlayAt("Test3D", v3Pos);
+		}
+
+		// 3D direction test: fire 3000cm (30m) from player in world axes.
+		Vector3 v3Base = m_pPlayer ? m_pPlayer->GetTransform()->GetPosition() : Vector3::Zero;
+		const float fDist = 3_m;
+		if (ImGui::Button("Left  (-X)")) {
+			SOUND->PlayAt("Test3D", v3Base + Vector3(-fDist, 0.0f, 0.0f));
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Right (+X)")) {
+			SOUND->PlayAt("Test3D", v3Base + Vector3(fDist, 0.0f, 0.0f));
+		}
+		if (ImGui::Button("Front (+Z)")) {
+			SOUND->PlayAt("Test3D", v3Base + Vector3(0.0f, 0.0f, fDist));
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Back  (-Z)")) {
+			SOUND->PlayAt("Test3D", v3Base + Vector3(0.0f, 0.0f, -fDist));
+		}
+
+		float fSfx = SOUND->GetCategoryVolume(SoundCategory::SFX);
+		if (ImGui::SliderFloat("SFX Vol", &fSfx, 0.0f, 1.0f)) {
+			SOUND->SetCategoryVolume(SoundCategory::SFX, fSfx);
+		}
+		float fMaster = SOUND->GetMasterVolume();
+		if (ImGui::SliderFloat("Master Vol", &fMaster, 0.0f, 1.0f)) {
+			SOUND->SetMasterVolume(fMaster);
+		}
+	}
+	ImGui::End();
+
 	SyncSceneWithServer();
 	ProcessNetworkZombies();
+	ProcessPlayerMelee();
 	ProcessShootResults();
+	ProcessMeleeResults();
 	RemoveDeadZombies();
 }
-
 
 void GameScene::ProcessPlayerShoot()
 {
@@ -228,6 +284,113 @@ void GameScene::ProcessPlayerShoot()
 
 	if (pHitZombie)
 		pHitZombie->TakeDamage(25.f);
+}
+
+void GameScene::ProcessPlayerMelee()
+{
+	auto pPlayer = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer);
+	if (!pPlayer || !pPlayer->ConsumeMelee())
+		return;
+
+	auto pCamera = std::dynamic_pointer_cast<ThirdPersonCamera>(pPlayer->GetCamera());
+	if (!pCamera)
+		return;
+
+	// origin은 발밑(Transform pos)이 아니라 캡슐 중심 높이를 써야 함.
+	// 발밑 + 수평 레이는 좀비 히트 캡슐(몸통 높이) 아래로 빗나감.
+	Vector3 v3Origin = pPlayer->GetTransform()->GetPosition();
+	if (auto pSelfCollider = pPlayer->GetComponent<PlayerCollider>())
+		v3Origin = pSelfCollider->GetCapsuleWorld().v3Center;
+
+	Vector3 v3Dir = pCamera->GetForwardXZ();		// 전방 XZ (y=0)
+	if (v3Dir.LengthSquared() > 1e-6f)
+		v3Dir.Normalize();
+
+	constexpr float fRange  = 200.f;
+	constexpr float fDamage = 50.f;
+
+	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
+	if (bOnline)
+	{
+		// 온라인: 서버가 권위적으로 판정 → S2C_MELEE_HIT 로 데미지 반영
+		NETWORK->SendPlayerMelee(v3Origin, v3Dir);
+		return;
+	}
+
+	// 오프라인: 단일 레이 — 전방 사거리 내 가장 가까운 좀비 1마리
+	float fMinDist = fRange;
+	std::shared_ptr<Zombie> pHitZombie;
+	for (const auto& pZombie : m_World.GetObjects<Zombie>())
+	{
+		if (!pZombie || !pZombie->IsPoolActive())
+			continue;
+
+		auto pCollider = pZombie->GetComponent<PlayerCollider>();
+		if (!pCollider)
+			continue;
+
+		float fDist = 0.f;
+		if (pCollider->GetCapsuleWorld().Intersects(v3Origin, v3Dir, fDist))
+		{
+			if (fDist >= 0.f && fDist < fMinDist)
+			{
+				fMinDist = fDist;
+				pHitZombie = pZombie;
+			}
+		}
+	}
+
+	if (pHitZombie)
+	{
+		pHitZombie->TakeDamage(fDamage);
+
+		auto pCollider = pHitZombie->GetComponent<PlayerCollider>();
+
+		// 피 이펙트 (좀비 캡슐 중심)
+		ParticleEffectSpawnDesc desc{};
+		desc.v3Position = pCollider->GetCapsuleWorld().v3Center;
+		desc.v3Direction = -v3Dir;
+		desc.v3Normal = Vector3::Up;
+		desc.mtxWorld = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
+		PARTICLE->Spawn<BloodEffect>(desc);
+	}
+}
+
+void GameScene::ProcessMeleeResults()
+{
+	if (!NETWORK->IsConnected() || NETWORK->IsOffline()) return;
+
+	auto pPlayer = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer);
+
+	// ── 리모트 플레이어 근접공격 모션 ────────────────────────────────────────
+	for (int nAttackerId : NETWORK->ConsumePlayerMelees())
+	{
+		if (nAttackerId == NETWORK->GetPlayerID()) continue; // 본인은 입력으로 이미 재생
+		auto it = m_RemotePlayers.find(nAttackerId);
+		if (it != m_RemotePlayers.end())
+			it->second->PlayMeleeStartAction();
+	}
+
+	// ── 좀비 히트: 데미지 + 피 + 히트마커 ────────────────────────────────────
+	for (auto& ev : NETWORK->ConsumeMeleeHits())
+	{
+		auto it = m_ServerZombies.find(ev.zombieId);
+		if (it != m_ServerZombies.end() && it->second)
+		{
+			it->second->TakeDamage(ev.damage);
+
+			ParticleEffectSpawnDesc desc{};
+			desc.v3Position = ev.v3HitPoint;
+			desc.v3Direction = Vector3::Up;
+			desc.v3Normal = Vector3::Up;
+			desc.mtxWorld = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
+			PARTICLE->Spawn<BloodEffect>(desc);
+		}
+
+		// 히트마커 (내 근접공격일 때만)
+		if (pPlayer && ev.attackerPlayerId == NETWORK->GetPlayerID())
+			pPlayer->ShowHitMarker();
+	}
 }
 
 void GameScene::RemoveDeadZombies()
@@ -400,6 +563,9 @@ void GameScene::ProcessShootResults()
 			auto it = m_RemotePlayers.find(ev.shooterPlayerId);
 			if (it != m_RemotePlayers.end()) {
 				it->second->PlayFireAction();
+				if (auto pWeapon = it->second->GetCurrentWeaponObject()) {
+					pWeapon->PlayFireSound();
+				}
 			}
 
 			Vector3 v3MuzzleDir = ev.v3ShootDir;
@@ -436,7 +602,7 @@ void GameScene::SyncSceneWithServer()
 		remotePlayer->Initialize();
 
 		remotePlayer->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.initialTransform.m), ev.bRunning, ev.bAiming, ev.fAimPitch);
-		remotePlayer->GiveWeapon(WEAPON_TYPE::AK);
+		remotePlayer->GiveWeapon(static_cast<WEAPON_TYPE>(ev.weaponType));
 		AddObject(remotePlayer);
 		m_RemotePlayers[ev.playerId] = remotePlayer;
 	}
@@ -461,6 +627,14 @@ void GameScene::SyncSceneWithServer()
 		if (it != m_RemotePlayers.end()) {
 			std::cout << "[Scene] Playing Reload for Remote Player " << id << std::endl;
 			it->second->PlayReloadStartAction();
+		}
+	}
+
+	for (auto& ev : NETWORK->ConsumePlayerWeapons()) {
+		if (ev.playerId == NETWORK->GetPlayerID()) continue; // 본인은 입력으로 이미 교체
+		auto it = m_RemotePlayers.find(ev.playerId);
+		if (it != m_RemotePlayers.end()) {
+			it->second->GiveWeapon(static_cast<WEAPON_TYPE>(ev.weaponType));
 		}
 	}
 }

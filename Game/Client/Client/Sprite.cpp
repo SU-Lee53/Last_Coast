@@ -27,6 +27,12 @@ UIRectData ImageBox::MakeSBData() const
 	return data;
 }
 
+void ImageBox::ShowControllImGui()
+{
+	IUIComponent::ShowControllImGui();
+	ImGui::InputFloat2("Size", (float*)&m_v2Size);
+}
+
 UIRectData ImageButton::MakeSBData() const
 {
 	RECT screenRect = GetScreenRect();
@@ -46,4 +52,10 @@ UIRectData ImageButton::MakeSBData() const
 	//data.v4TextColorOrTexIndex = m_v4TextColor;
 
 	return data;
+}
+
+void ImageButton::ShowControllImGui()
+{
+	IUIComponent::ShowControllImGui();
+	ImGui::InputFloat2("Size", (float*)&m_v2Size);
 }

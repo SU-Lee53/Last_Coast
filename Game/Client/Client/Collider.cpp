@@ -126,7 +126,13 @@ void ICollider::MergeOBB(std::shared_ptr<IGameObject> pObj, bool bFixInWorld)
 	auto pMeshRenderer = pObj->GetComponent<MeshRenderer>();
 	if (pMeshRenderer) {
 		if (m_xmOBBOrigin.Center == Vector3(0, 0, 0) && m_xmOBBOrigin.Extents == Vector3(1, 1, 1)) {
-			pMeshRenderer->GetOBBMerged().Transform(m_xmOBBOrigin, pObj->GetWorldMatrix());
+			Matrix mtxMergeSpace = pObj->GetWorldMatrix();
+			if (!bFixInWorld) {
+				if (auto pOwner = m_wpOwner.lock()) {
+					mtxMergeSpace = mtxMergeSpace * pOwner->GetWorldMatrix().Invert();
+				}
+			}
+			pMeshRenderer->GetOBBMerged().Transform(m_xmOBBOrigin, mtxMergeSpace);
 		}
 		else {
 			// Get corner fron OBB to merge
@@ -136,7 +142,11 @@ void ICollider::MergeOBB(std::shared_ptr<IGameObject> pObj, bool bFixInWorld)
 				xmOBBMesh = pMeshRenderer->GetOBBMerged();
 			}
 			else {
-				pMeshRenderer->GetOBBMerged().Transform(xmOBBMesh, pObj->GetWorldMatrix());
+				Matrix mtxMergeSpace = pObj->GetWorldMatrix();
+				if (auto pOwner = m_wpOwner.lock()) {
+					mtxMergeSpace = mtxMergeSpace * pOwner->GetWorldMatrix().Invert();
+				}
+				pMeshRenderer->GetOBBMerged().Transform(xmOBBMesh, mtxMergeSpace);
 			}
 			xmOBBMesh.GetCorners(pxmf3OBBPoints1);
 
@@ -271,8 +281,15 @@ PlayerCollider::PlayerCollider(std::shared_ptr<IGameObject> pOwner)
 
 void PlayerCollider::Initialize()
 {
-	auto& pOwner = m_wpOwner.lock();
-	MergeOBB(pOwner, false);
+	auto& pOwner = m_wpOwner.lock(); 
+	ResetCharacterModelCollision();
+
+	m_bInitialized = true;
+}
+
+void PlayerCollider::ResetCharacterModelCollision()
+{
+	MergeOBB(m_wpOwner.lock(), false);
 
 	BoundingCapsule::CreateFromBoundingOrientedBox(m_CapsuleOrigin, m_xmOBBOrigin);
 
@@ -282,8 +299,6 @@ void PlayerCollider::Initialize()
 	const Matrix& mtxWorld = m_wpOwner.lock()->GetWorldMatrix();
 	m_xmOBBOrigin.Transform(m_xmOBBWorld, mtxWorld);
 	m_CapsuleOrigin.Transform(m_CapsuleWorld, mtxWorld);
-
-	m_bInitialized = true;
 }
 
 void PlayerCollider::Update()

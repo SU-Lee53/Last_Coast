@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 enum class MONTAGE_SECTION_END_RULE {
 	NEXT,	// 다음 Section 으로
@@ -20,6 +20,7 @@ struct MontageSection {
 	std::shared_ptr<Animation> pAnimationToPlay;
 	float fStartTime;
 	float fEndTime;
+	std::vector<size_t> channelIndices;
 
 	MONTAGE_SECTION_END_RULE eEndRule = MONTAGE_SECTION_END_RULE::NEXT;
 	std::string strJumpTarget;

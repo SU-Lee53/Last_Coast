@@ -10,10 +10,16 @@ AnimationController::AnimationController(std::shared_ptr<IGameObject> pOwner)
 	m_wpOwnerSkeleton = m_wpOwner.lock()->GetComponent<Skeleton>();
 }
 
+AnimationController::~AnimationController()
+{
+	ANIMATION->RemoveAnimationController(this);
+}
+
 void AnimationController::Initialize()
 {
-	m_mtxFinalBoneTransforms.resize(m_wpOwnerSkeleton.lock()->GetBones().size(), Matrix::Identity);
-	m_mtxFinalModelLocalTransforms.resize(m_wpOwnerSkeleton.lock()->GetBones().size(), Matrix::Identity);
+	//m_mtxFinalBoneTransforms.resize(m_wpOwnerSkeleton.lock()->GetBones().size(), Matrix::Identity);
+	//m_mtxFinalModelLocalTransforms.resize(m_wpOwnerSkeleton.lock()->GetBones().size(), Matrix::Identity);
+	ANIMATION->RegisterAnimationController(this);
 }
 
 void AnimationController::Update()
@@ -105,6 +111,8 @@ void PlayerAnimationController::Initialize()
 
 	const auto& pCamera = std::static_pointer_cast<IThirdPersonPlayer>(m_wpOwner.lock())->GetCamera();
 	m_wpPlayerCamera = std::static_pointer_cast<ThirdPersonCamera>(pCamera);
+	
+	AnimationController::Initialize();
 }
 
 void PlayerAnimationController::ComputeAnimation()

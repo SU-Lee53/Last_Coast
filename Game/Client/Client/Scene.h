@@ -7,6 +7,7 @@
 #include "StaticObject.h"
 #include "Zombie.h"
 #include "WeaponObject.h"
+#include "WaterGridObject.h"
 
 #include "Player.h"	// Includes GameObject
 #include "Camera.h"
@@ -16,6 +17,7 @@
 class TerrainComponent;
 class TerrainObject;
 class Skybox;
+class EventSequence;
 //class Sprite;
 
 using CollisionPair = std::pair<std::shared_ptr<IGameObject>, std::shared_ptr<IGameObject>>;
@@ -23,7 +25,13 @@ using CollisionPair = std::pair<std::shared_ptr<IGameObject>, std::shared_ptr<IG
 class Scene {
 	friend class SceneManager;
 
-	using WorldType = World<NetworkRemoteThirdPersonPlayer, StaticObject, WeaponObject, Zombie>;
+	using WorldType = World<
+							NetworkOwnerThirdPersonPlayer, 
+							NetworkRemoteThirdPersonPlayer, 
+							StaticObject, 
+							WaterGridObject, 
+							WeaponObject, 
+							Zombie>;
 
 public:
 	virtual void BuildObjects() = 0;
@@ -76,17 +84,23 @@ public:
 	const std::shared_ptr<IPlayer>& GetPlayer() const { return m_pPlayer; }
 	const std::shared_ptr<TerrainObject>& GetTerrain() const { return m_pTerrain; }
 	const std::shared_ptr<Skybox>& GetSkybox() const { return m_pSkybox; }
-	const std::shared_ptr<Camera>& GetCamera() const { return m_pPlayer->GetCamera(); }
+	const std::shared_ptr<Camera>& GetCamera() const { return m_pMainCamera; }
 	const std::vector<std::shared_ptr<Light>>& GetLightsInScene() const { return m_pLights; }
+	std::shared_ptr<DirectionalLight> GetSunLight() const;
 	const Vector4& GetGlobalAmbient() const { return m_v4GlobalAmbient; }
+	void SetGlobalAmbient(const Vector4& v4Ambient) { m_v4GlobalAmbient = v4Ambient; }
 	const std::unique_ptr<UIBoard>& GetUIBoard() const { return m_pUIBoard; }
 
 	const ToneMappingVolume& GetToneMappingVolume() const { return m_ToneMappingVolume; }
 	const PostProcessingVolume& GetPostProcessingVolume() const { return m_PostProcessingVolume; }
 
+	bool IsGravityOn() const { return m_bEnableGravity; }
+
 	std::vector<LightData> MakeLightData() const;
 
 	TerrainHit QueryTerrainHit(const Vector3& v3WorldPos);
+
+	std::shared_ptr<Camera> SwapCamera(std::shared_ptr<Camera>& pNewCamera);
 
 protected:
 	void RemoveCollisionPairsOf(IGameObject* pDeadObject);
@@ -103,20 +117,22 @@ protected:
 	ToneMappingVolume m_ToneMappingVolume{};
 	PostProcessingVolume m_PostProcessingVolume{};
 
-
 	std::vector<std::shared_ptr<Light>>			m_pLights = {};
 	
 	std::shared_ptr<IPlayer>					m_pPlayer = nullptr;
+	std::shared_ptr<Camera>						m_pMainCamera = nullptr;
 	std::shared_ptr<TerrainObject>				m_pTerrain = nullptr;
 	std::shared_ptr<Skybox>						m_pSkybox = nullptr;
-
+	std::shared_ptr<EventSequence>				m_pEventSequence = nullptr;
+	
 	BoundingBox m_xmSceneBound{};
 	std::unique_ptr<UIBoard> m_pUIBoard{};
 	std::unordered_set<CollisionResult> m_pCollisionPairs;
 	Vector4 m_v4GlobalAmbient;
+	bool m_bEnableGravity = true;
 
 	std::unordered_map<int, std::shared_ptr<NetworkRemoteThirdPersonPlayer>> m_RemotePlayers;
-
+	
 
 private:
 	bool m_bSpatialRuntimeRegistrationEnabled = false;

@@ -158,6 +158,12 @@
     <Filter Include="03.Engine\Rendering\RenderPasses\PostProcessing">
       <UniqueIdentifier>{608e1348-ad04-4f9a-95ce-840fecdf345f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02.Game\Scene\Sequence">
+      <UniqueIdentifier>{6bf59c52-fb7d-484a-80f8-8c10c4f43567}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Game\Sound">
+      <UniqueIdentifier>{dc62a49b-fcb1-4eff-ab25-f98e641ba40c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\Includes\ImGui\imstb_truetype.h">
@@ -201,9 +207,6 @@
     </ClInclude>
     <ClInclude Include="GameFramework.h">
       <Filter>01.Core</Filter>
-    </ClInclude>
-    <ClInclude Include="GameObject.h">
-      <Filter>02.Game\GameObject</Filter>
     </ClInclude>
     <ClInclude Include="Packets.h">
       <Filter>99.Utility</Filter>
@@ -415,6 +418,9 @@
     <ClInclude Include="DeferredLightingPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
+    <ClInclude Include="BoundingBoxDebugPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
     <ClInclude Include="DirectionalCascadeShadowMapPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
@@ -471,9 +477,6 @@
     <ClInclude Include="UIPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
-    <ClInclude Include="WeaponObject.h">
-      <Filter>02.Game\GameObject\GameObjects</Filter>
-    </ClInclude>
     <ClInclude Include="TypedObjectPool.h">
       <Filter>02.Game\Scene\World</Filter>
     </ClInclude>
@@ -519,6 +522,15 @@
     <ClInclude Include="BulletImpactEffect.h">
       <Filter>02.Game\Particle\Particles</Filter>
     </ClInclude>
+    <ClInclude Include="ExplosionEffect.h">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="FireEffect.h">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="SmokeEffect.h">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClInclude>
     <ClInclude Include="NetworkGameTestScene.h">
       <Filter>02.Game\Scene\Test</Filter>
     </ClInclude>
@@ -547,9 +559,6 @@
     <ClInclude Include="ToneMappingPass.h">
       <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
     </ClInclude>
-    <ClInclude Include="BloomPass.h">
-      <Filter>03.Engine\Rendering</Filter>
-    </ClInclude>
     <ClInclude Include="RenderPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
@@ -565,6 +574,55 @@
     <ClInclude Include="LogInScene.h">
       <Filter>02.Game\Scene</Filter>
     </ClInclude>
+    <ClInclude Include="MenuScene.h">
+      <Filter>02.Game\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="EventSequence.h">
+      <Filter>02.Game\Scene\Sequence</Filter>
+    </ClInclude>
+    <ClInclude Include="GameEvent.h">
+      <Filter>02.Game\Scene\Sequence</Filter>
+    </ClInclude>
+    <ClInclude Include="WeaponObject.h">
+      <Filter>02.Game\GameObject\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="LightShaftPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
+    </ClInclude>
+    <ClInclude Include="BloomPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
+    </ClInclude>
+    <ClInclude Include="ShotgunWeapon.h">
+      <Filter>02.Game\GameObject\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="PistolWeapon.h">
+      <Filter>02.Game\GameObject\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="RifleWeapon.h">
+      <Filter>02.Game\GameObject\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="AkWeapon.h">
+      <Filter>02.Game\GameObject\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="M4Weapon.h">
+      <Filter>02.Game\GameObject\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="MeleeWeapon.h">
+      <Filter>02.Game\GameObject\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="LobbyScene.h">
+      <Filter>02.Game\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="WaterGridObject.h">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="LMGWeapon.h">
+      <Filter>02.Game\GameObject\Weapons</Filter>
+    </ClInclude>
+    <ClInclude Include="GameObject.h">
+      <Filter>02.Game\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Sound.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -799,6 +857,9 @@
     <ClCompile Include="DeferredLightingPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
+    <ClCompile Include="BoundingBoxDebugPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
     <ClCompile Include="SkyboxPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
@@ -873,9 +934,6 @@
     <ClCompile Include="UIPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
-    <ClCompile Include="WeaponObject.cpp">
-      <Filter>02.Game\GameObject\GameObjects</Filter>
-    </ClCompile>
     <ClCompile Include="TypedObjectPool.cpp">
       <Filter>02.Game\Scene\World</Filter>
     </ClCompile>
@@ -915,6 +973,15 @@
     <ClCompile Include="BulletImpactEffect.cpp">
       <Filter>02.Game\Particle\Particles</Filter>
     </ClCompile>
+    <ClCompile Include="ExplosionEffect.cpp">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="FireEffect.cpp">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="SmokeEffect.cpp">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClCompile>
     <ClCompile Include="NetworkGameTestScene.cpp">
       <Filter>02.Game\Scene\Test</Filter>
     </ClCompile>
@@ -934,9 +1001,6 @@
     <ClCompile Include="ToneMappingPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
     </ClCompile>
-    <ClCompile Include="BloomPass.cpp">
-      <Filter>03.Engine\Rendering</Filter>
-    </ClCompile>
     <ClCompile Include="RenderPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
@@ -952,6 +1016,34 @@
     <ClCompile Include="LogInScene.cpp">
       <Filter>02.Game\Scene</Filter>
     </ClCompile>
+    <ClCompile Include="MenuScene.cpp">
+      <Filter>02.Game\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="EventSequence.cpp">
+      <Filter>02.Game\Scene\Sequence</Filter>
+    </ClCompile>
+    <ClCompile Include="GameEvent.cpp">
+      <Filter>02.Game\Scene\Sequence</Filter>
+    </ClCompile>
+    <ClCompile Include="WeaponObject.cpp">
+      <Filter>02.Game\GameObject\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="LightShaftPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
+    </ClCompile>
+    <ClCompile Include="BloomPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
+    </ClCompile>
+    <ClCompile Include="ShotgunWeapon.cpp">
+      <Filter>02.Game\GameObject\Weapons</Filter>
+    </ClCompile>
+    <ClCompile Include="LobbyScene.cpp">
+      <Filter>02.Game\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="WaterGridObject.cpp">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
+    </ClCompile>
+    <ClCompile Include="Sound.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">
@@ -969,6 +1061,9 @@
       <Filter>03.Engine\HLSL\Compute</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\DefferedShader.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\DebugLineShader.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\Light.hlsl">
@@ -1015,6 +1110,9 @@
     </FxCompile>
     <FxCompile Include="..\HLSL\AutoExposure.hlsl">
       <Filter>03.Engine\HLSL\Compute</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\LightShaft.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

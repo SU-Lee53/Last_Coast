@@ -188,7 +188,7 @@ D3D12_INPUT_LAYOUT_DESC AnimatedShader::CreateInputLayout()
 
 void TerrainShader::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12RootSignature> pd3dRootSignature)
 {
-	m_pd3dPipelineStates.resize(1);
+	m_pd3dPipelineStates.resize(2);
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC d3dPipelineDesc{};
 	{
@@ -214,6 +214,15 @@ void TerrainShader::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12Roo
 	if (FAILED(hr)) {
 		__debugbreak();
 	}
+
+	{
+		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("TerrainInstancedVS");
+	}
+
+	hr = pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dPipelineStates[1].GetAddressOf()));
+	if (FAILED(hr)) {
+		__debugbreak();
+	}
 }
 
 D3D12_INPUT_LAYOUT_DESC TerrainShader::CreateInputLayout()
@@ -229,6 +238,39 @@ D3D12_INPUT_LAYOUT_DESC TerrainShader::CreateInputLayout()
 	inputLayoutDesc.pInputElementDescs = m_d3dInputElements.data();
 
 	return inputLayoutDesc;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// WaterShader
+
+void WaterShader::Initialize(ComPtr<ID3D12Device> pd3dDevice, ComPtr<ID3D12RootSignature> pd3dRootSignature)
+{
+	m_pd3dPipelineStates.resize(1);
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC d3dPipelineDesc{};
+	{
+		d3dPipelineDesc.pRootSignature = (pd3dRootSignature) ? pd3dRootSignature.Get() : RenderManager::g_pd3dGlobalRootSignature.Get();
+		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("StandardVS");
+		d3dPipelineDesc.PS = SHADER->GetShaderByteCode("GBufferWaterPS");
+		d3dPipelineDesc.RasterizerState = CreateRasterizerState();
+		d3dPipelineDesc.BlendState = CreateBlendState();
+		d3dPipelineDesc.DepthStencilState = CreateDepthStencilState();
+		d3dPipelineDesc.InputLayout = CreateInputLayout();
+		d3dPipelineDesc.SampleMask = UINT_MAX;
+		d3dPipelineDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		d3dPipelineDesc.NumRenderTargets = 3;
+		d3dPipelineDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		d3dPipelineDesc.RTVFormats[1] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		d3dPipelineDesc.RTVFormats[2] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		d3dPipelineDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+		d3dPipelineDesc.SampleDesc.Count = 1;
+		d3dPipelineDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	}
+
+	HRESULT hr = pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dPipelineStates[0].GetAddressOf()));
+	if (FAILED(hr)) {
+		__debugbreak();
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -13,7 +13,6 @@ public:
 	virtual ~IUIComponent() = default;
 
 	virtual void Update() {};
-	virtual bool IsClickable() const { return false; }
 
 public:
 	void SetVisible(bool bVisible) { m_bVisible = bVisible; }
@@ -24,7 +23,7 @@ public:
 	void SetSize(const Vector2& v2Size) { m_v2Size = v2Size; }
 	void SetColor(const Vector4& v4Color) { m_v4Color = v4Color; }
 	void SetColor(const Vector3& v3Color) { m_v4Color = Vector4(v3Color.x, v3Color.y, v3Color.z, 1.f); }
-	
+
 	bool IsVisible() const { return m_bVisible; }
 	uint32 GetLayer() const { return m_unLayer; }
 	const Vector2& GetAnchor() const { return m_v2Anchor; }
@@ -33,12 +32,39 @@ public:
 	const Vector2& GetSize() const { return m_v2Size; }
 	const Vector4& GetColor() { return m_v4Color; }
 
+public:
+	virtual bool IsClickable() const { return false; }
+	virtual bool IsFocusable() const { return false; }
+
+	virtual void SetFocused(bool bFocused) {}
+	virtual bool IsFocused() const { return false; }
+
+	virtual bool WasHovered() const { return false; }
+	virtual void OnClicked() {}
+	virtual void OnBeginHovered() {}
+	virtual void OnEndHovered() {}
+
+	virtual void OnChar(wchar_t) {}
+
+	bool CheckPointInComponent(POINT ptClicked) const {
+		RECT r = GetScreenRect();
+		return (ptClicked.x >= r.left && ptClicked.x <= r.right) &&
+			(ptClicked.y >= r.top && ptClicked.y <= r.bottom);
+	}
+
+public:
 	virtual UIRectData MakeSBData() const = 0;
 	virtual const TextureRef<Texture>& GetTextureRef() const { return {}; }
 
 	RECT GetScreenRect() const;
+	virtual const std::wstring& GetName() const { return m_strName; }
+
+	virtual void ShowControllImGui();
+
 
 protected:
+	std::wstring m_strName;
+
 	uint32 m_unLayer = 0;
 	Vector4 m_v4Color = Vector4{ 1.f, 1.f, 1.f, 1.f };
 
@@ -55,8 +81,24 @@ protected:
 interface IUIButtonComponent abstract : public IUIComponent {
 public:
 	virtual bool IsClickable() const override { return m_bVisible; }
-	bool WasHovered() { return m_bHovered; }
+	virtual bool WasHovered() const override { return m_bHovered; }
 
+	virtual void OnClicked() override {
+		//m_bHovered = false;
+		if (m_fnClickCallback) m_fnClickCallback(this);
+	}
+
+	virtual void OnBeginHovered() override {
+		m_bHovered = true;
+		if (m_fnBeginHoverCallback) m_fnBeginHoverCallback(this);
+	}
+
+	virtual void OnEndHovered() override {
+		m_bHovered = false;
+		if (m_fnEndHoverCallback) m_fnEndHoverCallback(this);
+	}
+
+public:
 	void SetButtonCallback(std::function<void(IUIComponent*)> fnCallback) {
 		m_fnClickCallback = fnCallback;
 	}
@@ -69,27 +111,6 @@ public:
 		m_fnEndHoverCallback = fnCallback;
 	}
 
-	bool CheckPointInComponent(POINT ptClicked) const {
-		RECT r = GetScreenRect();
-		return (ptClicked.x >= r.left && ptClicked.x <= r.right) &&
-			(ptClicked.y >= r.top && ptClicked.y <= r.bottom);
-	}
-
-	void OnClicked() {
-		//m_bHovered = false;
-		if (m_fnClickCallback) m_fnClickCallback(this);
-	}
-
-	void OnBeginHovered() {
-		m_bHovered = true;
-		if (m_fnBeginHoverCallback) m_fnBeginHoverCallback(this);
-	}
-
-	void OnEndHovered() {
-		m_bHovered = false;
-		if (m_fnEndHoverCallback) m_fnEndHoverCallback(this);
-	}
-
 protected:
 	// Button
 	std::function<void(IUIComponent*)> m_fnClickCallback;
@@ -99,7 +120,69 @@ protected:
 
 };
 
+interface IUIFocusableComponent abstract : public IUIComponent{
+public:
+	virtual bool IsClickable() const override { return m_bVisible; }
+	virtual bool IsFocusable() const { return m_bVisible; }
+	virtual bool IsFocused() const override { return m_bFocused; }
+
+	virtual void SetFocused(bool bFocused) override {
+		if (m_bFocused == bFocused) {
+			return;
+		}
+
+		m_bFocused = bFocused;
+
+		if (m_bFocused) {
+			if (m_fnBeginFocusCallback) m_fnBeginFocusCallback(this);
+		}
+		else {
+			if (m_fnEndFocusCallback) m_fnEndFocusCallback(this);
+		}
+	}
+
+public:
+	void SetButtonCallback(std::function<void(IUIComponent*)> fnCallback) {
+		m_fnClickCallback = fnCallback;
+	}
+
+	void SetBeginHoverCallback(std::function<void(IUIComponent*)> fnCallback) {
+		m_fnBeginHoverCallback = fnCallback;
+	}
+
+	void SetEndHoverCallback(std::function<void(IUIComponent*)> fnCallback) {
+		m_fnEndHoverCallback = fnCallback;
+	}
+
+	void SetBeginFocusCallback(std::function<void(IUIComponent*)> fnCallback) {
+		m_fnBeginFocusCallback = fnCallback;
+	}
+
+	void SetEndFocusCallback(std::function<void(IUIComponent*)> fnCallback) {
+		m_fnEndFocusCallback = fnCallback;
+	}
+
+	void SetEnterCallback(std::function<void(IUIComponent*)> fnCallback) {
+		m_fnEnterCallback = fnCallback;
+	}
+
+protected:
+	std::function<void(IUIComponent*)> m_fnClickCallback;
+	std::function<void(IUIComponent*)> m_fnBeginHoverCallback;
+	std::function<void(IUIComponent*)> m_fnEndHoverCallback;
+	std::function<void(IUIComponent*)> m_fnBeginFocusCallback;
+	std::function<void(IUIComponent*)> m_fnEndFocusCallback;
+	std::function<void(IUIComponent*)> m_fnEnterCallback;
+
+	bool m_bFocused = false;
+};
+
 template<typename C>
 concept Clickable = requires(C comp) {
 	comp->IsClickable();
+};
+
+template<typename C>
+concept Focusable = requires(C comp) {
+	comp->IsFocusable();
 };

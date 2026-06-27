@@ -30,8 +30,8 @@ public:
 
 public:
 	template<typename T>
-	VertexBuffer CreateVertexBuffer(std::vector<T> vertices, uint32 nType);
-	IndexBuffer CreateIndexBuffer(std::vector<UINT> Indices);
+	VertexBuffer CreateVertexBuffer(const std::vector<T>& vertices, uint32 nType);
+	IndexBuffer CreateIndexBuffer(const std::vector<UINT>& Indices);
 
 	ComPtr<ID3D12Resource> CreateBufferResource(void* pData, UINT nBytes, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates);
 
@@ -68,7 +68,7 @@ private:
 };
 
 template<typename T>
-inline VertexBuffer ResourceManager::CreateVertexBuffer(std::vector<T> vertices, uint32 nType)
+inline VertexBuffer ResourceManager::CreateVertexBuffer(const std::vector<T>& vertices, uint32 nType)
 {
 	HRESULT hr;
 

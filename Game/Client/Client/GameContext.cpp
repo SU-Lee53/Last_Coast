@@ -1,26 +1,52 @@
 ﻿#include "pch.h"
 #include "GameContext.h"
 #include "WeaponObject.h"
+#include "M4Weapon.h"
+#include "AkWeapon.h"
+#include "RifleWeapon.h"
+#include "PistolWeapon.h"
+#include "MeleeWeapon.h"
+#include "ShotgunWeapon.h"
+#include "LMGWeapon.h"
 #include "NodeObject.h"
 
-const std::vector<std::string> GameContext::g_strWeaponName = {
+const std::vector<std::string> GameContext::g_strWeaponNames = {
 	"M4",
 	"AK",
+	"SHOTGUN",
 	"RIFLE",
+	"LMG",
 	"PISTOL",
 	"MELEE",
+};
+
+const std::vector<std::string> GameContext::g_strCharacterNames = {
+	"player_m_01",
+	"player_f_01",
+	"player_m_02",
+	"player_f_02",
 	"UNKNOWN",
 };
 
 void GameContext::Initialize()
 {
+	LoadWeaponData();
+	LoadZombieModels();
+	LoadWeaponSounds();
+}
+
+void GameContext::LoadWeaponData()
+{
+
 	// Load weapon models
 	{
 		std::string strWeaponFilename[] = {
 			"SM_AR4",
 			"SM_KA47",
-			"old_sks_weapon_model",
-			"SM_SMG11_Y",
+			"SM_Modern_Weapons_Shotgun_01",
+			"SM_Modern_Weapons_Sniper_03_No_Scope",
+			"SM_Modern_Weapons_LMG_03",
+			"SM_Modern_Weapons_Pistol_03",
 			"spiked_baseball_bat",
 		};
 
@@ -28,7 +54,7 @@ void GameContext::Initialize()
 			//m_pWeaponModels[i] = MODEL->LoadOrGet(strWeaponFilename[i], true);
 			auto p = std::make_shared<WeaponObject>();
 			p->SetChild(MODEL->LoadOrGet(strWeaponFilename[i], true));
-			p->SetName(g_strWeaponName[i]);
+			p->SetName(g_strWeaponNames[i]);
 			p->SetWeaponType(static_cast<WEAPON_TYPE>(i));
 			m_pWeaponModels[i] = p;
 		}
@@ -40,13 +66,13 @@ void GameContext::Initialize()
 		ifstream in{ strSavePath };
 		nlohmann::json jWeaponData = nlohmann::json::parse(in);
 
-		std::vector<bool> checked(g_strWeaponName.size(), false);
+		std::vector<bool> checked(g_strWeaponNames.size(), false);
 
 		for (const auto& [k, v] : jWeaponData.items()) {
-			for (int i = 0; i < g_strWeaponName.size(); ++i) {
+			for (int i = 0; i < g_strWeaponNames.size(); ++i) {
 				if (checked[i]) continue;
 
-				if (k == g_strWeaponName[i]) {
+				if (k == g_strWeaponNames[i]) {
 					m_WeaponStats[i].fDamage = v["Damage"].get<float>();
 					m_WeaponStats[i].fFirePerSecond = v["FirePerSecond"].get<float>();
 					m_WeaponStats[i].fRecoil = v["Recoil"].get<float>();
@@ -61,7 +87,61 @@ void GameContext::Initialize()
 			}
 		}
 	}
+}
 
+void GameContext::LoadWeaponSounds()
+{
+	// Rifle1
+	SOUND->AddSound("m4_shot_close", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_Noise-Exterior-Close_01.wav", false, true, SoundCategory::SFX);
+	//SOUND->AddSound("rifle_shot_distant1", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_Noise-Exterior-Distant_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("rifle_on_reload", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_ClipIn_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("rifle_mid_reload", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_ClipOut_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("rifle_end_reload", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_Bolt_01.wav", false, true, SoundCategory::SFX);
+	
+	SOUND->AddSound("ak_shot_close", "../Resources/Sounds/Rifle/ak_fire.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("lmg_shot_close", "../Resources/Sounds/Rifle/lmg_fire.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("rifle_shot_close", "../Resources/Sounds/Rifle/rifle_fire.wav", false, true, SoundCategory::SFX);
+
+
+
+	// Shotgun
+	SOUND->AddSound("shotgun_shot_close", "../Resources/Sounds/Shotgun/shotgun_fire.wav", false, true, SoundCategory::SFX);
+	//SOUND->AddSound("shotgun_shot_distant", "../Resources/Sounds/Shotgun/SW_Weapons_Shotgun_Noise-Interior-Distant_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("shotgun_on_reload", "../Resources/Sounds/Shotgun/SW_Weapons_Shotgun_ClipIn_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("shotgun_mid_reload", "../Resources/Sounds/Rifle/SW_Weapons_Shotgun_ClipOut_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("shotgun_end_reload", "../Resources/Sounds/Shotgun/shotgun_trimmed_longtail.wav", false, true, SoundCategory::SFX);
+	
+	// Pistol
+	SOUND->AddSound("pistol_shot_close", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_Noise-Interior-Close_01.wav", false, true, SoundCategory::SFX);
+	//SOUND->AddSound("pistol_shot_distant", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_Noise-Interior-Distant_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("pistol_on_reload", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_ClipIn_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("pistol_mid_reload", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_ClipOut_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("pistol_end_reload", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_Slide_01.wav", false, true, SoundCategory::SFX);
+
+	// Impact
+	SOUND->AddSound("impact_on_zombie", "../Resources/Sounds/Impacts/SW_ImpactHeadshot_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("impact_on_object", "../Resources/Sounds/Impacts/SW_ImpactPlasterDebris_01.wav", false, true, SoundCategory::SFX);
+}
+
+void GameContext::LoadPlayerModels()
+{
+	// Load Zombie Models
+	{
+		std::string strZombieFilename[] = {
+			"player_m_01",
+			"player_f_01",
+			"player_m_02",
+			"player_f_02"
+		};
+
+		for (int i = 0; i < g_unZombieModels; ++i) {
+			m_pZombieModels[i] = MODEL->LoadOrGet(strZombieFilename[i]);
+		}
+	}
+}
+
+void GameContext::LoadZombieModels()
+{
 	// Load Zombie Models
 	{
 		std::string strZombieFilename[] = {
@@ -76,9 +156,21 @@ void GameContext::Initialize()
 	}
 }
 
+
 std::shared_ptr<WeaponObject> GameContext::GetWeaponCopy(WEAPON_TYPE eWeaponType)
 {
-	auto pWeapon = m_pWeaponModels[std::to_underlying(eWeaponType)]->CopyObject<WeaponObject>();
+	const auto& pModel = m_pWeaponModels[std::to_underlying(eWeaponType)];
+	std::shared_ptr<WeaponObject> pWeapon;
+	switch (eWeaponType) {
+	case WEAPON_TYPE::M4:      pWeapon = pModel->CopyObject<M4Weapon>();      break;
+	case WEAPON_TYPE::AK:      pWeapon = pModel->CopyObject<AkWeapon>();      break;
+	case WEAPON_TYPE::RIFLE:   pWeapon = pModel->CopyObject<RifleWeapon>();   break;
+	case WEAPON_TYPE::LMG:   pWeapon = pModel->CopyObject<LMGWeapon>();   break;
+	case WEAPON_TYPE::PISTOL:  pWeapon = pModel->CopyObject<PistolWeapon>();  break;
+	case WEAPON_TYPE::MELEE:   pWeapon = pModel->CopyObject<MeleeWeapon>();   break;
+	case WEAPON_TYPE::SHOTGUN: pWeapon = pModel->CopyObject<ShotgunWeapon>(); break;
+	default:                   pWeapon = pModel->CopyObject<WeaponObject>();  break;
+	}
 
 	const auto& weaponStat = m_WeaponStats[std::to_underlying(eWeaponType)];
 	pWeapon->SetDamage(weaponStat.fDamage);
@@ -98,13 +190,6 @@ std::shared_ptr<WeaponObject> GameContext::GetWeaponCopy(WEAPON_TYPE eWeaponType
 std::shared_ptr<NodeObject> GameContext::GetZombieCopy(uint32 unIndex)
 {
 	return m_pZombieModels[unIndex]->CopyObject<NodeObject>();
-}
-
-std::shared_ptr<IGameObject> GameContext::GeModel(const std::string& strName)
-{
-	//auto find = m_pGameModels.find(strName);
-	//return (find != m_pGameModels.end()) ? find->second : nullptr;
-	return nullptr;
 }
 
 TextureRef<Texture> GameContext::GetImage(const std::string& strName)

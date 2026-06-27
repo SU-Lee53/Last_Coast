@@ -3,7 +3,7 @@
 
 //#define ASSERT_WHEN_TEXTURE_NAME_IS_BLANK
 
-constexpr static UINT MAX_TEXTURE_COUNT = 300;
+constexpr static UINT MAX_TEXTURE_COUNT = 800;
 
 enum class TEXTURE_RESOURCE_TYPE {
 	SRV,
@@ -37,10 +37,16 @@ public:
 	
 	TextureRef<Texture> LoadTextureFromRawData(
 		const std::string& strTextureName, 
-		std::vector<Vector4> data,
+		const std::vector<Vector4>& data,
 		uint32 unWidth, 
 		uint32 unHeight,
 		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN);
+	
+	TextureRef<Texture> LoadTextureFromHeightData(
+		const std::string& strTextureName, 
+		const std::vector<uint16>& data,
+		uint32 unWidth, 
+		uint32 unHeight);
 
 	TextureRef<RenderTargetTexture> LoadRenderTargetTexture(
 		const std::string& strTextureName, 

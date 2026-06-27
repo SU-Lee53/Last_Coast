@@ -21,6 +21,28 @@
         "Recoil": 50.0,
         "RecoilRecovery": 30.0
     },
+    "LMG": {
+        "AmmoPerClip": 100,
+        "Damage": 20.0,
+        "FirePerSecond": 550.0,
+        "MuzzlePosition": [
+            79.4000015258789,
+            6.199999809265137,
+            0.0
+        ],
+        "OffsetPosition": [
+            1.7999999523162842,
+            9.300000190734863,
+            0.30000001192092896
+        ],
+        "OffsetRotation": [
+            182.5,
+            -90.0,
+            -90.0
+        ],
+        "Recoil": 70.0,
+        "RecoilRecovery": 25.0
+    },
     "M4": {
         "AmmoPerClip": 30,
         "Damage": 30.0,
@@ -67,7 +89,7 @@
     },
     "PISTOL": {
         "AmmoPerClip": 10,
-        "Damage": 10.0,
+        "Damage": 30.0,
         "FirePerSecond": 100.0,
         "MuzzlePosition": [
             22.0,
@@ -89,24 +111,46 @@
     },
     "RIFLE": {
         "AmmoPerClip": 10,
-        "Damage": 100.0,
+        "Damage": 80.0,
         "FirePerSecond": 200.0,
         "MuzzlePosition": [
+            100.0,
             0.0,
-            2.0,
-            53.0
+            0.0
         ],
         "OffsetPosition": [
-            1.7000000476837158,
-            22.5,
-            2.4000000953674316
+            2.0,
+            8.600000381469727,
+            6.599999904632568
         ],
         "OffsetRotation": [
-            274.79998779296875,
+            181.39999389648438,
             -90.0,
             -90.0
         ],
         "Recoil": 80.0,
         "RecoilRecovery": 20.0
+    },
+    "SHOTGUN": {
+        "AmmoPerClip": 8,
+        "Damage": 15.0,
+        "FirePerSecond": 75.0,
+        "MuzzlePosition": [
+            100.0,
+            6.199999809265137,
+            0.0
+        ],
+        "OffsetPosition": [
+            1.7999999523162842,
+            1.7999999523162842,
+            3.5999999046325684
+        ],
+        "OffsetRotation": [
+            182.5,
+            -90.0,
+            -90.0
+        ],
+        "Recoil": 90.0,
+        "RecoilRecovery": 25.0
     }
 }

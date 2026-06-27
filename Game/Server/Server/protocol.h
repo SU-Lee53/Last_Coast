@@ -6,6 +6,7 @@ constexpr short PORT = 9000;
 constexpr int MAX_PLAYERS = 3;
 constexpr int MAX_ROOMS = 300;
 constexpr int MAX_NAME_LEN = 20;
+constexpr int MAX_CHAT_LEN = 200;
 constexpr int BUF_SIZE = 512;
 
 enum PACKET_TYPE {
@@ -23,7 +24,14 @@ enum PACKET_TYPE {
 	S2C_SHOOT_RESULT,                             // 서버 → 클라이언트: 사격 판정 결과
 	C2S_PLAYER_RELOAD,                            // 클라이언트 → 서버: 재장전 요청
 	S2C_PLAYER_RELOAD,                            // 서버 → 클라이언트: 재장전 알림
-	S2C_REGISTER_RESULT,                          // 서버 → 클라이언트: 회원가입 결과
+	C2S_PLAYER_MELEE,                             // 클라이언트 → 서버: 근접공격 요청
+	S2C_PLAYER_MELEE,                             // 서버 → 클라이언트: 근접공격 모션 (리모트 애니메이션)
+	S2C_MELEE_HIT,                                // 서버 → 클라이언트: 근접공격 좀비 히트 (좀비 1마리당 1패킷)
+	C2S_CHAT,                                     // 클라이언트 → 서버: 채팅 메시지
+	S2C_CHAT,                                     // 서버 → 클라이언트: 채팅 메시지 브로드캐스트
+	C2S_PLAYER_WEAPON,                            // 클라이언트 → 서버: 무기 교체 요청
+	S2C_PLAYER_WEAPON,                            // 서버 → 클라이언트: 무기 교체 브로드캐스트
+	S2C_REGISTER_RESULT
 };
 enum IOType { IO_SEND, IO_RECV, IO_ACCEPT };
 
@@ -111,6 +119,7 @@ struct S2C_AddPlayer {
 	bool          bRunning;
 	bool          bAiming;
 	float         fAimPitch;
+	unsigned char weaponType;   // 현재 장착 무기 (late-join 동기화용)
 };
 
 struct S2C_RemovePlayer {
@@ -192,6 +201,7 @@ struct C2S_PlayerShoot {
 	float         originX, originY, originZ;  // 카메라 위치 (cm)
 	float         dirX, dirY, dirZ;           // 조준 방향 (정규화)
 	float         muzzleX, muzzleY, muzzleZ;  // 총구 월드 위치 (cm)
+	float         damage;                     // 무기/펠릿 데미지 (샷건은 펠릿당 1패킷)
 };
 
 // 서버 → 클라이언트: 사격 판정 결과
@@ -217,6 +227,68 @@ struct S2C_PlayerReload {
 	unsigned char size;
 	PACKET_TYPE   type;
 	int           playerId;
+};
+
+// ── 근접공격 패킷 ───────────────────────────────────────────────────────────
+
+// 클라이언트 → 서버: 근접공격 요청 (플레이어 위치 + 전방 방향)
+struct C2S_PlayerMelee {
+	unsigned char size;
+	PACKET_TYPE   type;
+	float         originX, originY, originZ;  // 플레이어 월드 위치 (cm)
+	float         dirX, dirY, dirZ;           // 전방 방향 (정규화)
+};
+
+// 서버 → 클라이언트: 근접공격 모션 (리모트 플레이어 애니메이션용)
+struct S2C_PlayerMelee {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           attackerPlayerId;
+};
+
+// 서버 → 클라이언트: 근접공격 좀비 히트 (히트한 좀비 1마리당 1패킷)
+struct S2C_MeleeHit {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           attackerPlayerId;
+	int           zombieId;
+	float         damage;
+	float         hitX, hitY, hitZ;           // 피 이펙트 위치 (cm)
+};
+
+// ── 무기 교체 패킷 ──────────────────────────────────────────────────────────
+
+// 클라이언트 → 서버: 무기 교체 요청
+struct C2S_PlayerWeapon {
+	unsigned char size;
+	PACKET_TYPE   type;
+	unsigned char weaponType;   // WEAPON_TYPE (클라 enum, uint8)
+};
+
+// 서버 → 클라이언트: 무기 교체 브로드캐스트 (리모트 플레이어 무기 반영)
+struct S2C_PlayerWeapon {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           playerId;
+	unsigned char weaponType;
+};
+
+// ── 채팅 패킷 ───────────────────────────────────────────────────────────────
+
+// 클라이언트 → 서버: 채팅 메시지 전송
+struct C2S_Chat {
+	unsigned char size;
+	PACKET_TYPE   type;
+	char          message[MAX_CHAT_LEN];
+};
+
+// 서버 → 클라이언트: 채팅 메시지 브로드캐스트 (보낸 사람 정보 포함)
+struct S2C_Chat {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           playerId;
+	char          username[MAX_NAME_LEN];
+	char          message[MAX_CHAT_LEN];
 };
 
 #pragma pack(pop) // Restore default packing

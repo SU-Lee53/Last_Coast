@@ -42,6 +42,25 @@ VS_POSITION_OUTPUT VSShadowTerrain(VS_POSITION_INPUT input, uint nInstanceID : S
 	return output;
 }
 
+VS_POSITION_OUTPUT VSShadowTerrainInstanced(VS_POSITION_INPUT input, uint nInstanceID : SV_InstanceID)
+{
+	VS_POSITION_OUTPUT output = (VS_POSITION_OUTPUT) 0;
+	TerrainComponentData comp = gTerrainComponentData[nInstanceID];
+
+	float2 gridXZ = input.position.zx;
+	float2 componentGridOriginXZ = round(comp.v2ComponentOriginXZ / gv3TerrainScale.xz);
+	float2 heightGridXZ = componentGridOriginXZ + gridXZ;
+	float2 localXZ = heightGridXZ * gv3TerrainScale.xz;
+	int2 heightCoord = int2(heightGridXZ);
+	float height = LoadTerrainHeightLocal(heightCoord);
+
+	float3 positionLocal = float3(localXZ.y, height, localXZ.x);
+	float3 positionW = mul(float4(positionLocal, 1.f), gmtxTerrainWorld).xyz;
+	output.position = mul(float4(positionW, 1.f), gmtxLightViewProj);
+
+	return output;
+}
+
 VS_POSITION_OUTPUT VSShadowAnimated(VS_SKINNED_POSITION_INPUT input, uint nInstanceID : SV_InstanceID)
 {
 	VS_POSITION_OUTPUT output = (VS_POSITION_OUTPUT) 0;

@@ -11,7 +11,14 @@ void DynamicObject::PostUpdate()
 {
 	//ResolveTerrain();
 
-	for (auto& component : m_pComponents) {
+	//for (auto& component : m_pComponents) {
+	//	if (component) {
+	//		component->Update();
+	//	}
+	//}
+
+	uint32 unUpdateUntil = static_cast<uint32>(COMPONENT_TYPE::ANIMATION_CONTROLLER);
+	for (auto& component : m_pComponents | std::views::take(unUpdateUntil)) {
 		if (component) {
 			component->Update();
 		}
@@ -19,6 +26,20 @@ void DynamicObject::PostUpdate()
 
 	for (auto& pChild : m_pChildren) {
 		pChild->PostUpdate();
+	}
+}
+
+void DynamicObject::PostAnimationUpdate()
+{
+	uint32 unDropUntil = static_cast<uint32>(COMPONENT_TYPE::SKELETON);
+	for (auto& component : m_pComponents | std::views::drop(unDropUntil)) {
+		if (component) {
+			component->Update();
+		}
+	}
+
+	for (auto& pChild : m_pChildren) {
+		pChild->PostAnimationUpdate();
 	}
 }
 

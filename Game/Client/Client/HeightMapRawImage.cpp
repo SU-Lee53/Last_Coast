@@ -29,6 +29,12 @@ HRESULT HeightMapRawImage::LoadFromFile(const std::string& strFilename, uint32 u
 		return E_FAIL;
 	}
 
+	m_HeightMapRef = TEXTURE->LoadTextureFromHeightData("HeightMap", m_HeightMapRawData, m_unWidth, m_unHeight);
+	if (!m_HeightMapRef.IsValid()) {
+		__debugbreak();
+		return E_FAIL;
+	}
+
 	return S_OK;
 }
 

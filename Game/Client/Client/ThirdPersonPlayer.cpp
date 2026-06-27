@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "ThirdPersonPlayer.h"
 #include "ThirdPersonCamera.h"
 #include "NodeObject.h"
@@ -26,7 +26,7 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pHealthText->SetAnchor(Vector2{ 1, 1 });
 		pHealthText->SetPivot(Vector2{ 1,1 });
 		pHealthText->SetPosition(Vector2{ -50, -100 });
-		pHealthText->SetSizePerLetter(Vector2{ 30,50 });
+		pHealthText->SetTextHeight(50);
 		pUIBoard->InsertUI(pHealthText);
 
 		//pHealthImage
@@ -37,7 +37,7 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pAmmo->SetAnchor(Vector2{ 1, 1 });
 		pAmmo->SetPivot(Vector2{ 1,1 });
 		pAmmo->SetPosition(Vector2{ -50, -40 });
-		pAmmo->SetSizePerLetter(Vector2{ 15,50 });
+		pAmmo->SetTextHeight(50);
 		pUIBoard->InsertUI(pAmmo);
 
 		pWeaponName = std::make_shared<TextBox>(L"Malgun Gothic");
@@ -46,7 +46,7 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pWeaponName->SetAnchor(Vector2{ 1, 1 });
 		pWeaponName->SetPivot(Vector2{ 1,1 });
 		pWeaponName->SetPosition(Vector2{ -200, -40 });
-		pWeaponName->SetSizePerLetter(Vector2{ 20,50 });
+		pWeaponName->SetTextHeight(50);
 		pUIBoard->InsertUI(pWeaponName);
 
 		pReloadAlert = std::make_shared<TextBox>(L"Malgun Gothic");
@@ -55,7 +55,7 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pReloadAlert->SetAnchor(Vector2{ 0.5, 0.5 });
 		pReloadAlert->SetPivot(Vector2{ 0,0.5 });
 		pReloadAlert->SetPosition(Vector2{ 100, 0 });
-		pReloadAlert->SetSizePerLetter(Vector2{ 10,40 });
+		pReloadAlert->SetTextHeight(50);
 		pReloadAlert->SetVisible(false);
 		pUIBoard->InsertUI(pReloadAlert);
 	}
@@ -130,6 +130,10 @@ IThirdPersonPlayer::~IThirdPersonPlayer()
 
 void IThirdPersonPlayer::Initialize()
 {
+	if (!GetComponent<Transform>()) {
+		AddComponent<Transform>();
+	}
+
 	if (!m_bInitialized) {
 		InitializeCommonPlayer();
 
@@ -147,6 +151,8 @@ void IThirdPersonPlayer::Initialize()
 			component->Initialize();
 		}
 	}
+
+	GetTransform()->Update();
 
 	for (auto& pChild : m_pChildren) {
 		pChild->Initialize();
@@ -210,6 +216,12 @@ void IThirdPersonPlayer::OnEndCollision(const CollisionResult& collisionResult)
 void IThirdPersonPlayer::GiveWeapon(WEAPON_TYPE eWeaponType)
 {
 	ApplyWeaponChanged(eWeaponType);
+
+	// 로컬 제어 플레이어(카메라 보유)만 서버에 무기 교체 알림.
+	// 리모트 플레이어는 카메라가 없으므로 재전송 루프가 생기지 않음.
+	if (GetCamera()) {
+		NetworkManager::GetInstance()->SendPlayerWeapon(std::to_underlying(eWeaponType));
+	}
 }
 
 void IThirdPersonPlayer::PostUpdate()
@@ -417,9 +429,25 @@ float IThirdPersonPlayer::GetMoveSpeedSqXZ() const
 	return v3Delta.LengthSquared();
 }
 
+void IThirdPersonPlayer::SetPlayerModel(const std::string& strModelKey)
+{
+	auto pModel = MODEL->LoadOrGet(strModelKey)->CopyObject<NodeObject>();
+	pModel->GetTransform()->Rotate(Vector3::Up, -90.f);
+	SwapChild(0, pModel);
+
+	if (!GetComponent<AnimationController>()) {
+		AddComponent<PlayerAnimationController>();
+	}
+
+	if (!m_pWeaponSocket) {
+		m_pWeaponSocket = GetComponent<Skeleton>()->CreateAttachSocket<WeaponSocket>("RightHand"s);
+	}
+}
+
 void IThirdPersonPlayer::InitializeCommonPlayer()
 {
-	auto pModel = MODEL->LoadOrGet("Ch33_nonPBR")->CopyObject<NodeObject>();
+	const auto& data = GCTX->GetGameData();
+	auto pModel = MODEL->LoadOrGet(GameContext::g_strCharacterNames[data.m_nCurModelIndex])->CopyObject<NodeObject>();
 	pModel->GetTransform()->Rotate(Vector3::Up, -90.f);
 	SetChild(pModel);
 
@@ -726,6 +754,15 @@ void IThirdPersonPlayer::ResolveGroundYOnly(Vector3& delta)
 
 void IThirdPersonPlayer::EnterAim()
 {
+	// 근접공격 중에는 즉시 aim 진입을 보류한다.
+	// 여기서 aim 몽타주를 재생하면 "Melee Attack" 몽타주가 끊겨 종료 콜백
+	// (PlayMeleeEndAction)이 호출되지 않아 m_bInMeleeAttack 이 영구히 true 로 남는다.
+	// 대신 예약만 해두고, 근접 종료 시 PlayMeleeEndAction 이 aim 으로 진입한다.
+	if (m_bInMeleeAttack) {
+		m_bWasAimBeforeMelee = true;
+		return;
+	}
+
 	if (m_bAiming) {
 		return;
 	}
@@ -757,6 +794,12 @@ void IThirdPersonPlayer::EnterAim()
 
 void IThirdPersonPlayer::LeaveAim()
 {
+	// 근접공격 중 우클릭을 뗀 경우: aim 예약만 취소(근접 몽타주는 그대로 둔다).
+	if (m_bInMeleeAttack) {
+		m_bWasAimBeforeMelee = false;
+		return;
+	}
+
 	if (!m_bAiming) {
 		return;
 	}
@@ -824,6 +867,7 @@ void IThirdPersonPlayer::PlayMeleeStartAction()
 	m_eWeaponTypeBeforeMelee = m_pWeaponSocket->GetCurrentWeaponType();
 	m_bWasAimBeforeMelee = m_bAiming;
 	m_bInMeleeAttack = true;
+	m_bMeleeStartedThisFrame = true;	// 씬에서 소비 → 서버 전송(온라인)/로컬 판정(오프라인)
 
 	ApplyWeaponChanged(WEAPON_TYPE::MELEE);
 	pAnimationCtrl->GetMontage()->PlayMontage("Melee Attack");
@@ -861,10 +905,24 @@ void IThirdPersonPlayer::PlayReloadStartAction()
 
 	auto pMontage = pAnimationCtrl->GetMontage().get();
 	if (m_bAiming && pMontage->IsPlaying()) {
-		pMontage->JumpToSection("Rifle Reloading");
+		if (m_pWeaponSocket->GetCurrentWeaponType() == WEAPON_TYPE::PISTOL) {
+			pAnimationCtrl->GetMontage()->JumpToSection("Pistol Reloading");
+		}
+		else {
+			pAnimationCtrl->GetMontage()->JumpToSection("Rifle Reloading");
+		}
+
+		//pMontage->JumpToSection("Rifle Reloading");
 	}
 	else {
-		pMontage->PlayMontage("Rifle Reloading");
+		if (m_pWeaponSocket->GetCurrentWeaponType() == WEAPON_TYPE::PISTOL) {
+			pAnimationCtrl->GetMontage()->PlayMontage("Pistol Reloading");
+		}
+		else {
+			pAnimationCtrl->GetMontage()->PlayMontage("Rifle Reloading");
+		}
+
+		//pMontage->PlayMontage("Rifle Reloading");
 	}
 	pWeapon->BeginReload();
 }
@@ -891,7 +949,10 @@ void IThirdPersonPlayer::PlayReloadEndAction()
 void IThirdPersonPlayer::ApplyWeaponChanged(WEAPON_TYPE eWeaponType)
 {
 	auto eBefore = m_pWeaponSocket->GetCurrentWeaponType();
-	if (eBefore != eWeaponType && m_bAiming) {
+	// montage 점프는 로컬 플레이어(카메라 보유)의 조준 보정 전용.
+	// 리모트는 조준/근접/발사 montage가 동기화 이벤트로 구동되므로 여기서 건드리면
+	// 진행 중인 montage의 종료 notify가 누락되어 조준/근접 상태가 안 풀린다.
+	if (eBefore != eWeaponType && m_bAiming && m_pCamera) {
 		auto pAnimationCtrl = static_pointer_cast<PlayerAnimationController>(GetComponent<AnimationController>());
 		if (eWeaponType == WEAPON_TYPE::PISTOL) {
 			pAnimationCtrl->GetMontage()->JumpToSection("Pistol Aiming Idle");
@@ -903,7 +964,7 @@ void IThirdPersonPlayer::ApplyWeaponChanged(WEAPON_TYPE eWeaponType)
 
 	m_pWeaponSocket->SetWeapon(eWeaponType);
 	if (m_PlayerHUD.pWeaponName) {
-		const std::string& strWeaponName = GameContext::g_strWeaponName[std::to_underlying(eWeaponType)];
+		const std::string& strWeaponName = GameContext::g_strWeaponNames[std::to_underlying(eWeaponType)];
 		m_PlayerHUD.pWeaponName->SetText(::StringToWString(strWeaponName));
 	}
 }
@@ -920,11 +981,13 @@ void IThirdPersonPlayer::ApplyDead()
 
 void IThirdPersonPlayer::ApplyGravity()
 {
-	if (!m_bGrounded) {
-		m_fVerticalVelocity += m_fGravity * DT;
-	}
-	else {
-		m_fVerticalVelocity = 0.f;
+	if (CUR_SCENE->IsGravityOn()) {
+		if (!m_bGrounded) {
+			m_fVerticalVelocity += m_fGravity * DT;
+		}
+		else {
+			m_fVerticalVelocity = 0.f;
+		}
 	}
 }
 

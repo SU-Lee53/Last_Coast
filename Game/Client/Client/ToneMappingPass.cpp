@@ -92,6 +92,13 @@ void ToneMappingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 	pd3dCommandList->SetPipelineState(m_pd3dPipelineState.Get());
 	pd3dCommandList->SetGraphicsRootSignature(RenderManager::g_pd3dGlobalRootSignature.Get());
 
+	constexpr auto rootParamLightShaftResult = std::to_underlying(ROOT_PARAMETER::LIGHT_SHAFT_RESULT);
+	const auto pLightShaft = RENDER->GetPostProcessingResources().LightShaftBuffer.GetResource();
+	DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, pLightShaft->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamLightShaftResult, outDescHandle.gpuHandle);
+	outDescHandle.cpuHandle.Offset(1, nDescriptorInc);
+	outDescHandle.gpuHandle.Offset(1, nDescriptorInc);
+
 	CB_TONE_MAPPING_COMMON_DATA toneData = toneMappingVolume.GetCommonCBData();
 	auto cBuffer1 = RENDER->AllocCBuffer<CB_TONE_MAPPING_COMMON_DATA>();
 	cBuffer1.WriteData(&toneData);

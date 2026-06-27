@@ -121,7 +121,9 @@ int GetCascadeIndex(float fViewDepth)
 
 float Compute3x3PCF(float3 shadowPos, int nCascadeIndex)
 {
-	const float fCascadeSize[4] = { 2048, 1024, 512, 256 };
+	//const float fCascadeSize[4] = { 2048, 1024, 512, 256 };
+	//const float fCascadeSize[4] = { 4096, 2048, 1024, 512 };
+	const float fCascadeSize[4] = { 2048, 2048, 1024, 512 };
 	float fSum = 0.f;
 	
 	const float2 texelSize = (1.0f / fCascadeSize[nCascadeIndex]).xx;
@@ -129,6 +131,7 @@ float Compute3x3PCF(float3 shadowPos, int nCascadeIndex)
 	[unroll]
 	for (int y = -1; y <= 1; ++y)
 	{
+		[unroll]
 		for (int x = -1; x <= 1; ++x)
 		{
 			float2 offset = float2(x, y) * texelSize;
@@ -143,8 +146,8 @@ float SampleCascadeShadow(float3 worldPos, int nCascadeIndex)
 {
 	float4 shadowPos = mul(float4(worldPos, 1.f), gmtxCascadeShadows[nCascadeIndex]);
 	shadowPos.xyz /= shadowPos.w;
-	return gtxtCascadeShadowMaps[nCascadeIndex].SampleCmpLevelZero(gShadowMapSamplerState, shadowPos.xy, shadowPos.z);
-	
+	return Compute3x3PCF(shadowPos.xyz, nCascadeIndex);
+	//return gtxtCascadeShadowMaps[nCascadeIndex].SampleCmpLevelZero(gShadowMapSamplerState, shadowPos.xy, shadowPos.z);
 }
 
 

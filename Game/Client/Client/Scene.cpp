@@ -4,6 +4,7 @@
 #include "NodeObject.h"
 #include "Collider.h"
 #include "Skybox.h"
+#include "EventSequence.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // Scene
@@ -47,6 +48,10 @@ void Scene::CleanUp()
 void Scene::PostInitialize()
 {
 	InitializeObjects();
+	if (m_pPlayer) {
+		m_pMainCamera = m_pPlayer->GetCamera();
+	}
+
 	GenerateSceneBound();
 
 	// Space Partition
@@ -131,6 +136,15 @@ void Scene::PostInitialize()
 	}
 
 	m_bSpatialRuntimeRegistrationEnabled = true;
+
+	if (!m_pUIBoard) {
+		m_pUIBoard = std::make_unique<UIBoard>();
+	}
+
+	if (m_pEventSequence) {
+		m_pEventSequence->Initialize();
+	}
+
 }
 
 void Scene::PreProcessInput()
@@ -173,6 +187,10 @@ void Scene::FixedUpdate()
 
 	m_ToneMappingVolume.Update();
 
+	if (m_pEventSequence) {
+		m_pEventSequence->Update();
+	}
+
 	CheckCollision();
 }
 
@@ -189,6 +207,13 @@ void Scene::PostUpdate()
 
 	m_World.PostUpdate();
 
+	ANIMATION->UpdateAnimationParallel();
+
+	if (m_pPlayer) {
+		m_pPlayer->PostAnimationUpdate();
+	}
+	m_World.PostAnimationUpdate();
+
 	if (m_pSkybox) {
 		m_pSkybox->Update();
 	}
@@ -196,6 +221,12 @@ void Scene::PostUpdate()
 	// Update UI Components
 	if (m_pUIBoard) {
 		m_pUIBoard->Update();
+	}
+
+	// Update 3D audio listener from the active camera.
+	if (m_pPlayer) {
+		const std::shared_ptr<Camera>& pCamera = GetCamera();
+		SOUND->SetListenerAttributes(pCamera->GetPosition(), Vector3::Zero, pCamera->GetLook(), pCamera->GetUp());
 	}
 }
 
@@ -250,11 +281,6 @@ void Scene::CheckCollision()
 		return;
 	}
 
-	const std::shared_ptr<PlayerCollider> playerCollider = m_pPlayer->GetComponent<PlayerCollider>();
-	if (!playerCollider) {
-		return;
-	}
-
 	SpatialQueryDesc staticCollisionDesc{};
 	staticCollisionDesc.unLayerMask =
 		SPATIAL_COLLIDABLE |
@@ -264,45 +290,48 @@ void Scene::CheckCollision()
 	staticCollisionDesc.bIncludeStatic = true;
 	staticCollisionDesc.bIncludeDynamic = false;
 	staticCollisionDesc.v3AABBInflation = Vector3{ 3_m, 3_m, 3_m };
-	SpatialQueryResult playerBroadPhaseResult = m_World.GetSpatial().QueryAABB(playerCollider->GetAABBFromOBBWorld(), staticCollisionDesc);
-	//ImGui::Text("Player Collision Candidates : %d", (int)playerBroadPhaseResult.pObjects.size());
-	//RemoveInvalidCollisionSet(playerBroadPhaseResult);
 
-	// Player vs StaticObject
-	for (const auto& pObj : playerBroadPhaseResult.pObjects) {
-		const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
-		if (!pCollider) {
-			continue;
-		}
+	const std::shared_ptr<PlayerCollider> playerCollider = m_pPlayer->GetComponent<PlayerCollider>();
+	if (playerCollider) {
+		SpatialQueryResult playerBroadPhaseResult = m_World.GetSpatial().QueryAABB(playerCollider->GetAABBFromOBBWorld(), staticCollisionDesc);
+		//ImGui::Text("Player Collision Candidates : %d", (int)playerBroadPhaseResult.pObjects.size());
+		//RemoveInvalidCollisionSet(playerBroadPhaseResult);
 
-		bool bResult = playerCollider->CheckCollision(pCollider);
-		if (bResult) {
-			CollisionResult result1(m_pPlayer.get(), pObj);
-			CollisionResult result2(pObj, m_pPlayer.get());
-			if (!m_pCollisionPairs.contains(result1) || !m_pCollisionPairs.contains(result2)) {
-				// Begin Overlap
-				m_pPlayer->OnBeginCollision(result1);
-				pObj->OnBeginCollision(result2);
+		for (const auto& pObj : playerBroadPhaseResult.pObjects) {
+			const std::shared_ptr<StaticCollider> pCollider = pObj->GetComponent<StaticCollider>();
+			if (!pCollider) {
+				continue;
+			}
 
-				m_pCollisionPairs.insert(result1);
-				m_pCollisionPairs.insert(result2);
+			bool bResult = playerCollider->CheckCollision(pCollider);
+			if (bResult) {
+				CollisionResult result1(m_pPlayer.get(), pObj);
+				CollisionResult result2(pObj, m_pPlayer.get());
+				if (!m_pCollisionPairs.contains(result1) || !m_pCollisionPairs.contains(result2)) {
+					// Begin Overlap
+					m_pPlayer->OnBeginCollision(result1);
+					pObj->OnBeginCollision(result2);
+
+					m_pCollisionPairs.insert(result1);
+					m_pCollisionPairs.insert(result2);
+				}
+				else {
+					// While Overlap
+					m_pPlayer->OnWhileCollision(CollisionResult(m_pPlayer.get(), pObj));
+					pObj->OnWhileCollision(CollisionResult(pObj, m_pPlayer.get()));
+				}
 			}
 			else {
-				// While Overlap
-				m_pPlayer->OnWhileCollision(CollisionResult(m_pPlayer.get(), pObj));
-				pObj->OnWhileCollision(CollisionResult(pObj, m_pPlayer.get()));
-			}
-		}
-		else {
-			// End Overlap
-			CollisionResult result1(m_pPlayer.get(), pObj);
-			CollisionResult result2(pObj, m_pPlayer.get());
-			if (m_pCollisionPairs.contains(result1) || m_pCollisionPairs.contains(result2)) {
-				m_pPlayer->OnEndCollision(result1);
-				pObj->OnEndCollision(result2);
+				// End Overlap
+				CollisionResult result1(m_pPlayer.get(), pObj);
+				CollisionResult result2(pObj, m_pPlayer.get());
+				if (m_pCollisionPairs.contains(result1) || m_pCollisionPairs.contains(result2)) {
+					m_pPlayer->OnEndCollision(result1);
+					pObj->OnEndCollision(result2);
 
-				m_pCollisionPairs.erase(result1);
-				m_pCollisionPairs.erase(result2);
+					m_pCollisionPairs.erase(result1);
+					m_pCollisionPairs.erase(result2);
+				}
 			}
 		}
 	}
@@ -403,6 +432,13 @@ TerrainHit Scene::QueryTerrainHit(const Vector3& v3WorldPos)
 	return result;
 }
 
+std::shared_ptr<Camera> Scene::SwapCamera(std::shared_ptr<Camera>& pNewCamera)
+{
+	std::shared_ptr<Camera> pBefore = m_pMainCamera;
+	m_pMainCamera = pNewCamera;
+	return pBefore;
+}
+
 void Scene::RemoveCollisionPairsOf(IGameObject* pDeadObject)
 {
 	if (!pDeadObject) {
@@ -419,7 +455,7 @@ void Scene::RemoveCollisionPairsOf(IGameObject* pDeadObject)
 
 void Scene::BuildLights()
 {
-	m_pLights.reserve(1);
+	m_pLights.reserve(m_pLights.size() + 1);
 
 	auto pLight = std::make_shared<DirectionalLight>();
 	{
@@ -431,20 +467,34 @@ void Scene::BuildLights()
 		pLight->m_v3Direction.Normalize();
 	}
 
-	m_pLights.push_back(pLight);
+	m_pLights.insert(m_pLights.begin(), pLight);
+}
+
+std::shared_ptr<DirectionalLight> Scene::GetSunLight() const
+{
+	/*for (const auto& pLight : m_pLights) {
+		if (auto pDirectionalLight = std::dynamic_pointer_cast<DirectionalLight>(pLight)) {
+			return pDirectionalLight;
+		}
+	}*/
+
+	if (m_pSkybox) {
+		return std::static_pointer_cast<DirectionalLight>(m_pLights[0]);
+	}
+
+	return nullptr;
 }
 
 HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 {
 	std::string strFilePath = std::format("{}/{}.bin", g_strSceneBasePath, strFileName);
 
-	std::ifstream inFile{ strFilePath, std::ios::binary };
-	if (!inFile) {
+	auto bson = ::ReadBinaryFile(strFilePath);
+	if (bson.empty()) {
 		__debugbreak();
 		return E_INVALIDARG;
 	}
 
-	std::vector<std::uint8_t> bson(std::istreambuf_iterator<char>(inFile), {});
 	nlohmann::json jScene = nlohmann::json::from_bson(bson);;
 
 	if (jScene.contains("StaticMeshActors")) {
@@ -454,8 +504,7 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 			std::shared_ptr<StaticObject> pObj = std::make_shared<StaticObject>();
 			pObj->SetName(jObject["ActorName"].get<std::string>());
 
-			auto matrixData = jObject["Transform"]["WorldMatrix"].get<std::vector<float>>();
-			Matrix mtxWorldMatrix(matrixData.data());
+			Matrix mtxWorldMatrix = ::ReadMatrixFromJson(jObject["Transform"]["WorldMatrix"]);
 			pObj->GetTransform()->SetWorldMatrix(mtxWorldMatrix);
 
 			std::string strMeshName = jObject["MeshName"].get<std::string>();
@@ -487,8 +536,7 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 			if (strType == "PointLight") {
 				std::shared_ptr<PointLight> pLight = std::make_shared<PointLight>();
 				// Transform (Position)
-				auto matrixData = jLight["Transform"]["WorldMatrix"].get<std::vector<float>>();
-				Matrix mtxWorldMatrix(matrixData.data());
+				Matrix mtxWorldMatrix = ::ReadMatrixFromJson(jLight["Transform"]["WorldMatrix"]);
 				Vector3 v3Position(mtxWorldMatrix._41, mtxWorldMatrix._42, mtxWorldMatrix._43);
 				pLight->m_v3Position = v3Position;
 
@@ -513,8 +561,7 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 			else if (strType == "SpotLight") {
 				std::shared_ptr<SpotLight> pLight = std::make_shared<SpotLight>();
 				// Transform (Position)
-				auto matrixData = jLight["Transform"]["WorldMatrix"].get<std::vector<float>>();
-				Matrix mtxWorldMatrix(matrixData.data());
+				Matrix mtxWorldMatrix = ::ReadMatrixFromJson(jLight["Transform"]["WorldMatrix"]);
 				Vector3 v3Position(mtxWorldMatrix._41, mtxWorldMatrix._42, mtxWorldMatrix._43);
 				pLight->m_v3Position = v3Position;
 
@@ -550,6 +597,7 @@ HRESULT Scene::LoadFromFiles(const std::string& strFileName)
 		}
 	}
 
+	return S_OK;
 }
 
 void Scene::ShowDebugOptions()
@@ -587,27 +635,10 @@ void Scene::ShowDebugOptions()
 			if (auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 				m_pPlayer->ShowControlImGui();
 
-				ImGui::Text("Press `(~) to use mouse control");
-				ImGui::Text("Mouse : %s", pPlayer->IsMouseOn() ? "ON" : "OFF");
-
-				ImGui::Text("Move Speed : %f\n", pPlayer->GetMoveSpeed());
-
-				const Vector3& v3PlayerMoveDirection = pPlayer->GetMoveDirection();
-				ImGui::Text("Move Direction : (%f, %f, %f)", v3PlayerMoveDirection.x, v3PlayerMoveDirection.y, v3PlayerMoveDirection.z);
-
-				const auto& transform = pPlayer->GetTransform();
-				Vector3 v3PlayerPos = transform->GetPosition();
-				ImGui::Text("Player Position : (%f, %f, %f)", v3PlayerPos.x, v3PlayerPos.y, v3PlayerPos.z);
-
-				ImGui::Text("====== Collision Result ======");
-				for (const auto& pair : m_pCollisionPairs) {
-					ImGui::Text("Collision {%s : %s}", pair.pSelf->GetName().c_str(), pair.pOther->GetName().c_str());
-				}
-
 				ImGui::Text("====== Weapon Test ======");
 				const auto eWeaponType = pPlayer->GetCurrentWeaponType();
 				auto nWeaponIdx = std::to_underlying(eWeaponType);
-				const auto& strWeaponNames = GameContext::g_strWeaponName;
+				const auto& strWeaponNames = GameContext::g_strWeaponNames;
 				if (ImGui::BeginCombo("Weapons", strWeaponNames[nWeaponIdx].c_str())) {
 					for (int i = 0; i < strWeaponNames.size(); ++i) {
 						bool bSelected = (nWeaponIdx == i);
@@ -631,8 +662,24 @@ void Scene::ShowDebugOptions()
 					pPlayer->GetCurrentWeaponObject()->ShowControlImGui();
 					ImGui::TreePop();
 				}
-			}
 
+				ImGui::Text("Press `(~) to use mouse control");
+				ImGui::Text("Mouse : %s", pPlayer->IsMouseOn() ? "ON" : "OFF");
+
+				ImGui::Text("Move Speed : %f\n", pPlayer->GetMoveSpeed());
+
+				const Vector3& v3PlayerMoveDirection = pPlayer->GetMoveDirection();
+				ImGui::Text("Move Direction : (%f, %f, %f)", v3PlayerMoveDirection.x, v3PlayerMoveDirection.y, v3PlayerMoveDirection.z);
+
+				const auto& transform = pPlayer->GetTransform();
+				Vector3 v3PlayerPos = transform->GetPosition();
+				ImGui::Text("Player Position : (%f, %f, %f)", v3PlayerPos.x, v3PlayerPos.y, v3PlayerPos.z);
+
+				ImGui::Text("====== Collision Result ======");
+				for (const auto& pair : m_pCollisionPairs) {
+					ImGui::Text("Collision {%s : %s}", pair.pSelf->GetName().c_str(), pair.pOther->GetName().c_str());
+				}
+			}
 			ImGui::EndTabItem();		
 		}
 
@@ -647,6 +694,16 @@ void Scene::ShowDebugOptions()
 			}
 			else {
 				ImGui::Text("NULL Skybox");
+			}
+			ImGui::EndTabItem();		
+		}
+
+		if(ImGui::BeginTabItem("UI")){
+			if (m_pUIBoard) {
+				m_pUIBoard->EditUI();
+			}
+			else {
+				ImGui::Text("NULL UI");
 			}
 			ImGui::EndTabItem();		
 		}

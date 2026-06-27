@@ -146,6 +146,30 @@ void Camera::SetLookTo(const Vector3& v3Look)
 	m_v3Look = Vector3(mtxLookAt._13, mtxLookAt._23, mtxLookAt._33);
 }
 
+void Camera::SetLookTo(const Vector3& v3Look, const Vector3& v3Up)
+{
+	m_v3Look = v3Look;
+	if (m_v3Look.LengthSquared() < 0.0001f) {
+		m_v3Look = Vector3::Backward;
+	}
+	m_v3Look.Normalize();
+
+	m_v3Up = v3Up;
+	if (m_v3Up.LengthSquared() < 0.0001f) {
+		m_v3Up = Vector3::Up;
+	}
+	m_v3Up.Normalize();
+
+	m_v3Right = XMVector3Cross(m_v3Up, m_v3Look);
+	if (m_v3Right.LengthSquared() < 0.0001f) {
+		m_v3Right = Vector3::Right;
+	}
+	m_v3Right.Normalize();
+
+	m_v3Up = XMVector3Cross(m_v3Look, m_v3Right);
+	m_v3Up.Normalize();
+}
+
 void Camera::Rotate(float fPitch, float fYaw, float fRoll)
 {
 }

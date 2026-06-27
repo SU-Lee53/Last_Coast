@@ -48,6 +48,7 @@ public:
 	void SetLookAt(const Vector3& v3Look);
 	void SetLookTo(float x, float y, float z);
 	void SetLookTo(const Vector3& v3Look);
+	void SetLookTo(const Vector3& v3Look, const Vector3& v3Up);
 
 	void Rotate(float x, float y, float z);
 	void Rotate(const Vector3 v3Rotation);

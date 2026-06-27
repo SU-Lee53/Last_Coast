@@ -5,7 +5,8 @@ class GBufferPass : public IRenderPass {
 	struct RenderParameter {
 		CB_INSTANCE_DATA cbInstanceData{};
 		int32 nInstances = 0;
-		std::vector<int32> nBoneOffsets;
+		uint32 unBoneOffsetStart = 0;
+		uint32 unBoneOffsetCount = 0;
 		ComPtr<ID3D12PipelineState> pd3dPipelineState = nullptr;
 	};
 
@@ -40,25 +41,31 @@ private:
 
 	void BindGeometryData(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-		OUT DescriptorHandle& outDescHandle) const;
+		OUT DescriptorHandle& outDescHandle);
 	
 	void BindTerrainData(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,
-		OUT DescriptorHandle& outDescHandle) const;
+		OUT DescriptorHandle& outDescHandle);
 
 	void DrawGeometry(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
-		OUT DescriptorHandle& outDescHandle) const;
+		OUT DescriptorHandle& outDescHandle);
 	
 	void DrawTerrain(
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
-		OUT DescriptorHandle& outDescHandle) const;
+		OUT DescriptorHandle& outDescHandle);
 
 private:
-	mutable RenderQueue m_RenderQueueCached;
-	mutable uint32 m_unFrustumCulled = 0;
+	void FrustumCulling();
+	void BuildGeometryCache();
+	void UploadGeometryCache(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, OUT DescriptorHandle& outDescHandle);
 
-	mutable struct CachedData {
+
+private:
+	RenderQueue m_RenderQueueCached;
+	uint32 m_unFrustumCulled = 0;
+
+	struct CachedData {
 		std::vector<std::shared_ptr<IGameObject>> pObjFrustumCulled;
 		std::vector<TerrainComponent*> pTerrainComponentFrustumCulled;
 
@@ -68,12 +75,16 @@ private:
 
 		std::vector<WorldTransformData> sbWorldTransformDatas;
 		std::vector<Matrix> sbBoneTransformDatas;
+		std::vector<int32> nBoneOffsets;
+		D3D12_GPU_VIRTUAL_ADDRESS d3dBoneOffsetGPUAddress = 0;
 
 		struct AnimationInstancingData {
 			int32 unOffset = 0;
 		};
 
 		std::unordered_map<const AnimationController*, AnimationInstancingData> animationInstancingData;
+
+		std::vector<TerrainComponentData> terrainComponentDatas;
 
 		void Clear() {
 			frustumCulledMap.Clear();
@@ -82,11 +93,15 @@ private:
 
 			sbWorldTransformDatas.clear();
 			sbBoneTransformDatas.clear();
+			nBoneOffsets.clear();
+			d3dBoneOffsetGPUAddress = 0;
 
 			animationInstancingData.clear();
 
 			pObjFrustumCulled.clear();
 			pTerrainComponentFrustumCulled.clear();
+
+			terrainComponentDatas.clear();
 		}
 
 	} m_CachedData;

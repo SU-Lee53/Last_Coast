@@ -7,13 +7,16 @@
 #include "TestScene.h"
 #include "GameScene.h"
 #include "LogInScene.h"
+#include "LobbyScene.h"
 
 void SceneManager::Initialize()
 {
-	m_upCurrentScene = std::make_unique<LogInScene>();
-	m_upCurrentScene->BuildLights();
-	m_upCurrentScene->BuildObjects();
-	m_upCurrentScene->PostInitialize();
+	m_pSceneStack.push_back(std::make_unique<LogInScene>());
+	auto& pCurScene = m_pSceneStack.back();
+	pCurScene->OnEnterScene();
+	pCurScene->BuildLights();
+	pCurScene->BuildObjects();
+	pCurScene->PostInitialize();
 
 	//RESOURCE->WaitForCopyComplete();
 	//TEXTURE->WaitForCopyComplete();
@@ -21,31 +24,42 @@ void SceneManager::Initialize()
 
 void SceneManager::ProcessInput() 
 {
-	m_upCurrentScene->PreProcessInput();
-	m_upCurrentScene->ProcessInput();
-	m_upCurrentScene->PostProcessInput();
+	auto& pCurScene = m_pSceneStack.back();
+	pCurScene->PreProcessInput();
+	pCurScene->ProcessInput();
+	pCurScene->PostProcessInput();
 }
 
 void SceneManager::Update()
 {
-	m_upCurrentScene->PreUpdate();
-	m_upCurrentScene->Update();
+	auto& pCurScene = m_pSceneStack.back();
+	pCurScene->PreUpdate();
+	pCurScene->Update();
 	if (m_bSceneChanged) {
-		m_bSceneChanged = false;
 		return;
 	}
-	m_upCurrentScene->FixedUpdate();
-	m_upCurrentScene->PostUpdate();
+
+	// Get new refernce in case of scene changed
+	auto& pNewScene = m_pSceneStack.back();
+	pNewScene->FixedUpdate();
+	pNewScene->PostUpdate();
 }
 
 void SceneManager::PrepareRender()
 {
-	m_upCurrentScene->PrepareRender();
+	if (m_bSceneChanged) {
+		m_bSceneChanged = false;
+		return;
+	}
+
+	auto& pCurScene = m_pSceneStack.back();
+	pCurScene->PrepareRender();
 }
 
 void SceneManager::ShowDebugOptions()
 {
+	auto& pCurScene = m_pSceneStack.back();
 	ImGui::Begin("Scene");
-	m_upCurrentScene->ShowDebugOptions();
+	pCurScene->ShowDebugOptions();
 	ImGui::End();
 }

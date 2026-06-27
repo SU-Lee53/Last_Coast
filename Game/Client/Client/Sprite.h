@@ -12,19 +12,25 @@ protected:
 
 class ImageBox : public IUIComponent, public IImageSprite {
 public:
-	ImageBox(const std::string& strTexturePath) : IImageSprite{ strTexturePath } {
+	ImageBox(const std::string& strTexturePath, bool bIsKey = false) : IImageSprite{ strTexturePath } {
 		m_v4Color = Vector4(1.f, 1.f, 1.f, 1.f);
+		m_strName = bIsKey ? ::StringToWString(strTexturePath) : std::filesystem::path{ strTexturePath }.filename().wstring();
 	}
 	virtual const TextureRef<Texture>& GetTextureRef() const override { return m_TextureHandle; }
 	virtual UIRectData MakeSBData() const override;
 
+	virtual void ShowControllImGui() override;
 };
 
 class ImageButton : public IUIButtonComponent, public IImageSprite {
 public:
-	ImageButton(const std::string& strTexturePath) : IImageSprite{ strTexturePath } {}
+	ImageButton(const std::string& strTexturePath) : IImageSprite{ strTexturePath } {
+		m_strName = std::filesystem::path{ strTexturePath }.filename().wstring();
+	}
 	virtual const TextureRef<Texture>& GetTextureRef() const override { return m_TextureHandle; }
 	virtual UIRectData MakeSBData() const override;
+
+	virtual void ShowControllImGui() override;
 };
 
 class Crosshair : public ImageBox {

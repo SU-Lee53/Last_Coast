@@ -59,13 +59,15 @@ public:
 	std::shared_ptr<WeaponObject> GetCurrentWeaponObject() const { return m_pWeaponSocket->GetWeaponModel(); }
 	WEAPON_TYPE GetCurrentWeaponType() const { return m_pWeaponSocket->GetCurrentWeaponType(); }
 
-
 	bool IsAiming() const { return m_bAiming; }
 	float GetAimPitch() const { return m_fAimPitch; }
 	bool IsMoving() const { return m_bMoved; }
 	bool IsRunning() const { return m_bRunning; }
 	bool IsMouseOn() const { return m_bMouseInUse; }
 	bool ConsumeFire() { bool b = m_bFiredThisFrame; m_bFiredThisFrame = false; return b; }
+	bool ConsumeMelee() { bool b = m_bMeleeStartedThisFrame; m_bMeleeStartedThisFrame = false; return b; }
+
+	void SetPlayerModel(const std::string& strModelKey);
 
 public:
 	// Collision
@@ -130,12 +132,12 @@ public:
 
 public:
 	void PlayFireAction();
+	void PlayMeleeStartAction();	// public: 리모트 플레이어 근접공격 모션 재생에도 사용
 
 protected:
 	// Player action
 	void EnterAim();
 	void LeaveAim();
-	void PlayMeleeStartAction();
 	void PlayMeleeEndAction();
 
 	void ApplyWeaponChanged(WEAPON_TYPE eWeaponType);
@@ -183,6 +185,7 @@ protected:
 	WEAPON_TYPE m_eWeaponTypeBeforeMelee = WEAPON_TYPE::UNDEFINED;
 	bool m_bInMeleeAttack = false;
 	bool m_bWasAimBeforeMelee = false;
+	bool m_bMeleeStartedThisFrame = false;	// 로컬 입력으로 근접공격 시작 → 씬이 소비
 
 	// Collision
 	std::vector<BoundingOrientedBox> m_xmOBBCollided;

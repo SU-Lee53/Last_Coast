@@ -169,9 +169,9 @@ void IGameObject::ShowControlImGui()
 	std::string strComponentName[] = {
 		"TRANSFORM",
 		"MESH_RENDERER",
+		"COLLIDER",
 		"ANIMATION_CONTROLLER",
 		"SKELETON",
-		"COLLIDER",
 	};
 
 	if (ImGui::TreeNode(strTreeNodeName.c_str())) {

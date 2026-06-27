@@ -10,6 +10,8 @@ public:
 	explicit BurstSpawnModule(uint32 unCount)
 		: m_unCount(unCount) {}
 
+	virtual void Reset() override { m_bSpawned = false; }
+
 	virtual void UpdateSpawn(
 		ParticleEmitter& emitter,
 		const ParticleModuleContext& context) override;
@@ -17,6 +19,23 @@ public:
 private:
 	uint32 m_unCount = 0;
 	bool m_bSpawned = false;
+};
+
+class RateSpawnModule : public IParticleSpawnModule {
+public:
+	RateSpawnModule(float fSpawnRate, float fDuration)
+		: m_fSpawnRate(fSpawnRate), m_fDuration(fDuration) {}
+
+	virtual void Reset() override { m_fSpawnAccumulator = 0.f; }
+
+	virtual void UpdateSpawn(
+		ParticleEmitter& emitter,
+		const ParticleModuleContext& context) override;
+
+private:
+	float m_fSpawnRate = 0.f;
+	float m_fDuration = 1.f;
+	float m_fSpawnAccumulator = 0.f;
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -27,6 +46,20 @@ public:
 	virtual void Initialize(
 		Particle& particle,
 		const ParticleModuleContext& context) override;
+};
+
+class InitPositionSphereModule : public IParticleInitializeModule {
+public:
+	InitPositionSphereModule(float fRadiusMin, float fRadiusMax)
+		: m_fRadiusMin(fRadiusMin), m_fRadiusMax(fRadiusMax) {}
+
+	virtual void Initialize(
+		Particle& particle,
+		const ParticleModuleContext& context) override;
+
+private:
+	float m_fRadiusMin = 0.f;
+	float m_fRadiusMax = 0.f;
 };
 
 class InitLifetimeRandomModule : public IParticleInitializeModule {
@@ -87,6 +120,20 @@ private:
 	float m_fMax = XM_2PI;
 };
 
+class InitAngularVelocityRandomModule : public IParticleInitializeModule {
+public:
+	InitAngularVelocityRandomModule(float fMin, float fMax)
+		: m_fMin(fMin), m_fMax(fMax) {}
+
+	virtual void Initialize(
+		Particle& particle,
+		const ParticleModuleContext& context) override;
+
+private:
+	float m_fMin = 0.f;
+	float m_fMax = 0.f;
+};
+
 class InitConeVelocityModule : public IParticleInitializeModule {
 public:
 	InitConeVelocityModule(float fSpeedMin, float fSpeedMax, float fConeAngleRadians)
@@ -100,6 +147,20 @@ private:
 	float m_fSpeedMin = 0.f;
 	float m_fSpeedMax = 1.f;
 	float m_fConeAngleRadians = XM_PIDIV4;
+};
+
+class InitSphereVelocityModule : public IParticleInitializeModule {
+public:
+	InitSphereVelocityModule(float fSpeedMin, float fSpeedMax)
+		: m_fSpeedMin(fSpeedMin), m_fSpeedMax(fSpeedMax) {}
+
+	virtual void Initialize(
+		Particle& particle,
+		const ParticleModuleContext& context) override;
+
+private:
+	float m_fSpeedMin = 0.f;
+	float m_fSpeedMax = 1.f;
 };
 
 ///////////////////////////////////////////////////////////////////////////

@@ -26,8 +26,15 @@ private:
 	void ProcessNetworkZombies();
 	// 서버에서 수신한 사격 결과를 소비하고 이펙트 출력.
 	void ProcessShootResults();
+	// 로컬 근접공격 입력 → 온라인 송신 / 오프라인 로컬 판정
+	void ProcessPlayerMelee();
+	// 서버 근접공격 결과 → 좀비 데미지/피 + 리모트 애니메이션
+	void ProcessMeleeResults();
 
 private:
+	std::shared_ptr<class WaterGridObject> m_pWater = nullptr;
+	Vector3 m_v3WaterPos{};
+
 	ZombiePool m_ZombiePool;
 	//std::unique_ptr<NavMeshDebugRenderer> m_pNavMeshDebugRenderer;
 

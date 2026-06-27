@@ -103,7 +103,9 @@ namespace AIDLL
 			m_PathState = AIPathState::PathRequested;
 			bool bRequested = m_pPathPlanner->RequestPathToPosition(target);
 			if (!bRequested)
+			{
 				m_PathState = AIPathState::Idle;
+			}
 		}
 		else
 		{

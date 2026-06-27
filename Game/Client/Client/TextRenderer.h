@@ -46,9 +46,16 @@ struct CachedText {
 	std::wstring wstrText;
 
 	TextAtlas::AtlasRect Rect{};
-
 	bool bValid = false;
 	bool bDirty = true;
+
+	Vector2 GetSize() const {
+		return Vector2{
+			static_cast<float>(Rect.w),
+			static_cast<float>(Rect.h)
+		};
+	}
+
 };
 
 using CachedTextTable = ResourceTable<TextCacheKey, CachedText, TextCacheKeyHasher>;

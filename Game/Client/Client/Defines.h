@@ -115,7 +115,9 @@ enum class DESCRIPTOR_TYPE {
 enum class WEAPON_TYPE : uint8 {
 	M4 = 0,
 	AK,
+	SHOTGUN,
 	RIFLE,
+	LMG,
 	PISTOL,
 	MELEE,
 

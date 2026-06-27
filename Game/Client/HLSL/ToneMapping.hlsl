@@ -69,9 +69,11 @@ float4 PSToneMapping(VS_QUAD_OUTPUT input) : SV_Target0
 	float3 bloomColorQuater = gtxtBloomResult[1].SampleLevel(gSamplerState, input.uv, 0.0f).rgb;
 	float3 bloomColorEighth = gtxtBloomResult[2].SampleLevel(gSamplerState, input.uv, 0.0f).rgb;
 	float3 bloomColor = bloomColorHalf * 0.75 + bloomColorQuater * 0.20 + bloomColorEighth * 0.05;
+	float3 lightShaftColor = gtxtLightShaft.SampleLevel(gSamplerState, input.uv, 0.0f).rgb;
 	
     hdrColor += bloomColor;
 	hdrColor += bloomColor;
+	hdrColor += lightShaftColor;
 
 	float autoExposure = 1.0f;
 

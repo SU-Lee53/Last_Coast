@@ -3,6 +3,7 @@
 
 class TextBox;
 class TextButton;
+class InputTextBox;
 
 class MapTestScene : public Scene {
 public:
@@ -21,7 +22,11 @@ private:
 	std::shared_ptr<TextButton> m_pKoreanText = nullptr;
 	std::shared_ptr<TextBox> m_pLoadTimeText = nullptr;
 
+	std::shared_ptr<InputTextBox> m_pInputTest = nullptr;
+	std::shared_ptr<InputTextBox> m_pPWInputTest = nullptr;
+
 	std::shared_ptr<IGameObject> m_pGun = nullptr;
+
 
 	int32 m_nWeaponSelected = 0;
 

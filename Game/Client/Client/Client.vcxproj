@@ -71,7 +71,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LibraryPath>$(SolutionDir)Dependencies\Libraries\;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)Dependencies\Libraries\TBB\;$(SolutionDir)Dependencies\Libraries\;$(LibraryPath)</LibraryPath>
     <ExternalIncludePath>$(SolutionDir)AI\;$(SolutionDir)../../../Server/Server/;$(SolutionDir)Dependencies\Includes\;$(ExternalIncludePath)</ExternalIncludePath>
     <OutDir>$(SolutionDir)Executables\</OutDir>
     <TargetName>$(ProjectName)_dbg</TargetName>
@@ -79,7 +79,7 @@
     <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LibraryPath>$(SolutionDir)Dependencies\Libraries\;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)Dependencies\Libraries\TBB\;$(SolutionDir)Dependencies\Libraries\;$(LibraryPath)</LibraryPath>
     <ExternalIncludePath>$(SolutionDir)AI\;$(SolutionDir)../../../Server/Server/;$(SolutionDir)Dependencies\Includes\;$(ExternalIncludePath)</ExternalIncludePath>
     <OutDir>$(SolutionDir)Executables\</OutDir>
     <IntDir>$(SolutionDir)Intermediates\</IntDir>
@@ -166,6 +166,7 @@
     <ClInclude Include="AutoExposurePass.h" />
     <ClInclude Include="BloodEffect.h" />
     <ClInclude Include="BloomPass.h" />
+    <ClInclude Include="BoundingBoxDebugPass.h" />
     <ClInclude Include="BoundingCapsule.h" />
     <ClInclude Include="BulletImpactEffect.h" />
     <ClInclude Include="Camera.h" />
@@ -186,7 +187,14 @@
     <ClInclude Include="DescriptorHeap.h" />
     <ClInclude Include="DirectionalCascadeShadowMapPass.h" />
     <ClInclude Include="DynamicObject.h" />
+    <ClInclude Include="EventSequence.h" />
+    <ClInclude Include="ExplosionEffect.h" />
+    <ClInclude Include="FireEffect.h" />
+    <ClInclude Include="GameEvent.h" />
+    <ClInclude Include="LMGWeapon.h" />
+    <ClInclude Include="LobbyScene.h" />
     <ClInclude Include="LogInScene.h" />
+    <ClInclude Include="MenuScene.h" />
     <ClInclude Include="MuzzleFlashEffect.h" />
     <ClInclude Include="NetworkGameTestScene.h" />
     <ClInclude Include="ParticleEffect.h" />
@@ -203,10 +211,12 @@
     <ClInclude Include="PostProcessingVolume.h" />
     <ClInclude Include="RayTraceUtils.h" />
     <ClInclude Include="RWStructuredBuffer.h" />
+    <ClInclude Include="Sound.h" />
     <ClInclude Include="SpatialTraits.h" />
     <ClInclude Include="SpatialTypes.h" />
     <ClInclude Include="SpatialWorld.h" />
     <ClInclude Include="SSAOPass.h" />
+    <ClInclude Include="LightShaftPass.h" />
     <ClInclude Include="TextRenderer.h" />
     <ClInclude Include="GameFramework.h" />
     <ClInclude Include="GameObject.h" />
@@ -273,8 +283,16 @@
     <ClInclude Include="TypedObjectPool.h" />
     <ClInclude Include="UIBoard.h" />
     <ClInclude Include="UIComponent.h" />
+    <ClInclude Include="M4Weapon.h" />
+    <ClInclude Include="AkWeapon.h" />
+    <ClInclude Include="RifleWeapon.h" />
+    <ClInclude Include="PistolWeapon.h" />
+    <ClInclude Include="MeleeWeapon.h" />
+    <ClInclude Include="ShotgunWeapon.h" />
+    <ClInclude Include="SmokeEffect.h" />
     <ClInclude Include="UIPass.h" />
     <ClInclude Include="Utility.h" />
+    <ClInclude Include="WaterGridObject.h" />
     <ClInclude Include="WeaponObject.h" />
     <ClInclude Include="WinCore.h" />
     <ClInclude Include="WInSockCommon.h" />
@@ -343,6 +361,7 @@
     <ClCompile Include="AutoExposurePass.cpp" />
     <ClCompile Include="BloodEffect.cpp" />
     <ClCompile Include="BloomPass.cpp" />
+    <ClCompile Include="BoundingBoxDebugPass.cpp" />
     <ClCompile Include="BoundingCapsule.cpp" />
     <ClCompile Include="BulletImpactEffect.cpp" />
     <ClCompile Include="Camera.cpp" />
@@ -361,7 +380,13 @@
     <ClCompile Include="DescriptorHeap.cpp" />
     <ClCompile Include="DirectionalCascadeShadowMapPass.cpp" />
     <ClCompile Include="DynamicObject.cpp" />
+    <ClCompile Include="EventSequence.cpp" />
+    <ClCompile Include="ExplosionEffect.cpp" />
+    <ClCompile Include="FireEffect.cpp" />
+    <ClCompile Include="GameEvent.cpp" />
+    <ClCompile Include="LobbyScene.cpp" />
     <ClCompile Include="LogInScene.cpp" />
+    <ClCompile Include="MenuScene.cpp" />
     <ClCompile Include="MuzzleFlashEffect.cpp" />
     <ClCompile Include="NetworkGameTestScene.cpp" />
     <ClCompile Include="ParticleEffect.cpp" />
@@ -377,8 +402,10 @@
     <ClCompile Include="ParticleTextureCache.cpp" />
     <ClCompile Include="PostProcessingVolume.cpp" />
     <ClCompile Include="RWStructuredBuffer.cpp" />
+    <ClCompile Include="Sound.cpp" />
     <ClCompile Include="SpatialWorld.cpp" />
     <ClCompile Include="SSAOPass.cpp" />
+    <ClCompile Include="LightShaftPass.cpp" />
     <ClCompile Include="TextAtlas.cpp" />
     <ClCompile Include="TextRenderer.cpp" />
     <ClCompile Include="GameFramework.cpp" />
@@ -420,6 +447,7 @@
     <ClCompile Include="ShaderResource.cpp" />
     <ClCompile Include="SimpleMath.cpp" />
     <ClCompile Include="Skeleton.cpp" />
+    <ClCompile Include="SmokeEffect.cpp" />
     <ClCompile Include="Skybox.cpp" />
     <ClCompile Include="SkyboxPass.cpp" />
     <ClCompile Include="SoundManager.cpp" />
@@ -444,8 +472,10 @@
     <ClCompile Include="TypedObjectPool.cpp" />
     <ClCompile Include="UIBoard.cpp" />
     <ClCompile Include="UIComponent.cpp" />
+    <ClCompile Include="ShotgunWeapon.cpp" />
     <ClCompile Include="UIPass.cpp" />
     <ClCompile Include="Utility.cpp" />
+    <ClCompile Include="WaterGridObject.cpp" />
     <ClCompile Include="WeaponObject.cpp" />
     <ClCompile Include="WinCore.cpp" />
     <ClCompile Include="World.cpp" />
@@ -473,6 +503,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </FxCompile>
+    <FxCompile Include="..\HLSL\DebugLineShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="..\HLSL\ForwardShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -488,6 +522,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="..\HLSL\Light.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\LightShaft.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>

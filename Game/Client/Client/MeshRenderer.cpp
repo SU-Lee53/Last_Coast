@@ -33,6 +33,11 @@ MeshRenderer::MeshRenderer(std::shared_ptr<IGameObject> pOwner, const std::vecto
 			pMesh = std::make_shared<TerrainMesh>(meshLoadInfo);
 			break;
 		}
+		case MESH_TYPE::WATER:
+		{
+			pMesh = std::make_shared<StaticMesh>(meshLoadInfo);
+			break;
+		}
 		default:
 			std::unreachable();
 		}
@@ -60,6 +65,11 @@ MeshRenderer::MeshRenderer(std::shared_ptr<IGameObject> pOwner, const std::vecto
 		case MESH_TYPE::TERRAIN:
 		{
 			handle = MATERIAL->LoadMaterial<TerrainMaterial>(strMaterialKey, materialInfo);
+			break;
+		}
+		case MESH_TYPE::WATER:
+		{
+			handle = MATERIAL->LoadMaterial<WaterMaterial>(strMaterialKey, materialInfo);
 			break;
 		}
 		default:

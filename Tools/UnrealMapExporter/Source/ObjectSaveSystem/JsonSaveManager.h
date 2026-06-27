@@ -31,7 +31,7 @@ class OBJECTSAVESYSTEM_API UJsonSaveManager : public UBlueprintFunctionLibrary
 
 public:
 
-    // ¿©·¯ ¾×ÅÍ ÀúÀå
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     UFUNCTION(BlueprintCallable, Category = "JSON Save System")
     static bool SaveActorsToJson(const TArray<AActor*>& Actors, const FString& FileName);
 
@@ -42,11 +42,11 @@ public:
         EMeshExportFormat ExportFormat = EMeshExportFormat::GLB
     );
 
-    // ¿©·¯ ¾×ÅÍ ÀúÀå
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     UFUNCTION(BlueprintCallable, Category = "JSON Save System")
     static bool SaveActorsMeshToFBX(const TArray<AActor*>& Actors);
 
-    // Landscape export ÇÔ¼öµé
+    // Landscape export ï¿½Ô¼ï¿½ï¿½ï¿½
     UFUNCTION(BlueprintCallable, Category = "JSON Save System")
     static bool SaveLandscapeToJson(ALandscape* Landscape, const FString& FileName);
 
@@ -59,7 +59,7 @@ public:
     
 
 private:
-    // TransformÀ» JSON ¿ÀºêÁ§Æ®·Î º¯È¯
+    // Transformï¿½ï¿½ JSON ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½È¯
     static TSharedPtr<FJsonObject> TransformToJson(const FTransform& Transform);
 
     static TSharedPtr<FJsonObject> DirectionToJson(const FTransform& Transform);
@@ -93,6 +93,8 @@ private:
 
     static TSharedPtr<FJsonObject> LandscapeComponentToJson(ULandscapeComponent* Component,int32 ComponentIndex,const TMap<FName, int32>& LayerIndexMap);
 
+    static float GetLandscapeTiling(ALandscape* Landscape);
+
     static bool ExportHeightmapAsPNG(const TArray<uint16>& HeightData, int32 Width, int32 Height, const FString& FileName);
 
     static TMap<FName, FExportedLayerTextures> ExportLayerTextures(
@@ -108,6 +110,18 @@ private:
         UMaterialExpression* Expression,
         TArray<UTexture2D*>& OutTextures,
         TSet<UMaterialExpression*>& VisitedExpressions);
+
+    static float FindMappingScaleFromExpression(
+        UMaterialExpression* Expression,
+        TSet<UMaterialExpression*>& VisitedExpressions,
+        int32& OutCustomUVType);
+
+    // MappingScale + CustomUVType + ëœë“œìŠ¤ì¼€ì´í”„ ì¹˜ìˆ˜ -> í´ë¼ì´ì–¸íŠ¸ Tiling(= cmë‹¹ í…ìŠ¤ì²˜ ë°˜ë³µ)
+    // í´ë¼ ì…°ì´ë”: UV = worldLocalXZ_cm * Tiling
+    static float ComputeLandscapeTilingFromMapping(
+        ALandscape* Landscape,
+        float MappingScale,
+        int32 CustomUVType);
 
 
     static FString DetermineTextureTypeFromConnection(

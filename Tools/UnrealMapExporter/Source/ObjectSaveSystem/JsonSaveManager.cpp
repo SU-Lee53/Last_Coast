@@ -55,9 +55,12 @@
 #include "Materials/MaterialExpression.h"
 #include "Materials/MaterialExpressionTextureSample.h"
 #include "Materials/MaterialExpressionLandscapeLayerBlend.h"
+#include "Materials/MaterialExpressionLandscapeLayerCoords.h"
 #include "Materials/MaterialExpressionMultiply.h"
 #include "Materials/MaterialExpressionAdd.h"
 #include "Materials/MaterialExpressionLinearInterpolate.h"
+#include "Materials/MaterialExpressionMaterialFunctionCall.h"
+#include "Materials/MaterialFunctionInterface.h"
 
 // StaticMesh 관련
 #include "Engine/StaticMeshActor.h"
@@ -947,6 +950,18 @@ TSharedPtr<FJsonObject> UJsonSaveManager::LandscapeComponentToJson(
     return ComponentJson;
 }
 
+float UJsonSaveManager::GetLandscapeTiling(ALandscape* Landscape)
+{
+    UMaterialInterface* Mat = Landscape->GetLandscapeMaterial();
+    if (!Mat) return 1.0f;
+
+    // 폴백: 텍스처가 export 안 된 레이어용. material 의 MappingScale 스칼라 파라미터를
+    // WeightMap_UV 기준으로 클라 Tiling 으로 환산 (값 없으면 MappingScale=1 가정).
+    float MappingScale = 1.0f;
+    Mat->GetScalarParameterValue(FName("MappingScale"), MappingScale);
+    return ComputeLandscapeTilingFromMapping(Landscape, MappingScale, (int32)LCCT_WeightMapUV);
+}
+
 
 TArray<TSharedPtr<FJsonValue>> UJsonSaveManager::GetLayersInfoJson(
     ALandscape* Landscape,
@@ -988,6 +1003,8 @@ TArray<TSharedPtr<FJsonValue>> UJsonSaveManager::GetLayersInfoJson(
                 // ✅ 실제로 export된 텍스처만 포함
                 const FExportedLayerTextures* ExportedLayer = ExportedTextures.Find(LayerFName);
 
+                float GlobalTiling = GetLandscapeTiling(Landscape);
+
                 if (ExportedLayer)
                 {
                     TSharedPtr<FJsonObject> TexturesJson = MakeShareable(new FJsonObject);
@@ -1015,7 +1032,7 @@ TArray<TSharedPtr<FJsonValue>> UJsonSaveManager::GetLayersInfoJson(
                     // Export된 텍스처가 없는 경우 빈 객체
                     TSharedPtr<FJsonObject> TexturesJson = MakeShareable(new FJsonObject);
                     LayerJson->SetObjectField(TEXT("Textures"), TexturesJson);
-                    LayerJson->SetNumberField(TEXT("Tiling"), 0.01f);
+                    LayerJson->SetNumberField(TEXT("Tiling"), GlobalTiling);
 
                     UE_LOG(LogTemp, Warning, TEXT("No exported textures found for layer: %s"),
                         *LayerFName.ToString());
@@ -1453,6 +1470,42 @@ TMap<FName, FExportedLayerTextures> UJsonSaveManager::ExportLayerTextures(
                 }
             }
 
+            // Scalar 파라미터 실패 시 → LandscapeLayerCoords.MappingScale + CustomUVType에서 추출
+            if (LayerTextures.Tiling == 0.01f && Layer.LayerInput.Expression)
+            {
+                int32 CustomUVType = (int32)LCCT_None;
+
+                // 1) 레이어 입력 트리에서 탐색
+                TSet<UMaterialExpression*> CoordVisited;
+                float MappingScale = FindMappingScaleFromExpression(Layer.LayerInput.Expression, CoordVisited, CustomUVType);
+
+                // 2) 폴백: 머트리얼 전역(중첩 MF 포함)에서 LandscapeLayerCoords 탐색
+                if (MappingScale <= 0.f)
+                {
+                    TSet<UMaterialExpression*> GlobalVisited;
+                    for (UMaterialExpression* Expr : BaseMaterial->GetExpressions())
+                    {
+                        MappingScale = FindMappingScaleFromExpression(Expr, GlobalVisited, CustomUVType);
+                        if (MappingScale > 0.f)
+                        {
+                            UE_LOG(LogTemp, Log, TEXT("    (global scan) LandscapeLayerCoords found"));
+                            break;
+                        }
+                    }
+                }
+
+                if (MappingScale > 0.f)
+                {
+                    LayerTextures.Tiling = ComputeLandscapeTilingFromMapping(Landscape, MappingScale, CustomUVType);
+                    UE_LOG(LogTemp, Log, TEXT("    Tiling from LandscapeLayerCoords: MappingScale=%.3f, UVType=%d → Tiling=%.6f"),
+                        MappingScale, CustomUVType, LayerTextures.Tiling);
+                }
+                else
+                {
+                    UE_LOG(LogTemp, Warning, TEXT("    LandscapeLayerCoords NOT found anywhere → Tiling stays %.4f"), LayerTextures.Tiling);
+                }
+            }
+
             // 이 레이어에 직접 연결된 텍스처들 수집
             TArray<UTexture2D*> LayerTexturesList;
             TSet<UMaterialExpression*> VisitedExpressions;
@@ -1650,6 +1703,102 @@ bool UJsonSaveManager::ExportTextureToPNG(UTexture2D* Texture, const FString& Fi
         UE_LOG(LogTemp, Error, TEXT("Failed to set raw data for PNG encoding"));
         return false;
     }
+}
+
+float UJsonSaveManager::FindMappingScaleFromExpression(
+    UMaterialExpression* Expression,
+    TSet<UMaterialExpression*>& VisitedExpressions,
+    int32& OutCustomUVType)
+{
+    if (!Expression || VisitedExpressions.Contains(Expression))
+        return -1.f;
+
+    VisitedExpressions.Add(Expression);
+
+    // LandscapeLayerCoords 노드 발견 → MappingScale + CustomUVType 반환
+    // MappingScale 이 0/미설정이어도 "노드 찾음" 으로 처리 (1.0 보정). 못찾음(-1)과 구분.
+    if (UMaterialExpressionLandscapeLayerCoords* Coords =
+        Cast<UMaterialExpressionLandscapeLayerCoords>(Expression))
+    {
+        OutCustomUVType = (int32)Coords->CustomUVType;
+        return (Coords->MappingScale > 0.f) ? Coords->MappingScale : 1.0f;
+    }
+
+    // TextureSample: Coordinates(UV) 입력도 탐색 (CollectTextures와 달리 멈추지 않음)
+    if (UMaterialExpressionTextureSample* TS =
+        Cast<UMaterialExpressionTextureSample>(Expression))
+    {
+        if (TS->Coordinates.Expression)
+        {
+            float Scale = FindMappingScaleFromExpression(TS->Coordinates.Expression, VisitedExpressions, OutCustomUVType);
+            if (Scale > 0.f) return Scale;
+        }
+    }
+
+    // Material Function 호출 → 함수 내부 노드까지 진입 (GetInput 으로는 내부 못 봄)
+    if (UMaterialExpressionMaterialFunctionCall* FuncCall =
+        Cast<UMaterialExpressionMaterialFunctionCall>(Expression))
+    {
+        if (FuncCall->MaterialFunction)
+        {
+            // Function Instance 면 GetExpressions() 가 비므로 GetBaseFunction() 으로 실제 함수 획득.
+            // range-for 로 순회 (TObjectPtr/raw 둘 다 UMaterialExpression* 로 암시변환 → 버전 무관)
+            if (UMaterialFunction* BaseFunc = FuncCall->MaterialFunction->GetBaseFunction())
+            {
+                for (UMaterialExpression* Inner : BaseFunc->GetExpressions())
+                {
+                    float Scale = FindMappingScaleFromExpression(Inner, VisitedExpressions, OutCustomUVType);
+                    if (Scale > 0.f) return Scale;
+                }
+            }
+        }
+    }
+
+    // 모든 입력 순회
+    for (int32 i = 0; i < 100; ++i)
+    {
+        FExpressionInput* Input = Expression->GetInput(i);
+        if (!Input) break;
+        if (Input->Expression)
+        {
+            float Scale = FindMappingScaleFromExpression(Input->Expression, VisitedExpressions, OutCustomUVType);
+            if (Scale > 0.f) return Scale;
+        }
+    }
+
+    return -1.f;
+}
+
+// LandscapeLayerCoords 의 MappingScale/CustomUVType 을 클라이언트 Tiling 으로 변환.
+// 클라 셰이더: UV = worldLocalXZ_cm * Tiling
+//   Unreal:  textureUV = BaseUV * (1 / MappingScale)
+//   - LCCT_WeightMapUV : BaseUV 0..1 / 컴포넌트 1칸  → 1칸 폭 = ComponentSizeQuads * Scale.X (cm)
+//                        Tiling = 1 / (ComponentSizeQuads * Scale.X * MappingScale)
+//   - LCCT_None(기본)  : BaseUV 단위 = 1 quad = Scale.X (cm)
+//                        Tiling = 1 / (Scale.X * MappingScale)
+float UJsonSaveManager::ComputeLandscapeTilingFromMapping(
+    ALandscape* Landscape,
+    float MappingScale,
+    int32 CustomUVType)
+{
+    if (MappingScale <= 0.f)
+        MappingScale = 1.f;
+
+    const float ScaleX = Landscape ? (float)Landscape->GetActorScale3D().X : 100.f;
+    const int32 ComponentSizeQuads = Landscape ? Landscape->ComponentSizeQuads : 63;
+
+    if (CustomUVType == (int32)LCCT_WeightMapUV)
+    {
+        const float CompSpanCm = (float)ComponentSizeQuads * ScaleX;
+        if (CompSpanCm > 0.f)
+            return 1.f / (CompSpanCm * MappingScale);
+    }
+
+    // LCCT_None 및 그 외(CustomUV0~2 는 정확한 환산 불가 → quad 기준으로 근사)
+    if (ScaleX > 0.f)
+        return 1.f / (ScaleX * MappingScale);
+
+    return 1.f / MappingScale;
 }
 
 void UJsonSaveManager::CollectTexturesFromExpression(
