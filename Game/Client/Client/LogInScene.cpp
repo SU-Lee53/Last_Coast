@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "LogInScene.h"
 #include "DebugPlayer.h"
 #include "GameScene.h"
@@ -229,6 +229,23 @@ void LogInScene::Update()
 {
 	NETWORK->ConnectToServer();
 
+	if (NETWORK->m_nLoginState == 1) {
+		m_pResultText->SetText(L"Login Success!");
+		NETWORK->m_nLoginState = 0;
+		m_bProceed = true;
+	} else if (NETWORK->m_nLoginState == -1) {
+		m_pResultText->SetText(L"Login Failed. Please check ID/PW.");
+		NETWORK->m_nLoginState = 0;
+	}
+
+	if (NETWORK->m_nRegisterState == 1) {
+		m_pResultText->SetText(L"Register Success!");
+		NETWORK->m_nRegisterState = 0;
+	} else if (NETWORK->m_nRegisterState == -1) {
+		m_pResultText->SetText(L"Register Failed. ID may already exist.");
+		NETWORK->m_nRegisterState = 0;
+	}
+
 	if (m_bProceed) {
 		m_bProceed = false;
 		SCENE->PushScene<MenuScene>();
@@ -243,6 +260,9 @@ bool LogInScene::TryLogIn()
 	// 로그인 시도
 	// 성공하면 TRUE, 실패하면 FALSE 를 리턴
 	// ID, 비번은 m_strIDInput, m_strPasswordInput 에 보관됩니다.
+	if (NETWORK->IsConnected() && !NETWORK->IsOffline()) {
+		NETWORK->SendLogin(m_strIDInput, m_strPasswordInput);
+	}
 
 	return true;
 }
@@ -253,6 +273,9 @@ bool LogInScene::TryRegister()
 	// 회원가입 시도
 	// 성공하면 TRUE, 실패하면 FALSE 를 리턴
 	// ID, 비번은 m_strIDInput, m_strPasswordInput 에 보관됩니다.
+	if (NETWORK->IsConnected() && !NETWORK->IsOffline()) {
+		NETWORK->SendRegister(m_strIDInput, m_strPasswordInput);
+	}
 
 	return true;
 }
