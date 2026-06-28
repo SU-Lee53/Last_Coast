@@ -4,6 +4,7 @@
 
 class TextBox;
 class InputTextBox;
+class ImageBox;
 
 class GameScene : public Scene {
 public:
@@ -42,12 +43,17 @@ private:
 	// 히스토리/입력 UI 컴포넌트 생성, Enter 폴링으로 열기/전송/닫기, 히스토리 갱신
 	void BuildChatUI();
 	void UpdateChat();
+	void BeginEndCredits();
+	void BuildEndCreditsUI();
+	void UpdateEndCredits();
+	void ClearEndCreditsUI();
 
 private:
 	std::shared_ptr<class WaterGridObject> m_pWater = nullptr;
 	Vector3 m_v3WaterPos{};
-
 	ZombiePool m_ZombiePool;
+
+	bool m_bGameEnded = false;
 
 	// 오프라인 드립 스폰 설정
 	static constexpr int   OFFLINE_MAX_ZOMBIES   = 100;   // 동시 존재 최대 마리수
@@ -65,23 +71,14 @@ private:
 	std::shared_ptr<InputTextBox>                       m_pChatInput;
 	std::array<std::shared_ptr<TextBox>, CHAT_VISIBLE_LINES> m_pChatLines{};
 	std::vector<std::wstring>                           m_ChatHistory;
-};
 
-//Old_Rotten_Wood_vlzhfekn_2K_Normal.dds
-//Old_Concrete_Barrier_vksrdes_Mid_2K_Normal.dds
-//TX_PaintedWood_A_NRM.dds
-//Fine_American_Road_sjfnch0a_2K_Normal.dds
-//Fine_American_Road_sjfnch0a_2K_Normal.dds
-//Fine_American_Road_sjfnch0a_2K_Normal.dds
-//Fine_American_Road_sjfnch0a_2K_Normal.dds
-//Fine_American_Road_sjfnch0a_2K_Normal.dds
-//Street_Curbs_sepxW_Mid_2K_Normal.dds
-//Street_Curbs_sepxW_Mid_2K_Normal.dds
-//Street_Curbs_sepxW_Mid_2K_Normal.dds
-//Street_Curbs_sepxW_Mid_2K_Normal.dds
-//Street_Curbs_sepxW_Mid_2K_Normal.dds
-//Dirty_Sidewalk_Tiles_ugxjcdpn_2K_Normal.dds
-//Dirty_Sidewalk_Tiles_ugxjcdpn_2K_Normal.dds
-//Dirty_Sidewalk_Tiles_ugxjcdpn_2K_Normal.dds
-//Dirty_Sidewalk_Tiles_ugxjcdpn_2K_Normal.dds
-//Dirty_Sidewalk_Tiles_ugxjcdpn_2K_Normal.dds
+	// End credits
+	float m_fEndCreditsElapsed = 0.0f;
+	constexpr static float END_CREDITS_DURATION = 10.0f;
+	constexpr static float END_CREDITS_FADE_IN_DURATION = 2.5f;
+	constexpr static float END_CREDITS_FIRST_LINE_OFFSET_Y = 120.0f;
+	constexpr static float END_CREDITS_LINE_HEIGHT = 34.0f;
+	std::shared_ptr<ImageBox> m_pEndBackgroundImage;
+	std::shared_ptr<TextBox> m_pEndTitleText;
+	std::vector<std::shared_ptr<TextBox>> m_pEndCreditTexts;
+};

@@ -179,7 +179,7 @@ void MapTestScene::Update()
 				desc.v3Position = v3PlayerPos + desc.v3Direction * 180.0f;
 				desc.mtxWorld = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
 				return desc;
-				};
+			};
 
 			ImGui::Text("Spawn Position : (%.1f, %.1f, %.1f)", v3PlayerPos.x, v3PlayerPos.y, v3PlayerPos.z);
 

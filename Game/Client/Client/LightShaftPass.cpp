@@ -114,9 +114,12 @@ void LightShaftPass::CreatePipelineState()
 CB_LIGHT_SHAFT_DATA LightShaftPass::MakeLightShaftCBData()
 {
 	Vector3 v3SunDirection = Vector3::Zero;
+	float fDayVisibility = 1.0f;
 
 	if (const auto& pSkybox = CUR_SCENE->GetSkybox()) {
-		v3SunDirection = pSkybox->MakeCBData().v3SunDirection;
+		const SkyboxData skyboxData = pSkybox->MakeCBData();
+		v3SunDirection = skyboxData.v3SunDirection;
+		fDayVisibility = std::clamp(skyboxData.fDayNightBlend, 0.0f, 1.0f);
 	}
 
 	if (v3SunDirection.LengthSquared() <= 1e-6f) {
@@ -150,7 +153,13 @@ CB_LIGHT_SHAFT_DATA LightShaftPass::MakeLightShaftCBData()
 
 	const auto& volume = CUR_SCENE->GetPostProcessingVolume();
 	CB_LIGHT_SHAFT_DATA cbData = volume.GetLightShaftCBData(m_v2LightScreenPosition);
-	if (!m_bLightInFront) {
+	cbData.gfIntensity *= fDayVisibility;
+
+	const bool bLightOnScreen =
+		m_v2LightScreenPosition.x >= 0.0f && m_v2LightScreenPosition.x <= 1.0f &&
+		m_v2LightScreenPosition.y >= 0.0f && m_v2LightScreenPosition.y <= 1.0f;
+
+	if (!m_bLightInFront || !bLightOnScreen || fDayVisibility <= 0.02f) {
 		cbData.gnEnable = 0;
 	}
 

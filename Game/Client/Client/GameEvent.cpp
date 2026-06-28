@@ -2,6 +2,7 @@
 #include "GameEvent.h"
 #include "Skybox.h"
 #include "BloodEffect.h"
+#include "FireEffect.h"
 #include "MuzzleFlashEffect.h"
 #include "ToneMappingVolume.h"
 #include "PostProcessingVolume.h"
@@ -112,7 +113,15 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 		p.fBloomIntensity    = 1.20f;   // 으스스한 발광
 		p.fVignetteStrength  = 0.70f;
 		p.v4FogColor         = Vector4{ 0.05f, 0.06f, 0.08f, 1.0f };
-		p.fFogDistanceDensity = 0.020f;
+		p.fFogStartDistance       = 200.f;
+		p.fFogCutOffDistance      = 6500.f;
+		p.fFogDistanceDensity     = 0.020f;
+		p.fFogDistancePower       = 1.35f;
+		p.fFogHeightDensity       = 0.055f;
+		p.fFogHeightFalloff       = 0.045f;
+		p.fFogBaseHeightOffset    = -120.f;
+		p.fFogHeightStartDistance = 0.f;
+		p.fFogMaxOpacity          = 0.86f;
 		return p;
 	}();
 
@@ -125,7 +134,15 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 		p.v4GlobalAmbient    = Vector4{ 0.03f, 0.04f, 0.07f, 1.0f };
 		p.fPostSaturation    = 0.75f;
 		p.v4FogColor         = Vector4{ 0.06f, 0.08f, 0.14f, 1.0f };
-		p.fFogDistanceDensity = 0.010f;
+		p.fFogStartDistance       = 400.f;
+		p.fFogCutOffDistance      = 9000.f;
+		p.fFogDistanceDensity     = 0.010f;
+		p.fFogDistancePower       = 1.15f;
+		p.fFogHeightDensity       = 0.030f;
+		p.fFogHeightFalloff       = 0.055f;
+		p.fFogBaseHeightOffset    = -80.f;
+		p.fFogHeightStartDistance = 0.f;
+		p.fFogMaxOpacity          = 0.60f;
 		return p;
 	}();
 
@@ -138,7 +155,15 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 		p.v4GlobalAmbient    = Vector4{ 0.18f, 0.14f, 0.12f, 1.0f };
 		p.fExposure          = 1.1f;
 		p.v4FogColor         = Vector4{ 0.55f, 0.45f, 0.40f, 1.0f };
-		p.fFogDistanceDensity = 0.0050f;
+		p.fFogStartDistance       = 600.f;
+		p.fFogCutOffDistance      = 12000.f;
+		p.fFogDistanceDensity     = 0.0050f;
+		p.fFogDistancePower       = 1.0f;
+		p.fFogHeightDensity       = 0.018f;
+		p.fFogHeightFalloff       = 0.040f;
+		p.fFogBaseHeightOffset    = -60.f;
+		p.fFogHeightStartDistance = 0.f;
+		p.fFogMaxOpacity          = 0.38f;
 		return p;
 	}();
 
@@ -152,7 +177,15 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 		p.v4GlobalAmbient    = Vector4{ 0.14f, 0.10f, 0.09f, 1.0f };
 		p.fExposure          = 1.05f;
 		p.v4FogColor         = Vector4{ 0.65f, 0.40f, 0.28f, 1.0f }; // 주황빛 노을
-		p.fFogDistanceDensity = 0.0060f;
+		p.fFogStartDistance       = 500.f;
+		p.fFogCutOffDistance      = 11000.f;
+		p.fFogDistanceDensity     = 0.0060f;
+		p.fFogDistancePower       = 1.1f;
+		p.fFogHeightDensity       = 0.020f;
+		p.fFogHeightFalloff       = 0.050f;
+		p.fFogBaseHeightOffset    = -50.f;
+		p.fFogHeightStartDistance = 0.f;
+		p.fFogMaxOpacity          = 0.45f;
 		return p;
 	}();
 
@@ -193,10 +226,16 @@ namespace {
 		p.fVignetteStrength  = fx.fVignetteStrength;
 		p.fVignetteRadius    = fx.fVignetteRadius;
 
-		p.v4FogColor         = fog.v4FogColor;
-		p.fFogDistanceDensity = fog.fFogDistanceDensity;
-		p.fFogHeightDensity  = fog.fFogHeightDensity;
-		p.fFogMaxOpacity     = fog.fFogMaxOpacity;
+		p.v4FogColor              = fog.v4FogColor;
+		p.fFogStartDistance       = fog.fFogStartDistance;
+		p.fFogCutOffDistance      = fog.fFogCutOffDistance;
+		p.fFogDistanceDensity     = fog.fFogDistanceDensity;
+		p.fFogDistancePower       = fog.fFogDistancePower;
+		p.fFogHeightDensity       = fog.fFogHeightDensity;
+		p.fFogHeightFalloff       = fog.fFogHeightFalloff;
+		p.fFogBaseHeightOffset    = fog.fFogBaseHeightOffset;
+		p.fFogHeightStartDistance = fog.fFogHeightStartDistance;
+		p.fFogMaxOpacity          = fog.fFogMaxOpacity;
 
 		p.bAffectTime        = true;
 		p.fTimeOfDay01       = pScene->GetSkybox() ? pScene->GetSkybox()->GetDayNightBlend() : 0.5f;
@@ -226,10 +265,16 @@ namespace {
 		fx.fVignetteStrength    = std::lerp(a.fVignetteStrength, b.fVignetteStrength, t);
 		fx.fVignetteRadius      = std::lerp(a.fVignetteRadius,   b.fVignetteRadius,   t);
 
-		fog.v4FogColor          = Vector4::Lerp(a.v4FogColor,    b.v4FogColor,        t);
-		fog.fFogDistanceDensity = std::lerp(a.fFogDistanceDensity, b.fFogDistanceDensity, t);
-		fog.fFogHeightDensity   = std::lerp(a.fFogHeightDensity, b.fFogHeightDensity, t);
-		fog.fFogMaxOpacity      = std::lerp(a.fFogMaxOpacity,    b.fFogMaxOpacity,    t);
+		fog.v4FogColor              = Vector4::Lerp(a.v4FogColor, b.v4FogColor, t);
+		fog.fFogStartDistance       = std::lerp(a.fFogStartDistance,       b.fFogStartDistance,       t);
+		fog.fFogCutOffDistance      = std::lerp(a.fFogCutOffDistance,      b.fFogCutOffDistance,      t);
+		fog.fFogDistanceDensity     = std::lerp(a.fFogDistanceDensity,     b.fFogDistanceDensity,     t);
+		fog.fFogDistancePower       = std::lerp(a.fFogDistancePower,       b.fFogDistancePower,       t);
+		fog.fFogHeightDensity       = std::lerp(a.fFogHeightDensity,       b.fFogHeightDensity,       t);
+		fog.fFogHeightFalloff       = std::lerp(a.fFogHeightFalloff,       b.fFogHeightFalloff,       t);
+		fog.fFogBaseHeightOffset    = std::lerp(a.fFogBaseHeightOffset,    b.fFogBaseHeightOffset,    t);
+		fog.fFogHeightStartDistance = std::lerp(a.fFogHeightStartDistance, b.fFogHeightStartDistance, t);
+		fog.fFogMaxOpacity          = std::lerp(a.fFogMaxOpacity,          b.fFogMaxOpacity,          t);
 
 		if (b.bAffectTime && pScene->GetSkybox()) {
 			pScene->GetSkybox()->SetDayNightBlend(std::lerp(a.fTimeOfDay01, b.fTimeOfDay01, t));
@@ -659,4 +704,45 @@ void CinematicCameraEvent::OnLeaveEvent(Scene* pScene)
 
 	m_pCameraSwapped.reset();
 	m_fTimeElapsed = 0.0f;
+}
+
+void FireEvent::Initialize(Scene* pScene)
+{
+	m_v3FirePos.clear();
+	m_pFireEffects.clear();
+	m_fFireEffectElapsed.clear();
+
+	const auto& pLights = pScene->GetLightsInScene();
+	for (const auto& pLight : pLights) {
+		if (auto point = std::dynamic_pointer_cast<PointLight>(pLight)) {
+			m_v3FirePos.push_back(pLight->m_v3Position);
+		}
+	}
+
+	m_pFireEffects.resize(m_v3FirePos.size());
+	m_fFireEffectElapsed.resize(m_v3FirePos.size(), 0.0f);
+}
+
+void FireEvent::OnUpdateEvent(Scene* pScene)
+{
+	constexpr float FIRE_EFFECT_ESTIMATED_DURATION = 5.4f;
+	constexpr float FIRE_EFFECT_RESPAWN_LEAD_TIME = FIRE_EFFECT_ESTIMATED_DURATION / 2;
+	constexpr float FIRE_EFFECT_RESPAWN_TIME = FIRE_EFFECT_ESTIMATED_DURATION - FIRE_EFFECT_RESPAWN_LEAD_TIME;
+
+	for (size_t i = 0; i < m_v3FirePos.size(); ++i) {
+		const auto& pEffect = m_pFireEffects[i];
+		m_fFireEffectElapsed[i] += DT;
+
+		if (pEffect && pEffect->IsPlaying() && !pEffect->IsDead() && m_fFireEffectElapsed[i] < FIRE_EFFECT_RESPAWN_TIME) {
+			continue;
+		}
+
+		ParticleEffectSpawnDesc desc{};
+		desc.v3Direction = Vector3::Up;
+		desc.v3Normal = Vector3::Up;
+		desc.v3Position = m_v3FirePos[i];
+		desc.mtxWorld = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
+		m_pFireEffects[i] = PARTICLE->Spawn<FireEffect>(desc);
+		m_fFireEffectElapsed[i] = 0.0f;
+	}
 }

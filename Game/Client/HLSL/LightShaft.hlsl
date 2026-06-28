@@ -37,6 +37,8 @@ float4 PSLightShaft(VS_QUAD_OUTPUT input) : SV_Target0
 		float3 sampleColor = gtxtHDRResult.SampleLevel(gSamplerState, uv, 0.0f).rgb;
 		float luminance = GetLuminanceForLightShaft(sampleColor);
 		float sourceMask = smoothstep(0.7f, 4.0f, luminance);
+		float sourceDistance = distance(uv, gv2LightScreenPosition);
+		sourceMask *= 1.0f - smoothstep(0.08f, 0.22f, sourceDistance);
 
 		shaftColor += sampleColor * sourceMask * skyVisibility * illuminationDecay * gfLightShaftWeight;
 		illuminationDecay *= gfLightShaftDecay;

@@ -6,7 +6,11 @@
 #include "TerrainTestScene.h"
 #include "Skybox.h"
 #include "MapTestScene.h"
+#include "LoginScene.h"
+#include "MenuScene.h"
+#include "LobbyScene.h"
 #include "TextBox.h"
+#include "Sprite.h"
 #include "BloodEffect.h"
 #include "MuzzleFlashEffect.h"
 #include "ZombieAnimationController.h"
@@ -69,6 +73,7 @@ void GameScene::BuildObjects()
 	// 서버 트리거 게임 이벤트용 시퀀스 (런타임에 이벤트 AddEvent).
 	// Scene::FixedUpdate()가 매 프레임 m_pEventSequence->Update() 호출.
 	m_pEventSequence = std::make_shared<EventSequence>(this);
+	m_pEventSequence->AddEvent(std::make_shared<FireEvent>());
 
 	m_pWater = std::make_shared<WaterGridObject>();
 	//pWater->Initialize();
@@ -86,6 +91,7 @@ void GameScene::OnEnterScene()
 
 void GameScene::OnLeaveScene()
 {
+	ClearEndCreditsUI();
 }
 
 void GameScene::ProcessInput()
@@ -249,8 +255,16 @@ void GameScene::Update()
 		if (ImGui::SliderFloat("Master Vol", &fMaster, 0.0f, 1.0f)) {
 			SOUND->SetMasterVolume(fMaster);
 		}
+		if (ImGui::Button("End Credits Test")) {
+			BeginEndCredits();
+		}
 	}
 	ImGui::End();
+
+	if (m_bGameEnded) {
+		UpdateEndCredits();
+		return;
+	}
 
 	UpdateOfflineSpawner();
 	SyncSceneWithServer();
@@ -261,6 +275,155 @@ void GameScene::Update()
 	ProcessServerGameEvents();
 	RemoveDeadZombies();
 	UpdateChat();
+}
+
+void GameScene::BeginEndCredits()
+{
+	if (m_bGameEnded) {
+		return;
+	}
+
+	m_bGameEnded = true;
+	m_fEndCreditsElapsed = 0.0f;
+
+	if (m_pUIBoard) {
+		m_pUIBoard->ClearFocus();
+	}
+	INPUT->SetTextInputMode(false);
+
+	BuildEndCreditsUI();
+}
+
+void GameScene::BuildEndCreditsUI()
+{
+	ClearEndCreditsUI();
+
+	if (!m_pUIBoard) {
+		return;
+	}
+
+	const std::wstring wstrTitle = L"THE END";
+	const std::vector<std::wstring> wstrcreditLines = {
+		L"Thanks for playing",
+		L"",
+		L"Programming",
+		L"- ",
+		L"",
+		L"Art / Level",
+		L"- ",
+		L"",
+		L"Special Thanks",
+		L"- Team Last Coast"
+	};
+
+	const float fScreenWidth = static_cast<float>(WinCore::g_dwClientWidth);
+	const float fScreenHeight = static_cast<float>(WinCore::g_dwClientHeight);
+	const float fBaseY = fScreenHeight * 0.5f + 120.0f;
+
+	m_pEndBackgroundImage = std::make_shared<ImageBox>("Color");
+	m_pEndBackgroundImage->SetLayer(0);
+	m_pEndBackgroundImage->SetAnchor(Vector2{ 0.5f, 0.5f });
+	m_pEndBackgroundImage->SetPivot(Vector2{ 0.5f, 0.5f });
+	m_pEndBackgroundImage->SetPosition(Vector2{ 0.0f, 0.0f });
+	m_pEndBackgroundImage->SetSize(Vector2{ fScreenWidth, fScreenHeight });
+	m_pEndBackgroundImage->SetColor(Vector4{ 0.0f, 0.0f, 0.0f, 0.0f });
+	m_pUIBoard->InsertUI(m_pEndBackgroundImage);
+
+	m_pEndTitleText = std::make_shared<TextBox>(L"Malgun Gothic");
+	m_pEndTitleText->SetText(wstrTitle);
+	m_pEndTitleText->SetLayer(0);
+	m_pEndTitleText->SetAnchor(Vector2{ 0.5f, 0.5f });
+	m_pEndTitleText->SetPivot(Vector2{ 0.5f, 0.5f });
+	m_pEndTitleText->SetPosition(Vector2{ 0.0f, fBaseY });
+	m_pEndTitleText->SetTextHeight(72.0f);
+	m_pEndTitleText->SetColor(Vector4{ 1.0f, 1.0f, 1.0f, 1.0f });
+	m_pUIBoard->InsertUI(m_pEndTitleText);
+
+	for (size_t i = 0; i < wstrcreditLines.size(); ++i) {
+		auto pText = std::make_shared<TextBox>(L"Malgun Gothic");
+		pText->SetText(wstrcreditLines[i]);
+		pText->SetLayer(0);
+		pText->SetAnchor(Vector2{ 0.5f, 0.5f });
+		pText->SetPivot(Vector2{ 0.5f, 0.5f });
+		pText->SetPosition(Vector2{ 0.0f, fBaseY + END_CREDITS_FIRST_LINE_OFFSET_Y + static_cast<float>(i) * END_CREDITS_LINE_HEIGHT });
+		pText->SetTextHeight(wstrcreditLines[i].empty() ? 12.0f : 26.0f);
+		pText->SetColor(Vector4{ 0.9f, 0.9f, 0.9f, 1.0f });
+		m_pUIBoard->InsertUI(pText);
+		m_pEndCreditTexts.push_back(pText);
+	}
+}
+
+void GameScene::UpdateEndCredits()
+{
+	m_fEndCreditsElapsed += DT;
+
+	float fFadeT = m_fEndCreditsElapsed / END_CREDITS_FADE_IN_DURATION;
+	if (fFadeT > 1.0f) {
+		fFadeT = 1.0f;
+	}
+
+	float fScrollT = m_fEndCreditsElapsed / END_CREDITS_DURATION;
+	if (fScrollT > 1.0f) {
+		fScrollT = 1.0f;
+	}
+
+	const float fScreenWidth = static_cast<float>(WinCore::g_dwClientWidth);
+	const float fScreenHeight = static_cast<float>(WinCore::g_dwClientHeight);
+	const float fCreditHeight = END_CREDITS_FIRST_LINE_OFFSET_Y
+		+ static_cast<float>(m_pEndCreditTexts.size()) * END_CREDITS_LINE_HEIGHT
+		+ 120.0f;
+	const float fStartY = fScreenHeight * 0.5f + 120.0f;
+	const float fEndY = -fScreenHeight * 0.5f - fCreditHeight;
+	const float fBaseY = fStartY + (fEndY - fStartY) * fScrollT;
+
+	if (m_pEndBackgroundImage) {
+		m_pEndBackgroundImage->SetSize(Vector2{ fScreenWidth, fScreenHeight });
+		m_pEndBackgroundImage->SetColor(Vector4{ 0.0f, 0.0f, 0.0f, fFadeT });
+	}
+
+	if (m_pEndTitleText) {
+		m_pEndTitleText->SetPosition(Vector2{ 0.0f, fBaseY });
+	}
+
+	for (size_t i = 0; i < m_pEndCreditTexts.size(); ++i) {
+		if (m_pEndCreditTexts[i]) {
+			m_pEndCreditTexts[i]->SetPosition(Vector2{
+				0.0f,
+				fBaseY + END_CREDITS_FIRST_LINE_OFFSET_Y + static_cast<float>(i) * END_CREDITS_LINE_HEIGHT
+			});
+		}
+	}
+
+	if (m_fEndCreditsElapsed >= END_CREDITS_DURATION) {
+		ClearEndCreditsUI();
+		SCENE->PopScene();
+		SCENE->PushScene<LogInScene>();
+		SCENE->PushScene<MenuScene>();
+		SCENE->PushScene<LobbyScene>();
+	}
+}
+
+void GameScene::ClearEndCreditsUI()
+{
+	if (m_pUIBoard) {
+		if (m_pEndBackgroundImage) {
+			m_pUIBoard->RemoveUI(m_pEndBackgroundImage);
+		}
+
+		if (m_pEndTitleText) {
+			m_pUIBoard->RemoveUI(m_pEndTitleText);
+		}
+
+		for (const auto& pText : m_pEndCreditTexts) {
+			if (pText) {
+				m_pUIBoard->RemoveUI(pText);
+			}
+		}
+	}
+
+	m_pEndBackgroundImage.reset();
+	m_pEndTitleText.reset();
+	m_pEndCreditTexts.clear();
 }
 
 void GameScene::ProcessServerGameEvents()

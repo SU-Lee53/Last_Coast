@@ -24121,6 +24121,60 @@
 			}
 		},
 		{
+			"ActorName": "StaticMeshActor_2951",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Van_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.24298018986230274, 0, 0.97003125069993457, 0, 0, 1, 0, 0, -0.97003125069993457, 0, 0.24298018986230274, 0, 41750, -3570, 25770, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2955",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Monster_Truck_15",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.24298018986229419, 0.047597177128353763, 0.96886280559421623, 0, 1.6063539387545234e-15, 0.99879545622383026, -0.049067673947627857, 0, -0.97003125069993701, 0.011922472731897338, 0.24268750958686303, 0, 41580, -3580, 25070, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2960",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Pick_Up_11",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.19509033245852125, 0, 0.9807852783261094, 0, 0, 1, 0, 0, -0.9807852783261094, 0, 0.19509033245852125, 0, 41410, -3590, 24390, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2962",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Hatchback_Car_15",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.19509033245851726, 0, 0.98078527832611029, 0, 0, 1, 0, 0, -0.98078527832611029, 0, 0.19509033245851726, 0, 41290, -3590, 23790, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2979",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Classic_Car_9",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.19509033245851337, 0, 0.98078527832611095, 0, 0, 1, 0, 0, -0.98078527832611095, 0, 0.19509033245851337, 0, 41210, -3570, 23260, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2981",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Hatchback_Car_15",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.94154406607973495, 0, 0.33688985088607187, 0, 0, 1, 0, 0, -0.33688985088607187, 0, 0.94154406607973495, 0, 40880, -3570, 22870, 1 ]
+			}
+		},
+		{
 			"ActorName": "StaticMeshActor_597",
 			"ComponentName": "StaticMeshComponent0",
 			"MeshName": "SM_Barrier",
@@ -29926,5 +29980,106 @@
 			}
 		}
 	],
-	"Lights": []
+	"Lights": [
+		{
+			"Type": "PointLight",
+			"ActorName": "PointLight_1",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 13261.244822030942, -3457.548854820026, 25243.661629728333, 1 ]
+			},
+			"Intensity": 8,
+			"Color":
+			{
+				"X": 1,
+				"Y": 0.19461782276630402,
+				"Z": 0
+			},
+			"Range": 1000,
+			"Attenuation0": 1,
+			"Attenuation1": 0,
+			"Attenuation2": 9.9999999747524271e-07,
+			"SourceRadius": 0
+		},
+		{
+			"Type": "PointLight",
+			"ActorName": "PointLight_3",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 7920, -3440.0650626001661, 22627.45009277136, 1 ]
+			},
+			"Intensity": 8,
+			"Color":
+			{
+				"X": 1,
+				"Y": 0.19461782276630402,
+				"Z": 0
+			},
+			"Range": 1000,
+			"Attenuation0": 1,
+			"Attenuation1": 0,
+			"Attenuation2": 9.9999999747524271e-07,
+			"SourceRadius": 0
+		},
+		{
+			"Type": "PointLight",
+			"ActorName": "PointLight_5",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 23890, -3400.0076053171965, 27049.127948465521, 1 ]
+			},
+			"Intensity": 8,
+			"Color":
+			{
+				"X": 1,
+				"Y": 0.19461782276630402,
+				"Z": 0
+			},
+			"Range": 1000,
+			"Attenuation0": 1,
+			"Attenuation1": 0,
+			"Attenuation2": 9.9999999747524271e-07,
+			"SourceRadius": 0
+		},
+		{
+			"Type": "PointLight",
+			"ActorName": "PointLight_7",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 20931.915757920578, -3321.483332361378, 26928.987657717382, 1 ]
+			},
+			"Intensity": 8,
+			"Color":
+			{
+				"X": 1,
+				"Y": 0.19461782276630402,
+				"Z": 0
+			},
+			"Range": 1000,
+			"Attenuation0": 1,
+			"Attenuation1": 0,
+			"Attenuation2": 9.9999999747524271e-07,
+			"SourceRadius": 0
+		},
+		{
+			"Type": "PointLight",
+			"ActorName": "PointLight_9",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 27736.31256947224, -3435.9972736775399, 27101.632700579765, 1 ]
+			},
+			"Intensity": 8,
+			"Color":
+			{
+				"X": 1,
+				"Y": 0.19461782276630402,
+				"Z": 0
+			},
+			"Range": 1000,
+			"Attenuation0": 1,
+			"Attenuation1": 0,
+			"Attenuation2": 9.9999999747524271e-07,
+			"SourceRadius": 0
+		}
+	]
 }

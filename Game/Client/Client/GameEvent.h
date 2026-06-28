@@ -15,6 +15,7 @@
 */
 
 class CrashDebris;
+class FireEffect;
 
 interface IGameEvent abstract {
 public:
@@ -100,6 +101,18 @@ private:
 
 };
 
+// Test
+class FireEvent : public ILoopEvent {
+public:
+	virtual void Initialize(Scene* pScene) override;
+	virtual void OnUpdateEvent(Scene* pScene) override;
+
+private:
+	std::vector<Vector3> m_v3FirePos;
+	std::vector<std::shared_ptr<FireEffect>> m_pFireEffects;
+	std::vector<float> m_fFireEffectElapsed;
+};
+
 // 폭발 연출 (서버 GE_EXPLOSION). 지정 위치에 파티클 + 3D 사운드 1회 재생 후 종료.
 class ExplosionEvent : public IOneShotEvent {
 public:
@@ -135,9 +148,15 @@ struct EnvironmentPreset {
 
 	// 안개
 	Vector4 v4FogColor       { 0.62f, 0.68f, 0.72f, 1.0f };
-	float   fFogDistanceDensity = 0.0035f;
-	float   fFogHeightDensity   = 0.02f;
-	float   fFogMaxOpacity      = 0.0f;
+	float   fFogStartDistance       = 5.0f;
+	float   fFogCutOffDistance      = 0.0f;
+	float   fFogDistanceDensity     = 0.0035f;
+	float   fFogDistancePower       = 1.0f;
+	float   fFogHeightDensity       = 0.02f;
+	float   fFogHeightFalloff       = 0.06f;
+	float   fFogBaseHeightOffset    = 0.0f;
+	float   fFogHeightStartDistance = 0.0f;
+	float   fFogMaxOpacity          = 0.0f;
 
 	// 스카이박스 시간 (0~1). bAffectTime=false 면 시간은 건드리지 않음.
 	bool  bAffectTime        = false;
