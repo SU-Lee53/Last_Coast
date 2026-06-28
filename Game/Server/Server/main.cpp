@@ -7,6 +7,9 @@
 
 #include "protocol.h"
 
+#define JSON_HAS_RANGES 0
+#include <Includes/nlohmann_json/json.hpp>
+
 using namespace std;
 
 // NavMesh JSON 경로 — 서버 작업 디렉터리(프로젝트 폴더) 기준 상대 경로
@@ -22,6 +25,7 @@ static constexpr Vector3 m_v3SpawnPosition = { 50600.f, -3590.f, 22000.f }; // N
 static constexpr DWORD       TICK_MS = static_cast<DWORD>(TICK_DT * 1000.f);
 static constexpr DWORD       ZOMBIE_SEND_INTERVAL_MS = 100; // 좀비 상태 정기 전송 간격 (0.2초)
 static constexpr DWORD       ZOMBIE_SPAWN_INTERVAL_MS = 4000; // 좀비 스폰 간격
+static constexpr const char* CHECKPOINT_JSON_PATH = "../../Client/Resources/Scenes/DEMO_Checkpoints.json"; // 언리얼 SaveCheckpointsToJson 출력
 
 ZombieManager                g_ZombieManager;
 ServerSpatialGrid            g_SpatialGrid;     // 정적 OBB 공간 분할 (사격 차폐 판정)
@@ -33,6 +37,33 @@ std::array<Room, MAX_ROOMS> rooms;
 
 SOCKET g_server;
 HANDLE g_iocp;
+
+// ── 체크포인트(전원 도달 트리거) ────────────────────────────────────────────────
+// 맵이 일직선(+X 전진)이라 진행도 = pos.x. 모든 연결 플레이어의 min(x)가 체크포인트 x를
+// 넘으면(= 가장 뒤처진 플레이어까지 도달) 1회 events 를 브로드캐스트.
+struct EventEmit {
+	int     eventId;          // GameEventId
+	Vector3 pos;              // 위치 의존 이벤트용(폭발 등). 무관하면 {}
+	float   fTargetValue;
+	float   fDuration;
+	int     presetId;         // EnvironmentPresetId (GE_ENVIRONMENT 전용)
+	float   fFreezeDuration;  // 컷씬 길이(초). >0 이면 그 동안 서버 좀비 AI 정지(온라인 스냅 방지). 비컷씬=0
+
+	// 명시적 생성자 — 중첩 중괄호 {{...}}로 vector<EventEmit> 초기화 시 MSVC 변환 오류 방지.
+	EventEmit(int eventId_, const Vector3& pos_, float fTargetValue_,
+	          float fDuration_, int presetId_, float fFreezeDuration_)
+		: eventId(eventId_), pos(pos_), fTargetValue(fTargetValue_)
+		, fDuration(fDuration_), presetId(presetId_), fFreezeDuration(fFreezeDuration_) {}
+};
+struct Checkpoint {
+	Vector3                v3Pos;          // 익스포트 위치(cm). x 좌표를 임계값으로 사용
+	std::vector<EventEmit> events;         // 도달 시 발사할 이벤트들
+	bool                   bFired = false; // 1회성
+};
+std::vector<Checkpoint> g_Checkpoints;
+
+// 이 시각(timeGetTime, ms)까지 좀비 AI/이동/공격/스폰 정지 — 클라 컷씬과 동기화해 종료 후 스냅 방지.
+DWORD g_dwZombieFreezeUntil = 0;
 
 Room* find_empty_room()
 {
@@ -79,6 +110,51 @@ static void BroadcastAll(Fn fn)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 체크포인트 로드 + 이벤트 배정
+// ─────────────────────────────────────────────────────────────────────────────
+
+// DEMO_Checkpoints.json("Checkpoints") 에서 체크포인트 위치 로드 (익스포터가 이름 끝 숫자순 정렬).
+static int LoadCheckpoints(const char* path)
+{
+	g_Checkpoints.clear();
+
+	std::ifstream in(path);
+	if (!in) {
+		std::cout << "[Checkpoint] file not found: " << path << "\n";
+		return 0;
+	}
+
+	nlohmann::json j = nlohmann::json::parse(in, nullptr, false);
+	if (j.is_discarded() || !j.contains("Checkpoints"))
+		return 0;
+
+	for (const auto& jc : j["Checkpoints"]) {
+		const auto& wm = jc["Transform"]["WorldMatrix"]; // 행 우선 4x4 — translation = 12,13,14
+		Vector3 v3Pos(wm[12].get<float>(), wm[13].get<float>(), wm[14].get<float>());
+		g_Checkpoints.push_back(Checkpoint{ v3Pos, {}, false });
+	}
+
+	std::cout << "[Checkpoint] loaded: " << g_Checkpoints.size() << "\n";
+	return static_cast<int>(g_Checkpoints.size());
+}
+
+// 체크포인트 index →
+// (위치는 익스포트 순서 = Checkpoint_1, Checkpoint_2 … 순)
+static void AssignCheckpointEvents()
+{
+	auto Set = [](size_t i, std::vector<EventEmit> ev) {
+		if (i < g_Checkpoints.size()) g_Checkpoints[i].events = std::move(ev);
+	};
+
+	// 예시 배정 — 한 체크포인트가 여러 이벤트를 동시에 쏠 수 있음.
+	//Set(0, { { GE_HELICOPTER_CRASH, {}, 0.f, 0.0f, 0, 5.0f } });
+	Set(0, { { GE_ENVIRONMENT, {}, 0.f, 8.0f, EP_SUNSET, 8.0f } });   // 0번 도착 → 석양 (정지 8초)
+	//Set(1, { { GE_ENVIRONMENT, {}, 0.f, 3.0f, EP_NIGHT,  0.f } });   // 1번 도착 → 야간 (정지 안함)
+	//Set(2, { { GE_HELICOPTER_CRASH, {}, 0.f, 0.f, 0,     5.0f },     // 2번 도착 → 헬기추락 (정지 5초)
+	//		 { GE_ENVIRONMENT, {}, 0.f, 2.0f, EP_HORROR, 0.f } });   //            + 호러룩 (정지 안함)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 게임 틱 스레드 (30Hz) — AI 업데이트 + 좀비 상태 브로드캐스트
 // ─────────────────────────────────────────────────────────────────────────────
 static DWORD WINAPI GameTickThread(LPVOID)
@@ -87,12 +163,6 @@ static DWORD WINAPI GameTickThread(LPVOID)
 	DWORD dwPrevTickTime = timeGetTime();
 	DWORD dwLastSpawnTime = dwPrevTickTime;
 
-	// ── 테스트용 게임 이벤트 emit (end-to-end 확인용) ──────────────────────────
-	// 8초마다 첫 연결 플레이어 위치에 폭발 ↔ 화면 어둡게 를 번갈아 브로드캐스트.
-	// 실제 게임 로직 연결 시 이 블록을 트리거 지점으로 교체.
-	constexpr DWORD TEST_GAME_EVENT_INTERVAL_MS = 8000;
-	DWORD dwLastGameEventTime = dwPrevTickTime;
-	int   nTestEventToggle = 0;
 	while (g_bRunning)
 	{
 		DWORD dwTickStart = timeGetTime();
@@ -101,6 +171,9 @@ static DWORD WINAPI GameTickThread(LPVOID)
 		float fActualDT = (dwTickStart - dwPrevTickTime) * 0.001f;
 		fActualDT = std::clamp(fActualDT, 0.001f, 0.1f); // 1ms~100ms 범위 제한
 		dwPrevTickTime = dwTickStart;
+
+		// 컷씬 중(온라인): 좀비 AI/이동/공격/스폰 정지. 클라도 정지 상태라 종료 후 스냅 없음.
+		const bool bZombieFrozen = (dwTickStart < g_dwZombieFreezeUntil);
 
 		// ── 플레이어 위치 스냅샷 (clients 배열에서 직접 읽기) ────────────────
 		unordered_map<int, Vector3> playerSnapshots;
@@ -113,6 +186,9 @@ static DWORD WINAPI GameTickThread(LPVOID)
 			}
 		}
 
+		// ── 좀비 AI/이동/공격/스폰 (컷씬 정지 중에는 전체 스킵) ────────────────────
+		if (!bZombieFrozen)
+		{
 		// ── AI Tick ──────────────────────────────────────────────────────────
 		vector<pair<int, int>> attacks;     // 데미지 발동 (Notify 딜레이 후)
 		vector<pair<int, int>> attackAnims; // 공격 모션 시작 (즉시)
@@ -184,36 +260,38 @@ static DWORD WINAPI GameTickThread(LPVOID)
 				cl.send_zombie_attack(nZombieId, nTargetId, 10.f);
 			});
 		}
+		} // if (!bZombieFrozen)
 
-		// ── 테스트 게임 이벤트 emit ──────────────────────────────────────────
-		if (dwTickStart - dwLastGameEventTime >= TEST_GAME_EVENT_INTERVAL_MS && !playerSnapshots.empty())
+		// ── 체크포인트 트리거: 전원이 지점 도달 시 이벤트 발사 ────────────────────
+		// 진행축 +X. 모든 연결 플레이어의 min(x)가 체크포인트 x를 넘으면 1회 발사.
+		if (!playerSnapshots.empty() && !g_Checkpoints.empty())
 		{
-			dwLastGameEventTime = dwTickStart;
-			Vector3 v3At = playerSnapshots.begin()->second;
+			float fMinX = playerSnapshots.begin()->second.x;
+			for (const auto& [nId, v3Pos] : playerSnapshots)
+				fMinX = std::min(fMinX, v3Pos.x);
 
-			switch (nTestEventToggle) {
-			case 0: // 폭발: 플레이어 위치에 연출
-				BroadcastAll([&](Session& cl) {
-					cl.send_game_event(GE_EXPLOSION, v3At, 0.f, 0.f);
-				});
-				break;
-			case 1: // 호러 룩: exposure/outputScale/saturation↓ + vignette↑ 2초 페이드
-				BroadcastAll([&](Session& cl) {
-					cl.send_game_event(GE_HORROR_LOOK, Vector3{ 0,0,0 }, 0.f, 2.0f);
-				});
-				break;
-			case 2: // 룩 복구: 기본값으로 1.5초 페이드
-				BroadcastAll([&](Session& cl) {
-					cl.send_game_event(GE_RESTORE_LOOK, Vector3{ 0,0,0 }, 0.f, 1.5f);
-				});
-				break;
-			case 3: // 헬기 추락 컷씬: 시네마틱 카메라가 추락 헬기 추적 (기본 연출 길이)
-				BroadcastAll([&](Session& cl) {
-					cl.send_game_event(GE_HELICOPTER_CRASH, Vector3{ 0,0,0 }, 0.f, 0.f);
-				});
-				break;
+			for (auto& cp : g_Checkpoints)
+			{
+				if (cp.bFired || fMinX < cp.v3Pos.x) continue;
+				cp.bFired = true;
+
+				float fMaxFreeze = 0.f;
+				for (const auto& e : cp.events) {
+					BroadcastAll([&](Session& cl) {
+						cl.send_game_event(e.eventId, e.pos, e.fTargetValue, e.fDuration, e.presetId);
+					});
+					fMaxFreeze = std::max(fMaxFreeze, e.fFreezeDuration);
+				}
+
+				// 컷씬이면 그 길이(+0.5초 버퍼)만큼 서버 좀비 정지 — 클라 컷씬 종료 시점까지 좀비 고정.
+				if (fMaxFreeze > 0.f) {
+					DWORD dwUntil = dwTickStart + static_cast<DWORD>((fMaxFreeze + 0.5f) * 1000.f);
+					g_dwZombieFreezeUntil = std::max(g_dwZombieFreezeUntil, dwUntil);
+				}
+
+				std::cout << "[Checkpoint] fired at x=" << cp.v3Pos.x
+					<< " (" << cp.events.size() << " events, freeze " << fMaxFreeze << "s)\n";
 			}
-			nTestEventToggle = (nTestEventToggle + 1) % 4;
 		}
 
 		// ── 다음 틱까지 대기 ─────────────────────────────────────────────────
@@ -384,6 +462,10 @@ int main()
 		// 실제 스폰은 게임 틱의 드립 스포너가 랜덤 포인트에서 INITIAL_ZOMBIES까지 채운다
 		g_ZombieManager.LoadSpawnPoints(SPAWN_JSON_PATH);
 	}
+
+	// ── 체크포인트 로드 + 이벤트 배정 (언리얼 SaveCheckpointsToJson 출력) ─────────
+	LoadCheckpoints(CHECKPOINT_JSON_PATH);
+	AssignCheckpointEvents();
 
 	// ── 공격 애니메이션 길이 로드 ────────────────────────────────────────────
 	g_ZombieManager.LoadAttackAnimDuration(ATTACK_ANIM_PATH);

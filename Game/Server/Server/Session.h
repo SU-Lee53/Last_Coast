@@ -68,7 +68,7 @@ public:
 	void send_melee_hit(int attacker_id, int zombie_id, float damage, const Vector3& v3Hit);
 	void send_chat(int sender_id, const char* username, const char* message);
 	void send_player_weapon(int player_id, unsigned char weapon_type);
-	void send_game_event(int event_id, const Vector3& v3Pos, float fTargetValue, float fDuration);
+	void send_game_event(int event_id, const Vector3& v3Pos, float fTargetValue, float fDuration, int preset_id = 0);
 
 public:
 	SOCKET		m_client;

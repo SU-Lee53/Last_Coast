@@ -161,10 +161,11 @@ public:
 	const FogParameters& GetFogParameters() const { return m_Parameters.Fog; }
 
 	// 게임 이벤트 런타임 조정용 (쓰기 가능). 값은 매 프레임 라이브로 반영됨.
-	BloomParameters& GetBloomParameters() { return m_Bloom; }
-	SSAOParameters& GetSSAOParameters() { return m_SSAO; }
-	ScreenFXParameters& GetScreenFXParameters() { return m_ScreenFX; }
-	LightShaftParameters& GetLightShaftParameters() { return m_LightShaft; }
+	BloomParameters& GetBloomParameters() { return m_Parameters.Bloom; }
+	SSAOParameters& GetSSAOParameters() { return m_Parameters.SSAO; }
+	ScreenFXParameters& GetScreenFXParameters() { return m_Parameters.ScreenFX; }
+	LightShaftParameters& GetLightShaftParameters() { return m_Parameters.LightShaft; }
+	FogParameters& GetFogParameters() { return m_Parameters.Fog; }
 
 private:
 	PostProcessingParameters m_Parameters;

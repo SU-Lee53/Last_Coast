@@ -251,9 +251,11 @@ bool UJsonSaveManager::SaveSpawnPointsToJson(const TArray<AActor*>& Actors, cons
     {
         if (!Actor) continue;
 
-        // HeliPath_* 액터는 헬기 경로 전용이므로 좀비 스폰에서 제외 (SaveHeliPathToJson 담당).
-        // 라벨 기준(GetActorLabel) — 아웃라이너에서 바꾼 이름.
-        if (Cast<ATargetPoint>(Actor) && !Actor->GetActorLabel().StartsWith(TEXT("HeliPath")))
+        // HeliPath_* / Checkpoint_* 액터는 전용 익스포트(SaveHeliPathToJson / SaveCheckpointsToJson)가
+        // 담당하므로 좀비 스폰에서 제외. 라벨 기준(GetActorLabel) — 아웃라이너에서 바꾼 이름.
+        if (Cast<ATargetPoint>(Actor)
+            && !Actor->GetActorLabel().StartsWith(TEXT("HeliPath"))
+            && !Actor->GetActorLabel().StartsWith(TEXT("Checkpoint")))
         {
             TSharedPtr<FJsonObject> SpawnJson = MakeShareable(new FJsonObject);
             SpawnJson->SetStringField(TEXT("ActorName"), Actor->GetName());
@@ -345,6 +347,71 @@ bool UJsonSaveManager::SaveHeliPathToJson(const TArray<AActor*>& Actors, const F
     {
         UE_LOG(LogTemp, Log, TEXT("Heli path saved: %d points to: %s"),
             PathArray.Num(), *FullPath);
+    }
+
+    return bSuccess;
+}
+
+// 이름이 "Checkpoint"로 시작하는 TargetPoint 액터만 게임 이벤트 체크포인트로 별도 JSON에 저장.
+// 이름 끝 숫자(Checkpoint_1, Checkpoint_2, ...) 순으로 정렬해 순서를 보존한다(서버 이벤트 배정 index).
+// 서버는 각 점의 위치(주로 X 진행축)를 "전원 도달" 임계값으로 사용.
+// 출력 스키마: { "Checkpoints": [ { ActorName, Transform.WorldMatrix } ] }
+bool UJsonSaveManager::SaveCheckpointsToJson(const TArray<AActor*>& Actors, const FString& FileName)
+{
+    // 1) Checkpoint 접두사 TargetPoint만 수집 (라벨 기준).
+    TArray<AActor*> CheckpointActors;
+    for (AActor* Actor : Actors)
+    {
+        if (!Actor) continue;
+        if (Cast<ATargetPoint>(Actor) && Actor->GetActorLabel().StartsWith(TEXT("Checkpoint")))
+        {
+            CheckpointActors.Add(Actor);
+        }
+    }
+
+    // 2) 라벨 끝 숫자 기준 정렬 → 의도한 순서 유지 (문자열 정렬이면 _10 < _2 문제).
+    auto TrailingNumber = [](const FString& Name) -> int32
+    {
+        int32 Num = 0, Place = 1;
+        for (int32 i = Name.Len() - 1; i >= 0; --i)
+        {
+            const TCHAR c = Name[i];
+            if (c < '0' || c > '9') break;
+            Num += (c - '0') * Place;
+            Place *= 10;
+        }
+        return Num;
+    };
+    CheckpointActors.Sort([&TrailingNumber](const AActor& A, const AActor& B)
+    {
+        return TrailingNumber(A.GetActorLabel()) < TrailingNumber(B.GetActorLabel());
+    });
+
+    // 3) 순서대로 직렬화.
+    TSharedPtr<FJsonObject> RootJson = MakeShareable(new FJsonObject);
+    TArray<TSharedPtr<FJsonValue>> CheckpointArray;
+    for (AActor* Actor : CheckpointActors)
+    {
+        TSharedPtr<FJsonObject> PointJson = MakeShareable(new FJsonObject);
+        PointJson->SetStringField(TEXT("ActorName"), Actor->GetActorLabel());
+        PointJson->SetObjectField(TEXT("Transform"), TransformToJson(Actor->GetActorTransform()));
+        CheckpointArray.Add(MakeShareable(new FJsonValueObject(PointJson)));
+    }
+    RootJson->SetArrayField(TEXT("Checkpoints"), CheckpointArray);
+
+    FString OutputString;
+    TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
+    FJsonSerializer::Serialize(RootJson.ToSharedRef(), Writer);
+
+    FString Directory = FPaths::ProjectSavedDir() + TEXT("../SceneJson/");
+    FString FullPath = Directory + FileName + TEXT(".json");
+
+    bool bSuccess = FFileHelper::SaveStringToFile(OutputString, *FullPath);
+
+    if (bSuccess)
+    {
+        UE_LOG(LogTemp, Log, TEXT("Checkpoints saved: %d points to: %s"),
+            CheckpointArray.Num(), *FullPath);
     }
 
     return bSuccess;
