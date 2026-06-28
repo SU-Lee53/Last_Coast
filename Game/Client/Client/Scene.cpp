@@ -120,7 +120,7 @@ void Scene::PostInitialize()
 	}
 
 	if (m_pPlayer) {
-		m_pPlayer->GetTransform()->SetPosition(m_xmSceneBound.Center);
+		//m_pPlayer->GetTransform()->SetPosition(m_xmSceneBound.Center);
 	}
 
 	for (auto& pZombie : m_World.GetObjects<Zombie>()) {
