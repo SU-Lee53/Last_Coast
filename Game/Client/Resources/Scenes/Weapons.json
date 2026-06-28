@@ -128,7 +128,7 @@
             -90.0,
             -90.0
         ],
-        "Recoil": 80.0,
+        "Recoil": 120.0,
         "RecoilRecovery": 20.0
     },
     "SHOTGUN": {
@@ -150,7 +150,7 @@
             -90.0,
             -90.0
         ],
-        "Recoil": 90.0,
+        "Recoil": 150.0,
         "RecoilRecovery": 25.0
     }
 }
