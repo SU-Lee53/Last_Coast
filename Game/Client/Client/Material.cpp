@@ -67,11 +67,12 @@ void StandardMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 	InitializeColors(materialLoadInfo);
 
 	m_TextureIDs.resize(4);
-	m_TextureIDs[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName, true);			// Diffused
+	m_TextureIDs[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName, !materialLoadInfo.bHasAlbedoAlphaMode);			// Diffused
 	m_TextureIDs[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName, false);			// Normal
 	m_TextureIDs[2] = TEXTURE->LoadTexture(materialLoadInfo.strMetallicMapName, false);		// Metallic
 	m_TextureIDs[3] = TEXTURE->LoadTexture(materialLoadInfo.strSpecularMapName, false);		// Specular
 
+	bool bLoadedMaterialAlbedo = m_TextureIDs[0].IsValid();
 	if (!m_TextureIDs[0].IsValid()) {
 		m_TextureIDs[0] = TEXTURE->LoadTexture("DefaultMaterial_BaseColor_0");
 		if (!m_TextureIDs[1].IsValid()) {
@@ -80,7 +81,14 @@ void StandardMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 	}
 
 	if (m_TextureIDs[0].IsValid()) {
-		m_MaterialData.eAlphaMode = std::to_underlying(m_TextureIDs[0].GetResource()->GetAlphaMode());
+		if (bLoadedMaterialAlbedo && materialLoadInfo.bHasAlbedoAlphaMode) {
+			Texture::ALPHA_MODE eAlphaMode = static_cast<Texture::ALPHA_MODE>(materialLoadInfo.unAlbedoAlphaMode);
+			m_TextureIDs[0].GetResource()->SetAlphaMode(eAlphaMode);
+			m_MaterialData.eAlphaMode = materialLoadInfo.unAlbedoAlphaMode;
+		}
+		else {
+			m_MaterialData.eAlphaMode = std::to_underlying(m_TextureIDs[0].GetResource()->GetAlphaMode());
+		}
 	}
 
 	m_pShader = SHADER->Get<StandardShader>();
@@ -94,11 +102,12 @@ void SkinnedMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 	InitializeColors(materialLoadInfo);
 
 	m_TextureIDs.resize(4);
-	m_TextureIDs[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName, true);			// Diffused
+	m_TextureIDs[0] = TEXTURE->LoadTexture(materialLoadInfo.strAlbedoMapName, !materialLoadInfo.bHasAlbedoAlphaMode);			// Diffused
 	m_TextureIDs[1] = TEXTURE->LoadTexture(materialLoadInfo.strNormalMapName, false);			// Normal
 	m_TextureIDs[2] = TEXTURE->LoadTexture(materialLoadInfo.strMetallicMapName, false);		// Metallic
 	m_TextureIDs[3] = TEXTURE->LoadTexture(materialLoadInfo.strSpecularMapName, false);		// Specular
 
+	bool bLoadedMaterialAlbedo = m_TextureIDs[0].IsValid();
 	if (!m_TextureIDs[0].IsValid()) {
 		m_TextureIDs[0] = TEXTURE->LoadTexture("DefaultMaterial_BaseColor_0");
 		if (!m_TextureIDs[1].IsValid()) {
@@ -107,7 +116,14 @@ void SkinnedMaterial::Initialize(const MATERIALLOADINFO& materialLoadInfo)
 	}
 
 	if (m_TextureIDs[0].IsValid()) {
-		m_MaterialData.eAlphaMode = std::to_underlying(m_TextureIDs[0].GetResource()->GetAlphaMode());
+		if (bLoadedMaterialAlbedo && materialLoadInfo.bHasAlbedoAlphaMode) {
+			Texture::ALPHA_MODE eAlphaMode = static_cast<Texture::ALPHA_MODE>(materialLoadInfo.unAlbedoAlphaMode);
+			m_TextureIDs[0].GetResource()->SetAlphaMode(eAlphaMode);
+			m_MaterialData.eAlphaMode = materialLoadInfo.unAlbedoAlphaMode;
+		}
+		else {
+			m_MaterialData.eAlphaMode = std::to_underlying(m_TextureIDs[0].GetResource()->GetAlphaMode());
+		}
 	}
 
 	m_pShader = SHADER->Get<AnimatedShader>();

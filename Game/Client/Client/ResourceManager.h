@@ -94,7 +94,7 @@ inline VertexBuffer ResourceManager::CreateVertexBuffer(const std::vector<T>& ve
 
 	if (!vertices.empty()) {
 		//ResetCommandList();
-		auto cmdList = m_CommandListPool.Allocate(m_nFenceValue);
+		auto cmdList = AllocateCommandListSafe();
 
 		hr = m_pd3dDevice->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
@@ -127,8 +127,7 @@ inline VertexBuffer ResourceManager::CreateVertexBuffer(const std::vector<T>& ve
 		Buffer.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
 		ExcuteCommandList(*cmdList);
-		cmdList->ui64FenceValue = Fence();
-		m_PendingUploadBuffers.push_back({ pUploadBuffer, cmdList });
+		m_PendingUploadBuffers.push_back({ pUploadBuffer, cmdList, cmdList->ui64FenceValue });
 	}
 
 	D3D12_VERTEX_BUFFER_VIEW VertexBufferView;

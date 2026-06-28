@@ -153,6 +153,7 @@ struct Bone {
 struct PendingUploadBuffer {
 	ComPtr<ID3D12Resource> pd3dPendingUploadBuffer = nullptr;
 	CommandListPair* cmdListPair;	// Only for ref
+	UINT64 ui64FenceValue = 0;
 };
 
 struct TerrainHit {

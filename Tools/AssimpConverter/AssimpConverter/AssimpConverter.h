@@ -52,6 +52,20 @@ struct Material {
 
 };
 
+enum class TextureAlphaMode : UINT {
+	Opaque = 0,
+	Masked = 1,
+	Transparent = 2
+};
+
+enum class TextureCompressionMode : UINT {
+	None = 0,
+	Auto,
+	BC1,
+	BC3,
+	BC7
+};
+
 struct Bone {	// == Frame
 	std::string strName;
 	int nIndex;
@@ -99,6 +113,7 @@ public:
 
 public:
 	void SetBakeForwardOption(bool bValue) { m_bForceBakeForwardZ = bValue; }
+	void SetTextureCompressionMode(TextureCompressionMode eMode) { m_eTextureCompressionMode = eMode; }
 
 private:
 	SceneAxis ReadSceneAxisMetaData(const aiScene* pScene);
@@ -122,9 +137,14 @@ private:
 	nlohmann::ordered_json StoreAnimationToJson(const aiAnimation* pAnimation) const;
 	nlohmann::ordered_json StoreNodeAnimToJson(const aiNodeAnim* pNodeAnim, double dTicksPerSecond) const;
 
-	void ExportEmbeddedTexture(const aiTexture* pTexture, aiTextureType eTextureType) const;
-	void ExportExternalTexture(const aiString& aistrTexturePath, aiTextureType eTextureType) const;
+	TextureAlphaMode ExportEmbeddedTexture(const aiTexture* pTexture, aiTextureType eTextureType) const;
+	TextureAlphaMode ExportExternalTexture(const aiString& aistrTexturePath, aiTextureType eTextureType) const;
 	void FlipNormalMapY(DirectX::ScratchImage& img) const;
+	TextureAlphaMode AnalyzeTextureAlpha(const DirectX::ScratchImage& img) const;
+	TextureAlphaMode AnalyzeTextureAlphaFromFile(const std::string& strTexturePath) const;
+	bool IsRGBA8Like(DXGI_FORMAT dxgiFormat) const;
+	DXGI_FORMAT GetTextureCompressionFormat(aiTextureType eTextureType, TextureAlphaMode eAlphaMode) const;
+	HRESULT SaveTextureDDS(const DirectX::ScratchImage& img, aiTextureType eTextureType, TextureAlphaMode eAlphaMode, const std::string& strTextureSaveName, const std::string& strTextureName) const;
 
 	XMFLOAT3 SamplePosition(const aiNodeAnim* pNodeAnim, double dTime) const;
 	XMFLOAT4 SampleRotation(const aiNodeAnim* pNodeAnim, double dTime) const;
@@ -155,6 +175,7 @@ private:
 
 	bool m_bForceBakeForwardZ = false;
 	double m_dUnitScaleCM = 1.0;
+	TextureCompressionMode m_eTextureCompressionMode = TextureCompressionMode::None;
 
 private:
 	static bool IsDDS(const aiTexture* tex);

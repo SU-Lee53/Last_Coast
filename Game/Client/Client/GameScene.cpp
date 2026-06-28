@@ -33,7 +33,7 @@ void GameScene::BuildObjects()
 
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize();
-	m_pSkybox->LoadSkyboxParameters("SkyboxParameters");
+	m_pSkybox->LoadSkyboxParameters("Day");
 
 	//m_pPlayer = std::make_shared<DebugPlayer>();
 	//m_pPlayer->Initialize();

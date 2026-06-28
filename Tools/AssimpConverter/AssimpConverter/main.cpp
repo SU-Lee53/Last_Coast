@@ -14,6 +14,7 @@ TCHAR g_lpstrFileTitle[8192] = L"";
 bool g_bModelConvertOn = false;
 bool g_bAnimationConvertOn = false;
 bool g_bForceBakeForwardZ = true;
+TextureCompressionMode g_eTextureCompressionMode = TextureCompressionMode::None;
 
 AssimpConverter g_Converter;
 std::vector<std::wstring> g_wstrFileSelected;
@@ -54,14 +55,22 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		g_hModelRadio = GetDlgItem(hDlg, IDC_RADIO1);
 		g_hAnimRadio = GetDlgItem(hDlg, IDC_RADIO2);
 		g_hBakeOptionCheck = GetDlgItem(hDlg, IDC_CHECK1);
+		g_hTextureCompressionCombo = GetDlgItem(hDlg, IDC_COMBO1);
 		CheckDlgButton(hDlg, IDC_RADIO1, BST_CHECKED);
 		CheckDlgButton(hDlg, IDC_CHECK1, BST_CHECKED);
 		SetDlgItemTextW(hDlg, IDC_EDIT2, L"1.0");
+		SendMessageW(g_hTextureCompressionCombo, CB_ADDSTRING, 0, (LPARAM)L"None");
+		SendMessageW(g_hTextureCompressionCombo, CB_ADDSTRING, 0, (LPARAM)L"Auto");
+		SendMessageW(g_hTextureCompressionCombo, CB_ADDSTRING, 0, (LPARAM)L"BC1");
+		SendMessageW(g_hTextureCompressionCombo, CB_ADDSTRING, 0, (LPARAM)L"BC3");
+		SendMessageW(g_hTextureCompressionCombo, CB_ADDSTRING, 0, (LPARAM)L"BC7");
+		SendMessageW(g_hTextureCompressionCombo, CB_SETCURSEL, 0, 0);
 
 		g_bModelConvertOn = (IsDlgButtonChecked(hDlg, IDC_RADIO1) == BST_CHECKED);
 		g_bAnimationConvertOn = (IsDlgButtonChecked(hDlg, IDC_RADIO2) == BST_CHECKED);
 		g_bForceBakeForwardZ = IsDlgButtonChecked(hDlg, IDC_CHECK1) == BST_CHECKED;
 		g_Converter.SetBakeForwardOption(g_bForceBakeForwardZ);
+		g_Converter.SetTextureCompressionMode(g_eTextureCompressionMode);
 
 		return TRUE;
 	case WM_COMMAND:
@@ -179,6 +188,7 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			}
 			DisplayText("Output folder: %s\r\n", cstrFilepath);
 			DisplayText("Mode: %s\r\n", g_bModelConvertOn ? "Model" : "Animation");
+			DisplayText("Texture compression: %d\r\n", static_cast<UINT>(g_eTextureCompressionMode));
 
 			if (g_wstrFileSelected.size() == 1) {
 				if (!g_Converter.IsOpened()) {
@@ -267,6 +277,15 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			g_bForceBakeForwardZ = IsDlgButtonChecked(hDlg, IDC_CHECK1) == BST_CHECKED;
 			g_Converter.SetBakeForwardOption(g_bForceBakeForwardZ);
+			return TRUE;
+		}
+		case IDC_COMBO1:
+		{
+			if (HIWORD(wParam) == CBN_SELCHANGE) {
+				int nSelected = static_cast<int>(SendMessageW(g_hTextureCompressionCombo, CB_GETCURSEL, 0, 0));
+				g_eTextureCompressionMode = static_cast<TextureCompressionMode>(nSelected);
+				g_Converter.SetTextureCompressionMode(g_eTextureCompressionMode);
+			}
 			return TRUE;
 		}
 		case IDOK:

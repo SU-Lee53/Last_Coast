@@ -23,6 +23,8 @@ struct MATERIALLOADINFO {
 	std::string		strEmissionMapName;
 	std::string		strDetailAlbedoMapName;
 	std::string		strDetailNormalMapName;
+	bool			bHasAlbedoAlphaMode = false;
+	UINT			unAlbedoAlphaMode = std::to_underlying(Texture::ALPHA_MODE::Opaque);
 
 	// Terrain material data
 	std::string strTerrainLayerName;

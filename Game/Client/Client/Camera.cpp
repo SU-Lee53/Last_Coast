@@ -79,6 +79,11 @@ float Camera::GetFovYInRadian() const
 	return XMConvertToRadians(m_ffovY);
 }
 
+float Camera::GetFovYInDegree() const
+{
+	return m_ffovY;
+}
+
 float Camera::GetAspectRatio() const
 {
 	return m_fAspectRatio;
@@ -212,15 +217,34 @@ void Camera::GenerateProjectionMatrix(float fNearPlaneDistance, float fFarPlaneD
 	m_fAspectRatio = fAspectRatio;
 	m_fNear = fNearPlaneDistance;
 	m_fFar = fFarPlaneDistance;
-	
+
+	RebuildProjectionMatrix();
+}
+
+void Camera::SetFovY(float fFOVAngle)
+{
+	if (fFOVAngle <= 0.f || m_ffovY == fFOVAngle) {
+		return;
+	}
+
+	m_ffovY = fFOVAngle;
+	RebuildProjectionMatrix();
+}
+
+void Camera::RebuildProjectionMatrix()
+{
+	if (m_fNear <= 0.f || m_fFar <= m_fNear || m_fAspectRatio <= 0.f || m_ffovY <= 0.f) {
+		return;
+	}
+
 	float FOVAngleInRad = XMConvertToRadians(m_ffovY);
 
 	XMStoreFloat4x4(&m_mtxProjection,
 		XMMatrixPerspectiveFovLH(
 			FOVAngleInRad,
-			fAspectRatio,
-			fNearPlaneDistance,
-			fFarPlaneDistance
+			m_fAspectRatio,
+			m_fNear,
+			m_fFar
 		)
 	);
 

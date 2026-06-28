@@ -70,8 +70,7 @@ IndexBuffer ResourceManager::CreateIndexBuffer(const std::vector<UINT>& Indices)
 		Buffer.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
 		ExcuteCommandList(*cmdList);
-		cmdList->ui64FenceValue = Fence();
-		m_PendingUploadBuffers.push_back({ pUploadBuffer, cmdList });
+		m_PendingUploadBuffers.push_back({ pUploadBuffer, cmdList, cmdList->ui64FenceValue });
 	}
 
 	D3D12_INDEX_BUFFER_VIEW IndexBufferView;
@@ -134,8 +133,7 @@ ComPtr<ID3D12Resource> ResourceManager::CreateBufferResource(void* pData, UINT n
 			cmdList->pd3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(pd3dBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, d3dResourceStates));
 
 			ExcuteCommandList(*cmdList);
-			cmdList->ui64FenceValue = Fence();
-			m_PendingUploadBuffers.push_back({ pUploadBuffer, cmdList });
+			m_PendingUploadBuffers.push_back({ pUploadBuffer, cmdList, cmdList->ui64FenceValue });
 
 			break;
 		}
@@ -158,9 +156,23 @@ ComPtr<ID3D12Resource> ResourceManager::CreateBufferResource(void* pData, UINT n
 
 void ResourceManager::WaitForCopyComplete()
 {
-	while (m_PendingUploadBuffers.size() != 0) {
-		ReleaseCompletedUploadBuffers();
+	if (m_PendingUploadBuffers.empty()) {
+		return;
 	}
+
+	UINT64 ui64ExpectedFenceValue = 0;
+	for (const PendingUploadBuffer& pending : m_PendingUploadBuffers) {
+		if (pending.ui64FenceValue > ui64ExpectedFenceValue) {
+			ui64ExpectedFenceValue = pending.ui64FenceValue;
+		}
+	}
+
+	if (m_pd3dFence->GetCompletedValue() < ui64ExpectedFenceValue) {
+		m_pd3dFence->SetEventOnCompletion(ui64ExpectedFenceValue, m_hFenceEvent);
+		::WaitForSingleObject(m_hFenceEvent, INFINITE);
+	}
+
+	ReleaseCompletedUploadBuffers();
 }
 
 void ResourceManager::ReleaseCompletedUploadBuffers()
@@ -168,8 +180,8 @@ void ResourceManager::ReleaseCompletedUploadBuffers()
 	UINT64 ui64CompletedValue = m_pd3dFence->GetCompletedValue();
 	m_CommandListPool.ReclaimEnded(ui64CompletedValue);
 
-	std::erase_if(m_PendingUploadBuffers, [](const PendingUploadBuffer& pended) {
-		return !pended.cmdListPair->bInUse;
+	std::erase_if(m_PendingUploadBuffers, [ui64CompletedValue](const PendingUploadBuffer& pended) {
+		return pended.ui64FenceValue <= ui64CompletedValue;
 	});
 }
 
@@ -214,23 +226,22 @@ void ResourceManager::ExcuteCommandList(CommandListPair& cmdPair)
 
 	ID3D12CommandList* ppCommandLists[] = { cmdPair.pd3dCommandList.Get() };
 	m_pd3dCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-	WaitForGPUComplete();
+	cmdPair.ui64FenceValue = Fence();
 }
 
 CommandListPair* ResourceManager::AllocateCommandListSafe()
 {
-	auto cmdList = m_CommandListPool.Allocate(m_nFenceValue);
-	if (!cmdList) {
-		while (true) {
-			UINT64 ui64CompletedValue = m_pd3dFence->GetCompletedValue();
-			//m_CommandListPool.ReclaimEnded(ui64CompletedValue);
-			ReleaseCompletedUploadBuffers();
-			cmdList = m_CommandListPool.Allocate(m_nFenceValue);
-			if (cmdList) {
-				break;
-			}
+	if (!m_CommandListPool.HasFree()) {
+		ReleaseCompletedUploadBuffers();
+	}
 
+	auto cmdList = m_CommandListPool.Allocate(m_pd3dFence->GetCompletedValue());
+	if (!cmdList) {
+		WaitForGPUComplete();
+		ReleaseCompletedUploadBuffers();
+		cmdList = m_CommandListPool.Allocate(m_pd3dFence->GetCompletedValue());
+		if (!cmdList) {
+			__debugbreak();
 		}
 	}
 
