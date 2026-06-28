@@ -19,6 +19,7 @@ public:
 public:
 	void AddYaw(float fValue);
 	void AddPitch(float fValue);
+	void AddFireFovRecoil(float fRecoil, float fRecovery);
 
 	void SetOffset(const Vector3& v3Value);
 	
@@ -32,6 +33,7 @@ public:
 private:
 	void UpdateFreeMode();
 	void UpdateAimMode();
+	void UpdateFireFovRecoil();
 
 private:
 	CAMERA_MODE m_eCameraMode;
@@ -49,6 +51,15 @@ private:
 
 	const float m_v3FreeModeHeight = 1.25_m;
 	const float m_v3AimModeHeight = 1.55_m;
+
+	float m_fFireFovBase = 0.f;
+	float m_fFireFovOffset = 0.f;
+	float m_fFireFovRecoverySpeed = 0.f;
+
+	const float m_fFireFovRecoilScale = 0.02f;
+	const float m_fFireFovRecoveryScale = 0.2f;
+	const float m_fMinFireFovRecoverySpeed = 4.f;
+	const float m_fMaxFireFovOffset = 6.f;
 
 };
 

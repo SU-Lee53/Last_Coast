@@ -844,8 +844,16 @@ void IThirdPersonPlayer::PlayFireAction()
 		pAnimationCtrl->GetMontage()->JumpToSection("Pistol Fire");
 	}
 
-	if (m_PlayerHUD.pCrosshair && m_pWeaponSocket->GetWeaponModel()) {
-		m_PlayerHUD.pCrosshair->AddRecoil(m_pWeaponSocket->GetWeaponModel()->GetRecoil());
+	auto pWeapon = m_pWeaponSocket->GetWeaponModel();
+	if (pWeapon) {
+		if (m_PlayerHUD.pCrosshair) {
+			m_PlayerHUD.pCrosshair->AddRecoil(pWeapon->GetRecoil());
+		}
+
+		if (m_pCamera) {
+			auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
+			pThirdPersonCamera->AddFireFovRecoil(pWeapon->GetRecoil(), pWeapon->GetRecoilRecovery());
+		}
 	}
 
 	//if (m_PlayerHUD.pHitMarker && m_pWeaponSocket->GetWeaponModel()) {

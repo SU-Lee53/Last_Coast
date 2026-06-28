@@ -292,6 +292,10 @@ MATERIALLOADINFO ModelManager::LoadMaterialInfoFromFiles(const nlohmann::json& i
 	materialLoadInfo.strSpecularMapName = inJson["SpecularMapName"].get<std::string>();
 	materialLoadInfo.strMetallicMapName = inJson["MetallicMapName"].get<std::string>();
 	materialLoadInfo.strNormalMapName = inJson["NormalMapName"].get<std::string>();
+	if (inJson.contains("AlbedoAlphaMode")) {
+		materialLoadInfo.bHasAlbedoAlphaMode = true;
+		materialLoadInfo.unAlbedoAlphaMode = inJson["AlbedoAlphaMode"].get<UINT>();
+	}
 
 	return materialLoadInfo;
 }

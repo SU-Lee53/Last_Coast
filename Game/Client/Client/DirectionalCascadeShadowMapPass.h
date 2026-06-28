@@ -72,8 +72,7 @@ private:
 	using RenderQueue = std::vector<std::pair<IMesh*, DirectionalCascadeShadowMapPass::RenderParameter>>;
 
 	struct CascadeCameraData {
-		BoundingFrustum xmShadowFrustum;	// Real shadow map projection area
-		BoundingFrustum xmCasterCullFrustum;	// Wider area for caster collecting
+		BoundingBox xmCasterCullAABB;	// Wider world-space AABB for caster collecting
 
 		Matrix mtxLightViewProj;
 		Matrix mtxToShadowMap;

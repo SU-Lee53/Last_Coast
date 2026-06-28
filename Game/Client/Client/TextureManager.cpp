@@ -638,9 +638,23 @@ CD3DX12_CPU_DESCRIPTOR_HANDLE TextureManager::GetCPUHandleByHandle(const Texture
 
 void TextureManager::WaitForCopyComplete()
 {
-	while (m_PendingUploadBuffers.size() != 0) {
-		ReleaseCompletedUploadBuffers();
+	if (m_PendingUploadBuffers.empty()) {
+		return;
 	}
+
+	UINT64 ui64ExpectedFenceValue = 0;
+	for (const PendingUploadBuffer& pending : m_PendingUploadBuffers) {
+		if (pending.ui64FenceValue > ui64ExpectedFenceValue) {
+			ui64ExpectedFenceValue = pending.ui64FenceValue;
+		}
+	}
+
+	if (m_pd3dFence->GetCompletedValue() < ui64ExpectedFenceValue) {
+		m_pd3dFence->SetEventOnCompletion(ui64ExpectedFenceValue, m_hFenceEvent);
+		::WaitForSingleObject(m_hFenceEvent, INFINITE);
+	}
+
+	ReleaseCompletedUploadBuffers();
 }
 
 void TextureManager::CreateUploadBuffer(ID3D12Resource** ppUploadBuffer, uint32 unBytes)
@@ -664,8 +678,8 @@ void TextureManager::ReleaseCompletedUploadBuffers()
 	UINT64 ui64CompletedValue = m_pd3dFence->GetCompletedValue();
 	m_CommandListPool.ReclaimEnded(ui64CompletedValue);
 
-	std::erase_if(m_PendingUploadBuffers, [](const PendingUploadBuffer& pended) {
-		return !pended.cmdListPair->bInUse;
+	std::erase_if(m_PendingUploadBuffers, [ui64CompletedValue](const PendingUploadBuffer& pended) {
+		return pended.ui64FenceValue <= ui64CompletedValue;
 	});
 }
 
@@ -701,8 +715,7 @@ void TextureManager::UpdateResources(ComPtr<ID3D12Resource> pResource, D3D12_RES
 		);
 	}
 	ExcuteCommandList(*cmdList);
-	cmdList->ui64FenceValue = Fence();
-	m_PendingUploadBuffers.push_back({ pd3dUploadBuffer, cmdList });
+	m_PendingUploadBuffers.push_back({ pd3dUploadBuffer, cmdList, cmdList->ui64FenceValue });
 }
 
 #pragma region D3D
@@ -745,8 +758,7 @@ void TextureManager::ExcuteCommandList(CommandListPair& cmdPair)
 
 	ID3D12CommandList* ppCommandLists[] = { cmdPair.pd3dCommandList.Get() };
 	m_pd3dCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-	WaitForGPUComplete();
+	cmdPair.ui64FenceValue = Fence();
 }
 
 UINT64 TextureManager::Fence()
@@ -769,17 +781,17 @@ void TextureManager::WaitForGPUComplete()
 
 CommandListPair* TextureManager::AllocateCommandListSafe()
 {
-	auto cmdList = m_CommandListPool.Allocate(m_nFenceValue);
-	if (!cmdList) {
-		while (true) {
-			UINT64 ui64CompletedValue = m_pd3dFence->GetCompletedValue();
-			//m_CommandListPool.ReclaimEnded(ui64CompletedValue);
-			ReleaseCompletedUploadBuffers();
-			cmdList = m_CommandListPool.Allocate(m_nFenceValue);
-			if (cmdList) {
-				break;
-			}
+	if (!m_CommandListPool.HasFree()) {
+		ReleaseCompletedUploadBuffers();
+	}
 
+	auto cmdList = m_CommandListPool.Allocate(m_pd3dFence->GetCompletedValue());
+	if (!cmdList) {
+		WaitForGPUComplete();
+		ReleaseCompletedUploadBuffers();
+		cmdList = m_CommandListPool.Allocate(m_pd3dFence->GetCompletedValue());
+		if (!cmdList) {
+			__debugbreak();
 		}
 	}
 
