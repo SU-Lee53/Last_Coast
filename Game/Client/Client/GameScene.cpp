@@ -45,7 +45,7 @@ void GameScene::BuildObjects()
 	m_ZombiePool.Initialize(100, true);
 
 	auto begin = high_resolution_clock::now();
-	LoadFromFiles("DEMO");
+	LoadFromFiles("Game");
 	auto end = high_resolution_clock::now();
 	long long llLoadTime = duration_cast<milliseconds>(end - begin).count();
 

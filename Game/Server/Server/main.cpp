@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 
 #include "ZombieManager.h"
 #include "ServerSpatialGrid.h"
@@ -14,11 +14,11 @@
 using namespace std;
 
 // NavMesh JSON 경로 — 서버 작업 디렉터리(프로젝트 폴더) 기준 상대 경로
-static constexpr const char* NAVMESH_PATH      = "../../Client/Resources/NavMesh/DEMO.json";
-static constexpr const char* SCENE_JSON_PATH   = "../../Client/Resources/Scenes/DEMO.json";
-static constexpr const char* SPAWN_JSON_PATH   = "../../Client/Resources/Scenes/DEMO_SpawnPoints.json";
-static constexpr const char* MODEL_DIRECTORY   = "../../Client/Resources/Models";
-static constexpr const char* ATTACK_ANIM_PATH  = "../../Client/Resources/Animations/Zombie Attack.bin";
+static constexpr const char* NAVMESH_PATH = "../../Client/Resources/NavMesh/DEMO.json";
+static constexpr const char* SCENE_JSON_PATH = "../../Client/Resources/Scenes/DEMO.json";
+static constexpr const char* SPAWN_JSON_PATH = "../../Client/Resources/Scenes/DEMO_SpawnPoints.json";
+static constexpr const char* MODEL_DIRECTORY = "../../Client/Resources/Models";
+static constexpr const char* ATTACK_ANIM_PATH = "../../Client/Resources/Animations/Zombie Attack.bin";
 static constexpr int         INITIAL_ZOMBIES = 100;    // 서버 시작 시 스폰할 좀비 수
 static constexpr float       TICK_RATE_HZ = 30.f; // 게임 틱 빈도
 static constexpr float       TICK_DT = 1.f / TICK_RATE_HZ;
@@ -52,9 +52,10 @@ struct EventEmit {
 
 	// 명시적 생성자 — 중첩 중괄호 {{...}}로 vector<EventEmit> 초기화 시 MSVC 변환 오류 방지.
 	EventEmit(int eventId_, const Vector3& pos_, float fTargetValue_,
-	          float fDuration_, int presetId_, float fFreezeDuration_)
+		float fDuration_, int presetId_, float fFreezeDuration_)
 		: eventId(eventId_), pos(pos_), fTargetValue(fTargetValue_)
-		, fDuration(fDuration_), presetId(presetId_), fFreezeDuration(fFreezeDuration_) {}
+		, fDuration(fDuration_), presetId(presetId_), fFreezeDuration(fFreezeDuration_) {
+	}
 };
 struct Checkpoint {
 	Vector3                v3Pos;          // 익스포트 위치(cm). x 좌표를 임계값으로 사용
@@ -145,7 +146,7 @@ static void AssignCheckpointEvents()
 {
 	auto Set = [](size_t i, std::vector<EventEmit> ev) {
 		if (i < g_Checkpoints.size()) g_Checkpoints[i].events = std::move(ev);
-	};
+		};
 
 	// 예시 배정 — 한 체크포인트가 여러 이벤트를 동시에 쏠 수 있음.
 	//Set(0, { { GE_HELICOPTER_CRASH, {}, 0.f, 0.0f, 0, 5.0f } });
@@ -190,77 +191,77 @@ static DWORD WINAPI GameTickThread(LPVOID)
 		// ── 좀비 AI/이동/공격/스폰 (컷씬 정지 중에는 전체 스킵) ────────────────────
 		if (!bZombieFrozen)
 		{
-		// ── AI Tick ──────────────────────────────────────────────────────────
-		vector<pair<int, int>> attacks;     // 데미지 발동 (Notify 딜레이 후)
-		vector<pair<int, int>> attackAnims; // 공격 모션 시작 (즉시)
-		g_ZombieManager.Tick(fActualDT, playerSnapshots, attacks, attackAnims);
+			// ── AI Tick ──────────────────────────────────────────────────────────
+			vector<pair<int, int>> attacks;     // 데미지 발동 (Notify 딜레이 후)
+			vector<pair<int, int>> attackAnims; // 공격 모션 시작 (즉시)
+			g_ZombieManager.Tick(fActualDT, playerSnapshots, attacks, attackAnims);
 
-		// 좀비 상태 전송 (상태 변화 + 위치 변화 시 즉시, 아니면 100ms 간격)
-		for (auto& [nId, zombie] : g_ZombieManager.GetZombies())
-		{
-			if (!zombie.bAlive || !zombie.pAgent) continue;
+			// 좀비 상태 전송 (상태 변화 + 위치 변화 시 즉시, 아니면 100ms 간격)
+			for (auto& [nId, zombie] : g_ZombieManager.GetZombies())
+			{
+				if (!zombie.bAlive || !zombie.pAgent) continue;
 
-			int nCurState = static_cast<int>(zombie.pAgent->GetBehaviorState());
-			Vector3 v3Pos = zombie.pAgent->GetPosition();
+				int nCurState = static_cast<int>(zombie.pAgent->GetBehaviorState());
+				Vector3 v3Pos = zombie.pAgent->GetPosition();
 
-			bool bStateChanged = (nCurState != zombie.nLastSentState);
-			bool bIntervalElapsed = (dwTickStart - zombie.dwLastSendTime >= ZOMBIE_SEND_INTERVAL_MS);
+				bool bStateChanged = (nCurState != zombie.nLastSentState);
+				bool bIntervalElapsed = (dwTickStart - zombie.dwLastSendTime >= ZOMBIE_SEND_INTERVAL_MS);
 
-			if (!bStateChanged && !bIntervalElapsed) continue;
+				if (!bStateChanged && !bIntervalElapsed) continue;
 
-			ZombieBehaviorState state = static_cast<ZombieBehaviorState>(nCurState);
+				ZombieBehaviorState state = static_cast<ZombieBehaviorState>(nCurState);
 
-			const auto& dbg = zombie.pAgent->GetPathDebugInfo();
-			float waypointX = v3Pos.x;
-			float waypointZ = v3Pos.z;
-			//CheckList 이거 수정해야함 문제점이 많음.
-			if (!dbg.Waypoints.empty()) {
-				waypointX = dbg.Waypoints.back().x;
-				waypointZ = dbg.Waypoints.back().z;
-			}
+				const auto& dbg = zombie.pAgent->GetPathDebugInfo();
+				float waypointX = v3Pos.x;
+				float waypointZ = v3Pos.z;
+				//CheckList 이거 수정해야함 문제점이 많음.
+				if (!dbg.Waypoints.empty()) {
+					waypointX = dbg.Waypoints.back().x;
+					waypointZ = dbg.Waypoints.back().z;
+				}
 
-			BroadcastAll([&](Session& cl) {
-				cl.send_zombie_state(nId, v3Pos.x, v3Pos.z,
-					zombie.fYaw, waypointX, waypointZ, state);
-			});
-
-			zombie.dwLastSendTime = dwTickStart;
-			zombie.nLastSentState = nCurState;
-		}
-
-		bool bSpawnElapsed = (dwTickStart - dwLastSpawnTime >= ZOMBIE_SPAWN_INTERVAL_MS);
-
-		if(bSpawnElapsed){
-			if(g_ZombieManager.GetZombies().size() >= INITIAL_ZOMBIES) {
-				//std::cout << "[Server] 최대 좀비 수 도달. 추가 스폰 생략.\n";
-				dwLastSpawnTime = dwTickStart;
-			}
-			else {
-				// 스폰 포인트 중 랜덤 하나 선택 (없으면 랜덤 NavMesh로 폴백)
-				int nZombieId = g_ZombieManager.SpawnZombie(g_ZombieManager.GetRandomSpawnPoint());
-				dwLastSpawnTime = dwTickStart;
-				auto& zombie = g_ZombieManager.GetZombies()[nZombieId];
 				BroadcastAll([&](Session& cl) {
-					cl.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
+					cl.send_zombie_state(nId, v3Pos.x, v3Pos.z,
+						zombie.fYaw, waypointX, waypointZ, state);
+					});
+
+				zombie.dwLastSendTime = dwTickStart;
+				zombie.nLastSentState = nCurState;
+			}
+
+			bool bSpawnElapsed = (dwTickStart - dwLastSpawnTime >= ZOMBIE_SPAWN_INTERVAL_MS);
+
+			if (bSpawnElapsed) {
+				if (g_ZombieManager.GetZombies().size() >= INITIAL_ZOMBIES) {
+					//std::cout << "[Server] 최대 좀비 수 도달. 추가 스폰 생략.\n";
+					dwLastSpawnTime = dwTickStart;
+				}
+				else {
+					// 스폰 포인트 중 랜덤 하나 선택 (없으면 랜덤 NavMesh로 폴백)
+					int nZombieId = g_ZombieManager.SpawnZombie(g_ZombieManager.GetRandomSpawnPoint());
+					dwLastSpawnTime = dwTickStart;
+					auto& zombie = g_ZombieManager.GetZombies()[nZombieId];
+					BroadcastAll([&](Session& cl) {
+						cl.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
+						});
+				}
+			}
+
+			// 공격 모션 시작 (즉시 — 몽타주 재생용, 데미지 0)
+			for (auto& [nZombieId, nTargetId] : attackAnims)
+			{
+				BroadcastAll([&](Session& cl) {
+					cl.send_zombie_attack(nZombieId, nTargetId, 0.f);
 					});
 			}
-		}
 
-		// 공격 모션 시작 (즉시 — 몽타주 재생용, 데미지 0)
-		for (auto& [nZombieId, nTargetId] : attackAnims)
-		{
-			BroadcastAll([&](Session& cl) {
-				cl.send_zombie_attack(nZombieId, nTargetId, 0.f);
-			});
-		}
-
-		// 공격 데미지 발동 (Notify 딜레이 후 — 실제 데미지)
-		for (auto& [nZombieId, nTargetId] : attacks)
-		{
-			BroadcastAll([&](Session& cl) {
-				cl.send_zombie_attack(nZombieId, nTargetId, 10.f);
-			});
-		}
+			// 공격 데미지 발동 (Notify 딜레이 후 — 실제 데미지)
+			for (auto& [nZombieId, nTargetId] : attacks)
+			{
+				BroadcastAll([&](Session& cl) {
+					cl.send_zombie_attack(nZombieId, nTargetId, 10.f);
+					});
+			}
 		} // if (!bZombieFrozen)
 
 		// ── 체크포인트 트리거: 전원이 지점 도달 시 이벤트 발사 ────────────────────
@@ -280,7 +281,7 @@ static DWORD WINAPI GameTickThread(LPVOID)
 				for (const auto& e : cp.events) {
 					BroadcastAll([&](Session& cl) {
 						cl.send_game_event(e.eventId, e.pos, e.fTargetValue, e.fDuration, e.presetId);
-					});
+						});
 					fMaxFreeze = std::max(fMaxFreeze, e.fFreezeDuration);
 				}
 
@@ -369,17 +370,11 @@ void worker_thread()
 				// Nagle 비활성화 — 작은 패킷 즉시 전송 (좀비 상태 패킷 지연 방지)
 				BOOL bNoDelay = TRUE;
 				setsockopt(exp_over->m_client_socket, IPPROTO_TCP, TCP_NODELAY,
-				           reinterpret_cast<const char*>(&bNoDelay), sizeof(bNoDelay));
+					reinterpret_cast<const char*>(&bNoDelay), sizeof(bNoDelay));
 
 				clients[player_index].init(exp_over->m_client_socket, player_index, nullptr);
-
-						clients[other_id].send_add_player(player_index);
-						clients[player_index].send_add_player(other_id);
-					}
-
-					clients[player_index].do_recv();
-					// std::cout << "Client[" << player_index << "] Connected. " << "Room assigned.\n";
-				}
+				clients[player_index].do_recv();
+				// std::cout << "Client[" << player_index << "] Connected. " << "Room assigned.\n";
 			}
 
 			// 다음 Accept 준비
