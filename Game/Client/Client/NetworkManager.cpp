@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "NetworkManager.h"
 #include "Packets.h"
 #include "TextBox.h"
@@ -64,7 +64,7 @@ void NetworkManager::ConnectToServer()
 				m_connectState = ConnectState::Connected;
 				m_bConnected = true;
 				m_bOfflineMode = false;
-				SendLoginPacket();
+				/*SendLoginPacket();*/
 				g_hNetworkThread = CreateThread(NULL, 0, ProcessNetwork, this, 0, NULL);
 			}
 		}
@@ -105,7 +105,7 @@ void NetworkManager::ConnectToServer()
 					m_bConnected = true;
 					m_bOfflineMode = false;
 					m_strErrorLog = "Connected!";
-					SendLoginPacket();
+					// SendLoginPacket(); // 제거: 명시적 로그인 대기
 					g_hNetworkThread = CreateThread(NULL, 0, ProcessNetwork, this, 0, NULL);
 				}
 				else
@@ -144,22 +144,34 @@ void NetworkManager::Disconnect()
 	WSACleanup();
 }
 
-// 일단 키 입력만
-void NetworkManager::SendLoginPacket()
+void NetworkManager::SendLogin(const std::string& id, const std::string& pw)
 {
 	if (m_hClientSocket == INVALID_SOCKET || !m_bConnected)
 		return;
 
+	m_nLoginState = 0; // 진행 중
 	C2S_Login packet;
 	packet.size = sizeof(C2S_Login);
 	packet.type = C2S_LOGIN;
-	strncpy_s(packet.username, "Player", sizeof(packet.username));
+	strncpy_s(packet.username, id.c_str(), sizeof(packet.username));
+	strncpy_s(packet.password, pw.c_str(), sizeof(packet.password));
 
-	DWORD dwSent = 0;
-	WSABUF wsa;
-	wsa.buf = reinterpret_cast<char*>(&packet);
-	wsa.len = packet.size;
-	WSASend(m_hClientSocket, &wsa, 1, &dwSent, 0, nullptr, nullptr);
+	SendPacket(&packet, packet.size);
+}
+
+void NetworkManager::SendRegister(const std::string& id, const std::string& pw)
+{
+	if (m_hClientSocket == INVALID_SOCKET || !m_bConnected)
+		return;
+
+	m_nRegisterState = 0; // 진행 중
+	C2S_Register packet;
+	packet.size = sizeof(C2S_Register);
+	packet.type = C2S_REGISTER;
+	strncpy_s(packet.username, id.c_str(), sizeof(packet.username));
+	strncpy_s(packet.password, pw.c_str(), sizeof(packet.password));
+
+	SendPacket(&packet, packet.size);
 }
 
 void NetworkManager::SendData()
@@ -291,8 +303,23 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	{
 		if (size < static_cast<int>(sizeof(S2C_LoginResult))) return;
 		auto* p = reinterpret_cast<const S2C_LoginResult*>(data);
-		if (p->success) 
+		if (p->success) {
+			m_nLoginState = 1;
 			m_bGameBegin = true;
+		} else {
+			m_nLoginState = -1;
+		}
+		break;
+	}
+	case S2C_REGISTER_RESULT:
+	{
+		if (size < static_cast<int>(sizeof(S2C_RegisterResult))) return;
+		auto* p = reinterpret_cast<const S2C_RegisterResult*>(data);
+		if (p->success) {
+			m_nRegisterState = 1;
+		} else {
+			m_nRegisterState = -1;
+		}
 		break;
 	}
 	case S2C_AVATAR_INFO:
@@ -306,7 +333,12 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	{
 		if (size < static_cast<int>(sizeof(S2C_AddPlayer))) return;
 		auto* p = reinterpret_cast<const S2C_AddPlayer*>(data);
-		m_PendingPlayerJoins.push(PlayerJoinEvent{ p->playerId, p->transform, p->bRunning, p->bAiming, p->fAimPitch, p->weaponType });
+		
+		char nameBuf[MAX_NAME_LEN];
+		memcpy_s(nameBuf, sizeof(nameBuf), p->username, MAX_NAME_LEN);
+		nameBuf[MAX_NAME_LEN - 1] = '\0';
+		
+		m_PendingPlayerJoins.push(PlayerJoinEvent{ p->playerId, p->transform, p->bRunning, p->bAiming, p->fAimPitch, p->weaponType, nameBuf, p->bReady });
 		break;
 	}
 	case S2C_REMOVE_PLAYER:
@@ -424,6 +456,16 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		if (size < static_cast<int>(sizeof(S2C_GameEvent))) return;
 		auto* p = reinterpret_cast<const S2C_GameEvent*>(data);
 		m_PendingGameEvents.push(GameEventMsg{ p->eventId, Vector3{ p->x, p->y, p->z }, p->fTargetValue, p->fDuration });
+		break;
+	}
+	case S2C_READY_STATE: {
+		if (size < static_cast<int>(sizeof(S2C_ReadyState))) return;
+		auto* p = reinterpret_cast<const S2C_ReadyState*>(data);
+		m_PendingReadyStates.push(ReadyStateEvent{ p->playerId, p->bReady });
+		break;
+	}
+	case S2C_GAME_START: {
+		m_bPendingGameStart.store(true);
 		break;
 	}
 	default:
@@ -594,6 +636,31 @@ std::vector<GameEventMsg> NetworkManager::ConsumeGameEvents()
 	while (m_PendingGameEvents.try_pop(ev))
 		out.push_back(ev);
 	return out;
+}
+
+void NetworkManager::SendReady(bool bReady)
+{
+	if (!m_bConnected || m_bOfflineMode) return;
+
+	C2S_Ready p;
+	p.size   = sizeof(C2S_Ready);
+	p.type   = C2S_READY;
+	p.bReady = bReady;
+	SendPacket(&p, p.size);
+}
+
+std::vector<ReadyStateEvent> NetworkManager::ConsumeReadyStates()
+{
+	std::vector<ReadyStateEvent> out;
+	ReadyStateEvent ev;
+	while (m_PendingReadyStates.try_pop(ev))
+		out.push_back(ev);
+	return out;
+}
+
+bool NetworkManager::ConsumeGameStart()
+{
+	return m_bPendingGameStart.exchange(false);
 }
 
 void NetworkManager::SendPlayerMelee(const Vector3& v3Origin, const Vector3& v3Direction)

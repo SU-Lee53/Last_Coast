@@ -1,4 +1,4 @@
-ï»¿#include "pch.h"
+#include "pch.h"
 #include "LogInScene.h"
 #include "DebugPlayer.h"
 #include "GameScene.h"
@@ -16,7 +16,7 @@ void LogInScene::BuildObjects()
 	m_pUIBoard = std::make_unique<UIBoard>();
 
 	// IP input
-	// ì—°ê²°ë§Œ ImGuië¡œ?
+	// ¿¬°á¸¸ ImGui·Î?
 	/*{
 		std::shared_ptr<TextBox> pTitle = std::make_shared<TextBox>(L"Malgun Gothic");
 		pTitle->SetText(L"Server IP : ");
@@ -117,32 +117,17 @@ void LogInScene::BuildObjects()
 			}
 		);
 
-		pRegisterButton->SetButtonCallback(
-			[&](IUIComponent* pComp) {
-				m_strIDInput = ::WStringToString(m_pIDInputBox->GetCommittedText());
-				m_strPasswordInput = ::WStringToString(m_pPWInputBox->GetCommittedText());
-				m_bLastRegisterTry = TryRegister();
-			}
-		);
+		if (ImGui::BeginTabBar("Log in")) {
+			if (ImGui::BeginTabItem("Register")) {
+				ImGui::InputText("ID", &m_strIDInput);
+				ImGui::InputText("Password", &m_strPasswordInput);
+				if (ImGui::Button("Register")) {
+					m_bLastRegisterTry = TryRegister();
+				}
 
-		m_pUIBoard->InsertUI(pRegisterButton);
-		
-		std::shared_ptr<TextButton> pLogInButton = std::make_shared<TextButton>(L"Malgun Gothic");
-		pLogInButton->SetText(L"Log In");
-		pLogInButton->SetLayer(1);
-		pLogInButton->SetColor(Vector3{ 0.8, 0.8, 0.8 });
-		pLogInButton->SetAnchor(Vector2{ 0.5, 0.0 });
-		pLogInButton->SetPivot(Vector2{ 0.0,0.0 });	// pivot to left
-		pLogInButton->SetPosition(Vector2{ 50,550 });
-		pLogInButton->SetTextHeight(50);
-
-
-		pLogInButton->SetBeginHoverCallback(
-			[](IUIComponent* pComp) {
-				auto pButton = static_cast<TextBox*>(pComp);
-				pButton->SetColor(Vector3(1.0, 0.0, 0.0));
-			}
-		);
+				if (m_bLastRegisterTry) {
+					ImGui::Text("Register Successful, Try log in");
+				}
 
 		pLogInButton->SetEndHoverCallback(
 			[](IUIComponent* pComp) {
@@ -151,58 +136,19 @@ void LogInScene::BuildObjects()
 			}
 		);
 
-		pLogInButton->SetButtonCallback(
-			[&](IUIComponent* pComp) {
-				m_strIDInput = ::WStringToString(m_pIDInputBox->GetCommittedText());
-				m_strPasswordInput = ::WStringToString(m_pPWInputBox->GetCommittedText());
-				m_bLastLogInTry = TryLogIn();
-			}
-		);
+			if (ImGui::BeginTabItem("Log in")) {
+				ImGui::InputText("ID", &m_strIDInput);
+				ImGui::InputText("Password", &m_strPasswordInput);
+				if (ImGui::Button("Log in")) {
+					m_bLastLogInTry = TryLogIn();
+				}
 
-		m_pUIBoard->InsertUI(pLogInButton);
-	}
-
-	// Register / Log In Result
-	{
-		m_pResultText = std::make_shared<TextBox>(L"Malgun Gothic");
-		m_pResultText->SetText(L"");
-		m_pResultText->SetLayer(1);
-		m_pResultText->SetAnchor(Vector2{ 0.5, 0.0 });
-		m_pResultText->SetPivot(Vector2{ 0.5,0.0 });	// pivot to left
-		m_pResultText->SetPosition(Vector2{ 0,650 });
-		m_pResultText->SetTextHeight(30);
-		m_pUIBoard->InsertUI(m_pResultText);
-	}
-
-	// Enter game button
-	{
-		std::shared_ptr<TextButton> pPlayButton = std::make_shared<TextButton>(L"Malgun Gothic");
-		pPlayButton->SetText(L"Enter");
-		pPlayButton->SetLayer(1);
-		pPlayButton->SetAnchor(Vector2{ 0.5, 0.0 });
-		pPlayButton->SetPivot(Vector2{ 0.5,0.0 });
-		pPlayButton->SetPosition(Vector2{ 0,750 });
-		pPlayButton->SetTextHeight(70);
-
-		pPlayButton->SetBeginHoverCallback(
-			[](IUIComponent* pComp) {
-				auto pButton = static_cast<TextBox*>(pComp);
-				pButton->SetColor(Vector3(1.0, 0.0, 0.0));
-			}
-		);
-
-		pPlayButton->SetEndHoverCallback(
-			[](IUIComponent* pComp) {
-				auto pButton = static_cast<TextBox*>(pComp);
-				pButton->SetColor(Vector3{ 0.8, 0.8, 0.8 });
-			}
-		);
-
-		pPlayButton->SetButtonCallback(
-			[&](IUIComponent* pComp) {
-				m_bProceed = true;
-			}
-		);
+				if (m_bLastLogInTry) {
+					ImGui::Text("Log in Successful");
+					if (ImGui::Button("Change To Scene")) {
+						SCENE->ChangeScene<GameScene>();
+					}
+				}
 
 		m_pUIBoard->InsertUI(pPlayButton);
 	}
@@ -239,20 +185,19 @@ void LogInScene::Update()
 
 bool LogInScene::TryLogIn()
 {
-	m_pResultText->SetText(L"Try Login");
-	// ë¡œê·¸ì¸ ì‹œë„
-	// ì„±ê³µí•˜ë©´ TRUE, ì‹¤íŒ¨í•˜ë©´ FALSE ë¥¼ ë¦¬í„´
-	// ID, ë¹„ë²ˆì€ m_strIDInput, m_strPasswordInput ì— ë³´ê´€ë©ë‹ˆë‹¤.
+	// ·Î±×ÀÎ ½Ãµµ
+	// ¼º°øÇÏ¸é TRUE, ½ÇÆĞÇÏ¸é FALSE ¸¦ ¸®ÅÏ
+	// ID, ºñ¹øÀº m_strIDInput, m_strPasswordInput ¿¡ º¸°üµË´Ï´Ù.
+
 
 	return true;
 }
 
 bool LogInScene::TryRegister()
 {
-	m_pResultText->SetText(L"Try Register");
-	// íšŒì›ê°€ì… ì‹œë„
-	// ì„±ê³µí•˜ë©´ TRUE, ì‹¤íŒ¨í•˜ë©´ FALSE ë¥¼ ë¦¬í„´
-	// ID, ë¹„ë²ˆì€ m_strIDInput, m_strPasswordInput ì— ë³´ê´€ë©ë‹ˆë‹¤.
+	// È¸¿ø°¡ÀÔ ½Ãµµ
+	// ¼º°øÇÏ¸é TRUE, ½ÇÆĞÇÏ¸é FALSE ¸¦ ¸®ÅÏ
+	// ID, ºñ¹øÀº m_strIDInput, m_strPasswordInput ¿¡ º¸°üµË´Ï´Ù.
 
 	return true;
 }

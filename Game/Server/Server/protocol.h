@@ -3,7 +3,7 @@
 constexpr short PORT = 9000;
 //constexpr int WORLD_WIDTH = 8;
 //constexpr int WORLD_HEIGHT = 8;
-constexpr int MAX_PLAYERS = 3;
+constexpr int MAX_PLAYERS = 1000;
 constexpr int MAX_ROOMS = 300;
 constexpr int MAX_NAME_LEN = 20;
 constexpr int MAX_CHAT_LEN = 200;
@@ -13,6 +13,7 @@ enum PACKET_TYPE {
 	C2S_LOGIN, C2S_MOVE,
 	C2S_TRANSFORM,
 	C2S_PLAYER_SHOOT,                             // 클라이언트 → 서버: 사격 요청
+	C2S_REGISTER,                                 // 클라이언트 → 서버: 회원가입 요청
 	S2C_LOGIN_RESULT, S2C_AVATAR_INFO,
 	S2C_ADD_PLAYER, S2C_REMOVE_PLAYER,
 	S2C_TRANSFORM,
@@ -31,6 +32,10 @@ enum PACKET_TYPE {
 	C2S_PLAYER_WEAPON,                            // 클라이언트 → 서버: 무기 교체 요청
 	S2C_PLAYER_WEAPON,                            // 서버 → 클라이언트: 무기 교체 브로드캐스트
 	S2C_GAME_EVENT,                               // 서버 → 클라이언트: 스크립트 게임 이벤트 (폭파/포스트FX 등)
+	S2C_REGISTER_RESULT,
+	C2S_READY,                                    // 클라이언트 → 서버: 레디 상태 변경
+	S2C_READY_STATE,                              // 서버 → 클라이언트: 누군가 레디 상태 변경
+	S2C_GAME_START                                // 서버 → 클라이언트: 4명 레디 완료, 게임 시작
 };
 
 // ── 게임 이벤트 ID (서버 트리거, 클라 효과 카탈로그) ──────────────────────────
@@ -72,6 +77,14 @@ struct C2S_Login {
 	unsigned char size;
 	PACKET_TYPE   type;
 	char username[MAX_NAME_LEN];
+	char password[MAX_NAME_LEN];
+};
+
+struct C2S_Register {
+	unsigned char size;
+	PACKET_TYPE   type;
+	char username[MAX_NAME_LEN];
+	char password[MAX_NAME_LEN];
 };
 
 struct C2S_Move {
@@ -96,11 +109,36 @@ struct S2C_LoginResult {
 	char message[50];
 };
 
+struct S2C_RegisterResult {
+	unsigned char size;
+	PACKET_TYPE   type;
+	bool success;
+	char message[50];
+};
+
 struct S2C_AvatarInfo {
 	unsigned char size;
 	PACKET_TYPE   type;
 	int playerId;
 	TransformData transform;
+};
+
+struct C2S_Ready {
+	unsigned char size;
+	PACKET_TYPE   type;
+	bool          bReady;
+};
+
+struct S2C_ReadyState {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           playerId;
+	bool          bReady;
+};
+
+struct S2C_GameStart {
+	unsigned char size;
+	PACKET_TYPE   type;
 };
 
 struct S2C_AddPlayer {
@@ -113,6 +151,7 @@ struct S2C_AddPlayer {
 	bool          bAiming;
 	float         fAimPitch;
 	unsigned char weaponType;   // 현재 장착 무기 (late-join 동기화용)
+	bool          bReady;       // 현재 레디 상태
 };
 
 struct S2C_RemovePlayer {

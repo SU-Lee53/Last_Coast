@@ -1,11 +1,11 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Room.h"
 
 bool Room::add_player(int id)
 {
 	std::lock_guard<std::mutex> lg(room_lock);
 
-	if (player_count >= 3) return false;
+	if (player_count >= 4) return false;
 
 	for (auto& p : players) {
 		if (p == -1) {
@@ -32,5 +32,5 @@ void Room::remove_player(int id)
 bool Room::is_full()
 {
 	std::lock_guard<std::mutex> lg(room_lock);
-	return player_count >= 3;
+	return player_count >= 4;
 }

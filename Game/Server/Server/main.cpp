@@ -1,9 +1,10 @@
-﻿#include "pch.h"
+#include "pch.h"
 
 #include "ZombieManager.h"
 #include "ServerSpatialGrid.h"
 #include "Session.h"
 #include "Room.h"
+#include "DBManager.h"
 
 #include "protocol.h"
 
@@ -284,36 +285,22 @@ void worker_thread()
 			}
 			// 접속 허용
 			else {
-				Room* room = find_empty_room();
+				// 방 할당 및 브로드캐스트는 로그인 성공 시 처리하도록 이동
+				CreateIoCompletionPort((HANDLE)exp_over->m_client_socket, g_iocp, player_index, 0);
 
-				if (room == nullptr) {
-					send_login_fail(exp_over->m_client_socket, "No Room Available");
-					closesocket(exp_over->m_client_socket);
-				}
-				else {
-					room->add_player(player_index);
-					CreateIoCompletionPort((HANDLE)exp_over->m_client_socket, g_iocp, player_index, 0);
+				// Nagle 비활성화 — 작은 패킷 즉시 전송 (좀비 상태 패킷 지연 방지)
+				BOOL bNoDelay = TRUE;
+				setsockopt(exp_over->m_client_socket, IPPROTO_TCP, TCP_NODELAY,
+				           reinterpret_cast<const char*>(&bNoDelay), sizeof(bNoDelay));
 
-					// Nagle 비활성화 — 작은 패킷 즉시 전송 (좀비 상태 패킷 지연 방지)
-					BOOL bNoDelay = TRUE;
-					setsockopt(exp_over->m_client_socket, IPPROTO_TCP, TCP_NODELAY,
-					           reinterpret_cast<const char*>(&bNoDelay), sizeof(bNoDelay));
-
-					clients[player_index].init(exp_over->m_client_socket, player_index, room);
-					clients[player_index].send_login_success();
-
-					Room* room = clients[player_index].m_room;
-
-					for (int other_id : room->players) {
-						if (other_id == -1 || other_id == player_index)
-							continue;
+				clients[player_index].init(exp_over->m_client_socket, player_index, nullptr);
 
 						clients[other_id].send_add_player(player_index);
 						clients[player_index].send_add_player(other_id);
 					}
 
 					clients[player_index].do_recv();
-					//std::cout << "Client[" << player_index << "] Connected. " << "Room assigned.\n";
+					// std::cout << "Client[" << player_index << "] Connected. " << "Room assigned.\n";
 				}
 			}
 
@@ -383,6 +370,12 @@ int main()
 		// 별도 파일에서 좀비 스폰 포인트 로드 (언리얼 SaveSpawnPointsToJson 출력)
 		// 실제 스폰은 게임 틱의 드립 스포너가 랜덤 포인트에서 INITIAL_ZOMBIES까지 채운다
 		g_ZombieManager.LoadSpawnPoints(SPAWN_JSON_PATH);
+	}
+
+	// ── DBManager 초기화 ────────────────────────────────────────────────────────
+	if (!DBManager::GetInstance().Initialize(L"LastCoastDB"))
+	{
+		std::cout << "[Server] DBManager 초기화 실패. ODBC DSN을 확인하세요.\n";
 	}
 
 	// ── 공격 애니메이션 길이 로드 ────────────────────────────────────────────

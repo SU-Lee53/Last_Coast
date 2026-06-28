@@ -69,6 +69,8 @@ public:
 	void send_chat(int sender_id, const char* username, const char* message);
 	void send_player_weapon(int player_id, unsigned char weapon_type);
 	void send_game_event(int event_id, const Vector3& v3Pos, float fTargetValue, float fDuration);
+	void send_ready_state(int player_id, bool bReady);
+	void send_game_start();
 
 public:
 	SOCKET		m_client;
@@ -83,4 +85,5 @@ public:
 	bool          m_bAiming = false;
 	float         m_fAimPitch = 0.f;
 	unsigned char m_weaponType = 3;   // 기본 PISTOL (WEAPON_TYPE::PISTOL == 3)
+	bool          m_bReady = false;
 };
