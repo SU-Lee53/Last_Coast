@@ -125,9 +125,9 @@ void GameContext::LoadWeaponSounds()
 
 void GameContext::LoadPlayerModels()
 {
-	// Load Zombie Models
+	// Load Player Models
 	{
-		std::string strZombieFilename[] = {
+		std::string strPlayerFilename[] = {
 			"player_m_01",
 			"player_f_01",
 			"player_m_02",
@@ -135,7 +135,7 @@ void GameContext::LoadPlayerModels()
 		};
 
 		for (int i = 0; i < g_unZombieModels; ++i) {
-			m_pZombieModels[i] = MODEL->LoadOrGet(strZombieFilename[i]);
+			m_pCharacterModels[i] = MODEL->LoadOrGet(strPlayerFilename[i]);
 		}
 	}
 }

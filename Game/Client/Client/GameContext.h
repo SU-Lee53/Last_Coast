@@ -59,7 +59,7 @@ private:
 	// Game Resoruce Containers
 	std::array<std::shared_ptr<IGameObject>, g_unWeapons> m_pWeaponModels;
 	std::array<std::shared_ptr<IGameObject>, g_unZombieModels> m_pZombieModels;
-	std::array<std::shared_ptr<IGameObject>, g_unZombieModels> m_pCharacterModels;
+	std::array<std::shared_ptr<IGameObject>, g_unCharacterModels> m_pCharacterModels;
 	//std::unordered_map<std::string, std::shared_ptr<IGameObject>> m_pGameModels;
 	std::unordered_map<std::string, TextureRef<Texture>> m_pUIImages;
 
