@@ -26,7 +26,7 @@ using CollisionPair = std::pair<std::shared_ptr<IGameObject>, std::shared_ptr<IG
 class Scene {
 	friend class SceneManager;
 
-	using WorldType = World<NetworkOwnerThirdPersonPlayer, NetworkRemoteThirdPersonPlayer, StaticObject, WeaponObject, Zombie, CrashDebris>;
+	using WorldType = World<NetworkOwnerThirdPersonPlayer, NetworkRemoteThirdPersonPlayer, StaticObject, WeaponObject, Zombie, WaterGridObject, CrashDebris>;
 
 public:
 	virtual void BuildObjects() = 0;
@@ -111,6 +111,13 @@ public:
 	void ClearCinematicProp() { m_pCinematicProp = nullptr; }
 	const std::shared_ptr<IGameObject>& GetCinematicProp() const { return m_pCinematicProp; }
 
+	// 컷씬(시네마틱) 게임플레이 정지: 입력/플레이어/좀비(월드) 업데이트를 멈춘다.
+	// 이벤트 시퀀스·스카이박스(시간/태양)는 계속 구동되어 연출은 진행됨.
+	// 중첩 컷씬 대비 깊이 카운터(컷씬 이벤트가 진입 시 Push, 종료 시 Pop).
+	void PushCinematic() { ++m_nCinematicDepth; }
+	void PopCinematic()  { if (m_nCinematicDepth > 0) --m_nCinematicDepth; }
+	bool IsCinematicActive() const { return m_nCinematicDepth > 0; }
+
 protected:
 	void RemoveCollisionPairsOf(IGameObject* pDeadObject);
 
@@ -142,6 +149,7 @@ protected:
 	std::unordered_set<CollisionResult> m_pCollisionPairs;
 	Vector4 m_v4GlobalAmbient;
 	bool m_bEnableGravity = true;
+	int  m_nCinematicDepth = 0;	// >0 이면 컷씬 중(게임플레이 정지)
 
 	std::unordered_map<int, std::shared_ptr<NetworkRemoteThirdPersonPlayer>> m_RemotePlayers;
 	

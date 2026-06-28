@@ -36,7 +36,13 @@ private:
 		PlayerPreviewTransform{ Vector3{-100.f, 90.f, 0.f}, Vector3{0.f, 10.f, 0.f} },
 		PlayerPreviewTransform{ Vector3{-250.f, 90.f, 0.f}, Vector3{0.f, 30.f, 0.f} }
 	};
-	std::array<std::shared_ptr<NetworkRemoteThirdPersonPlayer>, 3> m_pPreviewPlayers;
+	struct LobbyPreviewPlayer {
+		std::shared_ptr<NetworkRemoteThirdPersonPlayer> pPlayer;
+		std::shared_ptr<TextBox> pNameTag;
+		int nPlayerId = -1;
+		int nSlotIndex = -1;
+	};
+	std::vector<LobbyPreviewPlayer> m_ActivePreviews; std::array<std::shared_ptr<NetworkRemoteThirdPersonPlayer>, 3> m_pPreviewPlayers;
 
 	const Vector3 m_v3CurrentPlayerPos{ 120.f, 33.f, 210.f };
 	const Vector3 m_v3CurrentPlayerOrientation{0.f, -45.f, 0.f};

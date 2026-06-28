@@ -1,7 +1,10 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "Session.h"
 #include "ZombieManager.h"
 #include "ServerSpatialGrid.h"
+#include "DBManager.h"
+
+extern Room* find_empty_room();
 
 extern ZombieManager                g_ZombieManager;
 extern ServerSpatialGrid            g_SpatialGrid;
@@ -50,6 +53,7 @@ void Session::send_add_player(int player_id)
 	packet.bAiming = pl.m_bAiming;
 	packet.fAimPitch = pl.m_fAimPitch;
 	packet.weaponType = pl.m_weaponType;
+	packet.bReady = pl.m_bReady;
 	do_send(packet.size, reinterpret_cast<char*>(&packet));
 }
 
@@ -117,16 +121,71 @@ bool Session::process_packet(unsigned char* p)
 	switch (type) {
 	case C2S_LOGIN: {
 		C2S_Login* packet = reinterpret_cast<C2S_Login*>(p);
-		strncpy_s(m_username, packet->username, MAX_NAME_LEN);
-		std::cout << "Player[" << m_id << "] logged in as " << m_username << std::endl;
-		send_avatar_info();
+		std::string id(packet->username);
+		std::string pw(packet->password);
 
-		// 이미 스폰된 좀비 목록을 신규 클라이언트에게 전송
-		for (auto& [nZombieId, zombie] : g_ZombieManager.GetZombies())
-		{
-			if (!zombie.bAlive || !zombie.pAgent) continue;
-			send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
+		if (DBManager::GetInstance().Login(id, pw)) {
+			strncpy_s(m_username, packet->username, MAX_NAME_LEN);
+			// std::cout << "Player[" << m_id << "] logged in as " << m_username << std::endl;
+
+			// 방 할당
+			Room* room = find_empty_room();
+			if (room == nullptr) {
+				S2C_LoginResult res;
+				res.size = sizeof(S2C_LoginResult);
+				res.type = S2C_LOGIN_RESULT;
+				res.success = false;
+				strncpy_s(res.message, "No Room Available", sizeof(res.message));
+				do_send(res.size, reinterpret_cast<char*>(&res));
+				break;
+			}
+			
+			room->add_player(m_id);
+			m_room = room;
+
+			send_login_success();
+			send_avatar_info();
+
+			// 방에 있는 다른 플레이어들에게 접속 알림
+			for (int other_id : room->players) {
+				if (other_id == -1 || other_id == m_id) continue;
+				clients[other_id].send_add_player(m_id);
+				send_add_player(other_id);
+			}
+
+			// 이미 스폰된 좀비 목록을 신규 클라이언트에게 전송
+			for (auto& [nZombieId, zombie] : g_ZombieManager.GetZombies())
+			{
+				if (!zombie.bAlive || !zombie.pAgent) continue;
+				send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
+			}
+		} else {
+			S2C_LoginResult res;
+			res.size = sizeof(S2C_LoginResult);
+			res.type = S2C_LOGIN_RESULT;
+			res.success = false;
+			strncpy_s(res.message, "Invalid ID or Password", sizeof(res.message));
+			do_send(res.size, reinterpret_cast<char*>(&res));
 		}
+	}
+	break;
+	case C2S_REGISTER: {
+		C2S_Register* packet = reinterpret_cast<C2S_Register*>(p);
+		std::string id(packet->username);
+		std::string pw(packet->password);
+
+		S2C_RegisterResult res;
+		res.size = sizeof(S2C_RegisterResult);
+		res.type = S2C_REGISTER_RESULT;
+
+		if (DBManager::GetInstance().Register(id, pw)) {
+			res.success = true;
+			strncpy_s(res.message, "Register Successful", sizeof(res.message));
+		} else {
+			res.success = false;
+			strncpy_s(res.message, "Register Failed (ID Exists?)", sizeof(res.message));
+		}
+		do_send(res.size, reinterpret_cast<char*>(&res));
 	}
 	break;
 	case C2S_TRANSFORM: {
@@ -309,6 +368,36 @@ bool Session::process_packet(unsigned char* p)
 				cl.send_chat(m_id, m_username, msg);
 	}
 	break;
+	case C2S_READY: {
+		C2S_Ready* packet = reinterpret_cast<C2S_Ready*>(p);
+		m_bReady = packet->bReady;
+		std::cout << "[Ready] Player[" << m_id << "] is " << (m_bReady ? "READY" : "NOT READY") << std::endl;
+
+		// 방 안의 모든 클라이언트에게 레디 상태 브로드캐스트
+		if (m_room) {
+			for (int other_id : m_room->players) {
+				if (other_id == -1) continue;
+				clients[other_id].send_ready_state(m_id, m_bReady);
+			}
+
+			// 4명이 모두 레디인지 확인
+			int nReadyCount = 0;
+			int nConnectedCount = 0;
+			for (int other_id : m_room->players) {
+				if (other_id == -1) continue;
+				++nConnectedCount;
+				if (clients[other_id].m_bReady) ++nReadyCount;
+			}
+			if (nConnectedCount == 4 && nReadyCount == 4) {
+				std::cout << "[Room] All 4 players ready! Starting game." << std::endl;
+				for (int other_id : m_room->players) {
+					if (other_id == -1) continue;
+					clients[other_id].send_game_start();
+				}
+			}
+		}
+	}
+	break;
 	default:
 		std::cout << "Unknown packet type received from player[" << m_id << "].\n";
 		return false;
@@ -412,7 +501,7 @@ void Session::send_zombie_attack(int nZombieId, int nTargetPlayerId, float fDama
 	do_send(p.size, reinterpret_cast<char*>(&p));
 }
 
-void Session::send_game_event(int event_id, const Vector3& v3Pos, float fTargetValue, float fDuration)
+void Session::send_game_event(int event_id, const Vector3& v3Pos, float fTargetValue, float fDuration, int preset_id)
 {
 	S2C_GameEvent p;
 	p.size = sizeof(S2C_GameEvent);
@@ -423,5 +512,24 @@ void Session::send_game_event(int event_id, const Vector3& v3Pos, float fTargetV
 	p.z = v3Pos.z;
 	p.fTargetValue = fTargetValue;
 	p.fDuration = fDuration;
+	p.presetId = preset_id;
+	do_send(p.size, reinterpret_cast<char*>(&p));
+}
+
+void Session::send_ready_state(int player_id, bool bReady)
+{
+	S2C_ReadyState p;
+	p.size = sizeof(S2C_ReadyState);
+	p.type = S2C_READY_STATE;
+	p.playerId = player_id;
+	p.bReady = bReady;
+	do_send(p.size, reinterpret_cast<char*>(&p));
+}
+
+void Session::send_game_start()
+{
+	S2C_GameStart p;
+	p.size = sizeof(S2C_GameStart);
+	p.type = S2C_GAME_START;
 	do_send(p.size, reinterpret_cast<char*>(&p));
 }

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "pch.h"
 
 class Room {
@@ -13,7 +13,7 @@ public:
 	bool					is_full();
 
 public:
-	std::array<int, 3>		players;
+	std::array<int, 4>		players;
 	int						player_count = 0;
 	std::mutex				room_lock;
 

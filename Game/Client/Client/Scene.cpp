@@ -155,6 +155,8 @@ void Scene::PreProcessInput()
 
 void Scene::PostProcessInput()
 {
+	if (IsCinematicActive()) return; // 컷씬 중 플레이어 입력 차단
+
 	if (m_pPlayer) {
 		m_pPlayer->ProcessInput();
 	}
@@ -164,6 +166,8 @@ void Scene::PostProcessInput()
 
 void Scene::PreUpdate()
 {
+	if (IsCinematicActive()) return; // 컷씬 중 정지
+
 	if (m_pPlayer) {
 		m_pPlayer->PreUpdate();
 	}
@@ -173,47 +177,59 @@ void Scene::PreUpdate()
 
 void Scene::FixedUpdate()
 {
+	const bool bFrozen = IsCinematicActive(); // 컷씬 중 플레이어/월드(좀비) 정지
+
 	// Component Update
-	if (m_pPlayer) {
-		m_pPlayer->Update();
-	}
+	if (!bFrozen) {
+		if (m_pPlayer) {
+			m_pPlayer->Update();
+		}
 
-	if (m_pTerrain) {
-		m_pTerrain->Update();
-	}
+		if (m_pTerrain) {
+			m_pTerrain->Update();
+		}
 
-	m_World.FixedUpdate();
-	m_World.UpdateSpatial();
+		m_World.FixedUpdate();
+		m_World.UpdateSpatial();
+	}
 
 	m_ToneMappingVolume.Update();
 
+	// 컷씬 이벤트는 계속 구동되어야 연출(카메라/시간/포스트FX)이 진행됨.
 	if (m_pEventSequence) {
 		m_pEventSequence->Update();
 	}
 
-	CheckCollision();
+	if (!bFrozen) {
+		CheckCollision();
+	}
 }
 
 void Scene::PostUpdate()
 {
+	const bool bFrozen = IsCinematicActive(); // 컷씬 중 플레이어/월드(좀비) 이동·애니 정지
+
 	// Post Update
-	if (m_pPlayer) {
-		m_pPlayer->PostUpdate();
+	if (!bFrozen) {
+		if (m_pPlayer) {
+			m_pPlayer->PostUpdate();
+		}
+
+		if (m_pTerrain) {
+			m_pTerrain->PostUpdate();
+		}
+
+		m_World.PostUpdate();
+
+		ANIMATION->UpdateAnimationParallel();
+
+		if (m_pPlayer) {
+			m_pPlayer->PostAnimationUpdate();
+		}
+		m_World.PostAnimationUpdate();
 	}
 
-	if (m_pTerrain) {
-		m_pTerrain->PostUpdate();
-	}
-
-	m_World.PostUpdate();
-
-	ANIMATION->UpdateAnimationParallel();
-
-	if (m_pPlayer) {
-		m_pPlayer->PostAnimationUpdate();
-	}
-	m_World.PostAnimationUpdate();
-
+	// 스카이박스(시간/태양)는 컷씬 중에도 갱신 — 석양 연출이 진행되어야 함.
 	if (m_pSkybox) {
 		m_pSkybox->Update();
 	}

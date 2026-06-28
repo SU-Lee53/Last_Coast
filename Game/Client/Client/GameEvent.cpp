@@ -4,6 +4,7 @@
 #include "BloodEffect.h"
 #include "MuzzleFlashEffect.h"
 #include "ToneMappingVolume.h"
+#include "PostProcessingVolume.h"
 #include "NodeObject.h"
 #include "CrashDebris.h"
 #include "SpatialTraits.h"
@@ -88,83 +89,240 @@ void ExplosionEvent::OnEnterEvent(Scene* pScene)
 	m_bFinished = true; // 1회 재생 후 즉시 종료
 }
 
-void PostFXFadeEvent::OnEnterEvent(Scene* pScene)
+
+// ── 환경 프리셋 틀 ────────────────────────────────────────────────────────────
+
+// presetId → 프리셋 값 테이블. 새 룩은 여기에 항목만 추가하면 끝(이벤트 클래스 불필요).
+const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 {
-	m_fStartScale  = pScene->GetToneMappingVolume().GetOutputScale();
+	// EP_DEFAULT — 모든 값 디폴트. 다른 프리셋에서 복구할 때 목표로 쓰임.
+	static const EnvironmentPreset DEFAULT = [] {
+		EnvironmentPreset p;            // 멤버 디폴트가 곧 기본 룩
+		p.nEnableAutoExposure = 1;
+		return p;
+	}();
+
+	// EP_HORROR — 어둡고 채도 낮고 비네팅↑ 블룸↑ 안개 자욱+어둡게.
+	static const EnvironmentPreset HORROR = [] {
+		EnvironmentPreset p;
+		p.fExposure          = 0.35f;
+		p.fOutputScale       = 0.55f;
+		p.fPostSaturation    = 0.40f;
+		p.nEnableAutoExposure = 0;      // 수동 노출(어둡게 고정)
+		p.fBloomIntensity    = 1.20f;   // 으스스한 발광
+		p.fVignetteStrength  = 0.70f;
+		p.v4FogColor         = Vector4{ 0.05f, 0.06f, 0.08f, 1.0f };
+		p.fFogDistanceDensity = 0.020f;
+		return p;
+	}();
+
+	// EP_NIGHT — 시간 밤으로 + 앰비언트 어둡게 + 차가운 안개.
+	static const EnvironmentPreset NIGHT = [] {
+		EnvironmentPreset p;
+		p.bAffectTime        = true;
+		p.fTimeOfDay01       = 0.0f;    // 자정
+		p.bAffectAmbient     = true;
+		p.v4GlobalAmbient    = Vector4{ 0.03f, 0.04f, 0.07f, 1.0f };
+		p.fPostSaturation    = 0.75f;
+		p.v4FogColor         = Vector4{ 0.06f, 0.08f, 0.14f, 1.0f };
+		p.fFogDistanceDensity = 0.010f;
+		return p;
+	}();
+
+	// EP_DAWN — 시간 새벽으로 + 따뜻한 톤.
+	static const EnvironmentPreset DAWN = [] {
+		EnvironmentPreset p;
+		p.bAffectTime        = true;
+		p.fTimeOfDay01       = 0.25f;   // ~06시
+		p.bAffectAmbient     = true;
+		p.v4GlobalAmbient    = Vector4{ 0.18f, 0.14f, 0.12f, 1.0f };
+		p.fExposure          = 1.1f;
+		p.v4FogColor         = Vector4{ 0.55f, 0.45f, 0.40f, 1.0f };
+		p.fFogDistanceDensity = 0.0050f;
+		return p;
+	}();
+
+	// EP_SUNSET — 시간 저녁으로 + 따뜻한 안개 + 시네마틱 카메라가 지는 해를 바라봄.
+	static const EnvironmentPreset SUNSET = [] {
+		EnvironmentPreset p;
+		p.bAffectTime        = true;
+		p.fTimeOfDay01       = 0.75f;   // 18시 = 해가 정확히 지평선 (그 이상이면 땅 밑으로 꺼짐)
+		p.bWatchSun          = false;    // 전환 동안 카메라가 태양 추적
+		p.bAffectAmbient     = true;
+		p.v4GlobalAmbient    = Vector4{ 0.14f, 0.10f, 0.09f, 1.0f };
+		p.fExposure          = 1.05f;
+		p.v4FogColor         = Vector4{ 0.65f, 0.40f, 0.28f, 1.0f }; // 주황빛 노을
+		p.fFogDistanceDensity = 0.0060f;
+		return p;
+	}();
+
+	switch (presetId) {
+	case EP_HORROR:  return HORROR;
+	case EP_NIGHT:   return NIGHT;
+	case EP_DAWN:    return DAWN;
+	case EP_SUNSET:  return SUNSET;
+	case EP_DEFAULT:
+	default:         return DEFAULT;
+	}
+}
+
+namespace {
+	// 석양 시네마틱 카메라 고정 위치 (cm). 플레이어와 무관하게 이 지점에서 노을을 바라봄.
+	// ▼ 맵에 맞는 전망 좋은 지점으로 수정하세요.
+	const Vector3 SUNSET_CAM_POS{ 50600.f, 500.f, 22000.f };
+
+	// 현재 씬 환경 → 프리셋 스냅샷(페이드 시작값).
+	EnvironmentPreset CaptureEnvironment(Scene* pScene)
+	{
+		EnvironmentPreset p;
+		const auto& tone  = pScene->GetToneMappingVolume().GetCommonParameters();
+		const auto& bloom = pScene->GetPostProcessingVolume().GetBloomParameters();
+		const auto& fx    = pScene->GetPostProcessingVolume().GetScreenFXParameters();
+		const auto& fog   = pScene->GetPostProcessingVolume().GetFogParameters();
+
+		p.fExposure          = tone.fExposure;
+		p.fPostSaturation    = tone.fPostSaturation;
+		p.fOutputScale       = tone.fOutputScale;
+		p.fGamma             = tone.fGamma;
+		p.nEnableAutoExposure = tone.nEnableAutoExposure;
+
+		p.fBloomThreshold    = bloom.fThreshold;
+		p.fBloomIntensity    = bloom.fIntensity;
+
+		p.fGrainStrength     = fx.fGrainStrength;
+		p.fVignetteStrength  = fx.fVignetteStrength;
+		p.fVignetteRadius    = fx.fVignetteRadius;
+
+		p.v4FogColor         = fog.v4FogColor;
+		p.fFogDistanceDensity = fog.fFogDistanceDensity;
+		p.fFogHeightDensity  = fog.fFogHeightDensity;
+		p.fFogMaxOpacity     = fog.fFogMaxOpacity;
+
+		p.bAffectTime        = true;
+		p.fTimeOfDay01       = pScene->GetSkybox() ? pScene->GetSkybox()->GetDayNightBlend() : 0.5f;
+
+		p.bAffectAmbient     = true;
+		p.v4GlobalAmbient    = pScene->GetGlobalAmbient();
+		return p;
+	}
+
+	// from→to 를 t(0~1)로 보간해 씬에 라이브 적용. (int/즉시값은 호출부에서 처리)
+	void ApplyEnvironment(Scene* pScene, const EnvironmentPreset& a, const EnvironmentPreset& b, float t)
+	{
+		auto& tone  = pScene->GetToneMappingVolume().GetCommonParameters();
+		auto& bloom = pScene->GetPostProcessingVolume().GetBloomParameters();
+		auto& fx    = pScene->GetPostProcessingVolume().GetScreenFXParameters();
+		auto& fog   = pScene->GetPostProcessingVolume().GetFogParameters();
+
+		tone.fExposure          = std::lerp(a.fExposure,         b.fExposure,         t);
+		tone.fPostSaturation    = std::lerp(a.fPostSaturation,   b.fPostSaturation,   t);
+		tone.fOutputScale       = std::lerp(a.fOutputScale,      b.fOutputScale,      t);
+		tone.fGamma             = std::lerp(a.fGamma,            b.fGamma,            t);
+
+		bloom.fThreshold        = std::lerp(a.fBloomThreshold,   b.fBloomThreshold,   t);
+		bloom.fIntensity        = std::lerp(a.fBloomIntensity,   b.fBloomIntensity,   t);
+
+		fx.fGrainStrength       = std::lerp(a.fGrainStrength,    b.fGrainStrength,    t);
+		fx.fVignetteStrength    = std::lerp(a.fVignetteStrength, b.fVignetteStrength, t);
+		fx.fVignetteRadius      = std::lerp(a.fVignetteRadius,   b.fVignetteRadius,   t);
+
+		fog.v4FogColor          = Vector4::Lerp(a.v4FogColor,    b.v4FogColor,        t);
+		fog.fFogDistanceDensity = std::lerp(a.fFogDistanceDensity, b.fFogDistanceDensity, t);
+		fog.fFogHeightDensity   = std::lerp(a.fFogHeightDensity, b.fFogHeightDensity, t);
+		fog.fFogMaxOpacity      = std::lerp(a.fFogMaxOpacity,    b.fFogMaxOpacity,    t);
+
+		if (b.bAffectTime && pScene->GetSkybox()) {
+			pScene->GetSkybox()->SetDayNightBlend(std::lerp(a.fTimeOfDay01, b.fTimeOfDay01, t));
+		}
+		if (b.bAffectAmbient) {
+			pScene->SetGlobalAmbient(Vector4::Lerp(a.v4GlobalAmbient, b.v4GlobalAmbient, t));
+		}
+	}
+}
+
+void EnvironmentTransitionEvent::OnEnterEvent(Scene* pScene)
+{
+	if (!pScene) { m_bFinished = true; return; }
+
+	m_Start        = CaptureEnvironment(pScene);
 	m_fTimeElapsed = 0.f;
+
+	// 수동 노출(0)로 가는 룩이면 페이드 내내 exposure lerp가 보이도록 즉시 끔.
+	// auto(1)로 복귀하는 경우는 페이드 끝에서 켜야 exposure 보간이 살아있음(OnUpdate 종료시).
+	if (m_Target.nEnableAutoExposure == 0) {
+		pScene->GetToneMappingVolume().GetCommonParameters().nEnableAutoExposure = 0;
+	}
+
+	// 해질녘 카메라 연출: 시간이 바뀌는 프리셋(bAffectTime)이고 bWatchSun일 때만.
+	if (m_Target.bWatchSun && m_Target.bAffectTime) {
+		m_bWatchSun = true;
+		pScene->PushCinematic(); // 컷씬 동안 입력/좀비 정지
+
+		// 시네마틱 카메라 구성 후 메인 카메라와 교체 (HelicopterCrashEvent와 동일 방식)
+		m_pCinematicCamera = std::make_shared<Camera>();
+		m_pCinematicCamera->SetViewport(0, 0, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight, 0.f, 1.f);
+		m_pCinematicCamera->SetScissorRect(0, 0, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight);
+		m_pCinematicCamera->GenerateViewMatrix(XMFLOAT3(0.f, 0.f, 0.f), XMFLOAT3(0.f, 0.f, 1.f), XMFLOAT3(0.f, 1.f, 0.f));
+		m_pCinematicCamera->GenerateProjectionMatrix(
+			10.f, 1000_m,
+			static_cast<float>(WinCore::g_dwClientWidth) / static_cast<float>(WinCore::g_dwClientHeight),
+			60.f);
+		m_pSavedCamera = pScene->SwapCamera(m_pCinematicCamera);
+
+		// 카메라 위치 = 고정 좌표(플레이어 위치와 무관). 상단 SUNSET_CAM_POS 만 수정.
+		m_v3CamPos = SUNSET_CAM_POS;
+	}
 }
 
-void PostFXFadeEvent::OnUpdateEvent(Scene* pScene)
+void EnvironmentTransitionEvent::OnUpdateEvent(Scene* pScene)
 {
+	if (!pScene) { m_bFinished = true; return; }
+
 	m_fTimeElapsed += DT;
-	float t = (m_fDuration > 0.f) ? std::clamp(m_fTimeElapsed / m_fDuration, 0.f, 1.f) : 1.f;
+	const float t = (m_fDuration > 0.f) ? std::clamp(m_fTimeElapsed / m_fDuration, 0.f, 1.f) : 1.f;
 
-	float fScale = m_fStartScale + (m_fTargetScale - m_fStartScale) * t;
-	pScene->GetToneMappingVolume().SetOutputScale(fScale);
+	ApplyEnvironment(pScene, m_Start, m_Target, t);
 
-	if (t >= 1.f) m_bFinished = true;
-}
+	// 해질녘 연출: 매 프레임 태양 방향으로 시선을 맞춤(해가 내려가면 카메라도 따라 내려감).
+	if (m_bWatchSun && m_pCinematicCamera) {
+		Vector3 v3Sun = pScene->GetSkybox() ? pScene->GetSkybox()->GetSunDirection() : Vector3::Up;
 
-void HorrorLookEvent::OnEnterEvent(Scene* pScene)
-{
-	auto& tone = pScene->GetToneMappingVolume().GetCommonParameters();
-	auto& fx   = pScene->GetPostProcessingVolume().GetScreenFXParameters();
+		// 태양의 방위(수평 방향)만 추출
+		Vector3 v3Azimuth{ v3Sun.x, 0.f, v3Sun.z };
+		if (v3Azimuth.LengthSquared() < 1e-4f) v3Azimuth = Vector3::Backward;
+		v3Azimuth.Normalize();
 
-	m_fStartExposure = tone.fExposure;
-	m_fStartOutput   = tone.fOutputScale;
-	m_fStartSat      = tone.fPostSaturation;
-	m_fStartVignette = fx.fVignetteStrength;
+		// 태양 고도각을 [0°, 30°]로 클램프 → 지평선 아래(땅속)도, 머리 위(수직)도 안 봄.
+		// 해가 높을 땐 30°에 머물다, 지평선으로 내려오는 마지막 구간을 0°까지 따라 내려감.
+		const float fSunPitch = std::asin(std::clamp(v3Sun.y, -1.f, 1.f));
+		const float fPitch    = std::clamp(fSunPitch, 0.f, XMConvertToRadians(30.f));
 
-	tone.nEnableAutoExposure = 0; // exposure 수동 제어 (auto면 무시됨)
-	m_fTimeElapsed = 0.f;
-}
+		Vector3 v3Look = v3Azimuth * std::cos(fPitch) + Vector3::Up * std::sin(fPitch);
+		v3Look.Normalize();
 
-void HorrorLookEvent::OnUpdateEvent(Scene* pScene)
-{
-	m_fTimeElapsed += DT;
-	float t = (m_fDuration > 0.f) ? std::clamp(m_fTimeElapsed / m_fDuration, 0.f, 1.f) : 1.f;
-
-	auto& tone = pScene->GetToneMappingVolume().GetCommonParameters();
-	auto& fx   = pScene->GetPostProcessingVolume().GetScreenFXParameters();
-
-	tone.fExposure       = std::lerp(m_fStartExposure, 0.35f, t);
-	tone.fOutputScale    = std::lerp(m_fStartOutput,   0.55f, t);
-	tone.fPostSaturation = std::lerp(m_fStartSat,      0.40f, t);
-	fx.fVignetteStrength = std::lerp(m_fStartVignette, 0.70f, t);
-
-	if (t >= 1.f) m_bFinished = true;
-}
-
-void RestoreLookEvent::OnEnterEvent(Scene* pScene)
-{
-	auto& tone = pScene->GetToneMappingVolume().GetCommonParameters();
-	auto& fx   = pScene->GetPostProcessingVolume().GetScreenFXParameters();
-
-	m_fStartExposure = tone.fExposure;
-	m_fStartOutput   = tone.fOutputScale;
-	m_fStartSat      = tone.fPostSaturation;
-	m_fStartVignette = fx.fVignetteStrength;
-	m_fTimeElapsed   = 0.f;
-}
-
-void RestoreLookEvent::OnUpdateEvent(Scene* pScene)
-{
-	m_fTimeElapsed += DT;
-	float t = (m_fDuration > 0.f) ? std::clamp(m_fTimeElapsed / m_fDuration, 0.f, 1.f) : 1.f;
-
-	auto& tone = pScene->GetToneMappingVolume().GetCommonParameters();
-	auto& fx   = pScene->GetPostProcessingVolume().GetScreenFXParameters();
-
-	// 기본값으로 복귀 (ToneMappingCommonParameters / ScreenFXParameters 디폴트)
-	tone.fExposure       = std::lerp(m_fStartExposure, 1.0f,  t);
-	tone.fOutputScale    = std::lerp(m_fStartOutput,   1.0f,  t);
-	tone.fPostSaturation = std::lerp(m_fStartSat,      1.0f,  t);
-	fx.fVignetteStrength = std::lerp(m_fStartVignette, 0.25f, t);
+		m_pCinematicCamera->SetPosition(m_v3CamPos);
+		m_pCinematicCamera->SetLookTo(v3Look, Vector3::Up);
+		m_pCinematicCamera->Update();
+	}
 
 	if (t >= 1.f) {
-		tone.nEnableAutoExposure = 1; // auto-exposure 복원
+		// 즉시값(자동노출) 최종 확정.
+		pScene->GetToneMappingVolume().GetCommonParameters().nEnableAutoExposure = m_Target.nEnableAutoExposure;
+		RestoreCamera(pScene); // 해질녘 연출이었다면 원래 카메라로 복구
 		m_bFinished = true;
 	}
+}
+
+void EnvironmentTransitionEvent::RestoreCamera(Scene* pScene)
+{
+	if (!m_bWatchSun) return;
+	if (pScene && m_pSavedCamera) {
+		pScene->SwapCamera(m_pSavedCamera);
+	}
+	if (pScene) pScene->PopCinematic(); // 게임플레이 정지 해제
+	m_pSavedCamera.reset();
+	m_pCinematicCamera.reset();
+	m_bWatchSun = false;
 }
 
 namespace {
@@ -209,6 +367,9 @@ void HelicopterCrashEvent::OnEnterEvent(Scene* pScene)
 
 	m_fTimeElapsed = 0.f;
 	m_bExploded    = false;
+
+	pScene->PushCinematic(); // 컷씬 동안 입력/좀비 정지
+	m_bCinematicPushed = true;
 
 	// 시네마틱 카메라 구성 후 현재 카메라와 교체
 	m_pCinematicCamera = std::make_shared<Camera>();
@@ -368,6 +529,7 @@ void HelicopterCrashEvent::Finish(Scene* pScene)
 			pScene->SwapCamera(m_pSavedCamera);
 		}
 		pScene->ClearCinematicProp();
+		if (m_bCinematicPushed) { pScene->PopCinematic(); m_bCinematicPushed = false; } // 정지 해제
 	}
 	m_pSavedCamera.reset();
 	m_pHeli.reset();

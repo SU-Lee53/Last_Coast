@@ -1,0 +1,25 @@
+{
+	"Checkpoints": [
+		{
+			"ActorName": "Checkpoint_1",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 30000.0, -3589.86, 24000.0, 1 ]
+			}
+		},
+		{
+			"ActorName": "Checkpoint_2",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 40000.0, -3589.86, 24000.0, 1 ]
+			}
+		},
+		{
+			"ActorName": "Checkpoint_3",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 50000.0, -3589.86, 24000.0, 1 ]
+			}
+		}
+	]
+}

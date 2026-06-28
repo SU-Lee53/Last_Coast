@@ -191,7 +191,7 @@ void LobbyScene::BuildObjects()
 
 			m_pUIBoard->InsertUI(pReadyButton);
 
-			std::shared_ptr<TextButton> pOfflineButton  = std::make_shared<TextButton>(L"Malgun Gothic");
+			std::shared_ptr<TextButton> pOfflineButton = std::make_shared<TextButton>(L"Malgun Gothic");
 			pOfflineButton->SetText("Test Offline");
 			pOfflineButton->SetLayer(0);
 			pOfflineButton->SetAnchor(Vector2{ 1.0, 1.0 });
@@ -206,17 +206,6 @@ void LobbyScene::BuildObjects()
 			);
 
 			m_pUIBoard->InsertUI(pOfflineButton);
-		}
-	}
-
-	// Test
-	{
-		for (uint32 i = 0; i < m_pPreviewPlayers.size(); ++i) {
-			m_pPreviewPlayers[i] = std::make_shared<NetworkRemoteThirdPersonPlayer>();
-			m_pPreviewPlayers[i]->Initialize();
-			m_pPreviewPlayers[i]->GiveWeapon(WEAPON_TYPE::AK);
-
-			AddObject(m_pPreviewPlayers[i]);
 		}
 	}
 
@@ -272,12 +261,79 @@ void LobbyScene::Update()
 		ImGui::DragFloat3(std::format("Pos of {}", i).c_str(), (float*)(&m_PreviewTransforms[i].v3Position), 1.f, -1000.f, 1000.f);
 		ImGui::DragFloat3(std::format("Orientation of {}", i).c_str(), (float*)(&m_PreviewTransforms[i].v3Orientation), 1.f, 0.f, 360.f);
 		ImGui::NewLine();
-
-		m_pPreviewPlayers[i]->GetTransform()->SetPosition(m_PreviewTransforms[i].v3Position);
-		m_pPreviewPlayers[i]->GetTransform()->SetRotation(m_PreviewTransforms[i].v3Orientation);
 	}
+
+	for (auto& p : m_ActivePreviews) {
+		p.pPlayer->GetTransform()->SetPosition(m_PreviewTransforms[p.nSlotIndex].v3Position);
+		p.pPlayer->GetTransform()->SetRotation(m_PreviewTransforms[p.nSlotIndex].v3Orientation);
+	}
+
 	ImGui::End();
 
+	if (NETWORK->IsConnected() && !NETWORK->IsOffline()) {
+		for (auto& ev : NETWORK->ConsumePlayerJoins()) {
+			auto it = std::find_if(m_ActivePreviews.begin(), m_ActivePreviews.end(), [&](const LobbyPreviewPlayer& p) { return p.nPlayerId == ev.playerId; });
+			if (it != m_ActivePreviews.end()) continue;
+
+			int slot = -1;
+			for (int i = 0; i < 3; ++i) {
+				bool bUsed = false;
+				for (const auto& p : m_ActivePreviews) {
+					if (p.nSlotIndex == i) { bUsed = true; break; }
+				}
+				if (!bUsed) { slot = i; break; }
+			}
+
+			if (slot != -1) {
+				LobbyPreviewPlayer newPreview;
+				newPreview.nPlayerId = ev.playerId;
+				newPreview.nSlotIndex = slot;
+
+				newPreview.pPlayer = std::make_shared<NetworkRemoteThirdPersonPlayer>();
+				newPreview.pPlayer->Initialize();
+				newPreview.pPlayer->GetTransform()->SetPosition(m_PreviewTransforms[slot].v3Position);
+				newPreview.pPlayer->GetTransform()->SetRotation(m_PreviewTransforms[slot].v3Orientation);
+				newPreview.pPlayer->GiveWeapon((WEAPON_TYPE)ev.weaponType);
+				AddObject(newPreview.pPlayer);
+
+				newPreview.pNameTag = std::make_shared<TextBox>(L"Malgun Gothic");
+				newPreview.pNameTag->SetText(::StringToWString(ev.username));
+				newPreview.pNameTag->SetLayer(0);
+				newPreview.pNameTag->SetAnchor(Vector2{ 0.0f, 0.0f });
+				newPreview.pNameTag->SetPivot(Vector2{ 0.5f, 0.5f });
+				newPreview.pNameTag->SetTextHeight(30.f);
+				m_pUIBoard->InsertUI(newPreview.pNameTag);
+
+				m_ActivePreviews.push_back(newPreview);
+			}
+		}
+
+		for (auto id : NETWORK->ConsumePlayerLeaves()) {
+			auto it = std::find_if(m_ActivePreviews.begin(), m_ActivePreviews.end(), [&](const LobbyPreviewPlayer& p) { return p.nPlayerId == id; });
+			if (it != m_ActivePreviews.end()) {
+				m_pUIBoard->RemoveUI(it->pNameTag);
+				RemoveObject(it->pPlayer);
+				m_ActivePreviews.erase(it);
+			}
+		}
+
+		Matrix mtxVP = m_pViewCamera->GetViewProjectMatrix();
+		for (auto& preview : m_ActivePreviews) {
+			Vector3 headPos = preview.pPlayer->GetTransform()->GetPosition() + Vector3(0.f, 180.f, 0.f);
+			Vector4 clipPos = Vector4::Transform(Vector4(headPos.x, headPos.y, headPos.z, 1.0f), mtxVP);
+
+			if (clipPos.w > 0.01f && clipPos.z > 0.0f) {
+				float ndcX = clipPos.x / clipPos.w;
+				float ndcY = clipPos.y / clipPos.w;
+				float screenX = (ndcX + 1.0f) * 0.5f * WinCore::g_dwClientWidth;
+				float screenY = (1.0f - ndcY) * 0.5f * WinCore::g_dwClientHeight;
+				preview.pNameTag->SetPosition(Vector2{ screenX, screenY });
+			}
+			else {
+				preview.pNameTag->SetPosition(Vector2{ -10000.f, -10000.f });
+			}
+		}
+	}
 
 	if (m_bProceed) {
 		m_bProceed = false;

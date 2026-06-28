@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "GameScene.h"
 #include "DebugPlayer.h"
 #include "ThirdPersonPlayer.h"
@@ -45,7 +45,7 @@ void GameScene::BuildObjects()
 	m_ZombiePool.Initialize(100, true);
 
 	auto begin = high_resolution_clock::now();
-	LoadFromFiles("DEMO");	// 좀비 스폰 포인트(ZombieSpawnPoints)도 여기서 로드됨
+	LoadFromFiles("Game");
 	auto end = high_resolution_clock::now();
 	long long llLoadTime = duration_cast<milliseconds>(end - begin).count();
 
@@ -55,33 +55,6 @@ void GameScene::BuildObjects()
 	// 헬기 추락 컷씬 비행 경로 (언리얼 HeliPath_N TargetPoint 익스포트). 없으면 직선 폴백.
 	LoadHeliPath("DEMO_HeliPath");
 
-	std::shared_ptr<TextBox> pText = std::make_shared<TextBox>(L"Malgun Gothic");
-	pText->SetText(std::format(L"로딩 시간 : {}ms", llLoadTime));
-	pText->SetLayer(0);
-	pText->SetAnchor(Vector2{ 0,0 });
-	pText->SetPivot(Vector2{ 0,0 });
-	pText->SetPosition(Vector2{ 10,150 });
-	pText->SetTextHeight(50);
-	m_pUIBoard->InsertUI(pText);
-
-	BuildChatUI();
-
-	// 서버 트리거 게임 이벤트용 시퀀스 (런타임에 이벤트 AddEvent).
-	// Scene::FixedUpdate()가 매 프레임 m_pEventSequence->Update() 호출.
-	m_pEventSequence = std::make_shared<EventSequence>(this);
-	if (!bOnline) {
-		for (auto& pZombie : m_ZombiePool.Initialize(80, bOnline))
-			AddObject(pZombie);
-	}
-	else {
-		m_ZombiePool.Initialize(100, true);
-	}
-
-	//auto begin = high_resolution_clock::now();
-	LoadFromFiles("Game");
-	//auto end = high_resolution_clock::now();
-	//long long llLoadTime = duration_cast<milliseconds>(end - begin).count();
-
 	//std::shared_ptr<TextBox> pText = std::make_shared<TextBox>(L"Malgun Gothic");
 	//pText->SetText(std::format(L"로딩 시간 : {}ms", llLoadTime));
 	//pText->SetLayer(0);
@@ -90,6 +63,12 @@ void GameScene::BuildObjects()
 	//pText->SetPosition(Vector2{ 10,150 });
 	//pText->SetTextHeight(50);
 	//m_pUIBoard->InsertUI(pText);
+
+	BuildChatUI();
+
+	// 서버 트리거 게임 이벤트용 시퀀스 (런타임에 이벤트 AddEvent).
+	// Scene::FixedUpdate()가 매 프레임 m_pEventSequence->Update() 호출.
+	m_pEventSequence = std::make_shared<EventSequence>(this);
 
 	m_pWater = std::make_shared<WaterGridObject>();
 	//pWater->Initialize();
@@ -296,15 +275,10 @@ void GameScene::ProcessServerGameEvents()
 		case GE_EXPLOSION:
 			m_pEventSequence->AddEvent(std::make_shared<ExplosionEvent>(ev.pos));
 			break;
-		case GE_POSTFX_DARKEN:
-			// fTargetValue = 목표 outputScale, fDuration = 지속(초)
-			m_pEventSequence->AddEvent(std::make_shared<PostFXFadeEvent>(ev.fTargetValue, ev.fDuration));
-			break;
-		case GE_HORROR_LOOK:
-			m_pEventSequence->AddEvent(std::make_shared<HorrorLookEvent>(ev.fDuration > 0.f ? ev.fDuration : 1.5f));
-			break;
-		case GE_RESTORE_LOOK:
-			m_pEventSequence->AddEvent(std::make_shared<RestoreLookEvent>(ev.fDuration > 0.f ? ev.fDuration : 1.5f));
+		case GE_ENVIRONMENT:
+			// 환경 프리셋 전환: 한 이벤트로 포스트FX/안개/시간/앰비언트 전체를 페이드.
+			m_pEventSequence->AddEvent(std::make_shared<EnvironmentTransitionEvent>(
+				GetEnvironmentPreset(ev.presetId), ev.fDuration > 0.f ? ev.fDuration : 1.5f));
 			break;
 		case GE_HELICOPTER_CRASH:
 			// 헬기 추락 컷씬: 시네마틱 카메라가 추락 헬기 추적 (fDuration=0 → 기본 5초)

@@ -1,9 +1,9 @@
-#pragma once
+﻿#pragma once
 
 constexpr short PORT = 9000;
 //constexpr int WORLD_WIDTH = 8;
 //constexpr int WORLD_HEIGHT = 8;
-constexpr int MAX_PLAYERS = 3;
+constexpr int MAX_PLAYERS = 1000;
 constexpr int MAX_ROOMS = 300;
 constexpr int MAX_NAME_LEN = 20;
 constexpr int MAX_CHAT_LEN = 200;
@@ -13,6 +13,7 @@ enum PACKET_TYPE {
 	C2S_LOGIN, C2S_MOVE,
 	C2S_TRANSFORM,
 	C2S_PLAYER_SHOOT,                             // 클라이언트 → 서버: 사격 요청
+	C2S_REGISTER,                                 // 클라이언트 → 서버: 회원가입 요청
 	S2C_LOGIN_RESULT, S2C_AVATAR_INFO,
 	S2C_ADD_PLAYER, S2C_REMOVE_PLAYER,
 	S2C_TRANSFORM,
@@ -31,29 +32,33 @@ enum PACKET_TYPE {
 	C2S_PLAYER_WEAPON,                            // 클라이언트 → 서버: 무기 교체 요청
 	S2C_PLAYER_WEAPON,                            // 서버 → 클라이언트: 무기 교체 브로드캐스트
 	S2C_GAME_EVENT,                               // 서버 → 클라이언트: 스크립트 게임 이벤트 (폭파/포스트FX 등)
+	S2C_REGISTER_RESULT,
+	C2S_READY,                                    // 클라이언트 → 서버: 레디 상태 변경
+	S2C_READY_STATE,                              // 서버 → 클라이언트: 누군가 레디 상태 변경
+	S2C_GAME_START                                // 서버 → 클라이언트: 4명 레디 완료, 게임 시작
 };
 
 // ── 게임 이벤트 ID (서버 트리거, 클라 효과 카탈로그) ──────────────────────────
 enum GameEventId : int {
 	GE_EXPLOSION       = 0,   // 위치(x,y,z)에 폭발 연출 (파티클 + 사운드)
-	GE_POSTFX_DARKEN   = 1,   // 화면 어둡게 페이드 (단일값). fTargetValue = 목표 outputScale, fDuration = 지속(초)
-	GE_HORROR_LOOK     = 2,   // 작성형: exposure↓+outputScale↓+saturation↓+vignette↑ 동시 페이드. fDuration = 지속(초)
-	GE_RESTORE_LOOK    = 3,   // 작성형: 포스트값 기본으로 복구 페이드. fDuration = 지속(초)
-	GE_HELICOPTER_CRASH = 4,  // 헬기 추락 컷씬: 시네마틱 카메라가 추락하는 헬기를 추적. fDuration = 연출 길이(0이면 기본값)
+	GE_HORROR_LOOK     = 1,   // (구) 호러 룩. 호환용 — 내부적으로 EP_HORROR 프리셋으로 처리됨
+	GE_RESTORE_LOOK    = 2,   // (구) 룩 복구. 호환용 — 내부적으로 EP_DEFAULT 프리셋으로 처리됨
+	GE_HELICOPTER_CRASH = 3,  // 헬기 추락 컷씬: 시네마틱 카메라가 추락하는 헬기를 추적. fDuration = 연출 길이(0이면 기본값)
+	GE_ENVIRONMENT     = 4,   // 환경 프리셋 전환: presetId 프리셋(포스트FX/안개/시간/앰비언트 전체)으로 fDuration 동안 페이드
+};
+
+// ── 환경 프리셋 ID (GE_ENVIRONMENT 전용) ─────────────────────────────────────
+// 한 프리셋이 포스트프로세싱 + 안개 + 시간(스카이박스) + 글로벌 앰비언트 값을 통째로 담는다.
+// 실제 값은 클라 GameEvent.cpp 의 GetEnvironmentPreset() 테이블에 정의 — 새 룩은 거기 항목만 추가.
+enum EnvironmentPresetId : int {
+	EP_DEFAULT = 0,   // 기본 룩 (모든 값 디폴트 복구)
+	EP_HORROR  = 1,   // 호러: exposure↓ saturation↓ vignette↑ bloom↑ 안개 자욱+어둡게
+	EP_NIGHT   = 2,   // 야간: 시간 밤으로 + 앰비언트 어둡게 + 차가운 안개
+	EP_DAWN    = 3,   // 새벽: 시간 새벽으로 + 따뜻한 톤
+	EP_SUNSET  = 4,   // 석양: 시간 저녁으로 + 따뜻한 안개 + 시네마틱 카메라가 지는 해를 바라봄(bWatchSun)
 };
 enum IOType { IO_SEND, IO_RECV, IO_ACCEPT };
 
-// enum PACKET_TYPE { 
-// 	C2S_LOGIN, 
-// 	C2S_MOVE, 
-// 	C2S_TRANSFORM,
-// 	S2C_LOGIN_RESULT, 
-// 	S2C_AVATAR_INFO, 
-// 	S2C_ADD_PLAYER, 
-// 	S2C_REMOVE_PLAYER, 
-// 	S2C_MOVE_PLAYER,
-// 	S2C_TRANSFORM
-// };
 
 enum DIRECTION {
 	UP = 1 << 0,
@@ -72,6 +77,14 @@ struct C2S_Login {
 	unsigned char size;
 	PACKET_TYPE   type;
 	char username[MAX_NAME_LEN];
+	char password[MAX_NAME_LEN];
+};
+
+struct C2S_Register {
+	unsigned char size;
+	PACKET_TYPE   type;
+	char username[MAX_NAME_LEN];
+	char password[MAX_NAME_LEN];
 };
 
 struct C2S_Move {
@@ -96,11 +109,36 @@ struct S2C_LoginResult {
 	char message[50];
 };
 
+struct S2C_RegisterResult {
+	unsigned char size;
+	PACKET_TYPE   type;
+	bool success;
+	char message[50];
+};
+
 struct S2C_AvatarInfo {
 	unsigned char size;
 	PACKET_TYPE   type;
 	int playerId;
 	TransformData transform;
+};
+
+struct C2S_Ready {
+	unsigned char size;
+	PACKET_TYPE   type;
+	bool          bReady;
+};
+
+struct S2C_ReadyState {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           playerId;
+	bool          bReady;
+};
+
+struct S2C_GameStart {
+	unsigned char size;
+	PACKET_TYPE   type;
 };
 
 struct S2C_AddPlayer {
@@ -113,6 +151,7 @@ struct S2C_AddPlayer {
 	bool          bAiming;
 	float         fAimPitch;
 	unsigned char weaponType;   // 현재 장착 무기 (late-join 동기화용)
+	bool          bReady;       // 현재 레디 상태
 };
 
 struct S2C_RemovePlayer {
@@ -295,6 +334,7 @@ struct S2C_GameEvent {
 	float         x, y, z;            // 월드 위치 (cm) — 위치 무관 이벤트는 무시
 	float         fTargetValue;       // 목표값 (예: outputScale)
 	float         fDuration;          // 페이드 지속(초)
+	int           presetId;           // EnvironmentPresetId (GE_ENVIRONMENT 전용, 그 외 무시)
 };
 
 #pragma pack(pop) // Restore default packing

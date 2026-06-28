@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #define SERVERPORT 9000
 #include "ServerCore/Session.h"
 
@@ -30,6 +30,14 @@ struct PlayerJoinEvent {
 	bool          bAiming;
 	float         fAimPitch;
 	unsigned char weaponType;
+	std::string   username;
+	bool          bReady;
+};
+
+// 레디 상태 변경 이벤트
+struct ReadyStateEvent {
+	int  playerId;
+	bool bReady;
 };
 
 // 무기 교체 이벤트 (리모트 플레이어 무기 반영)
@@ -111,6 +119,7 @@ struct GameEventMsg {
 	Vector3 pos;
 	float   fTargetValue;
 	float   fDuration;
+	int     presetId;     // EnvironmentPresetId (GE_ENVIRONMENT 전용)
 };
 
 class NetworkManager {
@@ -165,6 +174,13 @@ public:
 
 	// ── 서버 게임 이벤트 소비 ──────────────────────────────────────────────────
 	std::vector<GameEventMsg> ConsumeGameEvents();
+	// ↳ 패킷 보내기
+	void SendReady(bool bReady);
+
+	// 어떤 플레이어의 레디 상태 변경을 수신
+	std::vector<ReadyStateEvent> ConsumeReadyStates();
+	// 게임 시작 신호 (서버 발송)
+	bool                         ConsumeGameStart();
 
 	// ── 플레이어 이벤트 소비 (Task: Remote Player Sync) ─────────────────────────
 	std::vector<PlayerJoinEvent>      ConsumePlayerJoins();
@@ -177,8 +193,15 @@ public:
 	// 앱 시작 기준 단조 시간(초) — 네트워크 스레드/게임 스레드 양쪽에서 사용
 	static float			GetNetTimeSec();
 
+public:
+	void					SendLogin(const std::string& id, const std::string& pw);
+	void					SendRegister(const std::string& id, const std::string& pw);
+
+	// ── 결과 상태 확인용 ───────────────────────────────────────────────────────
+	int						m_nLoginState = 0; // 0: None, 1: Success, -1: Failed
+	int						m_nRegisterState = 0; // 0: None, 1: Success, -1: Failed
+
 private:
-	void					SendLoginPacket();
 	void					SendData();
 	void					ReceiveData();
 
@@ -250,4 +273,6 @@ private:
 	concurrency::concurrent_queue<ChatMessageEvent>               m_PendingChatMessages;
 	concurrency::concurrent_queue<WeaponChangeEvent>             m_PendingPlayerWeapons;
 	concurrency::concurrent_queue<GameEventMsg>                  m_PendingGameEvents;
+	concurrency::concurrent_queue<ReadyStateEvent>               m_PendingReadyStates;
+	std::atomic<bool>                                            m_bPendingGameStart{ false };
 };
