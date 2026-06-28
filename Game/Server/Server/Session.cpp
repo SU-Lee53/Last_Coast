@@ -501,7 +501,7 @@ void Session::send_zombie_attack(int nZombieId, int nTargetPlayerId, float fDama
 	do_send(p.size, reinterpret_cast<char*>(&p));
 }
 
-void Session::send_game_event(int event_id, const Vector3& v3Pos, float fTargetValue, float fDuration)
+void Session::send_game_event(int event_id, const Vector3& v3Pos, float fTargetValue, float fDuration, int preset_id)
 {
 	S2C_GameEvent p;
 	p.size = sizeof(S2C_GameEvent);
@@ -512,6 +512,7 @@ void Session::send_game_event(int event_id, const Vector3& v3Pos, float fTargetV
 	p.z = v3Pos.z;
 	p.fTargetValue = fTargetValue;
 	p.fDuration = fDuration;
+	p.presetId = preset_id;
 	do_send(p.size, reinterpret_cast<char*>(&p));
 }
 

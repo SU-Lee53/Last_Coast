@@ -455,7 +455,7 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	case S2C_GAME_EVENT: {
 		if (size < static_cast<int>(sizeof(S2C_GameEvent))) return;
 		auto* p = reinterpret_cast<const S2C_GameEvent*>(data);
-		m_PendingGameEvents.push(GameEventMsg{ p->eventId, Vector3{ p->x, p->y, p->z }, p->fTargetValue, p->fDuration });
+		m_PendingGameEvents.push(GameEventMsg{ p->eventId, Vector3{ p->x, p->y, p->z }, p->fTargetValue, p->fDuration, p->presetId });
 		break;
 	}
 	case S2C_READY_STATE: {

@@ -110,55 +110,74 @@ private:
 	Vector3 m_v3Pos;
 };
 
-// 화면 어둡게 페이드 (서버 GE_POSTFX_DARKEN). ToneMapping outputScale 를
-// 현재값 → 목표값으로 지속시간 동안 보간. 완료 시 종료.
-class PostFXFadeEvent : public IOneShotEvent {
+
+// ── 환경 프리셋 틀 ────────────────────────────────────────────────────────────
+// 한 이벤트로 화면 환경 전체(톤매핑 + 포스트FX + 안개 + 스카이박스 시간 + 글로벌 앰비언트)를
+// 한꺼번에 목표값으로 페이드한다. "룩"은 더 이상 이벤트 클래스가 아니라 EnvironmentPreset 데이터다.
+//   - 새 룩 추가 = GetEnvironmentPreset() 테이블에 구조체 항목 하나 추가 (+ protocol.h enum)
+//   - 서버는 EnvironmentPresetId 만 보내고, 실제 값/페이드는 전부 여기서 처리
+struct EnvironmentPreset {
+	// 톤매핑 (라이브 반영되는 Common 값들)
+	float fExposure          = 1.0f;
+	float fPostSaturation    = 1.0f;
+	float fOutputScale       = 1.0f;
+	float fGamma             = 2.2f;
+	int   nEnableAutoExposure = 1;     // 즉시 적용(lerp 안 함). 0 = 수동 노출(룩 연출용)
+
+	// 블룸
+	float fBloomThreshold    = 1.0f;
+	float fBloomIntensity    = 0.6f;
+
+	// 스크린 FX
+	float fGrainStrength     = 0.015f;
+	float fVignetteStrength  = 0.25f;
+	float fVignetteRadius    = 0.75f;
+
+	// 안개
+	Vector4 v4FogColor       { 0.62f, 0.68f, 0.72f, 1.0f };
+	float   fFogDistanceDensity = 0.0035f;
+	float   fFogHeightDensity   = 0.02f;
+	float   fFogMaxOpacity      = 0.0f;
+
+	// 스카이박스 시간 (0~1). bAffectTime=false 면 시간은 건드리지 않음.
+	bool  bAffectTime        = false;
+	float fTimeOfDay01       = 0.5f;
+
+	// true 이고 bAffectTime 일 때: 전환 동안 시네마틱 카메라가 태양을 바라봄(해질녘 연출).
+	// 연출 끝나면 원래 카메라로 복구. (플레이어 입력은 전환 동안 카메라에 미반영)
+	bool  bWatchSun          = false;
+
+	// 글로벌 앰비언트. bAffectAmbient=false 면 앰비언트는 건드리지 않음.
+	bool    bAffectAmbient   = false;
+	Vector4 v4GlobalAmbient  { 0.1f, 0.1f, 0.1f, 1.0f };
+};
+
+// presetId(EnvironmentPresetId) → 프리셋 값. 정의는 GameEvent.cpp.
+const EnvironmentPreset& GetEnvironmentPreset(int presetId);
+
+// 환경 전체를 현재값 → 목표 프리셋으로 fDuration 동안 페이드하는 범용 이벤트.
+// 서버 GE_ENVIRONMENT 가 이걸 띄운다. (런타임 AddEvent — Initialize 미사용)
+class EnvironmentTransitionEvent : public IOneShotEvent {
 public:
-	PostFXFadeEvent(float fTargetScale, float fDuration)
-		: m_fTargetScale{ fTargetScale }, m_fDuration{ fDuration } {}
+	EnvironmentTransitionEvent(const EnvironmentPreset& target, float fDuration)
+		: m_Target{ target }, m_fDuration{ fDuration } {}
 	virtual void OnEnterEvent(Scene* pScene) override;
 	virtual void OnUpdateEvent(Scene* pScene) override;
 
 private:
-	float m_fTargetScale;
+	void RestoreCamera(Scene* pScene); // 해질녘 연출 종료 시 원래 카메라 복구
+
+private:
+	EnvironmentPreset m_Target;
+	EnvironmentPreset m_Start{};   // OnEnter서 현재 환경 스냅샷
 	float m_fDuration;
-	float m_fStartScale  = 1.f;
 	float m_fTimeElapsed = 0.f;
-};
 
-// 작성형(A) 다중 파라미터 이벤트 예시: 호러 룩.
-// exposure↓ + outputScale↓ + saturation↓ + vignette↑ 를 한 이벤트서 동시에 직접 조작.
-// 새 "룩"이 필요하면 이런 식으로 이벤트 클래스 추가 — 패킷/enum에 값 넣을 필요 없음.
-class HorrorLookEvent : public IOneShotEvent {
-public:
-	HorrorLookEvent(float fDuration) : m_fDuration{ fDuration } {}
-	virtual void OnEnterEvent(Scene* pScene) override;
-	virtual void OnUpdateEvent(Scene* pScene) override;
-
-private:
-	float m_fDuration;
-	float m_fTimeElapsed   = 0.f;
-	// 시작값 캡처
-	float m_fStartExposure = 1.f;
-	float m_fStartOutput   = 1.f;
-	float m_fStartSat      = 1.f;
-	float m_fStartVignette = 0.f;
-};
-
-// 포스트값을 기본으로 되돌리는 작성형 이벤트.
-class RestoreLookEvent : public IOneShotEvent {
-public:
-	RestoreLookEvent(float fDuration) : m_fDuration{ fDuration } {}
-	virtual void OnEnterEvent(Scene* pScene) override;
-	virtual void OnUpdateEvent(Scene* pScene) override;
-
-private:
-	float m_fDuration;
-	float m_fTimeElapsed   = 0.f;
-	float m_fStartExposure = 1.f;
-	float m_fStartOutput   = 1.f;
-	float m_fStartSat      = 1.f;
-	float m_fStartVignette = 0.f;
+	// 해질녘 카메라 연출(bWatchSun) 전용
+	bool                    m_bWatchSun = false;
+	Vector3                 m_v3CamPos{};        // OnEnter서 고정한 카메라 위치(플레이어 눈높이)
+	std::shared_ptr<Camera> m_pCinematicCamera;
+	std::shared_ptr<Camera> m_pSavedCamera;
 };
 
 // 헬기 추락 컷씬 (서버 GE_HELICOPTER_CRASH). 시네마틱 카메라로 전환 후
@@ -179,6 +198,7 @@ private:
 	float m_fDuration;
 	float m_fTimeElapsed = 0.f;
 	bool  m_bExploded = false;
+	bool  m_bCinematicPushed = false; // 게임플레이 정지 중복 Push/Pop 방지
 
 	// OnEnter서 플레이어 기준으로 산출 (정면 하늘 → 정면 지면)
 	Vector3 m_v3HeliStart{};

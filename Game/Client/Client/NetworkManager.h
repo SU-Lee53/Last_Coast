@@ -119,6 +119,7 @@ struct GameEventMsg {
 	Vector3 pos;
 	float   fTargetValue;
 	float   fDuration;
+	int     presetId;     // EnvironmentPresetId (GE_ENVIRONMENT 전용)
 };
 
 class NetworkManager {
