@@ -873,6 +873,7 @@ nlohmann::ordered_json AssimpConverter::StoreMaterialToJson(const aiMaterial* pM
 	material["SpecularMapName"] = "None";
 	material["MetallicMapName"] = "None";
 	material["NormalMapName"] = "None";
+	material["AlbedoAlphaMode"] = static_cast<UINT>(TextureAlphaMode::Opaque);
 
 	std::vector<aiTextureType> etextureTypes = {
 		aiTextureType_DIFFUSE,
@@ -891,15 +892,16 @@ nlohmann::ordered_json AssimpConverter::StoreMaterialToJson(const aiMaterial* pM
 				const aiTexture* pTexture = m_pScene->GetEmbeddedTexture(aistrTexturePath.C_Str());
 				// TODO : make it happen
 				std::string strTextureName;
+				TextureAlphaMode eAlphaMode = TextureAlphaMode::Opaque;
 				if (pTexture) {
-					ExportEmbeddedTexture(pTexture, eType);
+					eAlphaMode = ExportEmbeddedTexture(pTexture, eType);
 					strTextureName = pTexture->mFilename.C_Str();
 					strTextureName = std::filesystem::path{ strTextureName }.stem().string();
 				}
 				else {
 					// External texture
 					aistrTexturePath = ExtractFileNameOnly(std::string(aistrTexturePath.C_Str()));
-					ExportExternalTexture(aistrTexturePath, eType);
+					eAlphaMode = ExportExternalTexture(aistrTexturePath, eType);
 					strTextureName = aistrTexturePath.C_Str();
 					strTextureName = std::filesystem::path{ strTextureName }.stem().string();
 				}
@@ -908,6 +910,7 @@ nlohmann::ordered_json AssimpConverter::StoreMaterialToJson(const aiMaterial* pM
 				case aiTextureType_DIFFUSE:
 				{
 					material["AlbedoMapName"] = strTextureName;
+					material["AlbedoAlphaMode"] = static_cast<UINT>(eAlphaMode);
 					break;
 				}
 				case aiTextureType_SPECULAR:
@@ -940,7 +943,7 @@ nlohmann::ordered_json AssimpConverter::StoreMaterialToJson(const aiMaterial* pM
 	return material;
 }
 
-void AssimpConverter::ExportEmbeddedTexture(const aiTexture* pTexture, aiTextureType eTextureType) const
+TextureAlphaMode AssimpConverter::ExportEmbeddedTexture(const aiTexture* pTexture, aiTextureType eTextureType) const
 {
 	namespace fs = std::filesystem;
 
@@ -963,19 +966,45 @@ void AssimpConverter::ExportEmbeddedTexture(const aiTexture* pTexture, aiTexture
 	std::string strTextureSaveName = std::format("{}\\{}.dds", strTexturePath, strTextureName);
 	if (fs::exists(fs::path{ strTextureSaveName })) {
 		DisplayText("Texture : %s is already exists\n", strTextureSaveName.c_str());
-		return;
+		return (eTextureType == aiTextureType_DIFFUSE) ? AnalyzeTextureAlphaFromFile(strTextureSaveName) : TextureAlphaMode::Opaque;
 	}
 
 	if (pTexture->mHeight == 0) {
 		// Compressed
 		if (IsDDS(pTexture)) {
-			std::ofstream out{ strTextureSaveName , std::ios::binary };
-			out.write(
-				reinterpret_cast<const char*>(pTexture->pcData),
-				pTexture->mWidth
+			if (m_eTextureCompressionMode == TextureCompressionMode::None && eTextureType != aiTextureType_DIFFUSE) {
+				std::ofstream out{ strTextureSaveName , std::ios::binary };
+				out.write(
+					reinterpret_cast<const char*>(pTexture->pcData),
+					pTexture->mWidth
+				);
+
+				return TextureAlphaMode::Opaque;
+			}
+
+			hr = ::LoadFromDDSMemory(
+				reinterpret_cast<const uint8_t*>(pTexture->pcData),
+				pTexture->mWidth,
+				DDS_FLAGS_NONE,
+				&metaData,
+				img
 			);
 
-			return;
+			if (FAILED(hr)) {
+				DisplayText("%d : Failed to load texuture : %s\n", __LINE__, strTextureName.c_str());
+				return TextureAlphaMode::Opaque;
+			}
+
+			TextureAlphaMode eAlphaMode = (eTextureType == aiTextureType_DIFFUSE) ? AnalyzeTextureAlpha(img) : TextureAlphaMode::Opaque;
+			if (m_eTextureCompressionMode == TextureCompressionMode::None) {
+				std::ofstream out{ strTextureSaveName , std::ios::binary };
+				out.write(
+					reinterpret_cast<const char*>(pTexture->pcData),
+					pTexture->mWidth
+				);
+
+				return eAlphaMode;
+			}
 		}
 		else {
 			hr = ::LoadFromWICMemory(
@@ -986,16 +1015,17 @@ void AssimpConverter::ExportEmbeddedTexture(const aiTexture* pTexture, aiTexture
 				img
 			);
 
-			// Filp Y if its normal map
-			if (eTextureType == aiTextureType_NORMALS) {
-				FlipNormalMapY(img);
-			}
-
 			if (FAILED(hr)) {
 				DisplayText("%d : Failed to load texuture : %s\n", __LINE__, strTextureName.c_str());
+				return TextureAlphaMode::Opaque;
 			}
 			else {
 				DisplayText("%d : Texture load successful: % s\n", __LINE__, strTextureName.c_str());
+			}
+
+			// Filp Y if its normal map
+			if (eTextureType == aiTextureType_NORMALS) {
+				FlipNormalMapY(img);
 			}
 
 		}
@@ -1010,13 +1040,9 @@ void AssimpConverter::ExportEmbeddedTexture(const aiTexture* pTexture, aiTexture
 			1
 		);
 
-		// Filp Y if its normal map
-		if (eTextureType == aiTextureType_NORMALS) {
-			FlipNormalMapY(img);
-		}
-
 		if (FAILED(hr)) {
 			DisplayText("%d : Failed to load texuture : %s\n", __LINE__, strTextureName.c_str());
+			return TextureAlphaMode::Opaque;
 		}
 		else {
 			DisplayText("%d : Texture load successful: % s\n", __LINE__, strTextureName.c_str());
@@ -1025,38 +1051,14 @@ void AssimpConverter::ExportEmbeddedTexture(const aiTexture* pTexture, aiTexture
 		::memcpy(img.GetImage(0, 0, 0)->pixels, pTexture->pcData, (pTexture->mWidth * pTexture->mHeight * 4));
 	}
 
-	// Generate Mipmaps
-	ScratchImage mipChain{};
+	TextureAlphaMode eAlphaMode = (eTextureType == aiTextureType_DIFFUSE) ? AnalyzeTextureAlpha(img) : TextureAlphaMode::Opaque;
 
-	HRESULT hrMipGenerated = ::GenerateMipMaps(
-		img.GetImages(),
-		img.GetImageCount(),
-		img.GetMetadata(),
-		TEX_FILTER_DEFAULT,
-		0,	// auto
-		mipChain
-	);
+	SaveTextureDDS(img, eTextureType, eAlphaMode, strTextureSaveName, strTextureName);
 
-	// Save
-	hr = ::SaveToDDSFile(
-		hrMipGenerated == S_OK ? mipChain.GetImages() : img.GetImages(),
-		hrMipGenerated == S_OK ? mipChain.GetImageCount() : img.GetImageCount(),
-		hrMipGenerated == S_OK ? mipChain.GetMetadata() : img.GetMetadata(),
-		DirectX::DDS_FLAGS_NONE,
-		StringToWString_UTF8(strTextureSaveName).c_str()
-	);
-
-	if (FAILED(hr)) {
-		DisplayText("%d : Failed to save texuture : %s\n", __LINE__, strTextureName.c_str());
-	}
-	else {
-		DisplayText("%d : Texture save successful: % s\n", __LINE__, strTextureName.c_str());
-	}
-
-	return;
+	return eAlphaMode;
 }
 
-void AssimpConverter::ExportExternalTexture(const aiString& aistrTexturePath, aiTextureType eTextureType) const
+TextureAlphaMode AssimpConverter::ExportExternalTexture(const aiString& aistrTexturePath, aiTextureType eTextureType) const
 {
 	namespace fs = std::filesystem;
 	fs::path texFullPath = fs::path{ m_strFilePath }.parent_path() / aistrTexturePath.C_Str();
@@ -1073,48 +1075,279 @@ void AssimpConverter::ExportExternalTexture(const aiString& aistrTexturePath, ai
 	std::string strTextureSaveName = std::format("{}\\{}.dds", strTexturePath, strTextureName);
 	if (fs::exists(fs::path{ strTextureSaveName })) {
 		DisplayText("Texture : %s is already exists\n", strTextureSaveName.c_str());
-		return;
+		return (eTextureType == aiTextureType_DIFFUSE) ? AnalyzeTextureAlphaFromFile(strTextureSaveName) : TextureAlphaMode::Opaque;
 	}
 
 	ScratchImage img{};
 	TexMetadata metadata{};
+	HRESULT hr{};
 
-	HRESULT hr = LoadFromWICFile(
-		texFullPath.c_str(),
-		WIC_FLAGS_NONE,
-		&metadata,
-		img
-	);
+	if (texFullPath.extension() == ".dds" || texFullPath.extension() == ".DDS") {
+		hr = ::LoadFromDDSFile(
+			texFullPath.c_str(),
+			DDS_FLAGS_NONE,
+			&metadata,
+			img
+		);
+	}
+	else {
+		hr = LoadFromWICFile(
+			texFullPath.c_str(),
+			WIC_FLAGS_NONE,
+			&metadata,
+			img
+		);
+	}
 
 	if (FAILED(hr)) {
 		DisplayText("%d : Failed to load texuture : %s\n", __LINE__, strTextureName.c_str());
+		return TextureAlphaMode::Opaque;
 	}
 	else {
 		DisplayText("%d : Texture load successful: % s\n", __LINE__, strTextureName.c_str());
 	}
+
+	TextureAlphaMode eAlphaMode = (eTextureType == aiTextureType_DIFFUSE) ? AnalyzeTextureAlpha(img) : TextureAlphaMode::Opaque;
 
 	// Filp Y if its normal map
 	if (eTextureType == aiTextureType_NORMALS) {
 		FlipNormalMapY(img);
 	}
 
-	// Generate Mipmaps
-	ScratchImage mipChain{};
+	SaveTextureDDS(img, eTextureType, eAlphaMode, strTextureSaveName, strTextureName);
 
+	return eAlphaMode;
+}
+
+TextureAlphaMode AssimpConverter::AnalyzeTextureAlpha(const ScratchImage& img) const
+{
+	TexMetadata metaData = img.GetMetadata();
+	if (!::HasAlpha(metaData.format)) {
+		return TextureAlphaMode::Opaque;
+	}
+
+	ScratchImage decompressedImage;
+	const Image* pScanImage = nullptr;
+
+	if (::IsCompressed(metaData.format)) {
+		const Image* pBaseImage = img.GetImage(0, 0, 0);
+		if (!pBaseImage) {
+			return TextureAlphaMode::Opaque;
+		}
+
+		HRESULT hr = ::Decompress(
+			*pBaseImage,
+			DXGI_FORMAT_UNKNOWN,
+			decompressedImage
+		);
+
+		if (FAILED(hr)) {
+			return TextureAlphaMode::Opaque;
+		}
+
+		pScanImage = decompressedImage.GetImage(0, 0, 0);
+	}
+	else {
+		pScanImage = img.GetImage(0, 0, 0);
+	}
+
+	if (!pScanImage) {
+		return TextureAlphaMode::Opaque;
+	}
+
+	ScratchImage convertedImage;
+	const Image* pFinalImage = pScanImage;
+
+	if (!IsRGBA8Like(pScanImage->format)) {
+		HRESULT hr = ::Convert(
+			*pScanImage,
+			DXGI_FORMAT_R8G8B8A8_UNORM,
+			TEX_FILTER_DEFAULT,
+			TEX_THRESHOLD_DEFAULT,
+			convertedImage
+		);
+
+		if (FAILED(hr)) {
+			return TextureAlphaMode::Opaque;
+		}
+
+		pFinalImage = convertedImage.GetImage(0, 0, 0);
+		if (!pFinalImage) {
+			return TextureAlphaMode::Opaque;
+		}
+	}
+
+	bool bHasMaskedAlpha = false;
+	constexpr uint8_t zeroMax = 8;
+	constexpr uint8_t oneMin = 247;
+
+	for (size_t y = 0; y < pFinalImage->height; ++y) {
+		const uint8_t* pRow = pFinalImage->pixels + y * pFinalImage->rowPitch;
+		for (size_t x = 0; x < pFinalImage->width; ++x) {
+			uint8_t alpha = pRow[x * 4 + 3];
+			if (alpha <= zeroMax) {
+				bHasMaskedAlpha = true;
+			}
+			else if (alpha < oneMin) {
+				return TextureAlphaMode::Transparent;
+			}
+		}
+	}
+
+	return bHasMaskedAlpha ? TextureAlphaMode::Masked : TextureAlphaMode::Opaque;
+}
+
+TextureAlphaMode AssimpConverter::AnalyzeTextureAlphaFromFile(const std::string& strTexturePath) const
+{
+	namespace fs = std::filesystem;
+
+	TexMetadata metaData{};
+	ScratchImage img{};
+	HRESULT hr{};
+	fs::path texturePath{ strTexturePath };
+
+	if (texturePath.extension() == ".dds" || texturePath.extension() == ".DDS") {
+		hr = ::GetMetadataFromDDSFile(
+			StringToWString_UTF8(strTexturePath).c_str(),
+			DDS_FLAGS_NONE,
+			metaData
+		);
+		if (SUCCEEDED(hr) && !::HasAlpha(metaData.format)) {
+			return TextureAlphaMode::Opaque;
+		}
+
+		hr = ::LoadFromDDSFile(
+			StringToWString_UTF8(strTexturePath).c_str(),
+			DDS_FLAGS_NONE,
+			&metaData,
+			img
+		);
+	}
+	else {
+		hr = ::GetMetadataFromWICFile(
+			StringToWString_UTF8(strTexturePath).c_str(),
+			WIC_FLAGS_NONE,
+			metaData
+		);
+		if (SUCCEEDED(hr) && !::HasAlpha(metaData.format)) {
+			return TextureAlphaMode::Opaque;
+		}
+
+		hr = ::LoadFromWICFile(
+			StringToWString_UTF8(strTexturePath).c_str(),
+			WIC_FLAGS_NONE,
+			&metaData,
+			img
+		);
+	}
+
+	if (FAILED(hr)) {
+		DisplayText("%d : Failed to analyze texuture alpha : %s\n", __LINE__, strTexturePath.c_str());
+		return TextureAlphaMode::Opaque;
+	}
+
+	return AnalyzeTextureAlpha(img);
+}
+
+bool AssimpConverter::IsRGBA8Like(DXGI_FORMAT dxgiFormat) const
+{
+	switch (dxgiFormat) {
+	case DXGI_FORMAT_R8G8B8A8_UNORM:
+	case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+	case DXGI_FORMAT_B8G8R8A8_UNORM:
+	case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+		return true;
+	default:
+		return false;
+	}
+}
+
+DXGI_FORMAT AssimpConverter::GetTextureCompressionFormat(aiTextureType eTextureType, TextureAlphaMode eAlphaMode) const
+{
+	switch (m_eTextureCompressionMode) {
+	case TextureCompressionMode::None:
+		return DXGI_FORMAT_UNKNOWN;
+	case TextureCompressionMode::BC1:
+		return DXGI_FORMAT_BC1_UNORM;
+	case TextureCompressionMode::BC3:
+		return DXGI_FORMAT_BC3_UNORM;
+	case TextureCompressionMode::BC7:
+		return DXGI_FORMAT_BC7_UNORM;
+	case TextureCompressionMode::Auto:
+		if (eTextureType == aiTextureType_NORMALS) {
+			return DXGI_FORMAT_BC7_UNORM;
+		}
+		return (eAlphaMode == TextureAlphaMode::Opaque) ? DXGI_FORMAT_BC1_UNORM : DXGI_FORMAT_BC7_UNORM;
+	default:
+		return DXGI_FORMAT_UNKNOWN;
+	}
+}
+
+HRESULT AssimpConverter::SaveTextureDDS(const ScratchImage& img, aiTextureType eTextureType, TextureAlphaMode eAlphaMode, const std::string& strTextureSaveName, const std::string& strTextureName) const
+{
+	const ScratchImage* pSourceImage = &img;
+	ScratchImage decompressedImage{};
+
+	if (::IsCompressed(img.GetMetadata().format)) {
+		HRESULT hrDecompress = ::Decompress(
+			img.GetImages(),
+			img.GetImageCount(),
+			img.GetMetadata(),
+			DXGI_FORMAT_UNKNOWN,
+			decompressedImage
+		);
+
+		if (SUCCEEDED(hrDecompress)) {
+			pSourceImage = &decompressedImage;
+		}
+	}
+
+	ScratchImage mipChain{};
 	HRESULT hrMipGenerated = ::GenerateMipMaps(
-		img.GetImages(),
-		img.GetImageCount(),
-		img.GetMetadata(),
+		pSourceImage->GetImages(),
+		pSourceImage->GetImageCount(),
+		pSourceImage->GetMetadata(),
 		TEX_FILTER_DEFAULT,
 		0,	// auto
 		mipChain
 	);
 
-	// Save
-	hr = ::SaveToDDSFile(
-		hrMipGenerated == S_OK ? mipChain.GetImages() : img.GetImages(),
-		hrMipGenerated == S_OK ? mipChain.GetImageCount() : img.GetImageCount(),
-		hrMipGenerated == S_OK ? mipChain.GetMetadata() : img.GetMetadata(),
+	const Image* pSaveImages = (hrMipGenerated == S_OK) ? mipChain.GetImages() : pSourceImage->GetImages();
+	size_t nSaveImageCount = (hrMipGenerated == S_OK) ? mipChain.GetImageCount() : pSourceImage->GetImageCount();
+	TexMetadata saveMetadata = (hrMipGenerated == S_OK) ? mipChain.GetMetadata() : pSourceImage->GetMetadata();
+
+	ScratchImage compressedImage{};
+	DXGI_FORMAT dxgiCompressionFormat = GetTextureCompressionFormat(eTextureType, eAlphaMode);
+	if (dxgiCompressionFormat != DXGI_FORMAT_UNKNOWN) {
+		TEX_COMPRESS_FLAGS eCompressFlags = TEX_COMPRESS_PARALLEL;
+		if (dxgiCompressionFormat == DXGI_FORMAT_BC7_UNORM) {
+			eCompressFlags = eCompressFlags | TEX_COMPRESS_BC7_QUICK;
+		}
+
+		HRESULT hrCompress = ::Compress(
+			pSaveImages,
+			nSaveImageCount,
+			saveMetadata,
+			dxgiCompressionFormat,
+			eCompressFlags,
+			TEX_THRESHOLD_DEFAULT,
+			compressedImage
+		);
+
+		if (SUCCEEDED(hrCompress)) {
+			pSaveImages = compressedImage.GetImages();
+			nSaveImageCount = compressedImage.GetImageCount();
+			saveMetadata = compressedImage.GetMetadata();
+		}
+		else {
+			DisplayText("%d : Texture compression failed. Save uncompressed: %s\n", __LINE__, strTextureName.c_str());
+		}
+	}
+
+	HRESULT hr = ::SaveToDDSFile(
+		pSaveImages,
+		nSaveImageCount,
+		saveMetadata,
 		DirectX::DDS_FLAGS_NONE,
 		StringToWString_UTF8(strTextureSaveName).c_str()
 	);
@@ -1126,7 +1359,7 @@ void AssimpConverter::ExportExternalTexture(const aiString& aistrTexturePath, ai
 		DisplayText("%d : Texture save successful: % s\n", __LINE__, strTextureName.c_str());
 	}
 
-	return;
+	return hr;
 }
 
 void AssimpConverter::SerializeAnimation(const std::string& strPath, const std::string& strName)

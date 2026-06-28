@@ -80,7 +80,7 @@ void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> p
 
 		m_RenderQueueCached.clear();
 		SetRenderTargets(pd3dCommandList, i);
-		BoundingFrustum xmFrsutum = m_CascadeCached[i].xmCasterCullFrustum;
+		BoundingBox xmCasterCullAABB = m_CascadeCached[i].xmCasterCullAABB;
 
 		m_FrustumCulledCached.clear();
 		{
@@ -93,7 +93,7 @@ void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> p
 			objectShadowDesc.bIncludeStatic = true;
 			objectShadowDesc.bIncludeDynamic = true;
 
-			SpatialQueryResult objectShadowCandidates = CUR_SCENE->GetWorld().GetSpatial().QueryFrustum(xmFrsutum, objectShadowDesc);
+			SpatialQueryResult objectShadowCandidates = CUR_SCENE->GetWorld().GetSpatial().QueryAABB(xmCasterCullAABB, objectShadowDesc);
 			for (const auto& pObj : objectShadowCandidates.pObjects) {
 				pObj->AddToQueue(m_FrustumCulledCached);
 			}
@@ -119,7 +119,7 @@ void DirectionalCascadeShadowMapPass::Render(ComPtr<ID3D12GraphicsCommandList> p
 			terrainShadowDesc.bIncludeStatic = true;
 			terrainShadowDesc.bIncludeDynamic = false;
 
-			SpatialQueryResult terrainShadowCandidates = CUR_SCENE->GetWorld().GetSpatial().QueryFrustum(xmFrsutum, terrainShadowDesc);
+			SpatialQueryResult terrainShadowCandidates = CUR_SCENE->GetWorld().GetSpatial().QueryAABB(xmCasterCullAABB, terrainShadowDesc);
 			const auto& terrainCulled = terrainShadowCandidates.pTerrainComponents;
 
 			DrawTerrain(pd3dCommandList, terrainCulled, outDescHandle);
@@ -185,13 +185,12 @@ void DirectionalCascadeShadowMapPass::CreatePipelineState()
 		d3dPipelineDesc.VS = SHADER->GetShaderByteCode("ShadowStandardVS");
 		d3dPipelineDesc.PS = { nullptr, 0 };
 		d3dPipelineDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_FRONT;
+		d3dPipelineDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 		d3dPipelineDesc.RasterizerState.FrontCounterClockwise = FALSE;
 		d3dPipelineDesc.RasterizerState.DepthBias = 5000;
 		d3dPipelineDesc.RasterizerState.DepthBiasClamp = 0.05f;
 		d3dPipelineDesc.RasterizerState.DepthClipEnable = FALSE;
 		d3dPipelineDesc.RasterizerState.SlopeScaledDepthBias = 4.0f;
-		d3dPipelineDesc.RasterizerState.DepthClipEnable = TRUE;
 		d3dPipelineDesc.RasterizerState.MultisampleEnable = FALSE;
 		d3dPipelineDesc.RasterizerState.AntialiasedLineEnable = FALSE;
 		d3dPipelineDesc.RasterizerState.ForcedSampleCount = 0;
@@ -564,8 +563,13 @@ void DirectionalCascadeShadowMapPass::ComputeCascade()
 		float fMinX = v3MinX->x, fMinY = v3MinY->y, fMinZ = v3MinZ->z;
 		float fMaxX = v3MaxX->x, fMaxY = v3MaxY->y, fMaxZ = v3MaxZ->z;
 
+		const float fShadowMapSize = static_cast<float>(g_unCascadeShadowMapSize[i]);
+		float fWidth = fMaxX - fMinX;
+		float fHeight = fMaxY - fMinY;
+		float fExtent = std::max(fWidth, fHeight);
+
 		// 6. Add margin
-		const float fShadowXYMargin = 5.0_m;
+		const float fShadowXYMargin = std::max(fExtent / fShadowMapSize * 2.0f, 0.05_m);
 		fMinX -= fShadowXYMargin;
 		fMaxX += fShadowXYMargin;
 		fMinY -= fShadowXYMargin;
@@ -574,12 +578,10 @@ void DirectionalCascadeShadowMapPass::ComputeCascade()
 		fMaxZ += 20.0_m;
 
 		// 7. off-center orthographic project
-		const float fShadowMapSize = static_cast<float>(g_unCascadeShadowMapSize[i]);
-
-		float fWidth = fMaxX - fMinX;
-		float fHeight = fMaxY - fMinY;
+		fWidth = fMaxX - fMinX;
+		fHeight = fMaxY - fMinY;
 		
-		float fExtent = std::max(fWidth, fHeight);
+		fExtent = std::max(fWidth, fHeight);
 		fWidth = fExtent;
 		fHeight = fExtent;
 
@@ -590,8 +592,12 @@ void DirectionalCascadeShadowMapPass::ComputeCascade()
 		float fUnitsPerTexelX = fWidth / fShadowMapSize;
 		float fUnitsPerTexelY = fHeight / fShadowMapSize;
 
-		fCenterX = std::floor(fCenterX / fUnitsPerTexelX) * fUnitsPerTexelX;
-		fCenterY = std::floor(fCenterY / fUnitsPerTexelY) * fUnitsPerTexelY;
+		float fWorldCenterX = v3LightPos.Dot(v3LightRight) + fCenterX;
+		float fWorldCenterY = v3LightPos.Dot(v3LightUpReal) + fCenterY;
+		float fSnappedWorldCenterX = std::floor(fWorldCenterX / fUnitsPerTexelX) * fUnitsPerTexelX;
+		float fSnappedWorldCenterY = std::floor(fWorldCenterY / fUnitsPerTexelY) * fUnitsPerTexelY;
+		fCenterX += fSnappedWorldCenterX - fWorldCenterX;
+		fCenterY += fSnappedWorldCenterY - fWorldCenterY;
 
 		// rebuild bounds
 		fMinX = fCenterX - fWidth * 0.5f;
@@ -607,11 +613,6 @@ void DirectionalCascadeShadowMapPass::ComputeCascade()
 		
 		Matrix mtxLightWorld = mtxLightView.Invert();
 
-		// 8. cache
-		BoundingFrustum xmShadowFrustum;
-		BoundingFrustum::CreateFromMatrix(xmShadowFrustum, mtxLightProj);
-		xmShadowFrustum.Transform(xmShadowFrustum, mtxLightWorld);
-
 		float fCasterMinX = fMinX;
 		float fCasterMaxX = fMaxX;
 		float fCasterMinY = fMinY;
@@ -622,19 +623,31 @@ void DirectionalCascadeShadowMapPass::ComputeCascade()
 		fCasterMaxX += fCasterXYMargin;
 		fCasterMinY -= fCasterXYMargin;
 		fCasterMaxY += fCasterXYMargin;
-		Matrix mtxCasterCullProj = XMMatrixOrthographicOffCenterLH(
-			fCasterMinX, fCasterMaxX,
-			fCasterMinY, fCasterMaxY,
-			fMinZ, fMaxZ
+		std::array<Vector3, 8> v3CasterCullCorners = {
+			Vector3{ fCasterMinX, fCasterMinY, fMinZ },
+			Vector3{ fCasterMaxX, fCasterMinY, fMinZ },
+			Vector3{ fCasterMaxX, fCasterMaxY, fMinZ },
+			Vector3{ fCasterMinX, fCasterMaxY, fMinZ },
+			Vector3{ fCasterMinX, fCasterMinY, fMaxZ },
+			Vector3{ fCasterMaxX, fCasterMinY, fMaxZ },
+			Vector3{ fCasterMaxX, fCasterMaxY, fMaxZ },
+			Vector3{ fCasterMinX, fCasterMaxY, fMaxZ },
+		};
+
+		std::ranges::transform(v3CasterCullCorners, v3CasterCullCorners.begin(), [&mtxLightWorld](const Vector3& v) {
+			return XMVector3TransformCoord(v, mtxLightWorld);
+		});
+
+		BoundingBox xmCasterCullAABB;
+		BoundingBox::CreateFromPoints(
+			xmCasterCullAABB,
+			v3CasterCullCorners.size(),
+			v3CasterCullCorners.data(),
+			sizeof(Vector3)
 		);
 
-		BoundingFrustum xmCasterCullFrustum;
-		BoundingFrustum::CreateFromMatrix(xmCasterCullFrustum, mtxCasterCullProj);
-		xmCasterCullFrustum.Transform(xmCasterCullFrustum, mtxLightWorld);
-
 		CascadeCameraData data{
-			.xmShadowFrustum = xmShadowFrustum,
-			.xmCasterCullFrustum = xmCasterCullFrustum,
+			.xmCasterCullAABB = xmCasterCullAABB,
 			.mtxLightViewProj = XMMatrixMultiply(mtxLightView, mtxLightProj),
 			.mtxToShadowMap = XMMatrixMultiply(XMMatrixMultiply(mtxLightView, mtxLightProj), g_mtxToTexture)
 		};

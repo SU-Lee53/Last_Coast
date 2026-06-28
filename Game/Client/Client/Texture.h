@@ -43,6 +43,7 @@ public:
 
 	//bool HasTransparentPixel() const { return m_bHasTransparentPixel; }
 	Texture::ALPHA_MODE GetAlphaMode() const { return m_eAlphaMode; }
+	void SetAlphaMode(Texture::ALPHA_MODE eAlphaMode) { m_eAlphaMode = eAlphaMode; }
 
 	virtual void ShowDebugInfo() const;
 

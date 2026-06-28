@@ -133,7 +133,7 @@ bool WeaponObject::PlayBeginReloadSound()
 {
 	auto bRes = SOUND->PlayAt(m_pBeginReloadSound, m_v3MuzzlePositionWorld) != nullptr;
 	if (bRes) {
-		SOUND->QueueSoundAt(m_pMidReloadSound, 0.5f, m_v3MuzzlePositionWorld);
+		SOUND->QueueSoundAt(m_pMidReloadSound, 0.7f, m_v3MuzzlePositionWorld);
 	}
 	return bRes;
 }

@@ -30,6 +30,7 @@ void ThirdPersonCamera::Update()
 	}
 	}
 
+	UpdateFireFovRecoil();
 	Camera::Update();
 }
 
@@ -101,6 +102,32 @@ void ThirdPersonCamera::AddPitch(float fValue)
 	m_fPitch = std::clamp(m_fPitch, m_fMinPitch, m_fMaxPitch);
 }
 
+void ThirdPersonCamera::AddFireFovRecoil(float fRecoil, float fRecovery)
+{
+	if (fRecoil <= 0.f) {
+		return;
+	}
+
+	if (m_fFireFovBase <= 0.f) {
+		m_fFireFovBase = GetFovYInDegree();
+	}
+
+	if (m_fFireFovBase <= 0.f) {
+		return;
+	}
+
+	m_fFireFovOffset = std::min(
+		m_fFireFovOffset + (fRecoil * m_fFireFovRecoilScale),
+		m_fMaxFireFovOffset
+	);
+	m_fFireFovRecoverySpeed = std::max(
+		m_fMinFireFovRecoverySpeed,
+		fRecovery * m_fFireFovRecoveryScale
+	);
+
+	SetFovY(m_fFireFovBase - m_fFireFovOffset);
+}
+
 void ThirdPersonCamera::SetOffset(const Vector3& v3Value)
 {
 	m_v3Offset = v3Value;
@@ -109,6 +136,19 @@ void ThirdPersonCamera::SetOffset(const Vector3& v3Value)
 void ThirdPersonCamera::SetLookHeight(float fValue)
 {
 	m_fLookHeight = fValue;
+}
+
+void ThirdPersonCamera::UpdateFireFovRecoil()
+{
+	if (m_fFireFovOffset <= 0.f || m_fFireFovBase <= 0.f) {
+		return;
+	}
+
+	m_fFireFovOffset = std::max(
+		0.f,
+		m_fFireFovOffset - (m_fFireFovRecoverySpeed * DT)
+	);
+	SetFovY(m_fFireFovBase - m_fFireFovOffset);
 }
 
 Vector3 ThirdPersonCamera::GetForwardXZ() const

@@ -148,6 +148,8 @@ inline HWND		g_hScaleEdit;		// Scale Factor Edit
 inline HWND		g_hModelRadio;		// Model Radio
 inline HWND		g_hAnimRadio;		// Animation Radio
 inline HWND		g_hBakeOptionCheck;	
+
+inline HWND		 g_hTextureCompressionCombo;
 inline std::ofstream g_LogFile;
 inline std::filesystem::path g_LogFilePath;
 
