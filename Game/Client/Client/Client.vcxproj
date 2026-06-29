@@ -298,6 +298,7 @@
     <ClInclude Include="WinCore.h" />
     <ClInclude Include="WInSockCommon.h" />
     <ClInclude Include="World.h" />
+    <ClInclude Include="HelicopterAnimationController.h" />
     <ClInclude Include="Zombie.h" />
     <ClInclude Include="ZombieAnimationController.h" />
     <ClInclude Include="ZombiePool.h" />
@@ -481,6 +482,7 @@
     <ClCompile Include="WeaponObject.cpp" />
     <ClCompile Include="WinCore.cpp" />
     <ClCompile Include="World.cpp" />
+    <ClCompile Include="HelicopterAnimationController.cpp" />
     <ClCompile Include="Zombie.cpp" />
     <ClCompile Include="ZombieAnimationController.cpp" />
     <ClCompile Include="ZombiePool.cpp" />

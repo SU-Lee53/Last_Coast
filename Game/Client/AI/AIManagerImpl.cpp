@@ -8,7 +8,7 @@ namespace AIDLL
     // ─────────────────────────────────────────────────────────────────────────
     AIManagerImpl::AIManagerImpl()
         : m_pNavMesh(std::make_shared<NavMeshImpl>())
-        , m_pPathManager(std::make_shared<PathManager>(200))   // 매 프레임 최대 2000 A* 사이클 (좀비 100마리 기준 마리당 20 사이클)
+        , m_pPathManager(std::make_shared<PathManager>(2000))   // 매 프레임 최대 2000 A* 사이클 (좀비 100마리 기준 마리당 20). 서버는 30Hz라 많은 좀비 시 예산 부족 → 상향.
     {}
 
     AIManagerImpl::~AIManagerImpl()

@@ -9,6 +9,8 @@
 #include "NodeObject.h"
 #include "CrashDebris.h"
 #include "SpatialTraits.h"
+#include "HelicopterAnimationController.h"
+#include "Skeleton.h"
 
 void ILoopEvent::Update(Scene* pScene)
 {
@@ -385,8 +387,12 @@ namespace {
 	const float CAM_HEIGHT        = 1.5_m;  // 플레이어 위(어깨 높이)
 	const float CAM_SHOULDER      = 30_cm;  // 우측 어깨 오프셋
 	// ▼ 헬기 모델 교체 지점 — 진짜 헬기 모델 나오면 이 두 줄만 바꾸면 됨.
-	const char*   HELI_MODEL_NAME = "SM_Cube";          // 헬기 모델 이름(현재 placeholder)
+	const char*   HELI_MODEL_NAME = "Gunship";          // 헬기 모델 이름
 	const Vector3 HELI_SCALE{ 1.f, 1.f, 1.f };         // placeholder 큐브용 스케일. 실제 모델은 보통 {1,1,1}
+	// 모델이 옆으로 누운 채 익스포트됨 → 세우는 보정 회전 (Pitch=X, Yaw=Y, Roll=Z, 도 단위).
+	// 기수 정렬(mtxRot) 전에 적용돼 모델 로컬축을 엔진축(forward=+Z, up=+Y)에 맞춘다.
+	// 방향이 안 맞으면 이 세 값만 조정 (예: 90 / -90 / 180).
+	const Vector3 HELI_MODEL_FIX_EULER{ 0.f, 0.f, 90.f };
 
 	// 경로점들을 Catmull-Rom으로 보간해 t01(0~1) 위치 샘플 (CinematicCameraEvent와 동일 방식)
 	Vector3 SampleCatmullRom(const std::vector<Vector3>& pts, float t01)
@@ -423,7 +429,7 @@ void HelicopterCrashEvent::OnEnterEvent(Scene* pScene)
 	m_pCinematicCamera->SetScissorRect(0, 0, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight);
 	m_pCinematicCamera->GenerateViewMatrix(XMFLOAT3(0.f, 0.f, 0.f), XMFLOAT3(0.f, 0.f, 1.f), XMFLOAT3(0.f, 1.f, 0.f));
 	m_pCinematicCamera->GenerateProjectionMatrix(
-		10.f, 1000_m, 
+		10.f, 10000_m, 
 		static_cast<float>(WinCore::g_dwClientWidth) / static_cast<float>(WinCore::g_dwClientHeight),
 		60.f);
 	m_pSavedCamera = pScene->SwapCamera(m_pCinematicCamera);
@@ -438,7 +444,8 @@ void HelicopterCrashEvent::OnEnterEvent(Scene* pScene)
 	}
 
 	// 언리얼에서 내보낸 비행 경로(2점 이상)가 있으면 그 경로를 보간해 비행.
-	m_v3PathPoints = pScene->GetHeliPath();
+	// 착륙(구조) 모드는 별도 경로(ArrivePath), 추락 모드는 추락 경로(HeliPath) 사용.
+	m_v3PathPoints = m_bLandMode ? pScene->GetHeliArrivePath() : pScene->GetHeliPath();
 	OutputDebugStringA(std::format("[HeliCrash] OnEnter path points = {} ({})\n",
 		m_v3PathPoints.size(),
 		m_v3PathPoints.size() >= 2 ? "USING PATH" : "FALLBACK (player-relative)").c_str());
@@ -475,8 +482,16 @@ void HelicopterCrashEvent::OnEnterEvent(Scene* pScene)
 	// 모델 교체는 상단 HELI_MODEL_NAME / HELI_SCALE 만 수정.
 	m_pHeli = MODEL->LoadOrGet(HELI_MODEL_NAME, true)->CopyObject<CrashDebris>();
 	m_pHeli->Initialize();
+	// 스켈레탈 메시 → 본 행렬 생성용 컨트롤러 부착. 없으면 GBufferPass가 본 데이터를 못 만들어
+	// 스키닝 셰이더가 본 없이 렌더 → 크래시. 부착 시 로터 회전 애니(Gunship_Anim)도 재생된다.
+	m_pHeli->AddComponent<HelicopterAnimationController>();
+	m_pHeli->GetComponent<AnimationController>()->Initialize();
 	m_pHeli->GetTransform()->SetFrameMatrix(Matrix::Identity); // 루트 frame 분리 → world = transform
-	pScene->SetCinematicProp(m_pHeli);
+
+	// 직접 렌더(SetCinematicProp) 경로는 스켈레탈 메시를 그리지 못한다.
+	// 잔해와 동일하게 정상 스폐셜 파이프라인(AddObject)으로 등록 → 좀비처럼 스키닝 렌더.
+	// 컷씬 중 World 정지(bFrozen)라 위치/애니는 OnUpdateEvent에서 직접 갱신한다.
+	pScene->AddObject(m_pHeli);
 }
 
 void HelicopterCrashEvent::OnUpdateEvent(Scene* pScene)
@@ -512,12 +527,37 @@ void HelicopterCrashEvent::OnUpdateEvent(Scene* pScene)
 		mtxRot = Matrix::CreateWorld(Vector3::Zero, v3Travel, v3Up); // forward 정렬(translation 0)
 	}
 
+	// 모델이 옆으로 누워 익스포트된 것을 세우는 보정 (기수 정렬 전에 적용).
+	const Matrix mtxModelFix = Matrix::CreateFromYawPitchRoll(
+		XMConvertToRadians(HELI_MODEL_FIX_EULER.y),
+		XMConvertToRadians(HELI_MODEL_FIX_EULER.x),
+		XMConvertToRadians(HELI_MODEL_FIX_EULER.z));
+
 	const Matrix mtxWorld =
 		Matrix::CreateScale(HELI_SCALE) *
+		mtxModelFix *
 		mtxRot *
 		Matrix::CreateTranslation(v3HeliPos);
 	m_pHeli->GetTransform()->SetWorldMatrix(mtxWorld);
 	m_pHeli->PostUpdate(); // 루트 → 자식 메시 world 행렬 전파
+
+	// 컷씬 중엔 World 가 정지(bFrozen)되어 ANIMATION->UpdateAnimationParallel() 이 스킵된다.
+	// 헬기 로터 애니/스켈레톤만 직접 갱신해 본 행렬을 최신화 (GBufferPass 가 이 값을 수집).
+	if (auto pAnim = m_pHeli->GetComponent<AnimationController>()) {
+		pAnim->Update();
+
+		// ── 진단 로그 (본 행렬이 비었거나 0으로 붕괴했는지) ──
+		static int s_nLog = 0;
+		if (s_nLog++ < 3) {
+			const auto& out = pAnim->GetFinalOutput();
+			Matrix m0 = out.empty() ? Matrix::Identity : out[0];
+			OutputDebugStringA(std::format(
+				"[HeliAnim] finalBones={} m0._11={:.3f} m0._41={:.1f} heliPos=({:.0f},{:.0f},{:.0f})\n",
+				out.size(), m0._11, m0._41, v3HeliPos.x, v3HeliPos.y, v3HeliPos.z).c_str());
+		}
+	}
+	if (auto pSkel = m_pHeli->GetComponent<Skeleton>())
+		pSkel->Update();
 
 	// 카메라를 매 프레임 "플레이어→헬기" 방향 기준으로 플레이어 뒤에 배치.
 	// 헬기가 이동하면 카메라도 그 반대편(등 뒤)으로 돌며 항상 어깨 너머로 추락을 좇는다.
@@ -544,13 +584,19 @@ void HelicopterCrashEvent::OnUpdateEvent(Scene* pScene)
 	m_pCinematicCamera->SetLookTo(v3Look, Vector3::Up);
 	m_pCinematicCamera->Update();
 
-	// 지면 충돌 → 폭발 + 충돌점에 헬기 잔해로 남기고 종료
+	// 종료 처리 (t>=1):
+	//  - 착륙 모드: 폭발 없이 착륙 지점 기록 → 탈출 시퀀스가 이어받음 (헬기는 월드에 남음)
+	//  - 추락 모드: 폭발 파티클 + 사운드
 	if (!m_bExploded && t >= 1.f) {
-		SpawnExplosion(m_v3HeliEnd);
+		if (m_bLandMode) {
+			m_v3ExtractionPos = v3HeliPos;
+			m_bLanded = true;
+		}
+		else {
+			SpawnExplosion(m_v3HeliEnd);
+		}
 		m_bExploded = true;
-		// 헬기를 충돌점 잔해로 월드에 등록 → 좀비와 동일한 정상 렌더/그림자 파이프라인.
-		// (이번 프레임 위치 갱신으로 m_pHeli world는 이미 충돌점 자세. prop 해제는 Finish가 처리)
-		if (pScene && m_pHeli) pScene->AddObject(m_pHeli);
+		// 헬기는 OnEnter에서 이미 AddObject로 등록됨 → 그대로 World에 남는다.
 		Finish(pScene);
 	}
 }
@@ -576,6 +622,93 @@ void HelicopterCrashEvent::Finish(Scene* pScene)
 		}
 		pScene->ClearCinematicProp();
 		if (m_bCinematicPushed) { pScene->PopCinematic(); m_bCinematicPushed = false; } // 정지 해제
+	}
+	m_pSavedCamera.reset();
+	// 착륙 모드는 헬기를 유지(출발 컷씬에서 그대로 재사용). 추락 모드만 잔해 핸들 해제.
+	if (!m_bLandMode) m_pHeli.reset();
+	m_bFinished = true;
+}
+
+// ── 탈출 출발 컷씬 ──────────────────────────────────────────────────────────
+void HelicopterDepartEvent::OnEnterEvent(Scene* pScene)
+{
+	if (!pScene || !m_pHeli || m_v3PathPoints.size() < 2) { m_bFinished = true; return; }
+
+	m_fTimeElapsed = 0.f;
+
+	pScene->PushCinematic();          // 입력/월드 정지
+	m_bCinematicPushed = true;
+	pScene->SetHideCharacters(true);  // 전 플레이어 숨김
+
+	// 하늘 고정 카메라 — 착륙점 기준 위/옆에 한 번 배치하고 그대로 고정(추적 X).
+	const Vector3 v3Land = m_v3PathPoints.front();
+	const Vector3 v3CamPos = v3Land + Vector3(3000.f, 5000.f, 3000.f); // 옆+상공 (튜닝 가능)
+	const Vector3 v3LookAt = v3Land + Vector3(0.f, 2000.f, 0.f);       // 상승 구간 중앙을 바라봄
+
+	m_pCinematicCamera = std::make_shared<Camera>();
+	m_pCinematicCamera->SetViewport(0, 0, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight, 0.f, 1.f);
+	m_pCinematicCamera->SetScissorRect(0, 0, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight);
+	m_pCinematicCamera->GenerateViewMatrix(XMFLOAT3(0.f, 0.f, 0.f), XMFLOAT3(0.f, 0.f, 1.f), XMFLOAT3(0.f, 1.f, 0.f));
+	m_pCinematicCamera->GenerateProjectionMatrix(
+		10.f, 10000_m,
+		static_cast<float>(WinCore::g_dwClientWidth) / static_cast<float>(WinCore::g_dwClientHeight), 60.f);
+
+	Vector3 v3Look = v3LookAt - v3CamPos;
+	if (v3Look.LengthSquared() < 0.0001f) v3Look = Vector3::Backward;
+	v3Look.Normalize();
+	m_pCinematicCamera->SetPosition(v3CamPos);
+	m_pCinematicCamera->SetLookTo(v3Look, Vector3::Up);
+	m_pCinematicCamera->Update();
+
+	m_pSavedCamera = pScene->SwapCamera(m_pCinematicCamera);
+}
+
+void HelicopterDepartEvent::OnUpdateEvent(Scene* pScene)
+{
+	if (!pScene || !m_pHeli) { Finish(pScene); return; }
+
+	m_fTimeElapsed += DT;
+	const float t = std::clamp(m_fTimeElapsed / m_fDuration, 0.f, 1.f);
+
+	// 상승: ease-in(t²)로 서서히 가속하며 떠오름. 경로 [0]착륙점 → [last]상공.
+	const float fRise = t * t;
+	const Vector3 v3HeliPos = SampleCatmullRom(m_v3PathPoints, fRise);
+	const Vector3 v3Ahead   = SampleCatmullRom(m_v3PathPoints, std::min(fRise + 0.02f, 1.f));
+	Vector3 v3Travel = v3Ahead - v3HeliPos;
+
+	Matrix mtxRot = Matrix::Identity;
+	if (v3Travel.LengthSquared() > 1e-4f) {
+		v3Travel.Normalize();
+		Vector3 v3Up = Vector3::Up;
+		if (fabsf(v3Travel.Dot(v3Up)) > 0.99f) v3Up = Vector3::Backward;
+		mtxRot = Matrix::CreateWorld(Vector3::Zero, v3Travel, v3Up);
+	}
+
+	const Matrix mtxModelFix = Matrix::CreateFromYawPitchRoll(
+		XMConvertToRadians(HELI_MODEL_FIX_EULER.y),
+		XMConvertToRadians(HELI_MODEL_FIX_EULER.x),
+		XMConvertToRadians(HELI_MODEL_FIX_EULER.z));
+
+	const Matrix mtxWorld =
+		Matrix::CreateScale(HELI_SCALE) * mtxModelFix * mtxRot * Matrix::CreateTranslation(v3HeliPos);
+	m_pHeli->GetTransform()->SetWorldMatrix(mtxWorld);
+	m_pHeli->PostUpdate();
+
+	// 컷씬 정지 중이라 로터 애니/스켈레톤 직접 갱신.
+	if (auto pAnim = m_pHeli->GetComponent<AnimationController>()) pAnim->Update();
+	if (auto pSkel = m_pHeli->GetComponent<Skeleton>())            pSkel->Update();
+
+	// 카메라는 고정(매 프레임 갱신 안 함). 도달 시 종료.
+	if (t >= 1.f) Finish(pScene);
+}
+
+void HelicopterDepartEvent::Finish(Scene* pScene)
+{
+	if (pScene) {
+		if (m_pSavedCamera) pScene->SwapCamera(m_pSavedCamera);
+		if (m_bCinematicPushed) { pScene->PopCinematic(); m_bCinematicPushed = false; }
+		// 플레이어 숨김은 유지하지 않음(게임 종료 화면으로 넘어가므로 복구). 필요 시 GameScene이 처리.
+		pScene->SetHideCharacters(false);
 	}
 	m_pSavedCamera.reset();
 	m_pHeli.reset();

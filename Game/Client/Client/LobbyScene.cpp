@@ -73,6 +73,7 @@ void LobbyScene::BuildObjects()
 					if (auto p = static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 						p->SetPlayerModel(GameContext::g_strCharacterNames[m_nCurModelIndex]);
 						m_pModelNameTextbox->SetText(GameContext::g_strCharacterNames[m_nCurModelIndex]);
+						NETWORK->SendPlayerCharacter(static_cast<unsigned char>(m_nCurModelIndex));
 					}
 				}
 			);
@@ -93,6 +94,7 @@ void LobbyScene::BuildObjects()
 					if (auto p = static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 						p->SetPlayerModel(GameContext::g_strCharacterNames[m_nCurModelIndex]);
 						m_pModelNameTextbox->SetText(GameContext::g_strCharacterNames[m_nCurModelIndex]);
+						NETWORK->SendPlayerCharacter(static_cast<unsigned char>(m_nCurModelIndex));
 					}
 				}
 			);
@@ -136,6 +138,7 @@ void LobbyScene::BuildObjects()
 					if (auto p = static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 						p->GiveWeapon((WEAPON_TYPE)m_nCurWeaponIndex);
 						m_pWeaponNameTextbox->SetText(GameContext::g_strWeaponNames[m_nCurWeaponIndex]);
+						NETWORK->SendPlayerWeapon(static_cast<unsigned char>(m_nCurWeaponIndex));
 					}
 				}
 			);
@@ -156,6 +159,7 @@ void LobbyScene::BuildObjects()
 					if (auto p = static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 						p->GiveWeapon((WEAPON_TYPE)m_nCurWeaponIndex);
 						m_pWeaponNameTextbox->SetText(GameContext::g_strWeaponNames[m_nCurWeaponIndex]);
+						NETWORK->SendPlayerWeapon(static_cast<unsigned char>(m_nCurWeaponIndex));
 					}
 				}
 			);
@@ -187,6 +191,7 @@ void LobbyScene::BuildObjects()
 				[&](IUIComponent* pComp) {
 					m_bReadyState = !m_bReadyState;
 					static_cast<TextButton*>(pComp)->SetText(m_bReadyState ? "Ready" : "Not Ready");
+					NETWORK->SendReady(m_bReadyState);
 				}
 			);
 
@@ -214,6 +219,11 @@ void LobbyScene::BuildObjects()
 
 void LobbyScene::OnEnterScene()
 {
+	// 로비 진입 시 본인 캐릭터/무기 선택을 서버에 1회 통지 (이미 접속한 다른 클라에 반영 + 서버 기본값 보정)
+	if (NETWORK->IsConnected() && !NETWORK->IsOffline()) {
+		NETWORK->SendPlayerCharacter(static_cast<unsigned char>(m_nCurModelIndex));
+		NETWORK->SendPlayerWeapon(static_cast<unsigned char>(m_nCurWeaponIndex));
+	}
 }
 
 void LobbyScene::OnLeaveScene()
@@ -295,10 +305,13 @@ void LobbyScene::Update()
 				newPreview.pPlayer->GetTransform()->SetPosition(m_PreviewTransforms[slot].v3Position);
 				newPreview.pPlayer->GetTransform()->SetRotation(m_PreviewTransforms[slot].v3Orientation);
 				newPreview.pPlayer->GiveWeapon((WEAPON_TYPE)ev.weaponType);
+				if (ev.characterType < GameContext::g_unCharacterModels)
+					newPreview.pPlayer->SetPlayerModel(GameContext::g_strCharacterNames[ev.characterType]);
 				AddObject(newPreview.pPlayer);
 
+				newPreview.wstrUsername = ::StringToWString(ev.username);
 				newPreview.pNameTag = std::make_shared<TextBox>(L"Malgun Gothic");
-				newPreview.pNameTag->SetText(::StringToWString(ev.username));
+				newPreview.pNameTag->SetText(newPreview.wstrUsername);
 				newPreview.pNameTag->SetLayer(0);
 				newPreview.pNameTag->SetAnchor(Vector2{ 0.0f, 0.0f });
 				newPreview.pNameTag->SetPivot(Vector2{ 0.5f, 0.5f });
@@ -318,6 +331,31 @@ void LobbyScene::Update()
 			}
 		}
 
+		// 리모트 무기 교체 반영
+		for (auto& ev : NETWORK->ConsumePlayerWeapons()) {
+			auto it = std::find_if(m_ActivePreviews.begin(), m_ActivePreviews.end(), [&](const LobbyPreviewPlayer& p) { return p.nPlayerId == ev.playerId; });
+			if (it != m_ActivePreviews.end())
+				it->pPlayer->GiveWeapon((WEAPON_TYPE)ev.weaponType);
+		}
+
+		// 리모트 캐릭터 모델 변경 반영
+		for (auto& ev : NETWORK->ConsumePlayerCharacters()) {
+			auto it = std::find_if(m_ActivePreviews.begin(), m_ActivePreviews.end(), [&](const LobbyPreviewPlayer& p) { return p.nPlayerId == ev.playerId; });
+			if (it != m_ActivePreviews.end() && ev.characterType < GameContext::g_unCharacterModels)
+				it->pPlayer->SetPlayerModel(GameContext::g_strCharacterNames[ev.characterType]);
+		}
+
+		// 다른 플레이어 레디 상태 변경 → 닉네임 옆에 [READY] 표시 (레디면 초록).
+		for (auto& ev : NETWORK->ConsumeReadyStates()) {
+			auto it = std::find_if(m_ActivePreviews.begin(), m_ActivePreviews.end(),
+				[&](const LobbyPreviewPlayer& p) { return p.nPlayerId == ev.playerId; });
+			if (it == m_ActivePreviews.end() || !it->pNameTag) continue;
+
+			it->bReady = ev.bReady;
+			it->pNameTag->SetText(it->wstrUsername + (ev.bReady ? L"  [READY]" : L""));
+			it->pNameTag->SetColor(ev.bReady ? Vector3{ 0.4f, 1.0f, 0.4f } : Vector3{ 1.0f, 1.0f, 1.0f });
+		}
+
 		Matrix mtxVP = m_pViewCamera->GetViewProjectMatrix();
 		for (auto& preview : m_ActivePreviews) {
 			Vector3 headPos = preview.pPlayer->GetTransform()->GetPosition() + Vector3(0.f, 180.f, 0.f);
@@ -334,6 +372,11 @@ void LobbyScene::Update()
 				preview.pNameTag->SetPosition(Vector2{ -10000.f, -10000.f });
 			}
 		}
+	}
+
+	// 서버가 전원 레디 확인 후 보낸 게임 시작 신호 수신 → 전원 동시 게임 진입
+	if (NETWORK->ConsumeGameStart()) {
+		m_bProceed = true;
 	}
 
 	if (m_bProceed) {

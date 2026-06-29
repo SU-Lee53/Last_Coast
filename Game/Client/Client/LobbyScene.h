@@ -41,6 +41,8 @@ private:
 		std::shared_ptr<TextBox> pNameTag;
 		int nPlayerId = -1;
 		int nSlotIndex = -1;
+		std::wstring wstrUsername;   // 닉네임 (레디 표시 갱신용)
+		bool bReady = false;         // 레디 상태
 	};
 	std::vector<LobbyPreviewPlayer> m_ActivePreviews; std::array<std::shared_ptr<NetworkRemoteThirdPersonPlayer>, 3> m_pPreviewPlayers;
 

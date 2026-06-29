@@ -15,6 +15,7 @@
 #include "BloodEffect.h"
 #include "MuzzleFlashEffect.h"
 #include "ZombieAnimationController.h"
+#include "HelicopterAnimationController.h"
 #include "ThirdPersonCamera.h"
 #include "BulletImpactEffect.h"
 #include "EventSequence.h"
@@ -28,11 +29,13 @@ void GameScene::BuildObjects()
 
 	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
 	m_pPlayer->Initialize();
-	m_pPlayer->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
+	m_pPlayer->GetTransform()->SetPosition(29000, -3536.692724, 25000);
 	if (auto pThirdPerson = static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 		const auto& data = GCTX->GetGameData();
 		pThirdPerson->SetPlayerModel(GameContext::g_strCharacterNames[data.m_nCurModelIndex]);
 		pThirdPerson->GiveWeapon((WEAPON_TYPE)data.m_nCurWeaponIndex);
+		if (bOnline)
+			NETWORK->SendPlayerCharacter(static_cast<unsigned char>(data.m_nCurModelIndex)); // late-join 리모트에 모델 반영
 	}
 
 
@@ -48,8 +51,9 @@ void GameScene::BuildObjects()
 	m_pTerrain = std::make_shared<TerrainObject>();
 	m_pTerrain->LoadFromFiles("Game");
 
-	// 풀은 항상 dormant로 시작 — 오프라인은 스폰 포인트마다, 온라인은 서버 이벤트로 Acquire
-	m_ZombiePool.Initialize(100, true);
+	// 풀은 항상 dormant로 시작 — 오프라인은 스폰 포인트마다, 온라인은 서버 이벤트로 Acquire.
+	// 엔딩 서바이벌 동안 서버가 최대 250까지 스폰하므로 풀 용량을 맞춰 둔다.
+	m_ZombiePool.Initialize(250, true);
 
 	auto begin = high_resolution_clock::now();
 	LoadFromFiles("Game");
@@ -58,9 +62,11 @@ void GameScene::BuildObjects()
 
 	// 좀비 스폰 포인트는 씬과 분리된 별도 JSON에서 로드 (언리얼 SaveSpawnPointsToJson 출력).
 	// 오프라인은 UpdateOfflineSpawner()가 드립 방식으로 채운다 (online은 서버가 담당).
-	LoadZombieSpawnPoints("DEMO_SpawnPoints");
+	LoadZombieSpawnPoints("GAME_SpawnPoints");
 	// 헬기 추락 컷씬 비행 경로 (언리얼 HeliPath_N TargetPoint 익스포트). 없으면 직선 폴백.
-	LoadHeliPath("DEMO_HeliPath");
+	LoadHeliPath("GAME_HeliPath");
+	// 구조 헬기(착륙) 비행 경로 (언리얼 ArrivePath_N TargetPoint 익스포트). 없으면 직선 폴백.
+	LoadHeliArrivePath("GAME_HeliArrivePath");
 
 	//std::shared_ptr<TextBox> pText = std::make_shared<TextBox>(L"Malgun Gothic");
 	//pText->SetText(std::format(L"로딩 시간 : {}ms", llLoadTime));
@@ -72,6 +78,17 @@ void GameScene::BuildObjects()
 	//m_pUIBoard->InsertUI(pText);
 
 	BuildChatUI();
+
+	// 탈출 시퀀스 안내 HUD (총알/체력 UI와 동일하게 TextBox → UIBoard). 평소엔 숨김.
+	m_pEscapeText = std::make_shared<TextBox>(L"Malgun Gothic");
+	m_pEscapeText->SetText(L"");
+	m_pEscapeText->SetLayer(0);
+	m_pEscapeText->SetAnchor(Vector2{ 0.5f, 0.f });   // 화면 상단 중앙
+	m_pEscapeText->SetPivot(Vector2{ 0.5f, 0.f });
+	m_pEscapeText->SetPosition(Vector2{ 0.f, 60.f });
+	m_pEscapeText->SetTextHeight(60.f);
+	m_pEscapeText->SetVisible(false);
+	m_pUIBoard->InsertUI(m_pEscapeText);
 
 	// 서버 트리거 게임 이벤트용 시퀀스 (런타임에 이벤트 AddEvent).
 	// Scene::FixedUpdate()가 매 프레임 m_pEventSequence->Update() 호출.
@@ -86,9 +103,9 @@ void GameScene::BuildObjects()
 	pTransform->SetPosition(m_v3WaterPos);
 	AddObject(m_pWater);
 
-	auto pHeli = std::make_shared<HelicopterObject>();
-	pHeli->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
-	AddObject(pHeli);
+	//auto pHeli = std::make_shared<HelicopterObject>();
+	//pHeli->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
+	//AddObject(pHeli);
 
 }
 
@@ -296,6 +313,7 @@ void GameScene::Update()
 	ProcessShootResults();
 	ProcessMeleeResults();
 	ProcessServerGameEvents();
+	UpdateEscapeSequence();
 	RemoveDeadZombies();
 	UpdateChat();
 }
@@ -468,8 +486,100 @@ void GameScene::ProcessServerGameEvents()
 			// 헬기 추락 컷씬: 시네마틱 카메라가 추락 헬기 추적 (fDuration=0 → 기본 5초)
 			m_pEventSequence->AddEvent(std::make_shared<HelicopterCrashEvent>(ev.fDuration));
 			break;
+		case GE_HELICOPTER_ARRIVE:
+			// 구조 헬기 강하·착륙 컷씬(폭발 X). 착륙 후 탈출 시퀀스로 이어짐(2단계에서 처리).
+			m_pArriveEvent = std::make_shared<HelicopterCrashEvent>(ev.fDuration, /*bLandMode=*/true);
+			m_pEventSequence->AddEvent(m_pArriveEvent);
+			break;
 		default:
 			break;
+		}
+	}
+}
+
+// 마지막 체크포인트 후 탈출 시퀀스 (서버 권위).
+//  - 시간 카운트다운/상태/종료 판정은 모두 서버가 함 (S2C_ESCAPE_STATE / S2C_GAME_END).
+//  - 클라는 받은 상태로 UI를 그리고, 탈출 가능 + 헬기 반경 안에서 F를 누르면 서버에 1회 전송.
+//  - 누구든 1명이 보내면 서버가 전원에게 S2C_GAME_END → 모두 클리어.
+void GameScene::UpdateEscapeSequence()
+{
+	if (!m_pEscapeText) return;
+
+	// 출발 컷씬 종료 후 → 클리어 메시지 고정.
+	if (m_bGameCleared) {
+		m_pEscapeText->SetVisible(true);
+		m_pEscapeText->SetColor(Vector3{ 0.4f, 1.f, 0.4f });
+		m_pEscapeText->SetText(L"탈출 성공!");
+		return;
+	}
+
+	// 출발 컷씬 진행 중 → HUD 숨기고, 컷씬이 끝나면 클리어.
+	if (m_bDeparting) {
+		m_pEscapeText->SetVisible(false);
+		if (!m_pDepartEvent || m_pDepartEvent->IsFinished())
+			m_bGameCleared = true;
+		return;
+	}
+
+	// 서버 게임 종료 신호 수신 → 출발 컷씬 시작 (플레이어 숨김 + 헬기 역방향 상승 + 하늘 고정 카메라).
+	if (NETWORK->ConsumeGameEnd()) {
+		std::shared_ptr<CrashDebris> pHeli = m_pArriveEvent ? m_pArriveEvent->GetHeli() : nullptr;
+		std::vector<Vector3> reversed = GetHeliArrivePath();   // 착륙 경로(상공→착륙점)
+		std::reverse(reversed.begin(), reversed.end());        // 역방향(착륙점→상공)
+
+		if (pHeli && reversed.size() >= 2 && m_pEventSequence) {
+			m_pDepartEvent = std::make_shared<HelicopterDepartEvent>(pHeli, std::move(reversed), 8.0f);
+			m_pEventSequence->AddEvent(m_pDepartEvent);
+			m_bDeparting = true;
+		}
+		else {
+			m_bGameCleared = true; // 헬기/경로 없으면 컷씬 없이 바로 클리어
+		}
+		m_pEscapeText->SetVisible(false);
+		return;
+	}
+
+	// 착륙 지점 1회 기록 (탈출 반경 판정용 — 클라 로컬).
+	if (!m_bExtractionRecorded && m_pArriveEvent && m_pArriveEvent->IsLanded()) {
+		m_v3ExtractionPos     = m_pArriveEvent->GetExtractionPos();
+		m_bExtractionRecorded = true;
+	}
+
+	// 서버가 보낸 탈출 상태가 아직 없으면(시퀀스 전) HUD 숨김.
+	unsigned char ucPhase = 0;
+	float fRemain = 0.f;
+	if (!NETWORK->GetEscapeState(ucPhase, fRemain)) {
+		m_pEscapeText->SetVisible(false);
+		return;
+	}
+
+	m_pEscapeText->SetVisible(true);
+
+	if (ucPhase == 0) {
+		// 서바이벌: 서버가 준 남은 시간 표시.
+		const int nRemain = (int)std::ceil(fRemain);
+		m_pEscapeText->SetColor(Vector3{ 1.f, 1.f, 1.f });
+		m_pEscapeText->SetText(std::format(L"탈출까지 버텨라  {}:{:02d}", nRemain / 60, nRemain % 60));
+	}
+	else {
+		// 탈출 가능: 헬기 반경 안에서 F → 서버에 1회 전송.
+		bool bInRange = false;
+		if (m_pPlayer && m_bExtractionRecorded) {
+			const Vector3 v3PlayerPos = m_pPlayer->GetTransform()->GetPosition();
+			bInRange = (v3PlayerPos - m_v3ExtractionPos).Length() <= ESCAPE_RADIUS;
+		}
+
+		if (bInRange) {
+			m_pEscapeText->SetColor(Vector3{ 0.4f, 1.f, 0.4f });
+			m_pEscapeText->SetText(L"[F] 탈출!");
+			if (!m_bEscapeKeySent && INPUT->GetButtonDown('F')) {
+				NETWORK->SendPlayerEscape();
+				m_bEscapeKeySent = true;
+			}
+		}
+		else {
+			m_pEscapeText->SetColor(Vector3{ 1.f, 0.9f, 0.3f });
+			m_pEscapeText->SetText(L"헬기로 가서 F키로 탈출!");
 		}
 	}
 }
@@ -924,8 +1034,11 @@ void GameScene::SyncSceneWithServer()
 		}
 	}
 
-	for (auto& ev : NETWORK->ConsumePlayerJoins()) {
+	// 큐(ConsumePlayerJoins)가 아니라 방 멤버 스냅샷으로 생성한다.
+	// 로비가 입장 큐를 이미 소비했어도 스냅샷은 유지되므로 게임씬에서 리모트가 누락되지 않는다.
+	for (auto& ev : NETWORK->GetRoomPlayersSnapshot()) {
 
+		if (ev.playerId == NETWORK->GetPlayerID()) continue; // 본인 제외
 		if (m_RemotePlayers.contains(ev.playerId)) continue;
 
 		auto remotePlayer = std::make_shared<NetworkRemoteThirdPersonPlayer>();
@@ -933,6 +1046,8 @@ void GameScene::SyncSceneWithServer()
 
 		remotePlayer->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.initialTransform.m), ev.bRunning, ev.bAiming, ev.fAimPitch);
 		remotePlayer->GiveWeapon(static_cast<WEAPON_TYPE>(ev.weaponType));
+		if (ev.characterType < GameContext::g_unCharacterModels)
+			remotePlayer->SetPlayerModel(GameContext::g_strCharacterNames[ev.characterType]);
 		AddObject(remotePlayer);
 		m_RemotePlayers[ev.playerId] = remotePlayer;
 	}
@@ -961,11 +1076,20 @@ void GameScene::SyncSceneWithServer()
 	}
 
 	for (auto& ev : NETWORK->ConsumePlayerWeapons()) {
-		if (ev.playerId == NETWORK->GetPlayerID()) 
+		if (ev.playerId == NETWORK->GetPlayerID())
 			continue; // 본인은 입력으로 이미 교체
 		auto it = m_RemotePlayers.find(ev.playerId);
 		if (it != m_RemotePlayers.end()) {
 			it->second->GiveWeapon(static_cast<WEAPON_TYPE>(ev.weaponType));
+		}
+	}
+
+	for (auto& ev : NETWORK->ConsumePlayerCharacters()) {
+		if (ev.playerId == NETWORK->GetPlayerID())
+			continue; // 본인 모델은 이미 적용됨
+		auto it = m_RemotePlayers.find(ev.playerId);
+		if (it != m_RemotePlayers.end() && ev.characterType < GameContext::g_unCharacterModels) {
+			it->second->SetPlayerModel(GameContext::g_strCharacterNames[ev.characterType]);
 		}
 	}
 }

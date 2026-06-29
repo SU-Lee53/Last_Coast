@@ -58,6 +58,8 @@ public:
 	HRESULT LoadZombieSpawnPoints(const std::string& strFileName);
 	// 헬기 비행 경로점을 별도 JSON 파일에서 로드 (씬과 분리, 순서 보존)
 	HRESULT LoadHeliPath(const std::string& strFileName);
+	// 구조 헬기(착륙) 비행 경로점을 별도 JSON에서 로드 (추락 경로와 분리)
+	HRESULT LoadHeliArrivePath(const std::string& strFileName);
 
 
 public:
@@ -99,6 +101,7 @@ public:
 	const std::unique_ptr<UIBoard>& GetUIBoard() const { return m_pUIBoard; }
 	const std::vector<Vector3>& GetZombieSpawnPoints() const { return m_v3ZombieSpawnPoints; }
 	const std::vector<Vector3>& GetHeliPath() const { return m_v3HeliPath; }
+	const std::vector<Vector3>& GetHeliArrivePath() const { return m_v3HeliArrivePath; }
 
 	const ToneMappingVolume& GetToneMappingVolume() const { return m_ToneMappingVolume; }
 	ToneMappingVolume& GetToneMappingVolume() { return m_ToneMappingVolume; } // 게임 이벤트 런타임 조정용
@@ -126,6 +129,10 @@ public:
 	void PopCinematic()  { if (m_nCinematicDepth > 0) --m_nCinematicDepth; }
 	bool IsCinematicActive() const { return m_nCinematicDepth > 0; }
 
+	// 탈출 컷씬: 전 플레이어(로컬+리모트) 렌더 숨김 토글
+	void SetHideCharacters(bool bHide) { m_bHideCharacters = bHide; }
+	bool IsHidingCharacters() const { return m_bHideCharacters; }
+
 protected:
 	void RemoveCollisionPairsOf(IGameObject* pDeadObject);
 
@@ -152,12 +159,14 @@ protected:
 
 	BoundingBox m_xmSceneBound{};
 	std::vector<Vector3> m_v3ZombieSpawnPoints;	// 언리얼에서 내보낸 좀비 스폰 위치 (cm)
-	std::vector<Vector3> m_v3HeliPath;			// 언리얼에서 내보낸 헬기 비행 경로점 (cm, 순서대로)
+	std::vector<Vector3> m_v3HeliPath;			// 언리얼에서 내보낸 헬기 추락 경로점 (cm, 순서대로)
+	std::vector<Vector3> m_v3HeliArrivePath;	// 언리얼에서 내보낸 구조 헬기(착륙) 경로점 (cm, 순서대로)
 	std::unique_ptr<UIBoard> m_pUIBoard{};
 	std::unordered_set<CollisionResult> m_pCollisionPairs;
 	Vector4 m_v4GlobalAmbient;
 	bool m_bEnableGravity = true;
 	int  m_nCinematicDepth = 0;	// >0 이면 컷씬 중(게임플레이 정지)
+	bool m_bHideCharacters = false;	// 탈출 컷씬 동안 전 플레이어 렌더 숨김
 
 	std::unordered_map<int, std::shared_ptr<NetworkRemoteThirdPersonPlayer>> m_RemotePlayers;
 	

@@ -1,0 +1,18 @@
+{
+	"ArrivePath": [
+		{
+			"ActorName": "ArrivePath_1",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 37260, 2710, 28130, 1 ]
+			}
+		},
+		{
+			"ActorName": "ArrivePath_2",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 37260, -3576.2574683593775, 28130, 1 ]
+			}
+		}
+	]
+}

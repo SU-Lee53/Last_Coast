@@ -255,6 +255,7 @@ bool UJsonSaveManager::SaveSpawnPointsToJson(const TArray<AActor*>& Actors, cons
         // 담당하므로 좀비 스폰에서 제외. 라벨 기준(GetActorLabel) — 아웃라이너에서 바꾼 이름.
         if (Cast<ATargetPoint>(Actor)
             && !Actor->GetActorLabel().StartsWith(TEXT("HeliPath"))
+            && !Actor->GetActorLabel().StartsWith(TEXT("ArrivePath"))
             && !Actor->GetActorLabel().StartsWith(TEXT("Checkpoint")))
         {
             TSharedPtr<FJsonObject> SpawnJson = MakeShareable(new FJsonObject);
@@ -346,6 +347,70 @@ bool UJsonSaveManager::SaveHeliPathToJson(const TArray<AActor*>& Actors, const F
     if (bSuccess)
     {
         UE_LOG(LogTemp, Log, TEXT("Heli path saved: %d points to: %s"),
+            PathArray.Num(), *FullPath);
+    }
+
+    return bSuccess;
+}
+
+// 이름이 "ArrivePath"로 시작하는 TargetPoint 액터만 구조 헬기(착륙) 경로로 별도 JSON에 저장.
+// SaveHeliPathToJson 과 동일 패턴(끝 숫자 정렬)이며 출력 키만 "ArrivePath".
+// 출력 스키마: { "ArrivePath": [ { ActorName, Transform.WorldMatrix } ] }
+bool UJsonSaveManager::SaveHeliArrivePathToJson(const TArray<AActor*>& Actors, const FString& FileName)
+{
+    // 1) ArrivePath 접두사 TargetPoint만 수집 (라벨 기준).
+    TArray<AActor*> PathActors;
+    for (AActor* Actor : Actors)
+    {
+        if (!Actor) continue;
+        if (Cast<ATargetPoint>(Actor) && Actor->GetActorLabel().StartsWith(TEXT("ArrivePath")))
+        {
+            PathActors.Add(Actor);
+        }
+    }
+
+    // 2) 라벨 끝 숫자 기준 정렬 → 경로 순서 유지.
+    auto TrailingNumber = [](const FString& Name) -> int32
+    {
+        int32 Num = 0, Place = 1;
+        for (int32 i = Name.Len() - 1; i >= 0; --i)
+        {
+            const TCHAR c = Name[i];
+            if (c < '0' || c > '9') break;
+            Num += (c - '0') * Place;
+            Place *= 10;
+        }
+        return Num;
+    };
+    PathActors.Sort([&TrailingNumber](const AActor& A, const AActor& B)
+    {
+        return TrailingNumber(A.GetActorLabel()) < TrailingNumber(B.GetActorLabel());
+    });
+
+    // 3) 순서대로 직렬화.
+    TSharedPtr<FJsonObject> RootJson = MakeShareable(new FJsonObject);
+    TArray<TSharedPtr<FJsonValue>> PathArray;
+    for (AActor* Actor : PathActors)
+    {
+        TSharedPtr<FJsonObject> PointJson = MakeShareable(new FJsonObject);
+        PointJson->SetStringField(TEXT("ActorName"), Actor->GetActorLabel());
+        PointJson->SetObjectField(TEXT("Transform"), TransformToJson(Actor->GetActorTransform()));
+        PathArray.Add(MakeShareable(new FJsonValueObject(PointJson)));
+    }
+    RootJson->SetArrayField(TEXT("ArrivePath"), PathArray);
+
+    FString OutputString;
+    TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
+    FJsonSerializer::Serialize(RootJson.ToSharedRef(), Writer);
+
+    FString Directory = FPaths::ProjectSavedDir() + TEXT("../SceneJson/");
+    FString FullPath = Directory + FileName + TEXT(".json");
+
+    bool bSuccess = FFileHelper::SaveStringToFile(OutputString, *FullPath);
+
+    if (bSuccess)
+    {
+        UE_LOG(LogTemp, Log, TEXT("Heli arrive path saved: %d points to: %s"),
             PathArray.Num(), *FullPath);
     }
 

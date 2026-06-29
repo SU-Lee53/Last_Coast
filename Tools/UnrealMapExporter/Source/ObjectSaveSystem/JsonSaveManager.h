@@ -45,6 +45,11 @@ public:
     UFUNCTION(BlueprintCallable, Category = "JSON Save System")
     static bool SaveHeliPathToJson(const TArray<AActor*>& Actors, const FString& FileName);
 
+    // Export ONLY TargetPoint actors whose name starts with "ArrivePath" as an ordered
+    // RESCUE helicopter (landing) flight path. Same schema as SaveHeliPathToJson but key "ArrivePath".
+    UFUNCTION(BlueprintCallable, Category = "JSON Save System")
+    static bool SaveHeliArrivePathToJson(const TArray<AActor*>& Actors, const FString& FileName);
+
     // Export ONLY TargetPoint actors whose name starts with "Checkpoint" as ordered game-event
     // checkpoints (sorted by the trailing number in the name) to a separate JSON.
     // The server uses each point's position (X = progress axis) as an "all players reached" threshold.

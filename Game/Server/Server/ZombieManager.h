@@ -59,6 +59,11 @@ public:
 	// (SpawnZombie가 Zero를 받으면 랜덤 NavMesh 위치로 폴백)
 	Vector3 GetRandomSpawnPoint() const;
 
+	// 플레이어 근처(거리 window 내) 스폰 포인트만 골라 랜덤 반환.
+	// 이미 지나친 먼 뒤쪽/너무 먼 포인트를 제외해 좀비가 실제로 플레이어에게 닿게 한다.
+	// window 내 후보가 없으면 가장 가까운 포인트로 폴백.
+	Vector3 GetSpawnPointNear(const std::vector<Vector3>& playerPositions) const;
+
 	// 특정 ID 좀비를 디스폰
 	void DespawnZombie(int nId);
 
@@ -76,6 +81,9 @@ public:
 	const std::unordered_map<int, ServerZombie>& GetZombies() const { return m_Zombies; }
 
 	std::unordered_map<int, ServerZombie>& GetZombies() { return m_Zombies; }
+
+	// 감지 반경 런타임 변경 (엔딩 서바이벌 동안 시야 무제한 등)
+	void SetSightRange(float fRange) { m_fSightRange = fRange; }
 
 	std::shared_ptr<IAIManager> GetAIManager() const { return m_pAIManager; }
 
@@ -99,7 +107,7 @@ private:
 	std::vector<Vector3>                 m_SpawnPoints;   // 씬에서 로드한 고정 스폰 위치 (cm)
 	int                                  m_nNextId = 0;
 
-	static constexpr float m_fSightRange       = 1000000.f;  // cm
+	float                  m_fSightRange       = 10000000.f;  // cm — FOV/LOS 없이 이 반경 내면 인지 (런타임 변경 가능)
 	static constexpr float m_fHearingRange     = 0.f;
 	// FOV 콘 파라미터 (클라이언트 Zombie 와 동일)
 	static constexpr float m_fFOVCosHalf       = 0.5f;   // cos(60°) — 전방 ±60°

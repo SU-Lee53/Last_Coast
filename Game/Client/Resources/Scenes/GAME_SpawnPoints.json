@@ -1,0 +1,53 @@
+{
+	"ZombieSpawnPoints": [
+		{
+			"ActorName": "TargetPoint_7",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 35530, -3570, 20330, 1 ]
+			}
+		},
+		{
+			"ActorName": "TargetPoint_8",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 27050, -3570, 20510, 1 ]
+			}
+		},
+		{
+			"ActorName": "TargetPoint_9",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 21870, -3571.7726979421641, 21140, 1 ]
+			}
+		},
+		{
+			"ActorName": "TargetPoint_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 20860, -3571.7726980000002, 30750, 1 ]
+			}
+		},
+		{
+			"ActorName": "TargetPoint_11",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 25990, -3590.5174939350613, 31460, 1 ]
+			}
+		},
+		{
+			"ActorName": "TargetPoint_12",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 30500, -3577.0537404355496, 30490, 1 ]
+			}
+		},
+		{
+			"ActorName": "TargetPoint_14",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 41300, -3564.891623632815, 19770, 1 ]
+			}
+		}
+	]
+}

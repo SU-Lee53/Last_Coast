@@ -208,10 +208,18 @@ private:
 // 지면 충돌 시 폭발 파티클 + 사운드, 카메라 복구 후 종료. (런타임 AddEvent — Initialize 미사용)
 class HelicopterCrashEvent : public IOneShotEvent {
 public:
-	HelicopterCrashEvent(float fDuration)
-		: m_fDuration{ fDuration > 0.f ? fDuration : 5.0f } {}
+	// bLandMode=true 면 추락/폭발 대신 착륙(구조 헬기). 착륙 후 헬기는 월드에 남고,
+	// IsLanded()/GetExtractionPos() 로 탈출 시퀀스(GameScene)가 이어받는다.
+	HelicopterCrashEvent(float fDuration, bool bLandMode = false)
+		: m_fDuration{ fDuration > 0.f ? fDuration : 10.0f }, m_bLandMode{ bLandMode } {}
 	virtual void OnEnterEvent(Scene* pScene) override;
 	virtual void OnUpdateEvent(Scene* pScene) override;
+
+	// 착륙 모드 결과 (탈출 시퀀스 연동용)
+	bool IsLanded() const { return m_bLanded; }
+	const Vector3& GetExtractionPos() const { return m_v3ExtractionPos; }
+	// 착륙한 헬기 오브젝트 (출발 컷씬에서 그대로 띄워 올리기 위해). 착륙 모드는 Finish에서 reset 안 함.
+	std::shared_ptr<CrashDebris> GetHeli() const { return m_pHeli; }
 
 private:
 	void SpawnExplosion(const Vector3& v3Pos);
@@ -222,6 +230,10 @@ private:
 	float m_fTimeElapsed = 0.f;
 	bool  m_bExploded = false;
 	bool  m_bCinematicPushed = false; // 게임플레이 정지 중복 Push/Pop 방지
+
+	bool    m_bLandMode = false;       // true=구조 헬기 착륙(폭발 X)
+	bool    m_bLanded = false;         // 착륙 완료 플래그
+	Vector3 m_v3ExtractionPos{};       // 착륙 지점 = 탈출 지점
 
 	// OnEnter서 플레이어 기준으로 산출 (정면 하늘 → 정면 지면)
 	Vector3 m_v3HeliStart{};
@@ -236,6 +248,31 @@ private:
 	std::shared_ptr<Camera>      m_pCinematicCamera;
 	std::shared_ptr<Camera>      m_pSavedCamera;
 	std::shared_ptr<CrashDebris> m_pHeli; // 충돌 후 월드 잔해로 등록(dynamic spatial)
+};
+
+// 탈출 출발 컷씬 (마지막 F키 탈출 시): 전 플레이어 숨김 + 착륙 헬기를 ArrivePath 역방향으로
+// 상승시켜 경로 끝(상공)에 도달하면 종료. 카메라는 하늘 고정 위치(추적 X).
+class HelicopterDepartEvent : public IOneShotEvent {
+public:
+	// pHeli: 착륙한 헬기(그대로 재사용). reversedPath: ArrivePath 역순(착륙점→상공).
+	HelicopterDepartEvent(std::shared_ptr<CrashDebris> pHeli, std::vector<Vector3> reversedPath, float fDuration)
+		: m_pHeli{ std::move(pHeli) }, m_v3PathPoints{ std::move(reversedPath) }
+		, m_fDuration{ fDuration > 0.f ? fDuration : 8.0f } {}
+	virtual void OnEnterEvent(Scene* pScene) override;
+	virtual void OnUpdateEvent(Scene* pScene) override;
+
+private:
+	void Finish(Scene* pScene);
+
+private:
+	std::shared_ptr<CrashDebris> m_pHeli;
+	std::vector<Vector3>         m_v3PathPoints;   // [0]=착륙점 … [last]=상공
+	float                        m_fDuration;
+	float                        m_fTimeElapsed = 0.f;
+	bool                         m_bCinematicPushed = false;
+
+	std::shared_ptr<Camera>      m_pCinematicCamera;
+	std::shared_ptr<Camera>      m_pSavedCamera;
 };
 
 class CinematicCameraEvent : public ITriggerEvent {

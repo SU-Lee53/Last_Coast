@@ -337,8 +337,13 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		char nameBuf[MAX_NAME_LEN];
 		memcpy_s(nameBuf, sizeof(nameBuf), p->username, MAX_NAME_LEN);
 		nameBuf[MAX_NAME_LEN - 1] = '\0';
-		
-		m_PendingPlayerJoins.push(PlayerJoinEvent{ p->playerId, p->transform, p->bRunning, p->bAiming, p->fAimPitch, p->weaponType, nameBuf, p->bReady });
+
+		PlayerJoinEvent joinEv{ p->playerId, p->transform, p->bRunning, p->bAiming, p->fAimPitch, p->weaponType, nameBuf, p->bReady, p->characterType };
+		m_PendingPlayerJoins.push(joinEv);
+		{
+			std::lock_guard<std::mutex> lk(m_RoomPlayersMutex);
+			m_RoomPlayers[p->playerId] = joinEv; // 큐와 별개로 방 멤버 보존
+		}
 		break;
 	}
 	case S2C_REMOVE_PLAYER:
@@ -346,6 +351,10 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		if (size < static_cast<int>(sizeof(S2C_RemovePlayer))) return;
 		auto* p = reinterpret_cast<const S2C_RemovePlayer*>(data);
 		m_PendingPlayerLeaves.push(p->playerId);
+		{
+			std::lock_guard<std::mutex> lk(m_RoomPlayersMutex);
+			m_RoomPlayers.erase(p->playerId);
+		}
 		break;
 	}
 	case S2C_SPAWN_ZOMBIE:
@@ -379,6 +388,29 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		state.receivedTime  = GetNetTimeSec();
 		state.valid         = true;
 		m_ZombieStates[p->zombieId] = state;
+		break;
+	}
+	case S2C_ZOMBIE_STATE_BATCH:
+	{
+		if (size < static_cast<int>(offsetof(S2C_ZombieStateBatch, entries))) return;
+		auto* p = reinterpret_cast<const S2C_ZombieStateBatch*>(data);
+		int count = p->count;
+		if (count > MAX_ZOMBIE_BATCH) count = MAX_ZOMBIE_BATCH;
+		const double dRecv = GetNetTimeSec();
+		for (int i = 0; i < count; ++i)
+		{
+			const ZombieStateEntry& e = p->entries[i];
+			ZombieServerState state;
+			state.x             = e.x;
+			state.z             = e.z;
+			state.yaw           = e.yaw;
+			state.waypointX     = e.waypointX;
+			state.waypointZ     = e.waypointZ;
+			state.behaviorState = e.behaviorState;
+			state.receivedTime  = dRecv;
+			state.valid         = true;
+			m_ZombieStates[e.zombieId] = state;
+		}
 		break;
 	}
 	case S2C_ZOMBIE_ATTACK:
@@ -452,6 +484,12 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		m_PendingPlayerWeapons.push(WeaponChangeEvent{ p->playerId, p->weaponType });
 		break;
 	}
+	case S2C_PLAYER_CHARACTER: {
+		if (size < static_cast<int>(sizeof(S2C_PlayerCharacter))) return;
+		auto* p = reinterpret_cast<const S2C_PlayerCharacter*>(data);
+		m_PendingPlayerCharacters.push(CharacterChangeEvent{ p->playerId, p->characterType });
+		break;
+	}
 	case S2C_GAME_EVENT: {
 		if (size < static_cast<int>(sizeof(S2C_GameEvent))) return;
 		auto* p = reinterpret_cast<const S2C_GameEvent*>(data);
@@ -466,6 +504,17 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	}
 	case S2C_GAME_START: {
 		m_bPendingGameStart.store(true);
+		break;
+	}
+	case S2C_ESCAPE_STATE: {
+		if (size < static_cast<int>(sizeof(S2C_EscapeState))) return;
+		auto* p = reinterpret_cast<const S2C_EscapeState*>(data);
+		m_nEscapePhase.store(static_cast<int>(p->phase));
+		m_fEscapeRemain.store(p->fRemainSeconds);
+		break;
+	}
+	case S2C_GAME_END: {
+		m_bPendingGameEnd.store(true);
 		break;
 	}
 	default:
@@ -608,6 +657,26 @@ std::vector<WeaponChangeEvent> NetworkManager::ConsumePlayerWeapons()
 	return out;
 }
 
+void NetworkManager::SendPlayerCharacter(unsigned char characterType)
+{
+	if (!m_bConnected || m_bOfflineMode) return;
+
+	C2S_PlayerCharacter p;
+	p.size = sizeof(C2S_PlayerCharacter);
+	p.type = C2S_PLAYER_CHARACTER;
+	p.characterType = characterType;
+	SendPacket(&p, p.size);
+}
+
+std::vector<CharacterChangeEvent> NetworkManager::ConsumePlayerCharacters()
+{
+	std::vector<CharacterChangeEvent> out;
+	CharacterChangeEvent ev;
+	while (m_PendingPlayerCharacters.try_pop(ev))
+		out.push_back(ev);
+	return out;
+}
+
 void NetworkManager::SendChat(const std::string& message)
 {
 	if (!m_bConnected || m_bOfflineMode) return;
@@ -636,6 +705,31 @@ std::vector<GameEventMsg> NetworkManager::ConsumeGameEvents()
 	while (m_PendingGameEvents.try_pop(ev))
 		out.push_back(ev);
 	return out;
+}
+
+// ── 탈출 시퀀스 (서버 권위) ──────────────────────────────────────────────────
+bool NetworkManager::GetEscapeState(unsigned char& outPhase, float& outRemainSeconds) const
+{
+	const int nPhase = m_nEscapePhase.load();
+	if (nPhase < 0) return false; // 아직 서버 상태 수신 전
+	outPhase = static_cast<unsigned char>(nPhase);
+	outRemainSeconds = m_fEscapeRemain.load();
+	return true;
+}
+
+void NetworkManager::SendPlayerEscape()
+{
+	if (!m_bConnected || m_bOfflineMode) return;
+
+	C2S_PlayerEscape p;
+	p.size = sizeof(C2S_PlayerEscape);
+	p.type = C2S_PLAYER_ESCAPE;
+	SendPacket(&p, p.size);
+}
+
+bool NetworkManager::ConsumeGameEnd()
+{
+	return m_bPendingGameEnd.exchange(false);
 }
 
 void NetworkManager::SendReady(bool bReady)
@@ -702,6 +796,16 @@ std::vector<PlayerJoinEvent> NetworkManager::ConsumePlayerJoins()
 	std::vector<PlayerJoinEvent> out;
 	PlayerJoinEvent ev;
 	while (m_PendingPlayerJoins.try_pop(ev))
+		out.push_back(ev);
+	return out;
+}
+
+std::vector<PlayerJoinEvent> NetworkManager::GetRoomPlayersSnapshot()
+{
+	std::vector<PlayerJoinEvent> out;
+	std::lock_guard<std::mutex> lk(m_RoomPlayersMutex);
+	out.reserve(m_RoomPlayers.size());
+	for (auto& [id, ev] : m_RoomPlayers)
 		out.push_back(ev);
 	return out;
 }

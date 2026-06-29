@@ -32,6 +32,7 @@ struct PlayerJoinEvent {
 	unsigned char weaponType;
 	std::string   username;
 	bool          bReady;
+	unsigned char characterType;
 };
 
 // 레디 상태 변경 이벤트
@@ -44,6 +45,12 @@ struct ReadyStateEvent {
 struct WeaponChangeEvent {
 	int           playerId;
 	unsigned char weaponType;
+};
+
+// 캐릭터 모델 변경 이벤트 (리모트 플레이어 모델 반영)
+struct CharacterChangeEvent {
+	int           playerId;
+	unsigned char characterType;
 };
 
 struct PlayerTransformEvent {
@@ -168,6 +175,10 @@ public:
 	void SendPlayerWeapon(unsigned char weaponType);
 	std::vector<WeaponChangeEvent> ConsumePlayerWeapons();
 
+	// ── 캐릭터 모델 송수신 ──────────────────────────────────────────────────────
+	void SendPlayerCharacter(unsigned char characterType);
+	std::vector<CharacterChangeEvent> ConsumePlayerCharacters();
+
 	// ── 채팅 송수신 ────────────────────────────────────────────────────────────
 	void SendChat(const std::string& message);
 	std::vector<ChatMessageEvent> ConsumeChatMessages();
@@ -182,10 +193,22 @@ public:
 	// 게임 시작 신호 (서버 발송)
 	bool                         ConsumeGameStart();
 
+	// ── 탈출 시퀀스 (서버 권위) ────────────────────────────────────────────────
+	// 서버가 보낸 최신 탈출 상태가 있으면 true + phase(0=서바이벌,1=탈출가능)/남은초 반환.
+	bool  GetEscapeState(unsigned char& outPhase, float& outRemainSeconds) const;
+	// 탈출 키 입력을 서버에 전송 (탈출 가능 상태에서 누구든)
+	void  SendPlayerEscape();
+	// 게임 종료(탈출 성공) 신호 소비 (1회)
+	bool  ConsumeGameEnd();
+
 	// ── 플레이어 이벤트 소비 (Task: Remote Player Sync) ─────────────────────────
 	std::vector<PlayerJoinEvent>      ConsumePlayerJoins();
 	std::vector<int>                  ConsumePlayerLeaves();
 	std::vector<PlayerTransformEvent> ConsumePlayerTransforms();
+
+	// 현재 방에 접속한 모든 플레이어 스냅샷 (큐 소비와 무관하게 유지됨).
+	// 씬 전환(로비→게임) 시 큐가 이미 비어도 리모트 플레이어를 재구성하기 위함.
+	std::vector<PlayerJoinEvent>      GetRoomPlayersSnapshot();
 
 	// 최신 서버 좀비 상태 조회. 존재하지 않으면 false.
 	bool					GetLatestZombieState(int zombieId, ZombieServerState& outState) const;
@@ -272,7 +295,17 @@ private:
 	concurrency::concurrent_queue<MeleeHitEvent>                  m_PendingMeleeHits;
 	concurrency::concurrent_queue<ChatMessageEvent>               m_PendingChatMessages;
 	concurrency::concurrent_queue<WeaponChangeEvent>             m_PendingPlayerWeapons;
+	concurrency::concurrent_queue<CharacterChangeEvent>          m_PendingPlayerCharacters;
 	concurrency::concurrent_queue<GameEventMsg>                  m_PendingGameEvents;
 	concurrency::concurrent_queue<ReadyStateEvent>               m_PendingReadyStates;
 	std::atomic<bool>                                            m_bPendingGameStart{ false };
+
+	// 탈출 시퀀스 상태 (서버가 주기적으로 보냄 = 최신값만 유지) + 종료 신호
+	std::atomic<int>                                            m_nEscapePhase{ -1 };   // -1=없음, 0=서바이벌, 1=탈출가능
+	std::atomic<float>                                          m_fEscapeRemain{ 0.f }; // 남은 서바이벌 시간(초)
+	std::atomic<bool>                                           m_bPendingGameEnd{ false };
+
+	// 방 멤버 보존 맵 (큐 소비와 무관하게 유지). 씬 전환 후 리모트 재구성용. m_RoomPlayersMutex 보호
+	std::unordered_map<int, PlayerJoinEvent>                     m_RoomPlayers;
+	std::mutex                                                   m_RoomPlayersMutex;
 };
