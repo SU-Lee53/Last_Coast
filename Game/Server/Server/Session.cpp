@@ -428,7 +428,7 @@ bool Session::process_packet(unsigned char* p)
 				if (clients[other_id].m_bReady) ++nReadyCount;
 			}
 			// [테스트] 1명만 들어와도 시작 가능 (원래 2명). 정식 빌드에선 >= 2 로 복구.
-			if (nConnectedCount >= 1 && nReadyCount == nConnectedCount) {
+			if (nConnectedCount >= 3 && nReadyCount == nConnectedCount) {
 				std::cout << "[Room] All " << nConnectedCount << " players ready! Starting game." << std::endl;
 				for (int other_id : m_room->players) {
 					if (other_id == -1) continue;

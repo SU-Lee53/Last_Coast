@@ -33,7 +33,7 @@ static constexpr const char* CHECKPOINT_JSON_PATH = "../../Client/Resources/Scen
 // 엔딩 서바이벌(탈출 대기) 동안 좀비 강화: 시야 무제한 + 스폰 폭증
 static constexpr float       ESCAPE_SIGHT_RANGE       = 1000000.f; // 사실상 무제한 감지 반경 (cm)
 static constexpr DWORD       ESCAPE_SPAWN_INTERVAL_MS = 800;       // 더 자주 스폰
-static constexpr int         ESCAPE_MAX_ZOMBIES       = 100;       // 더 많이 동시 존재
+static constexpr int         ESCAPE_MAX_ZOMBIES       = 130;       // 더 많이 동시 존재
 static constexpr int         ESCAPE_SPAWN_BURST       = 1;         // 스폰 1회당 마리수
 
 ZombieManager                g_ZombieManager;
