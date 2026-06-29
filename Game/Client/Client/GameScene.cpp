@@ -347,11 +347,17 @@ void GameScene::BuildEndCreditsUI()
 	const std::vector<std::wstring> wstrcreditLines = {
 		L"Thanks for playing",
 		L"",
-		L"Programming",
-		L"- ",
+		L"Client framework",
+		L"- 이승욱",
 		L"",
-		L"Art / Level",
-		L"- ",
+		L"Client / Server contents",
+		L"- 민정원",
+		L"",
+		L"Server",
+		L"- 최명준",
+		L"",
+		L"Asset optimize / Map design",
+		L"- 이동연",
 		L"",
 	};
 
@@ -509,7 +515,8 @@ void GameScene::UpdateEscapeSequence()
 	if (m_bGameCleared) {
 		m_pEscapeText->SetVisible(true);
 		m_pEscapeText->SetColor(Vector3{ 0.4f, 1.f, 0.4f });
-		m_pEscapeText->SetText(L"탈출 성공!");
+		//m_pEscapeText->SetText(L"탈출 성공!");
+		m_bGameEnded = true;
 		return;
 	}
 

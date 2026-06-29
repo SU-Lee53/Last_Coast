@@ -122,6 +122,11 @@ void GameContext::LoadWeaponSounds()
 	// Impact
 	SOUND->AddSound("impact_on_zombie", "../Resources/Sounds/Impacts/SW_ImpactHeadshot_01.wav", false, true, SoundCategory::SFX);
 	SOUND->AddSound("impact_on_object", "../Resources/Sounds/Impacts/SW_ImpactPlasterDebris_01.wav", false, true, SoundCategory::SFX);
+
+	// Impact
+	SOUND->AddSound("explosion", "../Resources/Sounds/Explosive.wav", false, true, SoundCategory::SFX);
+
+
 }
 
 void GameContext::LoadPlayerModels()

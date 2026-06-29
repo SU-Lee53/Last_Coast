@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "ExplosionEffect.h"
 #include "ParticleModules.h"
 
@@ -8,6 +8,10 @@ void ExplosionEffect::Initialize()
 	CreateFireballEmitter();
 	CreateSmokeEmitter();
 	CreateDustEmitter();
+
+	if (!m_pSound) {
+		SOUND->GetSound("explosion");
+	}
 }
 
 void ExplosionEffect::CreateFlashEmitter()
@@ -29,8 +33,8 @@ void ExplosionEffect::CreateFlashEmitter()
 	emitter.AddInitializeModule<InitPositionSphereModule>(0.f, 18.f);
 	emitter.AddInitializeModule<InitLifetimeRandomModule>(0.06f, 0.12f);
 	emitter.AddInitializeModule<InitSizeRandomModule>(
-		60.0f, 110.0f,
-		20.0f, 40.0f
+		60.0f * 5, 110.0f * 5,
+		20.0f * 5, 40.0f * 5
 	);
 	emitter.AddInitializeModule<InitColorModule>(
 		Vector4(1.0f, 0.80f, 0.35f, 1.0f) * 7.0f,
@@ -62,8 +66,8 @@ void ExplosionEffect::CreateFireballEmitter()
 	emitter.AddInitializeModule<InitPositionSphereModule>(0.f, 35.f);
 	emitter.AddInitializeModule<InitLifetimeRandomModule>(0.25f, 0.55f);
 	emitter.AddInitializeModule<InitSizeRandomModule>(
-		28.0f, 55.0f,
-		75.0f, 135.0f
+		28.0f * 5, 55.0f * 5,
+		75.0f * 5, 135.0f * 5
 	);
 	emitter.AddInitializeModule<InitColorModule>(
 		Vector4(1.0f, 0.55f, 0.12f, 0.95f) * 3.5f,
@@ -102,8 +106,8 @@ void ExplosionEffect::CreateSmokeEmitter()
 	emitter.AddInitializeModule<InitPositionSphereModule>(12.f, 65.f);
 	emitter.AddInitializeModule<InitLifetimeRandomModule>(1.2f, 2.6f);
 	emitter.AddInitializeModule<InitSizeRandomModule>(
-		35.0f, 80.0f,
-		130.0f, 260.0f
+		35.0f * 5, 80.0f * 5,
+		130.0f * 5, 260.0f * 5
 	);
 	emitter.AddInitializeModule<InitColorModule>(
 		Vector4(0.30f, 0.28f, 0.24f, 0.45f),
@@ -141,8 +145,8 @@ void ExplosionEffect::CreateDustEmitter()
 	emitter.AddInitializeModule<InitPositionSphereModule>(10.f, 45.f);
 	emitter.AddInitializeModule<InitLifetimeRandomModule>(0.65f, 1.35f);
 	emitter.AddInitializeModule<InitSizeRandomModule>(
-		18.0f, 42.0f,
-		70.0f, 150.0f
+		18.0f * 5, 42.0f * 5,
+		70.0f * 5, 150.0f * 5
 	);
 	emitter.AddInitializeModule<InitColorModule>(
 		Vector4(0.48f, 0.42f, 0.34f, 0.55f),
@@ -159,4 +163,10 @@ void ExplosionEffect::CreateDustEmitter()
 	emitter.AddUpdateModule<UpdateSizeOverLifeModule>();
 	emitter.AddUpdateModule<UpdateColorOverLifeModule>();
 	emitter.AddUpdateModule<UpdateRotationModule>();
+}
+
+void ExplosionEffect::Play(const ParticleEffectSpawnDesc& desc)
+{
+	IParticleEffect::Play(desc);
+	SOUND->PlayAt(m_pSound, desc.v3Position);
 }
