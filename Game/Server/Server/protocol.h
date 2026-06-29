@@ -52,10 +52,9 @@ enum GameEventId : int {
 // 실제 값은 클라 GameEvent.cpp 의 GetEnvironmentPreset() 테이블에 정의 — 새 룩은 거기 항목만 추가.
 enum EnvironmentPresetId : int {
 	EP_DEFAULT = 0,   // 기본 룩 (모든 값 디폴트 복구)
-	EP_HORROR  = 1,   // 호러: exposure↓ saturation↓ vignette↑ bloom↑ 안개 자욱+어둡게
-	EP_NIGHT   = 2,   // 야간: 시간 밤으로 + 앰비언트 어둡게 + 차가운 안개
-	EP_DAWN    = 3,   // 새벽: 시간 새벽으로 + 따뜻한 톤
-	EP_SUNSET  = 4,   // 석양: 시간 저녁으로 + 따뜻한 안개 + 시네마틱 카메라가 지는 해를 바라봄(bWatchSun)
+	EP_NIGHT   = 1,   // 야간: 시간 밤으로 + 앰비언트 어둡게 + 차가운 안개
+	EP_DAWN    = 2,   // 새벽: 시간 새벽으로 + 따뜻한 톤
+	EP_SUNSET  = 3,   // 석양: 시간 저녁으로 + 따뜻한 안개 + 시네마틱 카메라가 지는 해를 바라봄(bWatchSun)
 };
 enum IOType { IO_SEND, IO_RECV, IO_ACCEPT };
 

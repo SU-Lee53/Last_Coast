@@ -3,6 +3,7 @@
 #include "DebugPlayer.h"
 #include "ThirdPersonPlayer.h"
 #include "TerrainObject.h"
+#include "HelicopterObject.h"
 #include "TerrainTestScene.h"
 #include "Skybox.h"
 #include "MapTestScene.h"
@@ -84,6 +85,10 @@ void GameScene::BuildObjects()
 	m_v3WaterPos = Vector3(0.f, -47_m, 0.f);
 	pTransform->SetPosition(m_v3WaterPos);
 	AddObject(m_pWater);
+
+	auto pHeli = std::make_shared<HelicopterObject>();
+	pHeli->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
+	AddObject(pHeli);
 
 }
 
@@ -276,10 +281,6 @@ void GameScene::Update()
 			m_pEventSequence->AddEvent(std::make_shared<EnvironmentTransitionEvent>(GetEnvironmentPreset(3), 1.5f));
 		}
 
-		if (ImGui::Button("Env Preset 4")) {
-			// 환경 프리셋 전환: 한 이벤트로 포스트FX/안개/시간/앰비언트 전체를 페이드.
-			m_pEventSequence->AddEvent(std::make_shared<EnvironmentTransitionEvent>(GetEnvironmentPreset(4), 1.5f));
-		}
 	}
 	ImGui::End();
 

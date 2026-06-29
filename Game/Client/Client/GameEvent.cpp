@@ -105,40 +105,17 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 		return p;
 	}();
 
-	// EP_HORROR — 어둡고 채도 낮고 비네팅↑ 블룸↑ 안개 자욱+어둡게.
-	static const EnvironmentPreset HORROR = [] {
-		EnvironmentPreset p;
-		p.fExposure          = 0.35f;
-		p.fOutputScale       = 0.55f;
-		p.fPostSaturation    = 0.40f;
-		p.fGradingStrength   = 0.65f;
-		p.fTemperature       = -0.18f;
-		p.nEnableAutoExposure = 0;      // 수동 노출(어둡게 고정)
-		p.fBloomIntensity    = 1.20f;   // 으스스한 발광
-		p.fVignetteStrength  = 0.70f;
-		p.v4FogColor         = Vector4{ 0.05f, 0.06f, 0.08f, 1.0f };
-		p.fFogStartDistance       = 200.f;
-		p.fFogCutOffDistance      = 6500.f;
-		p.fFogDistanceDensity     = 0.020f;
-		p.fFogDistancePower       = 1.35f;
-		p.fFogHeightDensity       = 0.055f;
-		p.fFogHeightFalloff       = 0.045f;
-		p.fFogBaseHeightOffset    = -120.f;
-		p.fFogHeightStartDistance = 0.f;
-		p.fFogMaxOpacity          = 0.86f;
-		return p;
-	}();
-
 	// EP_NIGHT — 시간 밤으로 + 앰비언트 어둡게 + 차가운 안개.
 	static const EnvironmentPreset NIGHT = [] {
 		EnvironmentPreset p;
 		p.bAffectTime        = true;
-		p.fTimeOfDayHour     = 4.0f;    // 자정
+		p.fTimeOfDayHour     = 2.0f;    // 자정
 		p.bAffectAmbient     = true;
 		p.v4GlobalAmbient    = Vector4{ 0.03f, 0.04f, 0.07f, 1.0f };
 		p.fPostSaturation    = 0.75f;
 		p.fGradingStrength   = 0.45f;
 		p.fTemperature       = -0.20f;
+		p.fGrainStrength     = 0.015;
 		p.v4FogColor         = Vector4{ 0.06f, 0.08f, 0.14f, 1.0f };
 		p.fFogStartDistance       = 200.f;
 		p.fFogCutOffDistance      = 9000.f;
@@ -148,7 +125,7 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 		p.fFogHeightFalloff       = 0.055f;
 		p.fFogBaseHeightOffset    = -80.f;
 		p.fFogHeightStartDistance = 0.f;
-		p.fFogMaxOpacity          = 1.00f;
+		p.fFogMaxOpacity          = 0.01f;
 		return p;
 	}();
 
@@ -156,22 +133,23 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 	static const EnvironmentPreset DAWN = [] {
 		EnvironmentPreset p;
 		p.bAffectTime        = true;
-		p.fTimeOfDayHour     = 6.0f;   // ~06시
+		p.fTimeOfDayHour     = 4.0f;   // ~06시
 		p.bAffectAmbient     = true;
 		p.v4GlobalAmbient    = Vector4{ 0.18f, 0.14f, 0.12f, 1.0f };
 		p.fExposure          = 1.1f;
-		p.fGradingStrength   = 0.50f;
-		p.fTemperature       = 0.16f;
-		p.v4FogColor         = Vector4{ 0.55f, 0.45f, 0.40f, 1.0f };
-		p.fFogStartDistance       = 600.f;
-		p.fFogCutOffDistance      = 12000.f;
-		p.fFogDistanceDensity     = 0.0050f;
+		p.fGradingStrength   = 0.25f;
+		p.fTemperature       = -0.18f;
+		p.fGrainStrength     = 0.03;
+		p.v4FogColor         = Vector4{ 0.7f, 0.7f, 0.9f, 1.0f };
+		p.fFogStartDistance       = 180.f;
+		p.fFogCutOffDistance      = 1000.f;
+		p.fFogDistanceDensity     = 0.0500f;
 		p.fFogDistancePower       = 1.0f;
-		p.fFogHeightDensity       = 0.018f;
+		p.fFogHeightDensity       = 0.033f;
 		p.fFogHeightFalloff       = 0.040f;
-		p.fFogBaseHeightOffset    = -60.f;
+		p.fFogBaseHeightOffset    = 0.f;
 		p.fFogHeightStartDistance = 0.f;
-		p.fFogMaxOpacity          = 0.38f;
+		p.fFogMaxOpacity          = 0.3f;
 		return p;
 	}();
 
@@ -179,28 +157,19 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 	static const EnvironmentPreset SUNSET = [] {
 		EnvironmentPreset p;
 		p.bAffectTime        = true;
-		p.fTimeOfDayHour     = 18.0f;   // 18시 = 해가 정확히 지평선 (그 이상이면 땅 밑으로 꺼짐)
+		p.fTimeOfDayHour     = 6.5f;   // 18시 = 해가 정확히 지평선 (그 이상이면 땅 밑으로 꺼짐)
 		p.bWatchSun          = false;    // 전환 동안 카메라가 태양 추적
 		p.bAffectAmbient     = true;
 		p.v4GlobalAmbient    = Vector4{ 0.14f, 0.10f, 0.09f, 1.0f };
 		p.fExposure          = 1.05f;
-		p.fGradingStrength   = 0.65f;
-		p.fTemperature       = 0.24f;
-		p.v4FogColor         = Vector4{ 0.65f, 0.40f, 0.28f, 1.0f }; // 주황빛 노을
-		p.fFogStartDistance       = 500.f;
-		p.fFogCutOffDistance      = 11000.f;
-		p.fFogDistanceDensity     = 0.0060f;
-		p.fFogDistancePower       = 1.1f;
-		p.fFogHeightDensity       = 0.020f;
-		p.fFogHeightFalloff       = 0.050f;
-		p.fFogBaseHeightOffset    = -50.f;
-		p.fFogHeightStartDistance = 0.f;
-		p.fFogMaxOpacity          = 0.45f;
+		p.fGradingStrength   = 0.24f;
+		p.fGrainStrength     = 0.008;
+		p.fTemperature       = 0.18f;
+		p.fFogMaxOpacity     = 0.0f;
 		return p;
 	}();
 
 	switch (presetId) {
-	case EP_HORROR:  return HORROR;
 	case EP_NIGHT:   return NIGHT;
 	case EP_DAWN:    return DAWN;
 	case EP_SUNSET:  return SUNSET;

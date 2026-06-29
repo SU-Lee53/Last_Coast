@@ -36,6 +36,7 @@ public:
 	void LoadWeaponSounds();
 	void LoadPlayerModels();
 	void LoadZombieModels();
+	void LoadHelicopterModel();
 
 	// Getters
 	std::shared_ptr<WeaponObject> GetWeaponCopy(WEAPON_TYPE eWeaponType);
@@ -75,6 +76,7 @@ private:
 	};
 
 	std::array<WeaponStats, g_unWeapons> m_WeaponStats;
+	std::shared_ptr<IGameObject> m_pHelicopterModel = nullptr;
 
 };
 

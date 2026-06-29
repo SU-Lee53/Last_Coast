@@ -4,6 +4,7 @@
 #include "StaticObject.h"
 #include "WaterGridObject.h"
 #include "WeaponObject.h"
+#include "HelicopterObject.h"
 #include "ThirdPersonPlayer.h"
 #include "CrashDebris.h"
 
@@ -34,6 +35,18 @@ struct SpatialObjectTraits<WaterGridObject>
     static constexpr uint32 unLayerMask =
         SPATIAL_RENDERABLE |
         SPATIAL_RAY_TARGET;
+
+    static constexpr bool bDynamic = true;
+};
+
+template<>
+struct SpatialObjectTraits<HelicopterObject>
+{
+    static constexpr bool bSpatial = true;
+	static constexpr uint32 unLayerMask =
+		SPATIAL_RENDERABLE |
+		SPATIAL_COLLIDABLE |
+		SPATIAL_RAY_TARGET;
 
     static constexpr bool bDynamic = true;
 };

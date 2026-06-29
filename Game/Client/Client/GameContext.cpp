@@ -32,7 +32,8 @@ void GameContext::Initialize()
 {
 	LoadWeaponData();
 	LoadZombieModels();
-	LoadWeaponSounds();
+	LoadWeaponSounds(); 
+	LoadHelicopterModel();
 }
 
 void GameContext::LoadWeaponData()
@@ -156,6 +157,10 @@ void GameContext::LoadZombieModels()
 	}
 }
 
+void GameContext::LoadHelicopterModel()
+{
+	m_pHelicopterModel = MODEL->LoadOrGet("Gunship")->CopyObject<NodeObject>();
+}
 
 std::shared_ptr<WeaponObject> GameContext::GetWeaponCopy(WEAPON_TYPE eWeaponType)
 {

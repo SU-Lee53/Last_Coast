@@ -623,6 +623,7 @@
       <Filter>02.Game\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Sound.h" />
+    <ClInclude Include="HelicopterObject.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -1044,6 +1045,7 @@
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClCompile>
     <ClCompile Include="Sound.cpp" />
+    <ClCompile Include="HelicopterObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">

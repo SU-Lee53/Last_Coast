@@ -19,6 +19,7 @@ class TerrainComponent;
 class TerrainObject;
 class Skybox;
 class EventSequence;
+class HelicopterObject;
 //class Sprite;
 
 using CollisionPair = std::pair<std::shared_ptr<IGameObject>, std::shared_ptr<IGameObject>>;
@@ -26,7 +27,14 @@ using CollisionPair = std::pair<std::shared_ptr<IGameObject>, std::shared_ptr<IG
 class Scene {
 	friend class SceneManager;
 
-	using WorldType = World<NetworkOwnerThirdPersonPlayer, NetworkRemoteThirdPersonPlayer, StaticObject, WeaponObject, Zombie, WaterGridObject, CrashDebris>;
+	using WorldType = World<
+		NetworkOwnerThirdPersonPlayer, 
+		NetworkRemoteThirdPersonPlayer, 
+		StaticObject, WeaponObject, 
+		Zombie, 
+		WaterGridObject, 
+		HelicopterObject,
+		CrashDebris>;
 
 public:
 	virtual void BuildObjects() = 0;
