@@ -146,7 +146,7 @@ public:
 	void ShowDebugOptions();
 
 	bool SaveParametersToBinary(const std::string& strSaveName) const;
-	bool LoadParametersFromBinary(const std::string& strSaveName);
+	bool LoadFromFiles(const std::string& strSaveName);
 
 	CB_BLOOM_DATA GetBloomCBData(XMINT2 xmi2InputSize, XMINT2 xmi2OutputSize) const;
 	CB_SSAO_DATA GetSSAOCBData() const;

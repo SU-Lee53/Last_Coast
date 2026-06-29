@@ -30,6 +30,7 @@ public:
 
 public:
 	TONE_MAPPING_MODE GetCurrentToneMapper() const { return m_eCurrentToneMapper; }
+	void SetCurrentToneMapper(TONE_MAPPING_MODE eMode);
 	CB_TONE_MAPPING_COMMON_DATA GetCommonCBData() const;
 	CB_TONE_MAPPING_LUT_DATA GetToneMapperLUTCBData() const;
 	CB_TONE_MAPPING_LUT_DATA GetGradingLUTCBData() const;
@@ -46,6 +47,8 @@ public:
 	// (AgX/GT 등 톤커브 파라미터는 LUT 베이크 → 별도 DirtyFlag 필요, 여기선 미포함)
 	ToneMappingCommonParameters& GetCommonParameters() { return m_Parameters.Common; }
 	const ToneMappingCommonParameters& GetCommonParameters() const { return m_Parameters.Common; }
+	GradingParameters& GetGradingParameters() { return m_Parameters.Grading; }
+	const GradingParameters& GetGradingParameters() const { return m_Parameters.Grading; }
 
 public:
 	void ShowDebugOptions();

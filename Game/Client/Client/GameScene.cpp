@@ -37,7 +37,9 @@ void GameScene::BuildObjects()
 
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize();
-	m_pSkybox->LoadSkyboxParameters("Day");
+	m_pSkybox->LoadSkyboxParameters("Start");
+	m_ToneMappingVolume.LoadFromFiles("Start");
+	m_PostProcessingVolume.LoadFromFiles("Start");
 
 	//m_pPlayer = std::make_shared<DebugPlayer>();
 	//m_pPlayer->Initialize();
@@ -217,8 +219,8 @@ void GameScene::Update()
 	//}
 	//ImGui::End();
 
-	// ====== Sound Test ======
-	ImGui::Begin("Sound Test");
+	// ====== Test ======
+	ImGui::Begin("Test");
 	{
 		if (ImGui::Button("Play 2D")) {
 			SOUND->Play("Test");
@@ -257,6 +259,26 @@ void GameScene::Update()
 		}
 		if (ImGui::Button("End Credits Test")) {
 			BeginEndCredits();
+		}
+
+		if (ImGui::Button("Env Preset 1")) {
+			// 환경 프리셋 전환: 한 이벤트로 포스트FX/안개/시간/앰비언트 전체를 페이드.
+			m_pEventSequence->AddEvent(std::make_shared<EnvironmentTransitionEvent>(GetEnvironmentPreset(1), 1.5f));
+		}
+
+		if (ImGui::Button("Env Preset 2")) {
+			// 환경 프리셋 전환: 한 이벤트로 포스트FX/안개/시간/앰비언트 전체를 페이드.
+			m_pEventSequence->AddEvent(std::make_shared<EnvironmentTransitionEvent>(GetEnvironmentPreset(2), 1.5f));
+		}
+
+		if (ImGui::Button("Env Preset 3")) {
+			// 환경 프리셋 전환: 한 이벤트로 포스트FX/안개/시간/앰비언트 전체를 페이드.
+			m_pEventSequence->AddEvent(std::make_shared<EnvironmentTransitionEvent>(GetEnvironmentPreset(3), 1.5f));
+		}
+
+		if (ImGui::Button("Env Preset 4")) {
+			// 환경 프리셋 전환: 한 이벤트로 포스트FX/안개/시간/앰비언트 전체를 페이드.
+			m_pEventSequence->AddEvent(std::make_shared<EnvironmentTransitionEvent>(GetEnvironmentPreset(4), 1.5f));
 		}
 	}
 	ImGui::End();
@@ -312,8 +334,6 @@ void GameScene::BuildEndCreditsUI()
 		L"Art / Level",
 		L"- ",
 		L"",
-		L"Special Thanks",
-		L"- Team Last Coast"
 	};
 
 	const float fScreenWidth = static_cast<float>(WinCore::g_dwClientWidth);

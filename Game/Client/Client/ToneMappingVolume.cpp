@@ -40,6 +40,37 @@ CB_TONE_MAPPING_COMMON_DATA ToneMappingVolume::GetCommonCBData() const
 	};
 }
 
+void ToneMappingVolume::SetCurrentToneMapper(TONE_MAPPING_MODE eMode)
+{
+	if (eMode < TONE_MAPPING_MODE::AGX || eMode >= TONE_MAPPING_MODE::COUNT || m_eCurrentToneMapper == eMode) {
+		return;
+	}
+
+	m_eCurrentToneMapper = eMode;
+
+	switch (m_eCurrentToneMapper)
+	{
+	case TONE_MAPPING_MODE::AGX:
+		m_Parameters.AgX = ToneMappingParameter::g_DefaultAgXParameters;
+		break;
+	case TONE_MAPPING_MODE::ACES:
+		m_Parameters.ACES = ToneMappingParameter::g_DefaultACESParameters;
+		break;
+	case TONE_MAPPING_MODE::UC2:
+		m_Parameters.UC2 = ToneMappingParameter::g_DefaultUC2Parameters;
+		break;
+	case TONE_MAPPING_MODE::GT:
+		m_Parameters.GT = ToneMappingParameter::g_DefaultGTParameters;
+		break;
+	default:
+		std::unreachable();
+		break;
+	}
+
+	m_bSkipThisFrame = true;
+	SetDirtyFlag(LUT_DIRTY_FLAG::TONE_MAPPER, true);
+}
+
 CB_TONE_MAPPING_LUT_DATA ToneMappingVolume::GetToneMapperLUTCBData() const
 {
 	CB_TONE_MAPPING_LUT_DATA data{};

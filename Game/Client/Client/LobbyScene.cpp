@@ -12,6 +12,7 @@ void LobbyScene::BuildObjects()
 	m_v4GlobalAmbient = { 0.25f, 0.25f, 0.25f, 1.f };
 	m_pSkybox = std::make_shared<Skybox>();
 	m_pSkybox->Initialize();
+	m_pSkybox->LoadSkyboxParameters("Lobby");
 
 	m_pPlayer = std::make_shared<NetworkOwnerThirdPersonPlayer>();
 	m_pPlayer->Initialize();

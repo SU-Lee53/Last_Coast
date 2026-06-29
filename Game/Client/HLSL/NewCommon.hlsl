@@ -158,7 +158,7 @@ struct SkyboxData
 #define POINT_LIGHT			1
 #define SPOT_LIGHT			2
 #define DIRECTIONAL_LIGHT	3
-#define MAX_LIGHTS			20 
+#define MAX_LIGHTS			16
 
 struct LightData
 {

@@ -135,7 +135,11 @@ struct EnvironmentPreset {
 	float fPostSaturation    = 1.0f;
 	float fOutputScale       = 1.0f;
 	float fGamma             = 2.2f;
+	float fGradingStrength   = 0.0f;
+	float fTemperature       = 0.0f;
 	int   nEnableAutoExposure = 1;     // 즉시 적용(lerp 안 함). 0 = 수동 노출(룩 연출용)
+	bool  bAffectToneMapperMode = false;
+	int   nToneMapperMode    = 1;     // 0=AgX, 1=ACES, 2=UC2, 3=GT. 모드는 이산값이라 lerp 대신 전환 시작 시 적용.
 
 	// 블룸
 	float fBloomThreshold    = 1.0f;
@@ -158,9 +162,9 @@ struct EnvironmentPreset {
 	float   fFogHeightStartDistance = 0.0f;
 	float   fFogMaxOpacity          = 0.0f;
 
-	// 스카이박스 시간 (0~1). bAffectTime=false 면 시간은 건드리지 않음.
+	// 스카이박스 시간 (0~24 hour). bAffectTime=false 면 시간은 건드리지 않음.
 	bool  bAffectTime        = false;
-	float fTimeOfDay01       = 0.5f;
+	float fTimeOfDayHour     = 12.0f;
 
 	// true 이고 bAffectTime 일 때: 전환 동안 시네마틱 카메라가 태양을 바라봄(해질녘 연출).
 	// 연출 끝나면 원래 카메라로 복구. (플레이어 입력은 전환 동안 카메라에 미반영)

@@ -467,7 +467,7 @@ void IThirdPersonPlayer::InitializeLocalCamera()
 		XMFLOAT3(0.f, 1.f, 0.f));
 	m_pCamera->GenerateProjectionMatrix(
 		10.f,
-		300_m,
+		250_m,
 		static_cast<float>(WinCore::g_dwClientWidth) / static_cast<float>(WinCore::g_dwClientHeight),
 		60.0f);
 	m_pCamera->SetOwner(shared_from_this());

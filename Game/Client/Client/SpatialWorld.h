@@ -64,6 +64,7 @@ public:
 private:
 	bool IsValidProxyID(SpatialProxyID id) const;
 	bool ShouldTestProxy(const SpatialProxy& proxy, const SpatialQueryDesc& desc) const;
+	bool IntersectsFrustumProxy(const BoundingFrustum& xmFrustumWorld, const SpatialProxy& proxy) const;
 	void PushProxyToResult(const SpatialProxy& proxy, SpatialQueryResult& result) const;
 
 private:

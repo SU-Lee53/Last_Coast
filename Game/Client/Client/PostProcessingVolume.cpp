@@ -91,7 +91,7 @@ bool PostProcessingVolume::SaveParametersToBinary(const std::string& strSaveName
 	return !!out;
 }
 
-bool PostProcessingVolume::LoadParametersFromBinary(const std::string& strSaveName)
+bool PostProcessingVolume::LoadFromFiles(const std::string& strSaveName)
 {
 	std::ifstream in{ g_strSavePath + strSaveName + ".bin", std::ios::binary };
 	if (!in) {
@@ -110,7 +110,7 @@ void PostProcessingVolume::ShowDebugOptions()
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("Load Post Processing Parameters")) {
-		LoadParametersFromBinary(m_strSaveName);
+		LoadFromFiles(m_strSaveName);
 	}
 
 	if (ImGui::Button("Reset All Post Processing Parameters")) {

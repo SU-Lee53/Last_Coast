@@ -4,6 +4,8 @@
 #include "TerrainObject.h"
 #include "Skybox.h"
 #include "RenderGraph.h"
+#include "Scene.h"
+#include "Light.h"
 
 ComPtr<ID3D12RootSignature> RenderManager::g_pd3dGlobalRootSignature = nullptr;
 ComPtr<ID3D12RootSignature> RenderManager::g_pd3dComputeRootSignature = nullptr;
@@ -568,15 +570,64 @@ void RenderManager::BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dComma
 	// Cache
 	const auto& pTerrain = CUR_SCENE->GetTerrain();
 	const auto& pSkybox = CUR_SCENE->GetSkybox();
+	const auto& pCamera = CUR_SCENE->GetCamera();
+
+	std::vector<LightData> lightDatas;
+	lightDatas.reserve(MAX_LIGHTS);
+
+	auto AppendLightData = [&lightDatas](Light* pLight)
+		{
+			if (!pLight || !pLight->m_bEnable || lightDatas.size() >= MAX_LIGHTS) {
+				return;
+			}
+
+			lightDatas.push_back(pLight->MakeCBData());
+		};
+
+	for (const auto& pLight : CUR_SCENE->GetLightsInScene()) {
+		if (dynamic_cast<DirectionalLight*>(pLight.get())) {
+			AppendLightData(pLight.get());
+		}
+	}
+
+	SpatialQueryDesc lightQueryDesc{};
+	lightQueryDesc.unLayerMask = SPATIAL_LIGHT;
+	lightQueryDesc.eLayerMatchMode = SPATIAL_LAYER_MATCH_MODE::ALL;
+	lightQueryDesc.bIncludeStatic = true;
+	lightQueryDesc.bIncludeDynamic = true;
+
+	SpatialQueryResult visibleLightResult = CUR_SCENE->GetWorld().GetSpatial().QueryFrustum(
+		pCamera->GetFrustumWorld(),
+		lightQueryDesc
+	);
+
+	if (visibleLightResult.pLights.size() > MAX_LIGHTS - lightDatas.size()) {
+		const Vector3 v3CameraPos = pCamera->GetPosition();
+		std::sort(visibleLightResult.pLights.begin(), visibleLightResult.pLights.end(),
+			[&v3CameraPos](const Light* pLhs, const Light* pRhs)
+			{
+				const float fLhsDistanceToInfluence = std::max(0.0f, Vector3::Distance(v3CameraPos, pLhs->m_v3Position) - pLhs->m_fRange);
+				const float fRhsDistanceToInfluence = std::max(0.0f, Vector3::Distance(v3CameraPos, pRhs->m_v3Position) - pRhs->m_fRange);
+				return fLhsDistanceToInfluence < fRhsDistanceToInfluence;
+			});
+	}
+
+	for (Light* pLight : visibleLightResult.pLights) {
+		if (dynamic_cast<DirectionalLight*>(pLight)) {
+			continue;
+		}
+
+		AppendLightData(pLight);
+	}
 
 	// descRange[0]
 	CB_SCENE_DATA sceneCBData;
 	{
 		sceneCBData.gSceneGlobal.fTotalTime = TIME->GetTotalTime();
 		sceneCBData.gSceneGlobal.fElapsedTime = TIME->GetTimeElapsed();
-		sceneCBData.gSceneGlobal.nNumLights = CUR_SCENE->GetLightsInScene().size();
+		sceneCBData.gSceneGlobal.nNumLights = static_cast<int32>(lightDatas.size());
 		sceneCBData.gSceneGlobal.v4GlobalAmbient = CUR_SCENE->GetGlobalAmbient();
-		sceneCBData.gCamera = CUR_SCENE->GetCamera()->MakeCBData();
+		sceneCBData.gCamera = pCamera->MakeCBData();
 		sceneCBData.gSkybox = (pSkybox) ? CUR_SCENE->GetSkybox()->MakeCBData() : SkyboxData{};
 		sceneCBData.nScreenSize = XMINT2{ 
 			static_cast<int32>(WinCore::g_dwClientWidth), 
@@ -589,11 +640,6 @@ void RenderManager::BindPerSceneData(ComPtr<ID3D12GraphicsCommandList> pd3dComma
 	outDescHandle.cpuHandle.Offset(1, unDescIncrementSize);
 
 	// descRange[1]
-	std::vector<LightData> lightDatas;
-	lightDatas.reserve(sceneCBData.gSceneGlobal.nNumLights);
-	for (const auto& pLight : CUR_SCENE->GetLightsInScene()) {
-		lightDatas.push_back(pLight->MakeCBData());
-	}
 	auto lightSBuffer = AllocSBuffer<LightData>(lightDatas.size());
 	lightSBuffer.WriteData(lightDatas);
 	DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, lightSBuffer.SRVHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);

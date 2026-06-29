@@ -110,7 +110,7 @@ void Scene::PostInitialize()
 			m_World.GetSpatial().RegisterLight(
 				pLight.get(),
 				SPATIAL_LIGHT,
-				true
+				false
 			);
 		}
 

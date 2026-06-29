@@ -100,6 +100,8 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 	static const EnvironmentPreset DEFAULT = [] {
 		EnvironmentPreset p;            // 멤버 디폴트가 곧 기본 룩
 		p.nEnableAutoExposure = 1;
+		p.bAffectToneMapperMode = true;
+		p.nToneMapperMode = static_cast<int>(TONE_MAPPING_MODE::ACES);
 		return p;
 	}();
 
@@ -109,6 +111,8 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 		p.fExposure          = 0.35f;
 		p.fOutputScale       = 0.55f;
 		p.fPostSaturation    = 0.40f;
+		p.fGradingStrength   = 0.65f;
+		p.fTemperature       = -0.18f;
 		p.nEnableAutoExposure = 0;      // 수동 노출(어둡게 고정)
 		p.fBloomIntensity    = 1.20f;   // 으스스한 발광
 		p.fVignetteStrength  = 0.70f;
@@ -129,12 +133,14 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 	static const EnvironmentPreset NIGHT = [] {
 		EnvironmentPreset p;
 		p.bAffectTime        = true;
-		p.fTimeOfDay01       = 0.0f;    // 자정
+		p.fTimeOfDayHour     = 4.0f;    // 자정
 		p.bAffectAmbient     = true;
 		p.v4GlobalAmbient    = Vector4{ 0.03f, 0.04f, 0.07f, 1.0f };
 		p.fPostSaturation    = 0.75f;
+		p.fGradingStrength   = 0.45f;
+		p.fTemperature       = -0.20f;
 		p.v4FogColor         = Vector4{ 0.06f, 0.08f, 0.14f, 1.0f };
-		p.fFogStartDistance       = 400.f;
+		p.fFogStartDistance       = 200.f;
 		p.fFogCutOffDistance      = 9000.f;
 		p.fFogDistanceDensity     = 0.010f;
 		p.fFogDistancePower       = 1.15f;
@@ -142,7 +148,7 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 		p.fFogHeightFalloff       = 0.055f;
 		p.fFogBaseHeightOffset    = -80.f;
 		p.fFogHeightStartDistance = 0.f;
-		p.fFogMaxOpacity          = 0.60f;
+		p.fFogMaxOpacity          = 1.00f;
 		return p;
 	}();
 
@@ -150,10 +156,12 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 	static const EnvironmentPreset DAWN = [] {
 		EnvironmentPreset p;
 		p.bAffectTime        = true;
-		p.fTimeOfDay01       = 0.25f;   // ~06시
+		p.fTimeOfDayHour     = 6.0f;   // ~06시
 		p.bAffectAmbient     = true;
 		p.v4GlobalAmbient    = Vector4{ 0.18f, 0.14f, 0.12f, 1.0f };
 		p.fExposure          = 1.1f;
+		p.fGradingStrength   = 0.50f;
+		p.fTemperature       = 0.16f;
 		p.v4FogColor         = Vector4{ 0.55f, 0.45f, 0.40f, 1.0f };
 		p.fFogStartDistance       = 600.f;
 		p.fFogCutOffDistance      = 12000.f;
@@ -171,11 +179,13 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 	static const EnvironmentPreset SUNSET = [] {
 		EnvironmentPreset p;
 		p.bAffectTime        = true;
-		p.fTimeOfDay01       = 0.75f;   // 18시 = 해가 정확히 지평선 (그 이상이면 땅 밑으로 꺼짐)
+		p.fTimeOfDayHour     = 18.0f;   // 18시 = 해가 정확히 지평선 (그 이상이면 땅 밑으로 꺼짐)
 		p.bWatchSun          = false;    // 전환 동안 카메라가 태양 추적
 		p.bAffectAmbient     = true;
 		p.v4GlobalAmbient    = Vector4{ 0.14f, 0.10f, 0.09f, 1.0f };
 		p.fExposure          = 1.05f;
+		p.fGradingStrength   = 0.65f;
+		p.fTemperature       = 0.24f;
 		p.v4FogColor         = Vector4{ 0.65f, 0.40f, 0.28f, 1.0f }; // 주황빛 노을
 		p.fFogStartDistance       = 500.f;
 		p.fFogCutOffDistance      = 11000.f;
@@ -209,6 +219,7 @@ namespace {
 	{
 		EnvironmentPreset p;
 		const auto& tone  = pScene->GetToneMappingVolume().GetCommonParameters();
+		const auto& grading = pScene->GetToneMappingVolume().GetGradingParameters();
 		const auto& bloom = pScene->GetPostProcessingVolume().GetBloomParameters();
 		const auto& fx    = pScene->GetPostProcessingVolume().GetScreenFXParameters();
 		const auto& fog   = pScene->GetPostProcessingVolume().GetFogParameters();
@@ -217,7 +228,11 @@ namespace {
 		p.fPostSaturation    = tone.fPostSaturation;
 		p.fOutputScale       = tone.fOutputScale;
 		p.fGamma             = tone.fGamma;
+		p.fGradingStrength   = tone.fGradingStrength;
+		p.fTemperature       = grading.fTemperature;
 		p.nEnableAutoExposure = tone.nEnableAutoExposure;
+		p.bAffectToneMapperMode = true;
+		p.nToneMapperMode    = static_cast<int>(pScene->GetToneMappingVolume().GetCurrentToneMapper());
 
 		p.fBloomThreshold    = bloom.fThreshold;
 		p.fBloomIntensity    = bloom.fIntensity;
@@ -238,7 +253,7 @@ namespace {
 		p.fFogMaxOpacity          = fog.fFogMaxOpacity;
 
 		p.bAffectTime        = true;
-		p.fTimeOfDay01       = pScene->GetSkybox() ? pScene->GetSkybox()->GetDayNightBlend() : 0.5f;
+		p.fTimeOfDayHour     = pScene->GetSkybox() ? pScene->GetSkybox()->GetDayNightBlend() * 24.0f : 12.0f;
 
 		p.bAffectAmbient     = true;
 		p.v4GlobalAmbient    = pScene->GetGlobalAmbient();
@@ -248,7 +263,9 @@ namespace {
 	// from→to 를 t(0~1)로 보간해 씬에 라이브 적용. (int/즉시값은 호출부에서 처리)
 	void ApplyEnvironment(Scene* pScene, const EnvironmentPreset& a, const EnvironmentPreset& b, float t)
 	{
-		auto& tone  = pScene->GetToneMappingVolume().GetCommonParameters();
+		auto& toneMapping = pScene->GetToneMappingVolume();
+		auto& tone  = toneMapping.GetCommonParameters();
+		auto& grading = toneMapping.GetGradingParameters();
 		auto& bloom = pScene->GetPostProcessingVolume().GetBloomParameters();
 		auto& fx    = pScene->GetPostProcessingVolume().GetScreenFXParameters();
 		auto& fog   = pScene->GetPostProcessingVolume().GetFogParameters();
@@ -257,6 +274,13 @@ namespace {
 		tone.fPostSaturation    = std::lerp(a.fPostSaturation,   b.fPostSaturation,   t);
 		tone.fOutputScale       = std::lerp(a.fOutputScale,      b.fOutputScale,      t);
 		tone.fGamma             = std::lerp(a.fGamma,            b.fGamma,            t);
+		tone.fGradingStrength   = std::lerp(a.fGradingStrength,  b.fGradingStrength,  t);
+
+		const float fTemperature = std::lerp(a.fTemperature, b.fTemperature, t);
+		if (std::abs(grading.fTemperature - fTemperature) > 0.0001f) {
+			grading.fTemperature = fTemperature;
+			toneMapping.SetDirtyFlag(LUT_DIRTY_FLAG::GRADING, true);
+		}
 
 		bloom.fThreshold        = std::lerp(a.fBloomThreshold,   b.fBloomThreshold,   t);
 		bloom.fIntensity        = std::lerp(a.fBloomIntensity,   b.fBloomIntensity,   t);
@@ -277,7 +301,7 @@ namespace {
 		fog.fFogMaxOpacity          = std::lerp(a.fFogMaxOpacity,          b.fFogMaxOpacity,          t);
 
 		if (b.bAffectTime && pScene->GetSkybox()) {
-			pScene->GetSkybox()->SetDayNightBlend(std::lerp(a.fTimeOfDay01, b.fTimeOfDay01, t));
+			pScene->GetSkybox()->SetTimeOfDayHours(std::lerp(a.fTimeOfDayHour, b.fTimeOfDayHour, t));
 		}
 		if (b.bAffectAmbient) {
 			pScene->SetGlobalAmbient(Vector4::Lerp(a.v4GlobalAmbient, b.v4GlobalAmbient, t));
@@ -296,6 +320,14 @@ void EnvironmentTransitionEvent::OnEnterEvent(Scene* pScene)
 	// auto(1)로 복귀하는 경우는 페이드 끝에서 켜야 exposure 보간이 살아있음(OnUpdate 종료시).
 	if (m_Target.nEnableAutoExposure == 0) {
 		pScene->GetToneMappingVolume().GetCommonParameters().nEnableAutoExposure = 0;
+	}
+
+	if (m_Target.bAffectToneMapperMode) {
+		const int nMode = std::clamp(
+			m_Target.nToneMapperMode,
+			static_cast<int>(TONE_MAPPING_MODE::AGX),
+			static_cast<int>(TONE_MAPPING_MODE::COUNT) - 1);
+		pScene->GetToneMappingVolume().SetCurrentToneMapper(static_cast<TONE_MAPPING_MODE>(nMode));
 	}
 
 	// 해질녘 카메라 연출: 시간이 바뀌는 프리셋(bAffectTime)이고 bWatchSun일 때만.

@@ -57,12 +57,9 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input, uint nInstanceID : SV_Ins
 	output.positionW = positionW;
 	output.position = mul(float4(output.positionW, 1.f), mtxViewProjection);
 	
-	//float3x3 mtxNormal = (float3x3) transpose(gWorldTransforms[nWorldTransformBase].mtxInvWorld);
-	//output.normalW = normalize(mul(input.normal, mtxNormal));
-	//output.tangentW = normalize(mul(input.tangent, mtxNormal));
-	
-	output.normalW = mul(float4(input.normal, 1.f), mtxWorld).xyz;
-	output.tangentW = mul(float4(input.tangent, 1.f), mtxWorld).xyz;
+	float3x3 mtxNormal = (float3x3) transpose(gWorldTransforms[nWorldTransformBase].mtxInvWorld);
+	output.normalW = normalize(mul(input.normal, mtxNormal));
+	output.tangentW = normalize(mul(input.tangent, mtxNormal));
 	output.uv = input.uv;
     
 	return output;
@@ -102,17 +99,9 @@ VS_STANDARD_OUTPUT VSAnimated(VS_SKINNED_INPUT input, uint nInstanceID : SV_Inst
 	output.positionW = positionW;
 	output.position = mul(float4(positionW, 1.f), mtxViewProjection);
 	
-	//float3x3 mtxNormal = (float3x3) transpose(gWorldTransforms[nWorldTransformBase].mtxInvWorld);
-	//output.normalW = normalize(mul(normal, mtxNormal));
-	//output.tangentW = normalize(mul(tangent, mtxNormal));
-	//output.uv = input.uv;
-    
-	//float3x3 mtxNormal = (float3x3) transpose(gWorldTransforms[nWorldTransformBase].mtxInvWorld);
-	//output.normalW = normalize(mul(input.normal, mtxNormal));
-	//output.tangentW = normalize(mul(input.tangent, mtxNormal));
-	
-	output.normalW = mul(float4(input.normal, 1.f), mtxWorld).xyz;
-	output.tangentW = mul(float4(input.tangent, 1.f), mtxWorld).xyz;
+	float3x3 mtxNormal = (float3x3) transpose(gWorldTransforms[nWorldTransformBase].mtxInvWorld);
+	output.normalW = normalize(mul(normal, mtxNormal));
+	output.tangentW = normalize(mul(tangent, mtxNormal));
 	output.uv = input.uv;
 	
 	return output;
@@ -130,7 +119,7 @@ PS_GBUFFER_OUTPUT PSGBufferOpaque(VS_STANDARD_OUTPUT input)
 	float4 cAlbedo = gtxtTextures[gnTextureIndex.x].Sample(gSamplerState, input.uv);
 	
 	// Normal
-	float3 vNormal = (gnTextureIndex.y != -1) ? ComputeNormal(input.normalW, input.tangentW, input.uv) : input.normalW;
+	float3 vNormal = (gnTextureIndex.y != -1) ? ComputeNormal(input.normalW, input.tangentW, input.uv) : normalize(input.normalW);
 	//float3 vNormal = normalize(input.normalW);
 	float2 vNormalEnc = EncodeNormalOcta(vNormal);
 	
@@ -163,7 +152,7 @@ PS_GBUFFER_OUTPUT PSGBufferAlphaMask(VS_STANDARD_OUTPUT input)
 	}
 	
 	// Normal
-	float3 vNormal = (gnTextureIndex.y != -1) ? ComputeNormal(input.normalW, input.tangentW, input.uv) : input.normalW;
+	float3 vNormal = (gnTextureIndex.y != -1) ? ComputeNormal(input.normalW, input.tangentW, input.uv) : normalize(input.normalW);
 	//float3 vNormal = normalize(input.normalW);
 	float2 vNormalEnc = EncodeNormalOcta(vNormal);
 	
@@ -307,7 +296,7 @@ PS_GBUFFER_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
 	//	flayerWeights, 
 	//	normalize(input.normalW), 
 	//	normalize(input.tangentW));
-	float3 vNormal = input.normalW;
+	float3 vNormal = normalize(input.normalW);
 	float2 vNormalEnc = EncodeNormalOcta(vNormal);
 	
 	// Materials

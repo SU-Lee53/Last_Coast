@@ -258,7 +258,7 @@ SpatialQueryResult SpatialWorld::QueryFrustumLinear(const BoundingFrustum& xmFru
 			continue;
 		}
 
-		if (!xmFrustumWorld.Intersects(proxy.xmAABB)) {
+		if (!IntersectsFrustumProxy(xmFrustumWorld, proxy)) {
 			continue;
 		}
 
@@ -312,7 +312,7 @@ SpatialQueryResult SpatialWorld::QueryFrustum(const BoundingFrustum& xmFrustumWo
 						continue;
 					}
 
-					if (!xmFrustumWorld.Intersects(proxy.xmAABB)) {
+					if (!IntersectsFrustumProxy(xmFrustumWorld, proxy)) {
 						continue;
 					}
 
@@ -357,7 +357,7 @@ SpatialQueryResult SpatialWorld::QueryFrustum(const BoundingFrustum& xmFrustumWo
 						continue;
 					}
 
-					if (!xmFrustumWorld.Intersects(proxy.xmAABB)) {
+					if (!IntersectsFrustumProxy(xmFrustumWorld, proxy)) {
 						continue;
 					}
 
@@ -659,6 +659,15 @@ bool SpatialWorld::ShouldTestProxy(const SpatialProxy& proxy, const SpatialQuery
 	}
 
 	return true;
+}
+
+bool SpatialWorld::IntersectsFrustumProxy(const BoundingFrustum& xmFrustumWorld, const SpatialProxy& proxy) const
+{
+	if (proxy.type == SPATIAL_PROXY_TYPE::LIGHT) {
+		return xmFrustumWorld.Intersects(proxy.xmSphere);
+	}
+
+	return xmFrustumWorld.Intersects(proxy.xmAABB);
 }
 
 void SpatialWorld::PushProxyToResult(const SpatialProxy& proxy, SpatialQueryResult& result) const
