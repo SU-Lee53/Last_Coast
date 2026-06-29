@@ -16,16 +16,11 @@ void BoundingBoxDebugPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCom
 	m_v3LineVertices.clear();
 	m_unDrawnColliders = 0;
 
-	if (!m_bEnabled && !m_bDrawNavMesh) {
+	if (!m_bEnabled) {
 		return;
 	}
 
-	if (m_bEnabled) {
-		BuildCollisionLineVertices();
-	}
-	if (m_bDrawNavMesh) {
-		AppendNavMeshLines();
-	}
+	BuildCollisionLineVertices();
 
 	if (m_v3LineVertices.empty()) {
 		return;
@@ -39,7 +34,7 @@ void BoundingBoxDebugPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCom
 
 void BoundingBoxDebugPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
-	if ((!m_bEnabled && !m_bDrawNavMesh) || m_v3LineVertices.empty()) {
+	if (!m_bEnabled || m_v3LineVertices.empty()) {
 		return;
 	}
 
@@ -64,25 +59,8 @@ void BoundingBoxDebugPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCo
 void BoundingBoxDebugPass::ShowDebugInfo()
 {
 	ImGui::Checkbox("Draw root collision bounds", &m_bEnabled);
-	ImGui::Checkbox("Draw NavMesh", &m_bDrawNavMesh);
 	ImGui::Text("Drawn root colliders: %u", m_unDrawnColliders);
-	ImGui::Text("NavMesh line verts: %zu", m_v3NavMeshLines.size());
 	ImGui::Text("Line vertices: %zu", m_v3LineVertices.size());
-}
-
-// NavMesh 폴리곤 외곽선(녹색)을 라인 목록에 추가. AI->GetNavMesh() 에서 1회 캐시.
-void BoundingBoxDebugPass::AppendNavMeshLines()
-{
-	if (!m_bNavMeshBuilt) {
-		auto pNavMesh = AI->GetNavMesh();
-		if (!pNavMesh) return;   // NavMesh 아직 로드 전 → 다음 프레임 재시도
-		auto debugData = pNavMesh->GetDebugLineVertices();
-		m_v3NavMeshLines = std::move(debugData.PolygonEdges);
-		m_bNavMeshBuilt = true;
-	}
-
-	m_v3LineVertices.insert(m_v3LineVertices.end(),
-		m_v3NavMeshLines.begin(), m_v3NavMeshLines.end());
 }
 
 void BoundingBoxDebugPass::AppendBoundingBoxLines(const BoundingBox& xmAABB)
