@@ -94,21 +94,6 @@ void GameScene::BuildObjects()
 	m_v3WaterPos = Vector3(0.f, -47_m, 0.f);
 	pTransform->SetPosition(m_v3WaterPos);
 	AddObject(m_pWater);
-
-	// ── [임시 디버그] 시작 지점에 헬기 1대 고정 소환 (회전 보정 없이 원본 방향) ──
-	{
-		auto pHeli = MODEL->LoadOrGet("Gunship", true)->CopyObject<CrashDebris>();
-		pHeli->Initialize();
-		pHeli->AddComponent<HelicopterAnimationController>();
-		pHeli->GetComponent<AnimationController>()->Initialize();
-		pHeli->GetTransform()->SetFrameMatrix(Matrix::Identity);
-
-		const Vector3 v3Pos{ 10000, -3536.692724, 20000 };       // 플레이어 시작 앞쪽, 살짝 위
-		pHeli->GetTransform()->SetWorldMatrix(Matrix::CreateTranslation(v3Pos));
-		pHeli->GetTransform()->Update();
-		AddObject(pHeli);
-	}
-
 }
 
 void GameScene::OnEnterScene()
