@@ -75,7 +75,7 @@ private:
 	const float m_fGravity      = -9.8_cm * 10;
 
 	// 감지 범위
-	static constexpr float m_fSightRange      = 800.0f;  // 8m
+	static constexpr float m_fSightRange      = 3000.0f; // 30m — FOV/LOS 없이 이 반경 내면 인지
 	static constexpr float m_fHearingRange    = 0.0f;    // 3.5m (현재 비활성)
 
 	// FOV (시야각)

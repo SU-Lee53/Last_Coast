@@ -1,0 +1,81 @@
+{
+	"HeliPath": [
+		{
+			"ActorName": "HeliPath_1",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 24340, 5830, 430, 1 ]
+			}
+		},
+		{
+			"ActorName": "HeliPath_2",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 27090, 5830, 4590, 1 ]
+			}
+		},
+		{
+			"ActorName": "HeliPath_3",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 29840, 5830, 7580, 1 ]
+			}
+		},
+		{
+			"ActorName": "HeliPath_4",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 31450, 5250, 9010, 1 ]
+			}
+		},
+		{
+			"ActorName": "HeliPath_5",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 34370, 3800, 11130, 1 ]
+			}
+		},
+		{
+			"ActorName": "HeliPath_6",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 36780, 2020, 14510, 1 ]
+			}
+		},
+		{
+			"ActorName": "HeliPath_7",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 40290, 1010, 16270, 1 ]
+			}
+		},
+		{
+			"ActorName": "HeliPath_8",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 40600, 680, 19350, 1 ]
+			}
+		},
+		{
+			"ActorName": "HeliPath_9",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 42700, -830, 22180, 1 ]
+			}
+		},
+		{
+			"ActorName": "HeliPath_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 42700, -2550, 23840, 1 ]
+			}
+		},
+		{
+			"ActorName": "HeliPath_11",
+			"Transform":
+			{
+				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 44960, -3589.6022559570338, 24620, 1 ]
+			}
+		}
+	]
+}

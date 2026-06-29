@@ -12,7 +12,7 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 	g_pD3DCore = std::make_unique<D3DCore>(bEnableDebugLayer, bEnableGBV, bEnableVSync);
 	g_pD3DCore->Initialize();
 
-	std::string strNavMesh = "DEMO";
+	std::string strNavMesh = "GAME";
 	// Init managers
 	AI->Initialize(strNavMesh);
 	COMPUTE->Initialize();

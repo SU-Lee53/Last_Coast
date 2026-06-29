@@ -155,15 +155,9 @@ void Zombie::PostUpdate()
 		Vector3 v3ZombiePos = m_pAIAgent->GetPosition();
 		float fDist = Vector3::Distance(v3ZombiePos, v3PlayerPos);
 
-		Vector3 v3ToPlayerXZ(v3PlayerPos.x - v3ZombiePos.x, 0.f, v3PlayerPos.z - v3ZombiePos.z);
-		float fToPlayerXZLen = v3ToPlayerXZ.Length();
-		bool bInFOV = (fDist <= m_fCloseRange);
-		if (!bInFOV && fToPlayerXZLen > 0.001f)
-			bInFOV = m_v3Forward.Dot(v3ToPlayerXZ / fToPlayerXZLen) >= m_fFOVCosHalf;
-
-		bool bVisible = bInFOV && (fDist <= m_fSightRange) &&
-		                AI->GetNavMesh()->IsLineOfSightClear(v3ZombiePos, v3PlayerPos);
-		bool bHeard = (fDist <= m_fHearingRange);
+		// 시야(FOV)/LOS 제거 — 반경(m_fSightRange) 내에 있으면 무조건 인지.
+		bool bVisible = (fDist <= m_fSightRange);
+		bool bHeard   = (fDist <= m_fHearingRange);
 
 		m_pAIAgent->UpdateSensoryStimulus(0, v3PlayerPos, bVisible, bHeard);
 

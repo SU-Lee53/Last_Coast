@@ -65,7 +65,7 @@ void DBManager::ExtractError(SQLSMALLINT handleType, SQLHANDLE handle) {
 }
 
 bool DBManager::Login(const std::string& id, const std::string& pw) {
-    if (!m_bConnected) return false;
+    if (!m_bConnected) return true; // DB 미연결 시 인증 우회 (DB 없이 테스트/플레이 허용)
 
     SQLHSTMT hStmt;
     SQLRETURN retCode = SQLAllocHandle(SQL_HANDLE_STMT, m_hDbc, &hStmt);
@@ -93,7 +93,7 @@ bool DBManager::Login(const std::string& id, const std::string& pw) {
 }
 
 bool DBManager::Register(const std::string& id, const std::string& pw) {
-    if (!m_bConnected) return false;
+    if (!m_bConnected) return true; // DB 미연결 시 회원가입 우회 (DB 없이 테스트/플레이 허용)
 
     SQLHSTMT hStmt;
     SQLRETURN retCode = SQLAllocHandle(SQL_HANDLE_STMT, m_hDbc, &hStmt);

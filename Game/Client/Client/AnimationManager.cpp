@@ -22,6 +22,8 @@ void AnimationManager::LoadGameAnimations()
 	LoadAndAdd("Zombie Running");
 	LoadAndAdd("Zombie Attack");
 	LoadAndAdd("Zombie Death");
+
+	LoadAndAdd("Gunship_Anim"); // 헬기 추락 컷씬 로터 회전 (HelicopterAnimationController)
 }
 
 std::shared_ptr<Animation> AnimationManager::LoadAndAdd(const std::string& strName)

@@ -119,9 +119,9 @@ void Scene::PostInitialize()
 		m_World.GetSpatial().BuildStaticGrid(gridDesc);
 	}
 
-	if (m_pPlayer) {
-		m_pPlayer->GetTransform()->SetPosition(m_xmSceneBound.Center);
-	}
+	//if (m_pPlayer) {
+	//	m_pPlayer->GetTransform()->SetPosition(m_xmSceneBound.Center);
+	//}
 
 	for (auto& pZombie : m_World.GetObjects<Zombie>()) {
 		pZombie->SetPosition(AI->GetNavMesh()->GetRandomPoint()); // Transform + AIAgent 동시에
@@ -261,7 +261,7 @@ void Scene::PrepareRender()
 		desc
 	);
 
-	if (m_pPlayer) {
+	if (m_pPlayer && !m_bHideCharacters) {
 		m_pPlayer->Render();
 	}
 
@@ -271,9 +271,9 @@ void Scene::PrepareRender()
 	}
 
 	for (auto* pObj : visibleGrid.pObjects) {
-		if (pObj) {
-			pObj->Render();
-		}
+		if (!pObj) continue;
+		if (m_bHideCharacters && pObj->IsCharacter()) continue;  // 탈출 컷씬: 전 플레이어 숨김
+		pObj->Render();
 	}
 }
 
@@ -675,6 +675,36 @@ HRESULT Scene::LoadHeliPath(const std::string& strFileName)
 
 	OutputDebugStringA(std::format("[HeliPath] LOADED {} points from {}\n",
 		m_v3HeliPath.size(), strFilePath).c_str());
+	return S_OK;
+}
+
+// 구조 헬기(착륙) 경로점을 별도 JSON에서 로드 (추락 경로 LoadHeliPath 와 동일 패턴, 키만 "ArrivePath").
+// 언리얼 SaveHeliArrivePathToJson 출력 → { "ArrivePath": [ { Transform.WorldMatrix } ] }
+HRESULT Scene::LoadHeliArrivePath(const std::string& strFileName)
+{
+	m_v3HeliArrivePath.clear();
+
+	std::string strFilePath = std::format("{}/{}.json", g_strSceneBasePath, strFileName);
+	std::ifstream in(strFilePath);
+	if (!in) {
+		OutputDebugStringA(std::format("[HeliArrivePath] FAIL open: {}\n", strFilePath).c_str());
+		return E_INVALIDARG; // 경로 파일 없음 → 직선 폴백
+	}
+
+	nlohmann::json j = nlohmann::json::parse(in, nullptr, false);
+	if (j.is_discarded() || !j.contains("ArrivePath")) {
+		OutputDebugStringA(std::format("[HeliArrivePath] FAIL parse/key: {}\n", strFilePath).c_str());
+		return E_FAIL;
+	}
+
+	m_v3HeliArrivePath.reserve(j["ArrivePath"].size());
+	for (const auto& jPoint : j["ArrivePath"]) {
+		Matrix mtxWorld = ::ReadMatrixFromJson(jPoint["Transform"]["WorldMatrix"]);
+		m_v3HeliArrivePath.emplace_back(mtxWorld._41, mtxWorld._42, mtxWorld._43);
+	}
+
+	OutputDebugStringA(std::format("[HeliArrivePath] LOADED {} points from {}\n",
+		m_v3HeliArrivePath.size(), strFilePath).c_str());
 	return S_OK;
 }
 

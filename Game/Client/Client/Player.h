@@ -9,6 +9,7 @@ public:
 	virtual ~IPlayer();
 
 	virtual void PostUpdate() override;
+	virtual bool IsCharacter() const override { return true; }  // 탈출 컷씬 숨김 대상
 
 public:
 	const std::shared_ptr<Camera>& GetCamera() const { return m_pCamera; };

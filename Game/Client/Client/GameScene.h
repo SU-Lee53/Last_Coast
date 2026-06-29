@@ -4,6 +4,8 @@
 
 class TextBox;
 class InputTextBox;
+class HelicopterCrashEvent;
+class HelicopterDepartEvent;
 
 class GameScene : public Scene {
 public:
@@ -37,6 +39,8 @@ private:
 	void ProcessMeleeResults();
 	// 서버 스크립트 게임 이벤트(폭파/포스트FX) 소비 → EventSequence에 등록
 	void ProcessServerGameEvents();
+	// 마지막 체크포인트 후: 구조 헬기 착륙 감지 → 2분 서바이벌 → 헬기 반경 내 F키 탈출
+	void UpdateEscapeSequence();
 
 	// 자체 UI 채팅 (기존 ImGui 채팅 창 대체)
 	// 히스토리/입력 UI 컴포넌트 생성, Enter 폴링으로 열기/전송/닫기, 히스토리 갱신
@@ -57,6 +61,17 @@ private:
 
 	// serverId → 클라이언트 Zombie 인스턴스 (서버 연결 시 사용)
 	std::unordered_map<int, std::shared_ptr<Zombie>> m_ServerZombies;
+
+	// ── 탈출 시퀀스 (서버 권위: 서버가 타이머/상태/종료 주관, 클라는 UI + 키 전송) ──
+	std::shared_ptr<HelicopterCrashEvent> m_pArriveEvent;  // 착륙 이벤트 (GetExtractionPos 폴링)
+	Vector3 m_v3ExtractionPos{};         // 착륙 헬기 = 탈출 지점 (착륙 시 1회 기록, 반경 판정용)
+	bool    m_bExtractionRecorded = false;
+	bool    m_bEscapeKeySent = false;    // F 중복 전송 방지
+	bool    m_bGameCleared = false;      // 출발 컷씬 종료 후 클리어 표시
+	bool    m_bDeparting = false;        // 출발 컷씬 진행 중
+	std::shared_ptr<HelicopterDepartEvent> m_pDepartEvent;  // 출발 컷씬 이벤트 (완료 폴링)
+	std::shared_ptr<TextBox> m_pEscapeText;  // 탈출 안내 HUD (총알 UI와 동일한 TextBox 방식)
+	static constexpr float ESCAPE_RADIUS = 500.f; // 탈출 가능 반경 (헬기 5m 이내)
 
 	// ── 채팅 UI ──────────────────────────────────────────────────────────────
 	static constexpr int    CHAT_VISIBLE_LINES = 8;     // 화면에 표시할 히스토리 줄 수

@@ -1,14 +1,36 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "Session.h"
 #include "ZombieManager.h"
 #include "ServerSpatialGrid.h"
 #include "DBManager.h"
+#include <concurrent_queue.h>
+
+// 송신용 EXP_OVER 재사용 풀 (스레드 안전 lock-free 큐). 풀 크기는 동시 in-flight 송신 수만큼만 자란다.
+static concurrency::concurrent_queue<EXP_OVER*> g_SendOverPool;
+
+EXP_OVER* AcquireSendOver()
+{
+	EXP_OVER* o = nullptr;
+	if (g_SendOverPool.try_pop(o)) {
+		ZeroMemory(&o->m_over, sizeof(o->m_over));  // WSAOVERLAPPED는 재사용 전 반드시 0으로
+		o->m_iotype  = IO_SEND;
+		o->m_wsa.buf = o->m_buff;
+		return o;
+	}
+	return new EXP_OVER(IO_SEND);
+}
+
+void ReleaseSendOver(EXP_OVER* o)
+{
+	if (o) g_SendOverPool.push(o);
+}
 
 extern Room* find_empty_room();
 
 extern ZombieManager                g_ZombieManager;
 extern ServerSpatialGrid            g_SpatialGrid;
 extern concurrency::concurrent_unordered_map<int, Vector3> g_PlayerPositions;
+extern std::atomic<bool>            g_bEscapeRequested;   // 탈출 키 입력됨(누구든). 틱 스레드가 소비.
 
 void Session::init(SOCKET s, int id, Room* room)
 {
@@ -34,7 +56,7 @@ void Session::do_recv()
 
 void Session::do_send(int num_bytes, char* mess)
 {
-	EXP_OVER* o = new EXP_OVER(IO_SEND);
+	EXP_OVER* o = AcquireSendOver();   // 풀에서 재사용 (new 회피)
 	o->m_wsa.len = num_bytes;
 	memcpy(o->m_buff, mess, num_bytes);
 	WSASend(m_client, &o->m_wsa, 1, 0, 0, &o->m_over, nullptr);
@@ -54,6 +76,7 @@ void Session::send_add_player(int player_id)
 	packet.fAimPitch = pl.m_fAimPitch;
 	packet.weaponType = pl.m_weaponType;
 	packet.bReady = pl.m_bReady;
+	packet.characterType = pl.m_characterType;
 	do_send(packet.size, reinterpret_cast<char*>(&packet));
 }
 
@@ -353,6 +376,22 @@ bool Session::process_packet(unsigned char* p)
 				cl.send_player_weapon(m_id, m_weaponType);
 	}
 	break;
+	case C2S_PLAYER_CHARACTER: {
+		C2S_PlayerCharacter* packet = reinterpret_cast<C2S_PlayerCharacter*>(p);
+		m_characterType = packet->characterType;   // late-join 동기화용으로 저장
+
+		// 캐릭터 모델 선택을 전체 클라이언트에 브로드캐스트 (본인 포함; 클라가 본인 필터)
+		for (auto& cl : clients)
+			if (cl.m_is_connected)
+				cl.send_player_character(m_id, m_characterType);
+	}
+	break;
+	case C2S_PLAYER_ESCAPE: {
+		// 탈출 키 입력 — 플래그만 세움. 실제 종료 판정/브로드캐스트는 틱 스레드가
+		// 탈출 가능 상태(Ready)일 때만 처리한다 (스레드 안전 + 단일 권위).
+		g_bEscapeRequested = true;
+	}
+	break;
 	case C2S_CHAT: {
 		C2S_Chat* packet = reinterpret_cast<C2S_Chat*>(p);
 		// 메시지 널 종단 보장
@@ -388,8 +427,9 @@ bool Session::process_packet(unsigned char* p)
 				++nConnectedCount;
 				if (clients[other_id].m_bReady) ++nReadyCount;
 			}
-			if (nConnectedCount == 4 && nReadyCount == 4) {
-				std::cout << "[Room] All 4 players ready! Starting game." << std::endl;
+			// [테스트] 1명만 들어와도 시작 가능 (원래 2명). 정식 빌드에선 >= 2 로 복구.
+			if (nConnectedCount >= 2 && nReadyCount == nConnectedCount) {
+				std::cout << "[Room] All " << nConnectedCount << " players ready! Starting game." << std::endl;
 				for (int other_id : m_room->players) {
 					if (other_id == -1) continue;
 					clients[other_id].send_game_start();
@@ -435,6 +475,16 @@ void Session::send_player_weapon(int player_id, unsigned char weapon_type)
 	packet.type = S2C_PLAYER_WEAPON;
 	packet.playerId = player_id;
 	packet.weaponType = weapon_type;
+	do_send(packet.size, reinterpret_cast<char*>(&packet));
+}
+
+void Session::send_player_character(int player_id, unsigned char character_type)
+{
+	S2C_PlayerCharacter packet;
+	packet.size = sizeof(S2C_PlayerCharacter);
+	packet.type = S2C_PLAYER_CHARACTER;
+	packet.playerId = player_id;
+	packet.characterType = character_type;
 	do_send(packet.size, reinterpret_cast<char*>(&packet));
 }
 
@@ -485,6 +535,23 @@ void Session::send_zombie_state(int nZombieId, float x, float z, float yaw, floa
 	do_send(p.size, reinterpret_cast<char*>(&p));
 }
 
+void Session::send_zombie_state_batch(const ZombieStateEntry* entries, int count)
+{
+	if (count <= 0 || !entries) return;
+	if (count > MAX_ZOMBIE_BATCH) count = MAX_ZOMBIE_BATCH;
+
+	S2C_ZombieStateBatch p;
+	p.type  = S2C_ZOMBIE_STATE_BATCH;
+	p.count = static_cast<unsigned char>(count);
+	for (int i = 0; i < count; ++i) p.entries[i] = entries[i];
+
+	// 미사용 엔트리 제외하고 실제 크기만 전송 (size 는 unsigned char ≤ 255).
+	const int nBytes = static_cast<int>(offsetof(S2C_ZombieStateBatch, entries))
+		+ count * static_cast<int>(sizeof(ZombieStateEntry));
+	p.size = static_cast<unsigned char>(nBytes);
+	do_send(nBytes, reinterpret_cast<char*>(&p));
+}
+
 void Session::send_shoot_result(const S2C_ShootResult& result)
 {
 	do_send(result.size, const_cast<char*>(reinterpret_cast<const char*>(&result)));
@@ -531,5 +598,23 @@ void Session::send_game_start()
 	S2C_GameStart p;
 	p.size = sizeof(S2C_GameStart);
 	p.type = S2C_GAME_START;
+	do_send(p.size, reinterpret_cast<char*>(&p));
+}
+
+void Session::send_escape_state(unsigned char phase, float remain_seconds)
+{
+	S2C_EscapeState p;
+	p.size = sizeof(S2C_EscapeState);
+	p.type = S2C_ESCAPE_STATE;
+	p.phase = phase;
+	p.fRemainSeconds = remain_seconds;
+	do_send(p.size, reinterpret_cast<char*>(&p));
+}
+
+void Session::send_game_end()
+{
+	S2C_GameEnd p;
+	p.size = sizeof(S2C_GameEnd);
+	p.type = S2C_GAME_END;
 	do_send(p.size, reinterpret_cast<char*>(&p));
 }

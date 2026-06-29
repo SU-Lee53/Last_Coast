@@ -32,6 +32,9 @@ public:
 	virtual void Render();
 	virtual void AddToQueue(OUT std::vector<IGameObject*>& pRenderQueue);
 
+	// 캐릭터(플레이어) 여부 — 탈출 컷씬에서 전 플레이어를 숨길 때 렌더 제외용
+	virtual bool IsCharacter() const { return false; }
+
 public:
 	template<ComponentType T>
 	void AddComponent();

@@ -16066,24 +16066,6 @@
 			}
 		},
 		{
-			"ActorName": "InstancedFoliageActor_0",
-			"ComponentName": "FoliageInstancedStaticMeshComponent_0",
-			"MeshName": "SM_Shrub01_b",
-			"Transform":
-			{
-				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ]
-			}
-		},
-		{
-			"ActorName": "InstancedFoliageActor_0",
-			"ComponentName": "FoliageInstancedStaticMeshComponent_1",
-			"MeshName": "SM_Shrub01",
-			"Transform":
-			{
-				"WorldMatrix": [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ]
-			}
-		},
-		{
 			"ActorName": "StaticMeshActor_2605",
 			"ComponentName": "StaticMeshComponent0",
 			"MeshName": "SM_House_Ground_02",
@@ -23698,15 +23680,6 @@
 			}
 		},
 		{
-			"ActorName": "StaticMeshActor_2998",
-			"ComponentName": "StaticMeshComponent0",
-			"MeshName": "Classic_Car_9",
-			"Transform":
-			{
-				"WorldMatrix": [ -0.098017127463357889, 0, 0.99518472793940749, 0, 0, 1, 0, 0, -0.99518472793940749, 0, -0.098017127463357889, 0, 23310, -3563.1323996948267, 23170, 1 ]
-			}
-		},
-		{
 			"ActorName": "StaticMeshActor_3002",
 			"ComponentName": "StaticMeshComponent0",
 			"MeshName": "Hatchback_Car_15",
@@ -23812,15 +23785,6 @@
 			"Transform":
 			{
 				"WorldMatrix": [ 0.1467304853632232, 0, 0.98917650834675264, 0, 0, 1, 0, 0, -0.98917650834675264, 0, 0.1467304853632232, 0, 31140, -3570, 22310, 1 ]
-			}
-		},
-		{
-			"ActorName": "StaticMeshActor_3051",
-			"ComponentName": "StaticMeshComponent0",
-			"MeshName": "Sport_Car_39",
-			"Transform":
-			{
-				"WorldMatrix": [ -0.09801717590084702, 0, -0.99518472316873041, 0, 0, 1, 0, 0, 0.99518472316873041, 0, -0.09801717590084702, 0, 31510, -3570, 22370, 1 ]
 			}
 		},
 		{
@@ -23947,15 +23911,6 @@
 			"Transform":
 			{
 				"WorldMatrix": [ -0.98917650656134026, 0, 0.14673049739949204, 0, 0, 1, 0, 0, -0.14673049739949204, 0, -0.98917650656134026, 0, 34860, -3590, 26050, 1 ]
-			}
-		},
-		{
-			"ActorName": "StaticMeshActor_3406",
-			"ComponentName": "StaticMeshComponent0",
-			"MeshName": "Monster_Truck_15",
-			"Transform":
-			{
-				"WorldMatrix": [ 0.14673049171974872, 0, 0.9891765074038511, 0, 0, 1, 0, 0, -0.9891765074038511, 0, 0.14673049171974872, 0, 38670, -3570, 21340, 1 ]
 			}
 		},
 		{
@@ -24118,6 +24073,69 @@
 			"Transform":
 			{
 				"WorldMatrix": [ 0.97003125365650866, 0, -0.24298017805899771, 0, 0, 1, 0, 0, 0.24298017805899771, 0, 0.97003125365650866, 0, 40240, -3590, 24200, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2951",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "N_Van_10",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.24298018986230274, 0, 0.97003125069993457, 0, 0, 1, 0, 0, -0.97003125069993457, 0, 0.24298018986230274, 0, 41750, -3570, 25770, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2955",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Monster_Truck_15",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.55557021910834403, 0.040798280289720268, 0.83046808003999117, 0, -3.783605373453014e-13, 0.99879545622382948, -0.049067673947645003, 0, -0.8314696215977514, -0.027260538366544108, -0.55490101045867579, 0, 41623.977883428059, -3572.0407077419691, 25232.015117132993, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2960",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Pick_Up_11",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.19509033245852125, 0, 0.9807852783261094, 0, 0, 1, 0, 0, -0.9807852783261094, 0, 0.19509033245852125, 0, 41464.625293088378, -3590, 24664.619877931338, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2962",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Hatchback_Car_15",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.19509033245851726, 0, 0.98078527832611029, 0, 0, 1, 0, 0, -0.98078527832611029, 0, 0.19509033245851726, 0, 41348.527099737548, -3590, 24084.235583497844, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2979",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Classic_Car_9",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.90398929458663679, 0, 0.42755509033661943, 0, 0, 1, 0, 0, -0.42755509033661943, 0, 0.90398929458663679, 0, 41270, -3570, 23670, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2981",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Hatchback_Car_15",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.94154406607973495, 0, 0.33688985088607187, 0, 0, 1, 0, 0, -0.33688985088607187, 0, 0.94154406607973495, 0, 40880, -3570, 22870, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2756",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Sport_Car_39",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.33688983763930125, 0, 0.9415440708195052, 0, 0, 1, 0, 0, -0.9415440708195052, 0, -0.33688983763930125, 0, 41130, -3590, 23210, 1 ]
 			}
 		},
 		{
@@ -29914,15 +29932,6 @@
 			"Transform":
 			{
 				"WorldMatrix": [ -0.95248616830446209, 0, -0.30458184316975168, 0, 0, 1, 0, 0, 0.30458184316975168, 0, -0.95248616830446209, 0, 12968.725359670898, -3463.9631062252679, 22137.509278130277, 1 ]
-			}
-		},
-		{
-			"ActorName": "BP_ThirdPersonCharacter_C_0",
-			"ComponentName": "CameraProxyMeshComponent_0",
-			"MeshName": "MatineeCam_SM",
-			"Transform":
-			{
-				"WorldMatrix": [ 0.3669068883299198, 0, -0.93025767145240779, 0, 0, 1, 0, 0, 0.93025767145240779, 0, 0.3669068883299198, 0, 9548.6098748167678, -3460.4929759517195, 20623.639429101546, 1 ]
 			}
 		}
 	],

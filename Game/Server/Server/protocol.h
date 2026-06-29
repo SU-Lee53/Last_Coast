@@ -35,7 +35,13 @@ enum PACKET_TYPE {
 	S2C_REGISTER_RESULT,
 	C2S_READY,                                    // 클라이언트 → 서버: 레디 상태 변경
 	S2C_READY_STATE,                              // 서버 → 클라이언트: 누군가 레디 상태 변경
-	S2C_GAME_START                                // 서버 → 클라이언트: 4명 레디 완료, 게임 시작
+	S2C_GAME_START,                               // 서버 → 클라이언트: 4명 레디 완료, 게임 시작
+	C2S_PLAYER_CHARACTER,                         // 클라이언트 → 서버: 캐릭터 모델 선택 통지
+	S2C_PLAYER_CHARACTER,                         // 서버 → 클라이언트: 캐릭터 모델 브로드캐스트
+	S2C_ESCAPE_STATE,                             // 서버 → 클라이언트: 탈출 시퀀스 상태/남은시간 (UI)
+	C2S_PLAYER_ESCAPE,                            // 클라이언트 → 서버: 탈출 키 입력 (누구든 1명)
+	S2C_GAME_END,                                 // 서버 → 클라이언트: 게임 종료(탈출 성공) — 전원
+	S2C_ZOMBIE_STATE_BATCH                        // 서버 → 클라이언트: 여러 좀비 상태를 한 패킷에 묶어 전송
 };
 
 // ── 게임 이벤트 ID (서버 트리거, 클라 효과 카탈로그) ──────────────────────────
@@ -45,6 +51,7 @@ enum GameEventId : int {
 	GE_RESTORE_LOOK    = 2,   // (구) 룩 복구. 호환용 — 내부적으로 EP_DEFAULT 프리셋으로 처리됨
 	GE_HELICOPTER_CRASH = 3,  // 헬기 추락 컷씬: 시네마틱 카메라가 추락하는 헬기를 추적. fDuration = 연출 길이(0이면 기본값)
 	GE_ENVIRONMENT     = 4,   // 환경 프리셋 전환: presetId 프리셋(포스트FX/안개/시간/앰비언트 전체)으로 fDuration 동안 페이드
+	GE_HELICOPTER_ARRIVE = 5, // 구조 헬기 강하·착륙 컷씬(폭발 X). 착륙 후 탈출 시퀀스(2분 서바이벌→키 탈출) 시작. fDuration = 연출 길이
 };
 
 // ── 환경 프리셋 ID (GE_ENVIRONMENT 전용) ─────────────────────────────────────
@@ -152,6 +159,7 @@ struct S2C_AddPlayer {
 	float         fAimPitch;
 	unsigned char weaponType;   // 현재 장착 무기 (late-join 동기화용)
 	bool          bReady;       // 현재 레디 상태
+	unsigned char characterType; // 현재 선택 캐릭터 모델 인덱스 (late-join 동기화용)
 };
 
 struct S2C_RemovePlayer {
@@ -222,6 +230,25 @@ struct S2C_ZombieAttack {
 	int           zombieId;
 	int           targetPlayerId;
 	float         damage;
+};
+
+// ── 좀비 상태 배치 전송 ──────────────────────────────────────────────────────
+// 좀비 1마리 상태 (S2C_ZombieState 페이로드와 동일 필드). pack(1) 기준 25바이트.
+struct ZombieStateEntry {
+	int                 zombieId;
+	float               x, z;                  // NavMesh XZ 위치 (cm)
+	float               yaw;                   // 회전 (라디안)
+	float               waypointX, waypointZ;  // 다음 waypoint XZ (cm)
+	ZombieBehaviorState behaviorState;
+};
+// 한 패킷에 담는 최대 좀비 수. size 가 unsigned char(≤255) 제약: 6(헤더) + 9*25 = 231.
+constexpr int MAX_ZOMBIE_BATCH = 9;
+// 여러 좀비 상태를 묶어 보내는 배치 패킷 — WSASend/힙할당 횟수를 ~9배 줄인다.
+struct S2C_ZombieStateBatch {
+	unsigned char    size;       // 실제 바이트 수 = 6 + count*sizeof(ZombieStateEntry)
+	PACKET_TYPE      type;
+	unsigned char    count;      // 이 패킷의 좀비 수 (≤ MAX_ZOMBIE_BATCH)
+	ZombieStateEntry entries[MAX_ZOMBIE_BATCH];
 };
 
 // ── 사격 패킷 ───────────────────────────────────────────────────────────────
@@ -305,6 +332,23 @@ struct S2C_PlayerWeapon {
 	unsigned char weaponType;
 };
 
+// ── 캐릭터 모델 선택 패킷 ────────────────────────────────────────────────────
+
+// 클라이언트 → 서버: 캐릭터 모델 선택 통지
+struct C2S_PlayerCharacter {
+	unsigned char size;
+	PACKET_TYPE   type;
+	unsigned char characterType; // 캐릭터 모델 인덱스 (클라 g_strCharacterNames 인덱스)
+};
+
+// 서버 → 클라이언트: 캐릭터 모델 브로드캐스트 (리모트 플레이어 모델 반영)
+struct S2C_PlayerCharacter {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           playerId;
+	unsigned char characterType;
+};
+
 // ── 채팅 패킷 ───────────────────────────────────────────────────────────────
 
 // 클라이언트 → 서버: 채팅 메시지 전송
@@ -335,6 +379,27 @@ struct S2C_GameEvent {
 	float         fTargetValue;       // 목표값 (예: outputScale)
 	float         fDuration;          // 페이드 지속(초)
 	int           presetId;           // EnvironmentPresetId (GE_ENVIRONMENT 전용, 그 외 무시)
+};
+
+// ── 탈출 시퀀스 패킷 (마지막 체크포인트: 구조 헬기 착륙 후 서버가 주관) ───────────
+// 서버 → 클라이언트: 탈출 시퀀스 상태. 서버가 시간을 재서 주기적으로 브로드캐스트.
+struct S2C_EscapeState {
+	unsigned char size;
+	PACKET_TYPE   type;
+	unsigned char phase;          // 0=서바이벌(카운트다운), 1=탈출 가능
+	float         fRemainSeconds; // 남은 서바이벌 시간(초). phase=1이면 0
+};
+
+// 클라이언트 → 서버: 탈출 키 입력 요청 (탈출 가능 상태에서 누구든 1명 누르면 됨)
+struct C2S_PlayerEscape {
+	unsigned char size;
+	PACKET_TYPE   type;
+};
+
+// 서버 → 클라이언트: 게임 종료(탈출 성공). 전원에게 브로드캐스트.
+struct S2C_GameEnd {
+	unsigned char size;
+	PACKET_TYPE   type;
 };
 
 #pragma pack(pop) // Restore default packing

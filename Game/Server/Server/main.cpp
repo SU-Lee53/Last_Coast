@@ -11,12 +11,14 @@
 #define JSON_HAS_RANGES 0
 #include <Includes/nlohmann_json/json.hpp>
 
+#include <atomic>
+
 using namespace std;
 
 // NavMesh JSON 경로 — 서버 작업 디렉터리(프로젝트 폴더) 기준 상대 경로
-static constexpr const char* NAVMESH_PATH = "../../Client/Resources/NavMesh/DEMO.json";
-static constexpr const char* SCENE_JSON_PATH = "../../Client/Resources/Scenes/DEMO.json";
-static constexpr const char* SPAWN_JSON_PATH = "../../Client/Resources/Scenes/DEMO_SpawnPoints.json";
+static constexpr const char* NAVMESH_PATH = "../../Client/Resources/NavMesh/GAME.json";
+static constexpr const char* SCENE_JSON_PATH = "../../Client/Resources/Scenes/GAME.json";
+static constexpr const char* SPAWN_JSON_PATH = "../../Client/Resources/Scenes/GAME_SpawnPoints.json";
 static constexpr const char* MODEL_DIRECTORY = "../../Client/Resources/Models";
 static constexpr const char* ATTACK_ANIM_PATH = "../../Client/Resources/Animations/Zombie Attack.bin";
 static constexpr int         INITIAL_ZOMBIES = 100;    // 서버 시작 시 스폰할 좀비 수
@@ -26,7 +28,13 @@ static constexpr Vector3 m_v3SpawnPosition = { 50600.f, -3590.f, 22000.f }; // N
 static constexpr DWORD       TICK_MS = static_cast<DWORD>(TICK_DT * 1000.f);
 static constexpr DWORD       ZOMBIE_SEND_INTERVAL_MS = 100; // 좀비 상태 정기 전송 간격 (0.2초)
 static constexpr DWORD       ZOMBIE_SPAWN_INTERVAL_MS = 4000; // 좀비 스폰 간격
-static constexpr const char* CHECKPOINT_JSON_PATH = "../../Client/Resources/Scenes/DEMO_Checkpoints.json"; // 언리얼 SaveCheckpointsToJson 출력
+static constexpr const char* CHECKPOINT_JSON_PATH = "../../Client/Resources/Scenes/GAME_Checkpoints.json"; // 언리얼 SaveCheckpointsToJson 출력
+
+// 엔딩 서바이벌(탈출 대기) 동안 좀비 강화: 시야 무제한 + 스폰 폭증
+static constexpr float       ESCAPE_SIGHT_RANGE       = 1000000.f; // 사실상 무제한 감지 반경 (cm)
+static constexpr DWORD       ESCAPE_SPAWN_INTERVAL_MS = 800;       // 더 자주 스폰
+static constexpr int         ESCAPE_MAX_ZOMBIES       = 100;       // 더 많이 동시 존재
+static constexpr int         ESCAPE_SPAWN_BURST       = 1;         // 스폰 1회당 마리수
 
 ZombieManager                g_ZombieManager;
 ServerSpatialGrid            g_SpatialGrid;     // 정적 OBB 공간 분할 (사격 차폐 판정)
@@ -67,6 +75,17 @@ std::vector<Checkpoint> g_Checkpoints;
 // 이 시각(timeGetTime, ms)까지 좀비 AI/이동/공격/스폰 정지 — 클라 컷씬과 동기화해 종료 후 스냅 방지.
 DWORD g_dwZombieFreezeUntil = 0;
 
+// ── 탈출 시퀀스 (마지막 체크포인트: 구조 헬기 착륙 후 서버가 주관) ──────────────
+// 서버가 시간을 재서 상태(남은 시간)를 주기적으로 클라에 보내고, 누구든 탈출 키를 누르면
+// 전원에게 게임 종료를 브로드캐스트한다.
+enum class EscapePhase { None, Survival, Ready, Ended };
+EscapePhase       g_eEscapePhase = EscapePhase::None;
+DWORD             g_dwEscapeSurviveStart = 0;    // 서바이벌 시작 시각(ms) = 착륙 컷씬(정지) 종료 후
+DWORD             g_dwLastEscapeBroadcast = 0;   // 상태 브로드캐스트 스로틀
+std::atomic<bool> g_bEscapeRequested{ false };   // 클라가 탈출 키 입력 (Session에서 set, 틱이 소비)
+static constexpr float ESCAPE_SURVIVE_SECONDS = 120.f;      // 버텨야 하는 시간 (2분)
+static constexpr DWORD ESCAPE_BROADCAST_INTERVAL_MS = 500;  // 상태 전송 주기
+
 Room* find_empty_room()
 {
 	for (auto& room : rooms) {
@@ -94,7 +113,7 @@ void send_login_fail(SOCKET client, const char* message)
 	p.type = S2C_LOGIN_RESULT;
 	p.success = false;
 	strncpy_s(p.message, message, sizeof(p.message));
-	EXP_OVER* o = new EXP_OVER(IO_SEND);
+	EXP_OVER* o = AcquireSendOver();   // 풀에서 재사용 (new 회피)
 	o->m_wsa.len = p.size;
 	memcpy(o->m_buff, &p, p.size);
 	WSASend(client, &o->m_wsa, 1, 0, 0, &o->m_over, nullptr);
@@ -151,9 +170,10 @@ static void AssignCheckpointEvents()
 	// 예시 배정 — 한 체크포인트가 여러 이벤트를 동시에 쏠 수 있음.
 	//Set(0, { { GE_HELICOPTER_CRASH, {}, 0.f, 0.0f, 0, 5.0f } });
 	Set(0, { { GE_ENVIRONMENT, {}, 0.f, 8.0f, EP_SUNSET, 8.0f } });   // 0번 도착 → 석양 (정지 8초)
-	//Set(1, { { GE_ENVIRONMENT, {}, 0.f, 3.0f, EP_NIGHT,  0.f } });   // 1번 도착 → 야간 (정지 안함)
-	//Set(2, { { GE_HELICOPTER_CRASH, {}, 0.f, 0.f, 0,     5.0f },     // 2번 도착 → 헬기추락 (정지 5초)
-	//		 { GE_ENVIRONMENT, {}, 0.f, 2.0f, EP_HORROR, 0.f } });   //            + 호러룩 (정지 안함)
+	Set(1, { { GE_ENVIRONMENT, {}, 0.f, 3.0f, EP_NIGHT,  0.f } });   // 1번 도착 → 야간 (정지 안함)
+	// 마지막 체크포인트 → 구조 헬기 강하·착륙 컷씬(폭발 X). 착륙 후 탈출 시퀀스(2분 서바이벌→키 탈출) 시작.
+	// (index는 맵의 '마지막' 체크포인트로 맞출 것. 현재 테이블 기준 2번이 마지막)
+	Set(2, { { GE_HELICOPTER_ARRIVE, {}, 0.f, 10.f, 0, 10.0f } });   // 2번 도착 → 구조 헬기 (강하 10초, 정지 10초)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -196,7 +216,10 @@ static DWORD WINAPI GameTickThread(LPVOID)
 			vector<pair<int, int>> attackAnims; // 공격 모션 시작 (즉시)
 			g_ZombieManager.Tick(fActualDT, playerSnapshots, attacks, attackAnims);
 
-			// 좀비 상태 전송 (상태 변화 + 위치 변화 시 즉시, 아니면 100ms 간격)
+			// 좀비 상태 전송 — 보낼 좀비를 한 번에 모아 배치 패킷으로 전송 (WSASend/할당 횟수 대폭 감소).
+			// (상태 변화 + 위치 변화 시 즉시, 아니면 100ms 간격)
+			static std::vector<ZombieStateEntry> batch;  // 틱마다 재사용 (재할당 방지)
+			batch.clear();
 			for (auto& [nId, zombie] : g_ZombieManager.GetZombies())
 			{
 				if (!zombie.bAlive || !zombie.pAgent) continue;
@@ -209,37 +232,54 @@ static DWORD WINAPI GameTickThread(LPVOID)
 
 				if (!bStateChanged && !bIntervalElapsed) continue;
 
-				ZombieBehaviorState state = static_cast<ZombieBehaviorState>(nCurState);
-
 				const auto& dbg = zombie.pAgent->GetPathDebugInfo();
 				float waypointX = v3Pos.x;
 				float waypointZ = v3Pos.z;
-				//CheckList 이거 수정해야함 문제점이 많음.
 				if (!dbg.Waypoints.empty()) {
 					waypointX = dbg.Waypoints.back().x;
 					waypointZ = dbg.Waypoints.back().z;
 				}
 
-				BroadcastAll([&](Session& cl) {
-					cl.send_zombie_state(nId, v3Pos.x, v3Pos.z,
-						zombie.fYaw, waypointX, waypointZ, state);
-					});
+				ZombieStateEntry e;
+				e.zombieId      = nId;
+				e.x             = v3Pos.x;
+				e.z             = v3Pos.z;
+				e.yaw           = zombie.fYaw;
+				e.waypointX     = waypointX;
+				e.waypointZ     = waypointZ;
+				e.behaviorState = static_cast<ZombieBehaviorState>(nCurState);
+				batch.push_back(e);
 
 				zombie.dwLastSendTime = dwTickStart;
 				zombie.nLastSentState = nCurState;
 			}
 
-			bool bSpawnElapsed = (dwTickStart - dwLastSpawnTime >= ZOMBIE_SPAWN_INTERVAL_MS);
+			// 모인 좀비를 MAX_ZOMBIE_BATCH 단위 청크로 전 클라에 전송.
+			for (size_t off = 0; off < batch.size(); off += MAX_ZOMBIE_BATCH)
+			{
+				const int n = static_cast<int>(std::min<size_t>(MAX_ZOMBIE_BATCH, batch.size() - off));
+				const ZombieStateEntry* chunk = &batch[off];
+				BroadcastAll([&](Session& cl) { cl.send_zombie_state_batch(chunk, n); });
+			}
 
-			if (bSpawnElapsed) {
-				if (g_ZombieManager.GetZombies().size() >= INITIAL_ZOMBIES) {
-					//std::cout << "[Server] 최대 좀비 수 도달. 추가 스폰 생략.\n";
-					dwLastSpawnTime = dwTickStart;
-				}
-				else {
-					// 스폰 포인트 중 랜덤 하나 선택 (없으면 랜덤 NavMesh로 폴백)
-					int nZombieId = g_ZombieManager.SpawnZombie(g_ZombieManager.GetRandomSpawnPoint());
-					dwLastSpawnTime = dwTickStart;
+			// 엔딩 서바이벌 동안에는 더 자주, 더 많이, 한 번에 여러 마리 스폰.
+			const bool   bEscapeSurvival = (g_eEscapePhase == EscapePhase::Survival || g_eEscapePhase == EscapePhase::Ready);
+			const DWORD  dwSpawnInterval = bEscapeSurvival ? ESCAPE_SPAWN_INTERVAL_MS : ZOMBIE_SPAWN_INTERVAL_MS;
+			const size_t nMaxZombies     = bEscapeSurvival ? static_cast<size_t>(ESCAPE_MAX_ZOMBIES) : static_cast<size_t>(INITIAL_ZOMBIES);
+			const int    nSpawnBurst     = bEscapeSurvival ? ESCAPE_SPAWN_BURST : 1;
+
+			if (dwTickStart - dwLastSpawnTime >= dwSpawnInterval) {
+				dwLastSpawnTime = dwTickStart;
+
+				// 플레이어 위치 목록 (근처 스폰포인트 선택용 — 이미 지난 뒤쪽 포인트 제외)
+				std::vector<Vector3> playerPosVec;
+				playerPosVec.reserve(playerSnapshots.size());
+				for (const auto& [nId, v3Pos] : playerSnapshots) playerPosVec.push_back(v3Pos);
+
+				for (int b = 0; b < nSpawnBurst; ++b) {
+					if (g_ZombieManager.GetZombies().size() >= nMaxZombies) break; // 최대치 도달
+					// 플레이어 근처 스폰 포인트 선택 (없으면 가장 가까운/랜덤 NavMesh 폴백)
+					int nZombieId = g_ZombieManager.SpawnZombie(g_ZombieManager.GetSpawnPointNear(playerPosVec));
 					auto& zombie = g_ZombieManager.GetZombies()[nZombieId];
 					BroadcastAll([&](Session& cl) {
 						cl.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
@@ -283,6 +323,15 @@ static DWORD WINAPI GameTickThread(LPVOID)
 						cl.send_game_event(e.eventId, e.pos, e.fTargetValue, e.fDuration, e.presetId);
 						});
 					fMaxFreeze = std::max(fMaxFreeze, e.fFreezeDuration);
+
+					// 구조 헬기 착륙 이벤트 → 탈출 시퀀스 시작. 서바이벌은 컷씬(정지) 종료 후부터.
+					if (e.eventId == GE_HELICOPTER_ARRIVE) {
+						g_eEscapePhase = EscapePhase::Survival;
+						g_dwEscapeSurviveStart = dwTickStart + static_cast<DWORD>((e.fFreezeDuration + 0.5f) * 1000.f);
+						g_dwLastEscapeBroadcast = 0;
+						g_bEscapeRequested = false;
+						g_ZombieManager.SetSightRange(ESCAPE_SIGHT_RANGE); // 서바이벌 동안 시야 무제한
+					}
 				}
 
 				// 컷씬이면 그 길이(+0.5초 버퍼)만큼 서버 좀비 정지 — 클라 컷씬 종료 시점까지 좀비 고정.
@@ -293,6 +342,30 @@ static DWORD WINAPI GameTickThread(LPVOID)
 
 				std::cout << "[Checkpoint] fired at x=" << cp.v3Pos.x
 					<< " (" << cp.events.size() << " events, freeze " << fMaxFreeze << "s)\n";
+			}
+		}
+
+		// ── 탈출 시퀀스 진행 (서버 권위) ─────────────────────────────────────
+		// 착륙 컷씬 종료 후부터 2분 카운트다운 → 상태를 주기적으로 브로드캐스트.
+		// 탈출 가능(Ready) 상태에서 누구든 탈출 키를 누르면 전원에게 게임 종료.
+		if ((g_eEscapePhase == EscapePhase::Survival || g_eEscapePhase == EscapePhase::Ready)
+			&& dwTickStart >= g_dwEscapeSurviveStart)
+		{
+			const float fElapsed = (dwTickStart - g_dwEscapeSurviveStart) / 1000.f;
+			float fRemain = ESCAPE_SURVIVE_SECONDS - fElapsed;
+			if (fRemain <= 0.f) { fRemain = 0.f; g_eEscapePhase = EscapePhase::Ready; }
+
+			const unsigned char ucPhase = (g_eEscapePhase == EscapePhase::Ready) ? 1 : 0;
+
+			if (dwTickStart - g_dwLastEscapeBroadcast >= ESCAPE_BROADCAST_INTERVAL_MS) {
+				g_dwLastEscapeBroadcast = dwTickStart;
+				BroadcastAll([&](Session& cl) { cl.send_escape_state(ucPhase, fRemain); });
+			}
+
+			if (g_eEscapePhase == EscapePhase::Ready && g_bEscapeRequested.exchange(false)) {
+				g_eEscapePhase = EscapePhase::Ended;
+				BroadcastAll([&](Session& cl) { cl.send_game_end(); });
+				std::cout << "[Escape] player escaped -> GAME END broadcast\n";
 			}
 		}
 
@@ -424,7 +497,7 @@ void worker_thread()
 		case IO_SEND: {
 			// cout << "Message sent. to client[" << key << "]\n";
 			EXP_OVER* o = reinterpret_cast<EXP_OVER*>(over);
-			delete o;
+			ReleaseSendOver(o);   // delete 대신 풀에 반납 (재사용)
 		}
 					break;
 		}
@@ -436,10 +509,12 @@ int main()
 	// ── ZombieManager 초기화 + 초기 좀비 스폰 ───────────────────────────────
 	if (!g_ZombieManager.Initialize(NAVMESH_PATH))
 	{
-		//std::cout << "[Server] ZombieManager 초기화 실패. NavMesh 경로 확인: " << NAVMESH_PATH << "\n";
+		// NavMesh 로드 실패 = 좀비가 길을 못 찾음(추격 불가). 조용히 넘어가지 말고 반드시 표시.
+		std::cout << "[Server][ERROR] ZombieManager/NavMesh 초기화 실패! 경로 확인: " << NAVMESH_PATH << "\n";
 	}
 	else
 	{
+		std::cout << "[Server] NavMesh 로드 성공: " << NAVMESH_PATH << "\n";
 		// 별도 파일에서 좀비 스폰 포인트 로드 (언리얼 SaveSpawnPointsToJson 출력)
 		// 실제 스폰은 게임 틱의 드립 스포너가 랜덤 포인트에서 INITIAL_ZOMBIES까지 채운다
 		g_ZombieManager.LoadSpawnPoints(SPAWN_JSON_PATH);

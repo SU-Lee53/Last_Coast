@@ -116,6 +116,40 @@ Vector3 ZombieManager::GetRandomSpawnPoint() const
 	return m_SpawnPoints[rand() % m_SpawnPoints.size()];
 }
 
+Vector3 ZombieManager::GetSpawnPointNear(const std::vector<Vector3>& playerPositions) const
+{
+	if (m_SpawnPoints.empty())   return Vector3::Zero;
+	if (playerPositions.empty()) return GetRandomSpawnPoint();
+
+	// 거리 window: 너무 가깝(눈앞)지도, 너무 멀(이미 지난/못 따라옴)지도 않은 포인트만 사용.
+	constexpr float fMinDist = 800.f;    // 8m  — 플레이어 코앞 스폰 방지
+	constexpr float fMaxDist = 20000.f;   // 60m — 이 밖은 "이미 지난/너무 먼" 포인트로 간주
+
+	std::vector<const Vector3*> candidates;
+	candidates.reserve(m_SpawnPoints.size());
+
+	const Vector3* pClosest = nullptr;
+	float fClosestDist = FLT_MAX;
+
+	for (const auto& sp : m_SpawnPoints) {
+		// 가장 가까운 플레이어까지 거리
+		float fNearest = FLT_MAX;
+		for (const auto& pp : playerPositions) {
+			float d = Vector3::Distance(sp, pp);
+			if (d < fNearest) fNearest = d;
+		}
+		if (fNearest >= fMinDist && fNearest <= fMaxDist)
+			candidates.push_back(&sp);
+		if (fNearest < fClosestDist) { fClosestDist = fNearest; pClosest = &sp; }
+	}
+
+	if (!candidates.empty())
+		return *candidates[rand() % candidates.size()];
+
+	// window 내 후보가 없으면 가장 가까운 포인트로 폴백 (먼 뒤쪽 랜덤 방지)
+	return pClosest ? *pClosest : GetRandomSpawnPoint();
+}
+
 void ZombieManager::DespawnZombie(int nId)
 {
 	auto it = m_Zombies.find(nId);
@@ -190,9 +224,8 @@ void ZombieManager::Tick(float fDeltaTime,
 		// 가장 가까운 플레이어 위치를 entity 0에 주입
 		if (nTargetId >= 0)
 		{
-			// 전방 벡터는 직전 프레임 yaw 기준 (fYaw는 이 틱 후반에 갱신됨 → 1틱 지연, 무해)
-			Vector3 v3Forward(std::sinf(zombie.fYaw), 0.f, std::cosf(zombie.fYaw));
-			bool bVisible = IsVisible(v3ZombiePos, v3TargetPos, v3Forward, m_fSightRange);
+			// 시야(FOV)/LOS 제거 — 반경(m_fSightRange) 내에 있으면 무조건 인지.
+			bool bVisible = (fDist <= m_fSightRange);
 			bool bHeard   = (fDist <= m_fHearingRange);
 			zombie.pAgent->UpdateSensoryStimulus(0, v3TargetPos, bVisible, bHeard);
 
