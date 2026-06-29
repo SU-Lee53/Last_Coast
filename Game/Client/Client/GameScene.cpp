@@ -102,11 +102,7 @@ void GameScene::BuildObjects()
 	m_v3WaterPos = Vector3(0.f, -47_m, 0.f);
 	pTransform->SetPosition(m_v3WaterPos);
 	AddObject(m_pWater);
-
-	//auto pHeli = std::make_shared<HelicopterObject>();
-	//pHeli->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
-	//AddObject(pHeli);
-
+	
 }
 
 void GameScene::OnEnterScene()
@@ -530,7 +526,7 @@ void GameScene::UpdateEscapeSequence()
 
 	// 서버 게임 종료 신호 수신 → 출발 컷씬 시작 (플레이어 숨김 + 헬기 역방향 상승 + 하늘 고정 카메라).
 	if (NETWORK->ConsumeGameEnd()) {
-		std::shared_ptr<CrashDebris> pHeli = m_pArriveEvent ? m_pArriveEvent->GetHeli() : nullptr;
+		std::shared_ptr<HelicopterObject> pHeli = m_pArriveEvent ? m_pArriveEvent->GetHeli() : nullptr;
 		std::vector<Vector3> reversed = GetHeliArrivePath();   // 착륙 경로(상공→착륙점)
 		std::reverse(reversed.begin(), reversed.end());        // 역방향(착륙점→상공)
 

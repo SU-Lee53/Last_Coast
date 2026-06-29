@@ -37,10 +37,9 @@ void HelicopterObject::ProcessInput()
 
 void HelicopterObject::Update()
 {
-	if (m_pMainRotorFrame)
+	if (m_bRotorActive && m_pMainRotorFrame)
 	{
 		auto& pTransform = m_pMainRotorFrame->GetTransform();
 		pTransform->Rotate(Vector3{ 0.0f, 10.f * DT, 0.0f });
 	}
-	
 }
