@@ -4,6 +4,7 @@
 #include "BloodEffect.h"
 #include "FireEffect.h"
 #include "MuzzleFlashEffect.h"
+#include "ExplosionEffect.h"
 #include "ToneMappingVolume.h"
 #include "PostProcessingVolume.h"
 #include "NodeObject.h"
@@ -565,7 +566,7 @@ void HelicopterCrashEvent::OnUpdateEvent(Scene* pScene)
 			m_bLanded = true;
 		}
 		else {
-			//SpawnExplosion(m_v3HeliEnd);
+			SpawnExplosion(m_v3HeliEnd);
 			if (m_pHeli) m_pHeli->SetRotorActive(false); // 추락 후 잔해 → 로터 정지
 		}
 		m_bExploded = true;
@@ -582,9 +583,9 @@ void HelicopterCrashEvent::SpawnExplosion(const Vector3& v3Pos)
 	desc.v3Direction = Vector3::Up;
 	desc.v3Normal    = Vector3::Up;
 	desc.mtxWorld    = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
-	PARTICLE->Spawn<MuzzleFlashEffect>(desc);
+	PARTICLE->Spawn<ExplosionEffect>(desc);
 
-	SOUND->PlayAt("Test3D", v3Pos);
+	//SOUND->PlayAt("Test3D", v3Pos);
 }
 
 void HelicopterCrashEvent::Finish(Scene* pScene)

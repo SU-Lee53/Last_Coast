@@ -297,8 +297,13 @@ void GameScene::Update()
 	}
 	ImGui::End();
 
-	if (m_bGameEnded) {
-		UpdateEndCredits();
+	if (m_bEndCreditsPlaying || m_bGameCleared) {
+		if (m_bGameCleared && !m_bEndCreditsPlaying && !m_bEndCreditsFinished) {
+			BeginEndCredits();
+		}
+		if (m_bEndCreditsPlaying) {
+			UpdateEndCredits();
+		}
 		return;
 	}
 
@@ -316,11 +321,8 @@ void GameScene::Update()
 
 void GameScene::BeginEndCredits()
 {
-	if (m_bGameEnded) {
-		return;
-	}
-
-	m_bGameEnded = true;
+	m_bEndCreditsPlaying = true;
+	m_bEndCreditsFinished = false;
 	m_fEndCreditsElapsed = 0.0f;
 
 	if (m_pUIBoard) {
@@ -437,6 +439,8 @@ void GameScene::UpdateEndCredits()
 
 	if (m_fEndCreditsElapsed >= END_CREDITS_DURATION) {
 		ClearEndCreditsUI();
+		m_bEndCreditsPlaying = false;
+		m_bEndCreditsFinished = true;
 		SCENE->PopScene();
 		SCENE->PushScene<LogInScene>();
 		SCENE->PushScene<MenuScene>();
@@ -511,8 +515,7 @@ void GameScene::UpdateEscapeSequence()
 	if (m_bGameCleared) {
 		m_pEscapeText->SetVisible(true);
 		m_pEscapeText->SetColor(Vector3{ 0.4f, 1.f, 0.4f });
-		//m_pEscapeText->SetText(L"탈출 성공!");
-		m_bGameEnded = true;
+		m_pEscapeText->SetText(L"탈출 성공!");
 		return;
 	}
 

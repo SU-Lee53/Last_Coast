@@ -57,8 +57,6 @@ private:
 	Vector3 m_v3WaterPos{};
 	ZombiePool m_ZombiePool;
 
-	bool m_bGameEnded = false;
-
 	// 오프라인 드립 스폰 설정
 	static constexpr int   OFFLINE_MAX_ZOMBIES   = 100;   // 동시 존재 최대 마리수
 	static constexpr float OFFLINE_SPAWN_INTERVAL = 2.0f; // 스폰 간격 (초)
@@ -88,6 +86,8 @@ private:
 	std::vector<std::wstring>                           m_ChatHistory;
 
 	// End credits
+	bool m_bEndCreditsPlaying = false;
+	bool m_bEndCreditsFinished = false;
 	float m_fEndCreditsElapsed = 0.0f;
 	constexpr static float END_CREDITS_DURATION = 10.0f;
 	constexpr static float END_CREDITS_FADE_IN_DURATION = 2.5f;
