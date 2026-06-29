@@ -4,6 +4,7 @@
 class ExplosionEffect : public IParticleEffect {
 public:
 	virtual void Initialize() override;
+	virtual void Play(const ParticleEffectSpawnDesc& desc) override;
 
 private:
 	void CreateFlashEmitter();
@@ -11,7 +12,6 @@ private:
 	void CreateSmokeEmitter();
 	void CreateDustEmitter();
 
-	virtual void Play(const ParticleEffectSpawnDesc& desc) override;
 
 private:
 	std::shared_ptr<Sound> m_pSound = nullptr;
