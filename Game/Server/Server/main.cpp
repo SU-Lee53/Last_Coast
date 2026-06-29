@@ -83,7 +83,7 @@ EscapePhase       g_eEscapePhase = EscapePhase::None;
 DWORD             g_dwEscapeSurviveStart = 0;    // 서바이벌 시작 시각(ms) = 착륙 컷씬(정지) 종료 후
 DWORD             g_dwLastEscapeBroadcast = 0;   // 상태 브로드캐스트 스로틀
 std::atomic<bool> g_bEscapeRequested{ false };   // 클라가 탈출 키 입력 (Session에서 set, 틱이 소비)
-static constexpr float ESCAPE_SURVIVE_SECONDS = 120.f;      // 버텨야 하는 시간 (2분)
+static constexpr float ESCAPE_SURVIVE_SECONDS = 20.f;      // 버텨야 하는 시간 (2분)
 static constexpr DWORD ESCAPE_BROADCAST_INTERVAL_MS = 500;  // 상태 전송 주기
 
 Room* find_empty_room()
@@ -169,11 +169,9 @@ static void AssignCheckpointEvents()
 
 	// 예시 배정 — 한 체크포인트가 여러 이벤트를 동시에 쏠 수 있음.
 	//Set(0, { { GE_HELICOPTER_CRASH, {}, 0.f, 0.0f, 0, 5.0f } });
-	Set(0, { { GE_ENVIRONMENT, {}, 0.f, 8.0f, EP_SUNSET, 8.0f } });   // 0번 도착 → 석양 (정지 8초)
-	Set(1, { { GE_ENVIRONMENT, {}, 0.f, 3.0f, EP_NIGHT,  0.f } });   // 1번 도착 → 야간 (정지 안함)
-	// 마지막 체크포인트 → 구조 헬기 강하·착륙 컷씬(폭발 X). 착륙 후 탈출 시퀀스(2분 서바이벌→키 탈출) 시작.
-	// (index는 맵의 '마지막' 체크포인트로 맞출 것. 현재 테이블 기준 2번이 마지막)
-	Set(2, { { GE_HELICOPTER_ARRIVE, {}, 0.f, 10.f, 0, 10.0f } });   // 2번 도착 → 구조 헬기 (강하 10초, 정지 10초)
+	Set(0, { { GE_ENVIRONMENT, {}, 0.f, 8.0f, EP_DAWN, 0.0f } });   // 0번 도착 → 석양 (정지 8초)
+	Set(1, { { GE_HELICOPTER_CRASH, {}, 0.f, 10.f, 0, 10.0f } ,{ GE_ENVIRONMENT, {}, 0.f, 8.0f, EP_SUNSET, 0.0f } });
+	Set(2, { { GE_HELICOPTER_ARRIVE, {}, 0.f, 10.f, 0, 10.0f }});
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -15,6 +15,11 @@
 */
 
 class CrashDebris;
+<<<<<<< Updated upstream
+=======
+class HelicopterObject;
+class FireEffect;
+>>>>>>> Stashed changes
 
 interface IGameEvent abstract {
 public:
@@ -196,7 +201,7 @@ public:
 	bool IsLanded() const { return m_bLanded; }
 	const Vector3& GetExtractionPos() const { return m_v3ExtractionPos; }
 	// 착륙한 헬기 오브젝트 (출발 컷씬에서 그대로 띄워 올리기 위해). 착륙 모드는 Finish에서 reset 안 함.
-	std::shared_ptr<CrashDebris> GetHeli() const { return m_pHeli; }
+	std::shared_ptr<HelicopterObject> GetHeli() const { return m_pHeli; }
 
 private:
 	void SpawnExplosion(const Vector3& v3Pos);
@@ -224,7 +229,7 @@ private:
 
 	std::shared_ptr<Camera>      m_pCinematicCamera;
 	std::shared_ptr<Camera>      m_pSavedCamera;
-	std::shared_ptr<CrashDebris> m_pHeli; // 충돌 후 월드 잔해로 등록(dynamic spatial)
+	std::shared_ptr<HelicopterObject> m_pHeli; // Gunship 헬기(모델+로터). 착륙 모드는 Finish에서 유지.
 };
 
 // 탈출 출발 컷씬 (마지막 F키 탈출 시): 전 플레이어 숨김 + 착륙 헬기를 ArrivePath 역방향으로
@@ -232,7 +237,7 @@ private:
 class HelicopterDepartEvent : public IOneShotEvent {
 public:
 	// pHeli: 착륙한 헬기(그대로 재사용). reversedPath: ArrivePath 역순(착륙점→상공).
-	HelicopterDepartEvent(std::shared_ptr<CrashDebris> pHeli, std::vector<Vector3> reversedPath, float fDuration)
+	HelicopterDepartEvent(std::shared_ptr<HelicopterObject> pHeli, std::vector<Vector3> reversedPath, float fDuration)
 		: m_pHeli{ std::move(pHeli) }, m_v3PathPoints{ std::move(reversedPath) }
 		, m_fDuration{ fDuration > 0.f ? fDuration : 8.0f } {}
 	virtual void OnEnterEvent(Scene* pScene) override;
@@ -242,7 +247,7 @@ private:
 	void Finish(Scene* pScene);
 
 private:
-	std::shared_ptr<CrashDebris> m_pHeli;
+	std::shared_ptr<HelicopterObject> m_pHeli;
 	std::vector<Vector3>         m_v3PathPoints;   // [0]=착륙점 … [last]=상공
 	float                        m_fDuration;
 	float                        m_fTimeElapsed = 0.f;

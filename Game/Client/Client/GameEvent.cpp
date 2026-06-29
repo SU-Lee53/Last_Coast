@@ -7,6 +7,7 @@
 #include "PostProcessingVolume.h"
 #include "NodeObject.h"
 #include "CrashDebris.h"
+#include "HelicopterObject.h"
 #include "SpatialTraits.h"
 #include "HelicopterAnimationController.h"
 #include "Skeleton.h"
@@ -432,19 +433,11 @@ void HelicopterCrashEvent::OnEnterEvent(Scene* pScene)
 
 	m_v3LookAt = m_v3HeliStart; // 시작 시선 = 경로 시작점(상공의 헬기)
 
-	// 헬기 오브젝트 — 월드/스폐셜 미등록, 컷씬 prop으로 직접 렌더.
-	// 모델 교체는 상단 HELI_MODEL_NAME / HELI_SCALE 만 수정.
-	m_pHeli = MODEL->LoadOrGet(HELI_MODEL_NAME, true)->CopyObject<CrashDebris>();
+	// 헬기 오브젝트 — Gunship 모델 + 로터 회전을 캡슐화한 HelicopterObject 사용.
+	// (모델 로드/방향보정/로터 애니는 HelicopterObject::Initialize/Update가 담당)
+	m_pHeli = std::make_shared<HelicopterObject>();
 	m_pHeli->Initialize();
-	// 스켈레탈 메시 → 본 행렬 생성용 컨트롤러 부착. 없으면 GBufferPass가 본 데이터를 못 만들어
-	// 스키닝 셰이더가 본 없이 렌더 → 크래시. 부착 시 로터 회전 애니(Gunship_Anim)도 재생된다.
-	m_pHeli->AddComponent<HelicopterAnimationController>();
-	m_pHeli->GetComponent<AnimationController>()->Initialize();
-	m_pHeli->GetTransform()->SetFrameMatrix(Matrix::Identity); // 루트 frame 분리 → world = transform
-
-	// 직접 렌더(SetCinematicProp) 경로는 스켈레탈 메시를 그리지 못한다.
-	// 잔해와 동일하게 정상 스폐셜 파이프라인(AddObject)으로 등록 → 좀비처럼 스키닝 렌더.
-	// 컷씬 중 World 정지(bFrozen)라 위치/애니는 OnUpdateEvent에서 직접 갱신한다.
+	// 컷씬 중 World 정지(bFrozen)라 위치/로터는 OnUpdateEvent에서 직접 갱신한다.
 	pScene->AddObject(m_pHeli);
 }
 
@@ -472,46 +465,25 @@ void HelicopterCrashEvent::OnUpdateEvent(Scene* pScene)
 		v3Travel  = m_v3HeliEnd - m_v3HeliStart;
 	}
 
-	// 기수를 진행 방향으로 정렬 (진행 벡터가 너무 작으면 회전 생략)
+	// 기수를 진행 방향으로 정렬 (진행 벡터가 너무 작으면 회전 생략).
+	// CreateWorld는 forward의 반대를 +Z로 잡으므로 -v3Travel을 넣어야 기수가 진행 방향을 본다.
+	// 착륙(구조) 모드는 경로 기수 정렬을 끄고 고정 방향(모델 기본 방향) 유지.
 	Matrix mtxRot = Matrix::Identity;
-	if (v3Travel.LengthSquared() > 1e-4f) {
+	if (!m_bLandMode && v3Travel.LengthSquared() > 1e-4f) {
 		v3Travel.Normalize();
 		Vector3 v3Up = Vector3::Up;
 		if (fabsf(v3Travel.Dot(v3Up)) > 0.99f) v3Up = Vector3::Backward; // 수직 비행 시 up 특이점 회피
-		mtxRot = Matrix::CreateWorld(Vector3::Zero, v3Travel, v3Up); // forward 정렬(translation 0)
+		mtxRot = Matrix::CreateWorld(Vector3::Zero, -v3Travel, v3Up); // 기수 = 진행 방향
 	}
 
-	// 모델이 옆으로 누워 익스포트된 것을 세우는 보정 (기수 정렬 전에 적용).
-	const Matrix mtxModelFix = Matrix::CreateFromYawPitchRoll(
-		XMConvertToRadians(HELI_MODEL_FIX_EULER.y),
-		XMConvertToRadians(HELI_MODEL_FIX_EULER.x),
-		XMConvertToRadians(HELI_MODEL_FIX_EULER.z));
-
+	// 모델 방향 보정은 HelicopterObject가 자체 처리(자식 모델 -90°)하므로 여기선 기수 정렬만.
 	const Matrix mtxWorld =
 		Matrix::CreateScale(HELI_SCALE) *
-		mtxModelFix *
 		mtxRot *
 		Matrix::CreateTranslation(v3HeliPos);
 	m_pHeli->GetTransform()->SetWorldMatrix(mtxWorld);
-	m_pHeli->PostUpdate(); // 루트 → 자식 메시 world 행렬 전파
-
-	// 컷씬 중엔 World 가 정지(bFrozen)되어 ANIMATION->UpdateAnimationParallel() 이 스킵된다.
-	// 헬기 로터 애니/스켈레톤만 직접 갱신해 본 행렬을 최신화 (GBufferPass 가 이 값을 수집).
-	if (auto pAnim = m_pHeli->GetComponent<AnimationController>()) {
-		pAnim->Update();
-
-		// ── 진단 로그 (본 행렬이 비었거나 0으로 붕괴했는지) ──
-		static int s_nLog = 0;
-		if (s_nLog++ < 3) {
-			const auto& out = pAnim->GetFinalOutput();
-			Matrix m0 = out.empty() ? Matrix::Identity : out[0];
-			OutputDebugStringA(std::format(
-				"[HeliAnim] finalBones={} m0._11={:.3f} m0._41={:.1f} heliPos=({:.0f},{:.0f},{:.0f})\n",
-				out.size(), m0._11, m0._41, v3HeliPos.x, v3HeliPos.y, v3HeliPos.z).c_str());
-		}
-	}
-	if (auto pSkel = m_pHeli->GetComponent<Skeleton>())
-		pSkel->Update();
+	m_pHeli->Update();      // 로터 회전 (컷씬 정지 중이라 직접 호출)
+	m_pHeli->PostUpdate();  // 루트 → 자식 world 행렬 전파
 
 	// 카메라를 매 프레임 "플레이어→헬기" 방향 기준으로 플레이어 뒤에 배치.
 	// 헬기가 이동하면 카메라도 그 반대편(등 뒤)으로 돌며 항상 어깨 너머로 추락을 좇는다.
@@ -547,7 +519,8 @@ void HelicopterCrashEvent::OnUpdateEvent(Scene* pScene)
 			m_bLanded = true;
 		}
 		else {
-			SpawnExplosion(m_v3HeliEnd);
+			//SpawnExplosion(m_v3HeliEnd);
+			if (m_pHeli) m_pHeli->SetRotorActive(false); // 추락 후 잔해 → 로터 정지
 		}
 		m_bExploded = true;
 		// 헬기는 OnEnter에서 이미 AddObject로 등록됨 → 그대로 World에 남는다.
@@ -627,30 +600,13 @@ void HelicopterDepartEvent::OnUpdateEvent(Scene* pScene)
 	// 상승: ease-in(t²)로 서서히 가속하며 떠오름. 경로 [0]착륙점 → [last]상공.
 	const float fRise = t * t;
 	const Vector3 v3HeliPos = SampleCatmullRom(m_v3PathPoints, fRise);
-	const Vector3 v3Ahead   = SampleCatmullRom(m_v3PathPoints, std::min(fRise + 0.02f, 1.f));
-	Vector3 v3Travel = v3Ahead - v3HeliPos;
 
-	Matrix mtxRot = Matrix::Identity;
-	if (v3Travel.LengthSquared() > 1e-4f) {
-		v3Travel.Normalize();
-		Vector3 v3Up = Vector3::Up;
-		if (fabsf(v3Travel.Dot(v3Up)) > 0.99f) v3Up = Vector3::Backward;
-		mtxRot = Matrix::CreateWorld(Vector3::Zero, v3Travel, v3Up);
-	}
-
-	const Matrix mtxModelFix = Matrix::CreateFromYawPitchRoll(
-		XMConvertToRadians(HELI_MODEL_FIX_EULER.y),
-		XMConvertToRadians(HELI_MODEL_FIX_EULER.x),
-		XMConvertToRadians(HELI_MODEL_FIX_EULER.z));
-
+	// 경로 기수 정렬은 끔 — 착륙/상승 모두 고정 방향(모델 기본 방향) 유지.
 	const Matrix mtxWorld =
-		Matrix::CreateScale(HELI_SCALE) * mtxModelFix * mtxRot * Matrix::CreateTranslation(v3HeliPos);
+		Matrix::CreateScale(HELI_SCALE) * Matrix::CreateTranslation(v3HeliPos);
 	m_pHeli->GetTransform()->SetWorldMatrix(mtxWorld);
+	m_pHeli->Update();      // 로터 회전 (컷씬 정지 중이라 직접 호출)
 	m_pHeli->PostUpdate();
-
-	// 컷씬 정지 중이라 로터 애니/스켈레톤 직접 갱신.
-	if (auto pAnim = m_pHeli->GetComponent<AnimationController>()) pAnim->Update();
-	if (auto pSkel = m_pHeli->GetComponent<Skeleton>())            pSkel->Update();
 
 	// 카메라는 고정(매 프레임 갱신 안 함). 도달 시 종료.
 	if (t >= 1.f) Finish(pScene);
