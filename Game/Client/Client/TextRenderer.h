@@ -89,6 +89,7 @@ public:
 public:
 	// Font handling
 	Font::ID RegisterFont(const FontDesc& desc);
+	HRESULT CreateBundledFontCollection(const std::wstring& wstrFontPath);
 
 	void DestroyFont(const Font::ID& id);
 	void DestroyFont(const std::wstring& wstrName);
@@ -153,14 +154,18 @@ private:
 
 	// DirectWrite
 	ComPtr<IDWriteFactory5>			m_pdwFactory = nullptr;
+	ComPtr<IDWriteFontCollection1>	m_pdwBundledFontCollection = nullptr;
 
 	// Brush
 	ComPtr<ID2D1SolidColorBrush>	m_pBrush = nullptr;
+
+	// Locale
+	std::wstring m_wstrLocaleName = L"ko-KR";
 
 	// Initializer
 	HRESULT InitializeD3D11On12(const ComPtr<ID3D12CommandQueue>& pd3dCommandQueue);
 	HRESULT InitializeD2D1();
 	HRESULT InitializeDirectWrite();
 	HRESULT CreateSharedResources();	// Create D2D1 <-> D3D shared resources
-
+	void InitializeLocaleName();
 };

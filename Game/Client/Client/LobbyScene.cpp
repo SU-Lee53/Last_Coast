@@ -49,7 +49,7 @@ void LobbyScene::BuildObjects()
 	{
 		// Model Selector
 		{
-			std::shared_ptr<TextBox> pModelText = std::make_shared<TextBox>(L"Malgun Gothic");
+			std::shared_ptr<TextBox> pModelText = std::make_shared<TextBox>(L"Noto Sans KR");
 			pModelText->SetText(L"Character : ");
 			pModelText->SetLayer(0);
 			pModelText->SetAnchor(Vector2{ 0.0, 0.0 });
@@ -58,7 +58,7 @@ void LobbyScene::BuildObjects()
 			pModelText->SetTextHeight(70);
 			m_pUIBoard->InsertUI(pModelText);
 
-			std::shared_ptr<TextButton> pModelPrev = std::make_shared<TextButton>(L"Malgun Gothic");
+			std::shared_ptr<TextButton> pModelPrev = std::make_shared<TextButton>(L"Noto Sans KR");
 			pModelPrev->SetText(L"<<");
 			pModelPrev->SetLayer(0);
 			pModelPrev->SetAnchor(Vector2{ 0.0, 0.0 });
@@ -80,7 +80,7 @@ void LobbyScene::BuildObjects()
 
 			m_pUIBoard->InsertUI(pModelPrev);
 
-			std::shared_ptr<TextButton> pModelNext = std::make_shared<TextButton>(L"Malgun Gothic");
+			std::shared_ptr<TextButton> pModelNext = std::make_shared<TextButton>(L"Noto Sans KR");
 			pModelNext->SetText(L">>");
 			pModelNext->SetLayer(0);
 			pModelNext->SetAnchor(Vector2{ 0.0, 0.0 });
@@ -100,7 +100,7 @@ void LobbyScene::BuildObjects()
 			);
 			m_pUIBoard->InsertUI(pModelNext);
 
-			m_pModelNameTextbox = std::make_shared<TextBox>(L"Malgun Gothic");
+			m_pModelNameTextbox = std::make_shared<TextBox>(L"Noto Sans KR");
 			m_pModelNameTextbox->SetText(GameContext::g_strCharacterNames[m_nCurModelIndex]);
 			m_pModelNameTextbox->SetLayer(0);
 			m_pModelNameTextbox->SetAnchor(Vector2{ 0.0, 0.0 });
@@ -114,7 +114,7 @@ void LobbyScene::BuildObjects()
 
 		// Weapon Selector
 		{
-			std::shared_ptr<TextBox> pWeaponText = std::make_shared<TextBox>(L"Malgun Gothic");
+			std::shared_ptr<TextBox> pWeaponText = std::make_shared<TextBox>(L"Noto Sans KR");
 			pWeaponText->SetText(L"Weapon : ");
 			pWeaponText->SetLayer(0);
 			pWeaponText->SetAnchor(Vector2{ 0.0, 0.0 });
@@ -123,7 +123,7 @@ void LobbyScene::BuildObjects()
 			pWeaponText->SetTextHeight(70);
 			m_pUIBoard->InsertUI(pWeaponText);
 
-			std::shared_ptr<TextButton> pWeaponPrev = std::make_shared<TextButton>(L"Malgun Gothic");
+			std::shared_ptr<TextButton> pWeaponPrev = std::make_shared<TextButton>(L"Noto Sans KR");
 			pWeaponPrev->SetText(L"<<");
 			pWeaponPrev->SetLayer(0);
 			pWeaponPrev->SetAnchor(Vector2{ 0.0, 0.0 });
@@ -145,7 +145,7 @@ void LobbyScene::BuildObjects()
 
 			m_pUIBoard->InsertUI(pWeaponPrev);
 
-			std::shared_ptr<TextButton> pWeaponNext = std::make_shared<TextButton>(L"Malgun Gothic");
+			std::shared_ptr<TextButton> pWeaponNext = std::make_shared<TextButton>(L"Noto Sans KR");
 			pWeaponNext->SetText(L">>");
 			pWeaponNext->SetLayer(0);
 			pWeaponNext->SetAnchor(Vector2{ 0.0, 0.0 });
@@ -165,7 +165,7 @@ void LobbyScene::BuildObjects()
 			);
 			m_pUIBoard->InsertUI(pWeaponNext);
 
-			m_pWeaponNameTextbox = std::make_shared<TextBox>(L"Malgun Gothic");
+			m_pWeaponNameTextbox = std::make_shared<TextBox>(L"Noto Sans KR");
 			m_pWeaponNameTextbox->SetText(GameContext::g_strWeaponNames[m_nCurWeaponIndex]);
 			m_pWeaponNameTextbox->SetLayer(0);
 			m_pWeaponNameTextbox->SetAnchor(Vector2{ 0.0, 0.0 });
@@ -179,7 +179,7 @@ void LobbyScene::BuildObjects()
 
 		// Buttons
 		{
-			std::shared_ptr<TextButton> pReadyButton = std::make_shared<TextButton>(L"Malgun Gothic");
+			std::shared_ptr<TextButton> pReadyButton = std::make_shared<TextButton>(L"Noto Sans KR");
 			pReadyButton->SetText(m_bReadyState ? "Ready" : "Not Ready");
 			pReadyButton->SetLayer(0);
 			pReadyButton->SetAnchor(Vector2{ 0.0, 0.0 });
@@ -197,7 +197,7 @@ void LobbyScene::BuildObjects()
 
 			m_pUIBoard->InsertUI(pReadyButton);
 
-			std::shared_ptr<TextButton> pOfflineButton = std::make_shared<TextButton>(L"Malgun Gothic");
+			std::shared_ptr<TextButton> pOfflineButton = std::make_shared<TextButton>(L"Noto Sans KR");
 			pOfflineButton->SetText("Test Offline");
 			pOfflineButton->SetLayer(0);
 			pOfflineButton->SetAnchor(Vector2{ 1.0, 1.0 });
@@ -310,7 +310,7 @@ void LobbyScene::Update()
 				AddObject(newPreview.pPlayer);
 
 				newPreview.wstrUsername = ::StringToWString(ev.username);
-				newPreview.pNameTag = std::make_shared<TextBox>(L"Malgun Gothic");
+				newPreview.pNameTag = std::make_shared<TextBox>(L"Noto Sans KR");
 				newPreview.pNameTag->SetText(newPreview.wstrUsername);
 				newPreview.pNameTag->SetLayer(0);
 				newPreview.pNameTag->SetAnchor(Vector2{ 0.0f, 0.0f });

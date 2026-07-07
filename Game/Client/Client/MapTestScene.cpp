@@ -26,7 +26,7 @@ void MapTestScene::BuildObjects()
 	//m_pPlayer = std::make_shared<DebugPlayer>();
 	//m_pPlayer->Initialize();
 
-	m_pFPSText = std::make_shared<TextBox>(L"Malgun Gothic");
+	m_pFPSText = std::make_shared<TextBox>(L"Noto Sans KR");
 	m_pFPSText->SetText(L"Test");
 	m_pFPSText->SetLayer(0);
 	m_pFPSText->SetAnchor(Vector2{ 0,0 });
@@ -34,7 +34,7 @@ void MapTestScene::BuildObjects()
 	m_pFPSText->SetPosition(Vector2{ 0,50 });
 	m_pFPSText->SetTextHeight(50);
 
-	m_pTimeText = std::make_shared<TextBox>(L"Malgun Gothic");
+	m_pTimeText = std::make_shared<TextBox>(L"Noto Sans KR");
 	m_pTimeText->SetText(L"Test");
 	m_pTimeText->SetLayer(0);
 	m_pTimeText->SetAnchor(Vector2{ 0,0 });
@@ -42,7 +42,7 @@ void MapTestScene::BuildObjects()
 	m_pTimeText->SetPosition(Vector2{ 200,50 });
 	m_pTimeText->SetTextHeight(50);
 
-	m_pKoreanText = std::make_shared<TextButton>(L"Malgun Gothic");
+	m_pKoreanText = std::make_shared<TextButton>(L"Noto Sans KR");
 	m_pKoreanText->SetText(L"카메라 재생");
 	m_pKoreanText->SetLayer(0);
 	m_pKoreanText->SetAnchor(Vector2{ 0,0 });
@@ -50,14 +50,14 @@ void MapTestScene::BuildObjects()
 	m_pKoreanText->SetPosition(Vector2{ 450,50 });
 	m_pKoreanText->SetTextHeight(50);
 
-	m_pInputTest = std::make_shared<InputTextBox>(L"Malgun Gothic");
+	m_pInputTest = std::make_shared<InputTextBox>(L"Noto Sans KR");
 	m_pInputTest->SetLayer(0);
 	m_pInputTest->SetAnchor(Vector2{ 0,0 });
 	m_pInputTest->SetPivot(Vector2{ 0,0 });
 	m_pInputTest->SetPosition(Vector2{ 50,100 });
 	m_pInputTest->SetTextHeight(50);
 
-	m_pPWInputTest = std::make_shared<InputTextBox>(L"Malgun Gothic");
+	m_pPWInputTest = std::make_shared<InputTextBox>(L"Noto Sans KR");
 	m_pPWInputTest->SetLayer(0);
 	m_pPWInputTest->SetAnchor(Vector2{ 0,0 });
 	m_pPWInputTest->SetPivot(Vector2{ 0,0 });

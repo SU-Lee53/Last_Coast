@@ -68,7 +68,7 @@ void GameScene::BuildObjects()
 	// 구조 헬기(착륙) 비행 경로 (언리얼 ArrivePath_N TargetPoint 익스포트). 없으면 직선 폴백.
 	LoadHeliArrivePath("GAME_HeliArrivePath");
 
-	//std::shared_ptr<TextBox> pText = std::make_shared<TextBox>(L"Malgun Gothic");
+	//std::shared_ptr<TextBox> pText = std::make_shared<TextBox>(L"Noto Sans KR");
 	//pText->SetText(std::format(L"로딩 시간 : {}ms", llLoadTime));
 	//pText->SetLayer(0);
 	//pText->SetAnchor(Vector2{ 0,0 });
@@ -80,7 +80,7 @@ void GameScene::BuildObjects()
 	BuildChatUI();
 
 	// 탈출 시퀀스 안내 HUD (총알/체력 UI와 동일하게 TextBox → UIBoard). 평소엔 숨김.
-	m_pEscapeText = std::make_shared<TextBox>(L"Malgun Gothic");
+	m_pEscapeText = std::make_shared<TextBox>(L"Noto Sans KR");
 	m_pEscapeText->SetText(L"");
 	m_pEscapeText->SetLayer(0);
 	m_pEscapeText->SetAnchor(Vector2{ 0.5f, 0.f });   // 화면 상단 중앙
@@ -372,7 +372,7 @@ void GameScene::BuildEndCreditsUI()
 	m_pEndBackgroundImage->SetColor(Vector4{ 0.0f, 0.0f, 0.0f, 0.0f });
 	m_pUIBoard->InsertUI(m_pEndBackgroundImage);
 
-	m_pEndTitleText = std::make_shared<TextBox>(L"Malgun Gothic");
+	m_pEndTitleText = std::make_shared<TextBox>(L"Noto Sans KR");
 	m_pEndTitleText->SetText(wstrTitle);
 	m_pEndTitleText->SetLayer(0);
 	m_pEndTitleText->SetAnchor(Vector2{ 0.5f, 0.5f });
@@ -383,7 +383,7 @@ void GameScene::BuildEndCreditsUI()
 	m_pUIBoard->InsertUI(m_pEndTitleText);
 
 	for (size_t i = 0; i < wstrcreditLines.size(); ++i) {
-		auto pText = std::make_shared<TextBox>(L"Malgun Gothic");
+		auto pText = std::make_shared<TextBox>(L"Noto Sans KR");
 		pText->SetText(wstrcreditLines[i]);
 		pText->SetLayer(0);
 		pText->SetAnchor(Vector2{ 0.5f, 0.5f });
@@ -597,7 +597,7 @@ void GameScene::BuildChatUI()
 	const float fLeft   = 20.f;
 
 	// 입력창: 화면 좌하단 앵커, 피벗도 자기 좌하단
-	m_pChatInput = std::make_shared<InputTextBox>(L"Malgun Gothic");
+	m_pChatInput = std::make_shared<InputTextBox>(L"Noto Sans KR");
 	m_pChatInput->SetPlaceholder(L"Press Enter to chat");
 	m_pChatInput->SetLayer(0);
 	m_pChatInput->SetAnchor(Vector2{ 0.f, 1.f });
@@ -608,7 +608,7 @@ void GameScene::BuildChatUI()
 
 	// 히스토리 줄: 입력창 위로 쌓임. 인덱스 0 = 맨 아래(최신), 클수록 과거
 	for (int i = 0; i < CHAT_VISIBLE_LINES; ++i) {
-		auto pLine = std::make_shared<TextBox>(L"Malgun Gothic");
+		auto pLine = std::make_shared<TextBox>(L"Noto Sans KR");
 		pLine->SetText(L"");
 		pLine->SetLayer(0);
 		pLine->SetAnchor(Vector2{ 0.f, 1.f });

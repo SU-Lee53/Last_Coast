@@ -29,6 +29,14 @@ void TextRenderer::Initialize(const ComPtr<ID3D12CommandQueue>& pd3dCommandQueue
 		return;
 	}
 
+	InitializeLocaleName();
+
+	hr = CreateBundledFontCollection(L"../Resources/Fonts/NotoSansKR-Regular.ttf");
+	if (FAILED(hr)) {
+		__debugbreak();
+		return;
+	}
+
 	hr = CreateSharedResources();
 	if (FAILED(hr)) {
 		__debugbreak();
@@ -58,10 +66,9 @@ void TextRenderer::Initialize(const ComPtr<ID3D12CommandQueue>& pd3dCommandQueue
 
 	// test
 	FontDesc desc;
-	desc.wstrFamilyName = L"Malgun Gothic";
+	desc.wstrFamilyName = L"Noto Sans KR";
 
 	Font::ID fontID = RegisterFont(desc);
-
 }
 
 TextHandle TextRenderer::GetOrCacheText(Font::ID fontID, const std::wstring& wstrText)
@@ -112,12 +119,12 @@ Font::ID TextRenderer::RegisterFont(const FontDesc& desc)
 
 	hr = m_pdwFactory->CreateTextFormat(
 		desc.wstrFamilyName.c_str(),
-		nullptr,
+		m_pdwBundledFontCollection.Get(),
 		desc.fontWeight,
 		desc.fontStyle,
 		desc.fontStretch,
 		Font::g_fFontSize,
-		L"ko-KR",
+		m_wstrLocaleName.c_str(),
 		font.pdwTextFormat.GetAddressOf()
 	);
 
@@ -152,6 +159,56 @@ Font::ID TextRenderer::RegisterFont(const FontDesc& desc)
 	CacheText(id, L"다람쥐 헌 쳇바퀴에 타고파");
 
 	return id;
+}
+
+HRESULT TextRenderer::CreateBundledFontCollection(const std::wstring& wstrFontPath)
+{
+	if (!m_pdwFactory) {
+		return E_FAIL;
+	}
+
+	HRESULT hr{};
+
+	const std::filesystem::path fontPath = std::filesystem::absolute(wstrFontPath);
+	
+	ComPtr<IDWriteFontFile> pFontFile = nullptr;
+	hr = m_pdwFactory->CreateFontFileReference(
+		fontPath.c_str(),
+		nullptr,
+		pFontFile.GetAddressOf()
+	);
+	if (FAILED(hr)) {
+		__debugbreak();
+		return hr;
+	}
+
+	ComPtr<IDWriteFontSetBuilder1> pFontSetBuilder = nullptr;
+	hr = m_pdwFactory->CreateFontSetBuilder(pFontSetBuilder.GetAddressOf());
+	if (FAILED(hr)) {
+		__debugbreak();
+		return hr;
+	}
+
+	hr = pFontSetBuilder->AddFontFile(pFontFile.Get());
+	if (FAILED(hr)) {
+		__debugbreak();
+		return hr;
+	}
+
+	ComPtr<IDWriteFontSet> pFontSet = nullptr;
+	hr = pFontSetBuilder->CreateFontSet(pFontSet.GetAddressOf());
+	if (FAILED(hr)) {
+		__debugbreak();
+		return hr;
+	}
+
+	hr = m_pdwFactory->CreateFontCollectionFromFontSet(pFontSet.Get(), m_pdwBundledFontCollection.GetAddressOf());
+	if (FAILED(hr)) {
+		__debugbreak();
+		return hr;
+	}
+
+	return S_OK;
 }
 
 void TextRenderer::DestroyFont(const Font::ID& id)
@@ -618,4 +675,15 @@ HRESULT TextRenderer::CreateSharedResources()
 	}
 
 	return hr;
+}
+
+void TextRenderer::InitializeLocaleName()
+{
+	WCHAR pwchLocaleName[LOCALE_NAME_MAX_LENGTH] = {};
+	if (::GetUserDefaultLocaleName(pwchLocaleName, LOCALE_NAME_MAX_LENGTH) > 0) {
+		m_wstrLocaleName = pwchLocaleName;
+		return;
+	}
+
+	m_wstrLocaleName = L"en-US";
 }

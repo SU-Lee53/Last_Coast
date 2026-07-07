@@ -20,7 +20,7 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pHitMarker = std::make_shared<HitMarker>();
 		pUIBoard->InsertUI(pHitMarker);
 
-		pHealthText = std::make_shared<TextBox>(L"Malgun Gothic");
+		pHealthText = std::make_shared<TextBox>(L"Noto Sans KR");
 		pHealthText->SetText(L"0");
 		pHealthText->SetLayer(0);
 		pHealthText->SetAnchor(Vector2{ 1, 1 });
@@ -31,7 +31,7 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 
 		//pHealthImage
 
-		pAmmo = std::make_shared<TextBox>(L"Malgun Gothic");
+		pAmmo = std::make_shared<TextBox>(L"Noto Sans KR");
 		pAmmo->SetText(L"1");
 		pAmmo->SetLayer(0);
 		pAmmo->SetAnchor(Vector2{ 1, 1 });
@@ -40,7 +40,7 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pAmmo->SetTextHeight(50);
 		pUIBoard->InsertUI(pAmmo);
 
-		pWeaponName = std::make_shared<TextBox>(L"Malgun Gothic");
+		pWeaponName = std::make_shared<TextBox>(L"Noto Sans KR");
 		pWeaponName->SetText(L"2");
 		pWeaponName->SetLayer(0);
 		pWeaponName->SetAnchor(Vector2{ 1, 1 });
@@ -49,7 +49,7 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pWeaponName->SetTextHeight(50);
 		pUIBoard->InsertUI(pWeaponName);
 
-		pReloadAlert = std::make_shared<TextBox>(L"Malgun Gothic");
+		pReloadAlert = std::make_shared<TextBox>(L"Noto Sans KR");
 		pReloadAlert->SetText(L"2");
 		pReloadAlert->SetLayer(0);
 		pReloadAlert->SetAnchor(Vector2{ 0.5, 0.5 });

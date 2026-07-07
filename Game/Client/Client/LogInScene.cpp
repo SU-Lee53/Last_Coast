@@ -18,7 +18,7 @@ void LogInScene::BuildObjects()
 	// IP input
 	// 연결만 ImGui로?
 	/*{
-		std::shared_ptr<TextBox> pTitle = std::make_shared<TextBox>(L"Malgun Gothic");
+		std::shared_ptr<TextBox> pTitle = std::make_shared<TextBox>(L"Noto Sans KR");
 		pTitle->SetText(L"Server IP : ");
 		pTitle->SetLayer(0);
 		pTitle->SetAnchor(Vector2{ 0.5, 0.0 });
@@ -27,7 +27,7 @@ void LogInScene::BuildObjects()
 		pTitle->SetTextHeight(30);
 		m_pUIBoard->InsertUI(pTitle);
 
-		std::shared_ptr<InputTextBox> pInputIP = std::make_shared<InputTextBox>(L"Malgun Gothic");
+		std::shared_ptr<InputTextBox> pInputIP = std::make_shared<InputTextBox>(L"Noto Sans KR");
 		pInputIP->SetPlaceholder(L"Input Here");
 		pInputIP->SetLayer(0);
 		pInputIP->SetAnchor(Vector2{ 0.5, 0.0 });
@@ -39,7 +39,7 @@ void LogInScene::BuildObjects()
 
 	// Title
 	{
-		std::shared_ptr<TextBox> pTitle = std::make_shared<TextBox>(L"Malgun Gothic");
+		std::shared_ptr<TextBox> pTitle = std::make_shared<TextBox>(L"Noto Sans KR");
 		pTitle->SetText(L"LAST COAST");
 		pTitle->SetLayer(1);
 		pTitle->SetAnchor(Vector2{ 0.5, 0.0 });
@@ -51,7 +51,7 @@ void LogInScene::BuildObjects()
 
 	// ID input
 	{
-		std::shared_ptr<TextBox> pTitle = std::make_shared<TextBox>(L"Malgun Gothic");
+		std::shared_ptr<TextBox> pTitle = std::make_shared<TextBox>(L"Noto Sans KR");
 		pTitle->SetText(L"ID : ");
 		pTitle->SetLayer(1);
 		pTitle->SetAnchor(Vector2{ 0.5, 0.0 });
@@ -60,7 +60,7 @@ void LogInScene::BuildObjects()
 		pTitle->SetTextHeight(50);
 		m_pUIBoard->InsertUI(pTitle);
 
-		m_pIDInputBox = std::make_shared<InputTextBox>(L"Malgun Gothic");
+		m_pIDInputBox = std::make_shared<InputTextBox>(L"Noto Sans KR");
 		m_pIDInputBox->SetPlaceholder(L"Example ID");
 		m_pIDInputBox->SetLayer(1);
 		m_pIDInputBox->SetAnchor(Vector2{ 0.5, 0.0 });
@@ -72,7 +72,7 @@ void LogInScene::BuildObjects()
 
 	// Password input
 	{
-		std::shared_ptr<TextBox> pTitle = std::make_shared<TextBox>(L"Malgun Gothic");
+		std::shared_ptr<TextBox> pTitle = std::make_shared<TextBox>(L"Noto Sans KR");
 		pTitle->SetText(L"Password : ");
 		pTitle->SetLayer(1);
 		pTitle->SetAnchor(Vector2{ 0.5, 0.0 });
@@ -81,7 +81,7 @@ void LogInScene::BuildObjects()
 		pTitle->SetTextHeight(50);
 		m_pUIBoard->InsertUI(pTitle);
 
-		m_pPWInputBox = std::make_shared<InputTextBox>(L"Malgun Gothic");
+		m_pPWInputBox = std::make_shared<InputTextBox>(L"Noto Sans KR");
 		m_pPWInputBox->SetPlaceholder(L"Example PW");
 		m_pPWInputBox->SetLayer(1);
 		m_pPWInputBox->SetAnchor(Vector2{ 0.5, 0.0 });
@@ -94,7 +94,7 @@ void LogInScene::BuildObjects()
 
 	// Register / Login button
 	{
-		std::shared_ptr<TextButton> pRegisterButton = std::make_shared<TextButton>(L"Malgun Gothic");
+		std::shared_ptr<TextButton> pRegisterButton = std::make_shared<TextButton>(L"Noto Sans KR");
 		pRegisterButton->SetText(L"Register");
 		pRegisterButton->SetLayer(1);
 		pRegisterButton->SetColor(Vector3{ 0.8, 0.8, 0.8 });
@@ -127,7 +127,7 @@ void LogInScene::BuildObjects()
 
 		m_pUIBoard->InsertUI(pRegisterButton);
 
-		std::shared_ptr<TextButton> pLogInButton = std::make_shared<TextButton>(L"Malgun Gothic");
+		std::shared_ptr<TextButton> pLogInButton = std::make_shared<TextButton>(L"Noto Sans KR");
 		pLogInButton->SetText(L"Log In");
 		pLogInButton->SetLayer(1);
 		pLogInButton->SetColor(Vector3{ 0.8, 0.8, 0.8 });
@@ -164,7 +164,7 @@ void LogInScene::BuildObjects()
 
 	// Register / Log In Result
 	{
-		m_pResultText = std::make_shared<TextBox>(L"Malgun Gothic");
+		m_pResultText = std::make_shared<TextBox>(L"Noto Sans KR");
 		m_pResultText->SetText(L"");
 		m_pResultText->SetLayer(1);
 		m_pResultText->SetAnchor(Vector2{ 0.5, 0.0 });
@@ -176,7 +176,7 @@ void LogInScene::BuildObjects()
 
 	// Enter game button
 	{
-		std::shared_ptr<TextButton> pPlayButton = std::make_shared<TextButton>(L"Malgun Gothic");
+		std::shared_ptr<TextButton> pPlayButton = std::make_shared<TextButton>(L"Noto Sans KR");
 		pPlayButton->SetText(L"Enter");
 		pPlayButton->SetLayer(1);
 		pPlayButton->SetAnchor(Vector2{ 0.5, 0.0 });

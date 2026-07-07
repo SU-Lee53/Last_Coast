@@ -138,7 +138,7 @@ void UIBoard::EditUI()
 	}
 
 	/*
-		m_pTimeText = std::make_shared<TextBox>(L"Malgun Gothic");
+		m_pTimeText = std::make_shared<TextBox>(L"Noto Sans KR");
 		m_pTimeText->SetText(L"Test");
 		m_pTimeText->SetLayer(0);
 		m_pTimeText->SetAnchor(Vector2{ 0,0 });
@@ -166,7 +166,7 @@ void UIBoard::EditUI()
 	}
 
 	if (ImGui::Button("Add TextBox")) {
-		std::shared_ptr<TextBox> pNew = std::make_shared<TextBox>(L"Malgun Gothic");
+		std::shared_ptr<TextBox> pNew = std::make_shared<TextBox>(L"Noto Sans KR");
 		pNew->SetText(StringToWString(m_strNewName));
 		pNew->SetLayer(m_nNewLayer);
 		pNew->SetAnchor(m_v2NewAnchor);
@@ -180,7 +180,7 @@ void UIBoard::EditUI()
 
 	if (ImGui::Button("Add TextButton")) {
 
-		std::shared_ptr<TextButton> pNew = std::make_shared<TextButton>(L"Malgun Gothic");
+		std::shared_ptr<TextButton> pNew = std::make_shared<TextButton>(L"Noto Sans KR");
 		pNew->SetText(StringToWString(m_strNewName));
 		pNew->SetLayer(m_nNewLayer);
 		pNew->SetAnchor(m_v2NewAnchor);
@@ -193,7 +193,7 @@ void UIBoard::EditUI()
 	ImGui::SameLine();
 
 	if (ImGui::Button("Add InputText")) {
-		std::shared_ptr<InputTextBox> pNew = std::make_shared<InputTextBox>(L"Malgun Gothic");
+		std::shared_ptr<InputTextBox> pNew = std::make_shared<InputTextBox>(L"Noto Sans KR");
 		pNew->SetPlaceholder(StringToWString(m_strNewName));
 		pNew->SetLayer(m_nNewLayer);
 		pNew->SetAnchor(m_v2NewAnchor);

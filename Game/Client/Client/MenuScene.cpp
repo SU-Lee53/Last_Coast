@@ -17,7 +17,7 @@ void MenuScene::BuildObjects()
 
 	// Title
 	{
-		std::shared_ptr<TextBox> pTitle = std::make_shared<TextBox>(L"Malgun Gothic");
+		std::shared_ptr<TextBox> pTitle = std::make_shared<TextBox>(L"Noto Sans KR");
 		pTitle->SetText(L"LAST COAST");
 		pTitle->SetLayer(0);
 		pTitle->SetAnchor(Vector2{ 0.5, 0.0 });
@@ -29,7 +29,7 @@ void MenuScene::BuildObjects()
 
 	// Buttons
 	{
-		std::shared_ptr<TextButton> pPlayButton = std::make_shared<TextButton>(L"Malgun Gothic");
+		std::shared_ptr<TextButton> pPlayButton = std::make_shared<TextButton>(L"Noto Sans KR");
 		pPlayButton->SetText(L"Play");
 		pPlayButton->SetLayer(0);
 		pPlayButton->SetAnchor(Vector2{ 0.5, 0.0 });
@@ -59,7 +59,7 @@ void MenuScene::BuildObjects()
 
 		m_pUIBoard->InsertUI(pPlayButton);
 
-		std::shared_ptr<TextButton> pQuitButton = std::make_shared<TextButton>(L"Malgun Gothic");
+		std::shared_ptr<TextButton> pQuitButton = std::make_shared<TextButton>(L"Noto Sans KR");
 		pQuitButton->SetText(L"Quit");
 		pQuitButton->SetLayer(0);
 		pQuitButton->SetAnchor(Vector2{ 0.5, 0.0 });
