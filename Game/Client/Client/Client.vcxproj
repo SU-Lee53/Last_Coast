@@ -193,6 +193,8 @@
     <ClInclude Include="GameEvent.h" />
     <ClInclude Include="HelicopterObject.h" />
     <ClInclude Include="LMGWeapon.h" />
+    <ClInclude Include="LoadingManager.h" />
+    <ClInclude Include="LoadingScene.h" />
     <ClInclude Include="LobbyScene.h" />
     <ClInclude Include="LogInScene.h" />
     <ClInclude Include="MenuScene.h" />
@@ -387,6 +389,8 @@
     <ClCompile Include="FireEffect.cpp" />
     <ClCompile Include="GameEvent.cpp" />
     <ClCompile Include="HelicopterObject.cpp" />
+    <ClCompile Include="LoadingManager.cpp" />
+    <ClCompile Include="LoadingScene.cpp" />
     <ClCompile Include="LobbyScene.cpp" />
     <ClCompile Include="LogInScene.cpp" />
     <ClCompile Include="MenuScene.cpp" />

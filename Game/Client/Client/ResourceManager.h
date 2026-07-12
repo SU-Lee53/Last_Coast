@@ -33,11 +33,23 @@ public:
 	VertexBuffer CreateVertexBuffer(const std::vector<T>& vertices, uint32 nType);
 	IndexBuffer CreateIndexBuffer(const std::vector<UINT>& Indices);
 
-	ComPtr<ID3D12Resource> CreateBufferResource(void* pData, UINT nBytes, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates);
+	ComPtr<ID3D12Resource> CreateBufferResource(
+		void* pData, 
+		UINT nBytes, 
+		D3D12_HEAP_TYPE d3dHeapType, 
+		D3D12_RESOURCE_STATES d3dResourceStates);
 
 	void WaitForCopyComplete();
 
 public:
+	void PollCopyComplete();
+	bool IsCopyComplete();
+	bool IsFenceComplete(uint64 ui64FenceValue) const;
+	uint64 GetLastSubmittedFenceValue() const;
+
+private:
+	uint64 GetPendingCopyFenceValue() const;
+
 private:
 	void ReleaseCompletedUploadBuffers();
 
@@ -45,7 +57,7 @@ private:
 private:
 	void CreateCommandList();
 	void CreateFence();
-	UINT64 Fence();
+	uint64 Fence();
 	void WaitForGPUComplete();
 
 	void ExcuteCommandList(CommandListPair& cmdPair);
@@ -58,7 +70,9 @@ private:
 
 	ComPtr<ID3D12Fence>		m_pd3dFence = nullptr;
 	HANDLE					m_hFenceEvent = nullptr;
-	UINT64					m_nFenceValue = 0;
+	uint64					m_un64FenceValue = 0;
+
+	mutable std::recursive_mutex m_mtxCopy;
 
 private:
 	CommandListPool			m_CommandListPool;
@@ -70,6 +84,8 @@ private:
 template<typename T>
 inline VertexBuffer ResourceManager::CreateVertexBuffer(const std::vector<T>& vertices, uint32 nType)
 {
+	std::lock_guard lock{ m_mtxCopy };
+
 	HRESULT hr;
 
 	ShaderResource Buffer{};

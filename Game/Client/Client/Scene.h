@@ -40,6 +40,10 @@ public:
 	virtual void BuildObjects() = 0;
 	virtual void BuildLights();
 
+
+	// Complete building scene of async changable scene
+	virtual void FinalizeBuild() {};
+
 public:
 	template<typename T> requires std::derived_from<T, IGameObject>
 	void AddObject(std::shared_ptr<T> pObj);

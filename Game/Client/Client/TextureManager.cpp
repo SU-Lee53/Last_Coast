@@ -34,6 +34,7 @@ void TextureManager::LoadGameTextures()
 
 TextureRef<Texture> TextureManager::LoadTexture(const std::string& strTextureName, bool bCheckTransparent)
 {
+	std::lock_guard lock{ m_mtxTextureLoad };
 	if (strTextureName == "None") return {};
 
 	TextureHandle findHandle = m_SRVTextureTable.GetHandle(strTextureName);
@@ -69,6 +70,7 @@ TextureRef<Texture> TextureManager::LoadTexture(const std::string& strTextureNam
 
 TextureRef<Texture> TextureManager::LoadTextureFromRaw(const std::string& strTextureName, uint32 unWidth, uint32 unHeight)
 {
+	std::lock_guard lock{ m_mtxTextureLoad };
 	TextureHandle findHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!findHandle.IsValid()) {
 		std::shared_ptr<Texture> pTexture = std::make_shared<Texture>();
@@ -102,6 +104,7 @@ TextureRef<Texture> TextureManager::LoadTextureFromRaw(const std::string& strTex
 
 TextureRef<Texture> TextureManager::LoadTextureArray(const std::string& strTextureName, const std::wstring& wstrTexturePath)
 {
+	std::lock_guard lock{ m_mtxTextureLoad };
 	TextureHandle findHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!findHandle.IsValid()) {
 		std::shared_ptr<Texture> pTexture = std::make_shared<Texture>();
@@ -135,6 +138,7 @@ TextureRef<Texture> TextureManager::LoadTextureArray(const std::string& strTextu
 
 TextureRef<Texture> TextureManager::LoadTextureFromRawData(const std::string& strTextureName, const std::vector<Vector4>& data, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat)
 {
+	std::lock_guard lock{ m_mtxTextureLoad };
 	TextureHandle findHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!findHandle.IsValid()) {
 		std::shared_ptr<Texture> pTexture = std::make_shared<Texture>();
@@ -168,6 +172,7 @@ TextureRef<Texture> TextureManager::LoadTextureFromRawData(const std::string& st
 
 TextureRef<Texture> TextureManager::LoadTextureFromHeightData(const std::string& strTextureName, const std::vector<uint16>& data, uint32 unWidth, uint32 unHeight)
 {
+	std::lock_guard lock{ m_mtxTextureLoad };
 	TextureHandle findHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!findHandle.IsValid()) {
 		std::shared_ptr<Texture> pTexture = std::make_shared<Texture>();
@@ -201,6 +206,7 @@ TextureRef<Texture> TextureManager::LoadTextureFromHeightData(const std::string&
 
 TextureRef<RenderTargetTexture> TextureManager::LoadRenderTargetTexture(const std::string& strTextureName, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat, D3D12_RESOURCE_STATES d3dInitialState, float* pfClearValue)
 {
+	std::lock_guard lock{ m_mtxTextureLoad };
 	TextureHandle SRVFindHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!SRVFindHandle.IsValid()) {
 		std::shared_ptr<RenderTargetTexture> pTexture = std::make_shared<RenderTargetTexture>();
@@ -260,6 +266,7 @@ TextureRef<RenderTargetTexture> TextureManager::LoadRenderTargetTexture(const st
 
 TextureRef<RenderTargetTexture> TextureManager::LoadRenderTargetTexture(ComPtr<ID3D12Resource> pd3dRTVResourceFromSwapChain, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat)
 {
+	std::lock_guard lock{ m_mtxTextureLoad };
 	std::string strTextureName = "RTV_" + std::to_string(g_unRTVFromCoreCount++);
 
 	std::shared_ptr<RenderTargetTexture> pTexture = std::make_shared<RenderTargetTexture>();
@@ -310,6 +317,7 @@ TextureRef<RenderTargetTexture> TextureManager::LoadRenderTargetTexture(ComPtr<I
 
 TextureRef<DepthStencilTexture> TextureManager::LoadDepthStencilTexture(const std::string& strTextureName, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiDSVFormat)
 {
+	std::lock_guard lock{ m_mtxTextureLoad };
 	TextureHandle SRVFindHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!SRVFindHandle.IsValid()) {
 		std::shared_ptr<DepthStencilTexture> pTexture = std::make_shared<DepthStencilTexture>();
@@ -368,6 +376,7 @@ TextureRef<DepthStencilTexture> TextureManager::LoadDepthStencilTexture(const st
 
 TextureRef<UnorderedAccessTexture> TextureManager::LoadUnorderedAccessTexture(const std::string& strTextureName, uint32 unArraySize, uint32 unWidth, uint32 unHeight, uint32 unDepth, DXGI_FORMAT dxgiSRVUAVFormat)
 {
+	std::lock_guard lock{ m_mtxTextureLoad };
 	TextureHandle SRVFindHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!SRVFindHandle.IsValid()) {
 		std::shared_ptr<UnorderedAccessTexture> pTexture = std::make_shared<UnorderedAccessTexture>();
@@ -442,6 +451,7 @@ TextureRef<UnorderedAccessTexture> TextureManager::LoadUnorderedAccessTexture(co
 
 TextureRef<RWRenderTargetTexture> TextureManager::LoadRWRenderTargetTexture(const std::string& strTextureName, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiSRVFormat, DXGI_FORMAT dxgiRTVFormat, DXGI_FORMAT dxgiUAVFormat)
 {
+	std::lock_guard lock{ m_mtxTextureLoad };
 	TextureHandle SRVFindHandle = m_SRVTextureTable.GetHandle(strTextureName);
 	if (!SRVFindHandle.IsValid()) {
 		std::shared_ptr<RWRenderTargetTexture> pTexture = std::make_shared<RWRenderTargetTexture>();
@@ -638,27 +648,71 @@ CD3DX12_CPU_DESCRIPTOR_HANDLE TextureManager::GetCPUHandleByHandle(const Texture
 
 void TextureManager::WaitForCopyComplete()
 {
-	if (m_PendingUploadBuffers.empty()) {
+	std::lock_guard lock{ m_mtxCopy };
+
+	uint64 un64ExpectedFenceValue = GetPendingCopyFenceValue();
+	if (un64ExpectedFenceValue == 0) {
 		return;
 	}
 
-	UINT64 ui64ExpectedFenceValue = 0;
-	for (const PendingUploadBuffer& pending : m_PendingUploadBuffers) {
-		if (pending.ui64FenceValue > ui64ExpectedFenceValue) {
-			ui64ExpectedFenceValue = pending.ui64FenceValue;
-		}
-	}
-
-	if (m_pd3dFence->GetCompletedValue() < ui64ExpectedFenceValue) {
-		m_pd3dFence->SetEventOnCompletion(ui64ExpectedFenceValue, m_hFenceEvent);
+	if (m_pd3dFence->GetCompletedValue() < un64ExpectedFenceValue) {
+		m_pd3dFence->SetEventOnCompletion(un64ExpectedFenceValue, m_hFenceEvent);
 		::WaitForSingleObject(m_hFenceEvent, INFINITE);
 	}
 
 	ReleaseCompletedUploadBuffers();
 }
 
+void TextureManager::PollCopyComplete()
+{
+	std::lock_guard lock{ m_mtxCopy };
+
+	ReleaseCompletedUploadBuffers();
+}
+
+bool TextureManager::IsCopyComplete()
+{
+	std::lock_guard lock{ m_mtxCopy };
+
+	PollCopyComplete();
+	return m_PendingUploadBuffers.empty();
+}
+
+bool TextureManager::IsFenceComplete(uint64 ui64FenceValue) const
+{
+	std::lock_guard lock{ m_mtxCopy };
+
+	if (ui64FenceValue == 0) {
+		return true;
+	}
+
+	return m_pd3dFence->GetCompletedValue() >= ui64FenceValue;
+}
+
+uint64 TextureManager::GetLastSubmittedFenceValue() const
+{
+	std::lock_guard lock{ m_mtxCopy };
+	return m_un64FenceValue;
+}
+
+uint64 TextureManager::GetPendingCopyFenceValue() const
+{
+	std::lock_guard lock{ m_mtxCopy };
+
+	uint64 un64ExpectedFenceValue = 0;
+	for (const auto& pendingBuffer : m_PendingUploadBuffers) {
+		if (pendingBuffer.ui64FenceValue > un64ExpectedFenceValue) {
+			un64ExpectedFenceValue = pendingBuffer.ui64FenceValue;
+		}
+	}
+
+	return un64ExpectedFenceValue;
+}
+
 void TextureManager::CreateUploadBuffer(ID3D12Resource** ppUploadBuffer, uint32 unBytes)
 {
+	std::lock_guard lock{ m_mtxCopy };
+
 	HRESULT hr = DEVICE->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
@@ -675,7 +729,9 @@ void TextureManager::CreateUploadBuffer(ID3D12Resource** ppUploadBuffer, uint32 
 
 void TextureManager::ReleaseCompletedUploadBuffers()
 {
-	UINT64 ui64CompletedValue = m_pd3dFence->GetCompletedValue();
+	std::lock_guard lock{ m_mtxCopy };
+
+	uint64 ui64CompletedValue = m_pd3dFence->GetCompletedValue();
 	m_CommandListPool.ReclaimEnded(ui64CompletedValue);
 
 	std::erase_if(m_PendingUploadBuffers, [ui64CompletedValue](const PendingUploadBuffer& pended) {
@@ -685,6 +741,8 @@ void TextureManager::ReleaseCompletedUploadBuffers()
 
 void TextureManager::UpdateResources(ComPtr<ID3D12Resource> pResource, D3D12_RESOURCE_STATES d3dCurrentState, const std::vector<D3D12_SUBRESOURCE_DATA>& subResources, uint32 unBytes, ComPtr<ID3D12Resource> pd3dUploadBuffer)
 {
+	std::lock_guard lock{ m_mtxCopy };
+
 	if (!pd3dUploadBuffer) {
 		CreateUploadBuffer(pd3dUploadBuffer.GetAddressOf(), unBytes);
 	}
@@ -761,16 +819,20 @@ void TextureManager::ExcuteCommandList(CommandListPair& cmdPair)
 	cmdPair.ui64FenceValue = Fence();
 }
 
-UINT64 TextureManager::Fence()
+uint64 TextureManager::Fence()
 {
-	m_nFenceValue++;
-	m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), m_nFenceValue);
-	return m_nFenceValue;
+	std::lock_guard lock{ m_mtxCopy };
+
+	m_un64FenceValue++;
+	m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), m_un64FenceValue);
+	return m_un64FenceValue;
 }
 
 void TextureManager::WaitForGPUComplete()
 {
-	const UINT64 expectedFenceValue = m_nFenceValue;
+	std::lock_guard lock{ m_mtxCopy };
+
+	const uint64 expectedFenceValue = m_un64FenceValue;
 
 	if (m_pd3dFence->GetCompletedValue() < expectedFenceValue)
 	{
@@ -781,6 +843,8 @@ void TextureManager::WaitForGPUComplete()
 
 CommandListPair* TextureManager::AllocateCommandListSafe()
 {
+	std::lock_guard lock{ m_mtxCopy };
+
 	if (!m_CommandListPool.HasFree()) {
 		ReleaseCompletedUploadBuffers();
 	}

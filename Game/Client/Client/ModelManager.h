@@ -41,6 +41,7 @@ private:
 private:
 	// Model Pool
 	std::unordered_map<std::string, std::shared_ptr<IGameObject>> m_pModelPool;
+	mutable std::recursive_mutex m_mtxModel;
 
 private:
 	inline static std::string g_strModelBasePath = "../Resources/Models";

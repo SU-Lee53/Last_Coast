@@ -17,6 +17,7 @@ public:
 
 private:
 	MaterialTable m_MaterialTable;
+	mutable std::mutex m_mtxMaterial;
 
 	constexpr static size_t g_unMaxMaterialCount = 2048;
 };
@@ -24,6 +25,7 @@ private:
 template<typename T> requires std::derived_from<T, IMaterial>
 inline MaterialHandle MaterialManager::LoadMaterial(const std::string& strNameKey, const MATERIALLOADINFO& loadInfo)
 {
+	std::lock_guard lock{ m_mtxMaterial };
 	MaterialHandle findHandle = m_MaterialTable.GetHandle(strNameKey);
 	if (!findHandle.IsValid()) {
 		std::shared_ptr<IMaterial> pMaterial = std::make_shared<T>();

@@ -267,12 +267,12 @@ void LobbyScene::Update()
 	m_pPlayer->GetTransform()->SetRotation(m_v3CurrentPlayerOrientation);
 
 
-	ImGui::Begin("Preview");
+	/*ImGui::Begin("Preview");
 	for (uint32 i = 0; i < m_PreviewTransforms.size(); ++i) {
 		ImGui::DragFloat3(std::format("Pos of {}", i).c_str(), (float*)(&m_PreviewTransforms[i].v3Position), 1.f, -1000.f, 1000.f);
 		ImGui::DragFloat3(std::format("Orientation of {}", i).c_str(), (float*)(&m_PreviewTransforms[i].v3Orientation), 1.f, 0.f, 360.f);
 		ImGui::NewLine();
-	}
+	}*/
 
 	for (auto& p : m_ActivePreviews) {
 		p.pPlayer->GetTransform()->SetPosition(m_PreviewTransforms[p.nSlotIndex].v3Position);
@@ -381,7 +381,8 @@ void LobbyScene::Update()
 
 	if (m_bProceed) {
 		m_bProceed = false;
-		SCENE->ChangeScene<GameScene>();
+		//SCENE->ChangeScene<GameScene>();
+		SCENE->ChangeSceneAsync<GameScene>();
 		return;
 	}
 }

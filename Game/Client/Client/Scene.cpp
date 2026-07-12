@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "Scene.h"
 #include "TerrainObject.h"
 #include "NodeObject.h"
@@ -47,6 +47,9 @@ void Scene::CleanUp()
 
 void Scene::PostInitialize()
 {
+	// Call after async BuildObjects()
+	FinalizeBuild();
+
 	InitializeObjects();
 	if (m_pPlayer) {
 		m_pMainCamera = m_pPlayer->GetCamera();
@@ -221,12 +224,15 @@ void Scene::PostUpdate()
 
 		m_World.PostUpdate();
 
-		ANIMATION->UpdateAnimationParallel();
+		if (!SCENE->IsInAsyncSceneChanging()) {
+			ANIMATION->UpdateAnimationParallel();
 
-		if (m_pPlayer) {
-			m_pPlayer->PostAnimationUpdate();
+			if (m_pPlayer) {
+				m_pPlayer->PostAnimationUpdate();
+			}
+
+			m_World.PostAnimationUpdate();
 		}
-		m_World.PostAnimationUpdate();
 	}
 
 	// 스카이박스(시간/태양)는 컷씬 중에도 갱신 — 석양 연출이 진행되어야 함.

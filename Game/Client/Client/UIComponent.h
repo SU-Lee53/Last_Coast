@@ -54,7 +54,7 @@ public:
 
 public:
 	virtual UIRectData MakeSBData() const = 0;
-	virtual const TextureRef<Texture>& GetTextureRef() const { return {}; }
+	virtual const TextureRef<Texture>& GetTextureRef() const;
 
 	RECT GetScreenRect() const;
 	virtual const std::wstring& GetName() const { return m_strName; }

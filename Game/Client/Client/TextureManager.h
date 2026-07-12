@@ -90,7 +90,6 @@ public:
 	std::shared_ptr<Texture> GetTextureByHandle(const TextureHandle& handle, TEXTURE_RESOURCE_TYPE eResourceType) const;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCPUHandleByHandle(const TextureHandle& handle, TEXTURE_RESOURCE_TYPE eResourceType) const;
 
-
 	void WaitForCopyComplete();
 
 	void UpdateResources(
@@ -99,6 +98,15 @@ public:
 		const std::vector<D3D12_SUBRESOURCE_DATA>& subResources,
 		uint32 unBytes,
 		ComPtr<ID3D12Resource> pd3dUploadBuffer = nullptr);
+
+public:
+	void PollCopyComplete();
+	bool IsCopyComplete();
+	bool IsFenceComplete(uint64 ui64FenceValue) const;
+	uint64 GetLastSubmittedFenceValue() const;
+
+private:
+	uint64 GetPendingCopyFenceValue() const;
 
 private:
 	void ReleaseCompletedUploadBuffers();
@@ -124,7 +132,7 @@ private:
 private:
 	void CreateCommandList();
 	void CreateFence();
-	UINT64 Fence();
+	uint64 Fence();
 	void WaitForGPUComplete();
 
 	void ExcuteCommandList(CommandListPair& cmdPair);
@@ -136,7 +144,10 @@ private:
 
 	ComPtr<ID3D12Fence>		m_pd3dFence = nullptr;
 	HANDLE					m_hFenceEvent = nullptr;
-	UINT64					m_nFenceValue = 0;
+	uint64					m_un64FenceValue = 0;
+
+	mutable std::recursive_mutex m_mtxCopy;	// protects cmdlist, uploadbuffer, copy fence
+	mutable std::recursive_mutex m_mtxTextureLoad; // protects file loading and lookup
 
 #pragma endregion
 

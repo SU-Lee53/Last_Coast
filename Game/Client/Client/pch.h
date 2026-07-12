@@ -40,6 +40,8 @@
 #include <typeindex>
 #include <functional>
 #include <queue>
+#include <thread>
+#include <condition_variable>
 
 using namespace std::string_literals;
 
@@ -187,6 +189,7 @@ using namespace AIDLL;
 //#include "CollisionManager.h"
 #include "MaterialManager.h"
 #include "ComputeManager.h"
+#include "LoadingManager.h"
 
 #include "TextRenderer.h"
 

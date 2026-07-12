@@ -39,6 +39,7 @@ public:										\
 #define AI				GET_SINGLE(AIManagerWrapper)
 #define MATERIAL		GET_SINGLE(MaterialManager)
 #define COMPUTE			GET_SINGLE(ComputeManager)
+#define LOADING			GET_SINGLE(LoadingManager)
 //#define TEXT			GET_SINGLE(TextManager)
 
 #define CUR_SCENE		SCENE->GetCurrentScene()

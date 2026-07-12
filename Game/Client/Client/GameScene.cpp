@@ -27,26 +27,7 @@ void GameScene::BuildObjects()
 	m_pUIBoard = std::make_unique<UIBoard>();
 	m_pPlayer = std::make_shared<NetworkOwnerThirdPersonPlayer>();
 
-	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
-	m_pPlayer->Initialize();
-	m_pPlayer->GetTransform()->SetPosition(29000, -3536.692724, 25000);
-	if (auto pThirdPerson = static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
-		const auto& data = GCTX->GetGameData();
-		pThirdPerson->SetPlayerModel(GameContext::g_strCharacterNames[data.m_nCurModelIndex]);
-		pThirdPerson->GiveWeapon((WEAPON_TYPE)data.m_nCurWeaponIndex);
-		if (bOnline)
-			NETWORK->SendPlayerCharacter(static_cast<unsigned char>(data.m_nCurModelIndex)); // late-join 리모트에 모델 반영
-	}
-
-
 	m_pSkybox = std::make_shared<Skybox>();
-	m_pSkybox->Initialize();
-	m_pSkybox->LoadSkyboxParameters("Start");
-	m_ToneMappingVolume.LoadFromFiles("Start");
-	m_PostProcessingVolume.LoadFromFiles("Start");
-
-	//m_pPlayer = std::make_shared<DebugPlayer>();
-	//m_pPlayer->Initialize();
 
 	m_pTerrain = std::make_shared<TerrainObject>();
 	m_pTerrain->LoadFromFiles("Game");
@@ -68,14 +49,36 @@ void GameScene::BuildObjects()
 	// 구조 헬기(착륙) 비행 경로 (언리얼 ArrivePath_N TargetPoint 익스포트). 없으면 직선 폴백.
 	LoadHeliArrivePath("GAME_HeliArrivePath");
 
-	//std::shared_ptr<TextBox> pText = std::make_shared<TextBox>(L"Noto Sans KR");
-	//pText->SetText(std::format(L"로딩 시간 : {}ms", llLoadTime));
-	//pText->SetLayer(0);
-	//pText->SetAnchor(Vector2{ 0,0 });
-	//pText->SetPivot(Vector2{ 0,0 });
-	//pText->SetPosition(Vector2{ 10,150 });
-	//pText->SetTextHeight(50);
-	//m_pUIBoard->InsertUI(pText);
+	// 서버 트리거 게임 이벤트용 시퀀스 (런타임에 이벤트 AddEvent).
+	// Scene::FixedUpdate()가 매 프레임 m_pEventSequence->Update() 호출.
+	m_pEventSequence = std::make_shared<EventSequence>(this);
+	m_pEventSequence->AddEvent(std::make_shared<FireEvent>());
+
+	m_pWater = std::make_shared<WaterGridObject>();
+	auto& pTransform = m_pWater->GetTransform();
+	m_v3WaterPos = Vector3(0.f, -47_m, 0.f);
+	pTransform->SetPosition(m_v3WaterPos);
+	AddObject(m_pWater);
+
+	m_ToneMappingVolume.LoadFromFiles("Start");
+	m_PostProcessingVolume.LoadFromFiles("Start");
+}
+
+void GameScene::FinalizeBuild()
+{
+	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
+	m_pPlayer->Initialize();
+	m_pPlayer->GetTransform()->SetPosition(29000, -3536.692724, 25000);
+	if (auto pThirdPerson = static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
+		const auto& data = GCTX->GetGameData();
+		pThirdPerson->SetPlayerModel(GameContext::g_strCharacterNames[data.m_nCurModelIndex]);
+		pThirdPerson->GiveWeapon((WEAPON_TYPE)data.m_nCurWeaponIndex);
+		if (bOnline)
+			NETWORK->SendPlayerCharacter(static_cast<unsigned char>(data.m_nCurModelIndex)); // late-join 리모트에 모델 반영
+	}
+
+	m_pSkybox->Initialize();
+	m_pSkybox->LoadSkyboxParameters("Start");
 
 	BuildChatUI();
 
@@ -89,20 +92,6 @@ void GameScene::BuildObjects()
 	m_pEscapeText->SetTextHeight(60.f);
 	m_pEscapeText->SetVisible(false);
 	m_pUIBoard->InsertUI(m_pEscapeText);
-
-	// 서버 트리거 게임 이벤트용 시퀀스 (런타임에 이벤트 AddEvent).
-	// Scene::FixedUpdate()가 매 프레임 m_pEventSequence->Update() 호출.
-	m_pEventSequence = std::make_shared<EventSequence>(this);
-	m_pEventSequence->AddEvent(std::make_shared<FireEvent>());
-
-	m_pWater = std::make_shared<WaterGridObject>();
-	//pWater->Initialize();
-
-	auto& pTransform = m_pWater->GetTransform();
-	m_v3WaterPos = Vector3(0.f, -47_m, 0.f);
-	pTransform->SetPosition(m_v3WaterPos);
-	AddObject(m_pWater);
-	
 }
 
 void GameScene::OnEnterScene()

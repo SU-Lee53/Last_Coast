@@ -115,7 +115,6 @@ public:
 private:
 	TableType* m_pResourceTable = nullptr;
 	ID m_id = TableType::InvalidID;
-
 };
 
 using MaterialHandle = ResourceHandle<std::string, IMaterial>;
@@ -136,6 +135,7 @@ public:
 
 	using CleanUpFn = std::function<void(const ResourcePtr&)>;
 	void SetCleanUpCallback(CleanUpFn fn) {
+		std::lock_guard lock{ m_mtxTable };
 		m_CleanUpFn = std::move(fn);
 	}
 
@@ -144,6 +144,7 @@ public:
 public:
 	// Initialize
 	void Initialize(size_t nMaxSize, bool bUseDescriptorHeap, D3D12_DESCRIPTOR_HEAP_TYPE d3dHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES, D3D12_DESCRIPTOR_HEAP_FLAGS d3dHeapFlags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE) {
+		std::lock_guard lock{ m_mtxTable };
 		m_unMaxSize = nMaxSize;
 		m_ResourceEntries.resize(nMaxSize);
 		m_KeyIDMap.reserve(nMaxSize);
@@ -151,6 +152,7 @@ public:
 
 	// Register
 	Handle Register(const KeyType& key, ResourcePtr pResource) {
+		std::lock_guard lock{ m_mtxTable };
 		auto it = m_KeyIDMap.find(key);
 		if (it != m_KeyIDMap.end()) {
 			return { this, it->second };
@@ -173,6 +175,7 @@ public:
 	
 	// Look Up
 	Handle GetHandle(const KeyType& key) {
+		std::lock_guard lock{ m_mtxTable };
 		auto it = m_KeyIDMap.find(key);
 		if (it == m_KeyIDMap.end()) {
 			return {};
@@ -198,6 +201,7 @@ public:
 	}
 
 	ResourcePtr GetResourceByName(const KeyType& key) const {
+		std::lock_guard lock{ m_mtxTable };
 		auto it = m_KeyIDMap.find(key);
 		if (it == m_KeyIDMap.end())
 			return nullptr;
@@ -216,53 +220,70 @@ public:
 
 private:
 	bool AddRef(ID id) {
-		if (id >= m_unMaxSize) {
+		if (id >= m_unMaxSize || id >= m_ResourceEntries.size()) {
 			return false;
 		}
 
 		auto& entry = m_ResourceEntries[id];
+		std::atomic_ref<int32> refCount{ entry.nRefCount };
+
+		int32 current = refCount.load();
+
+		while (current > 0) {
+			if (refCount.compare_exchange_weak(current, current + 1)) {
+				return true;
+			}
+		}
+
+		std::lock_guard lock{ m_mtxTable };
 		if (!entry.bAlive) {
 			return false;
 		}
 
-		++entry.nRefCount;
+		refCount.fetch_add(1);
 		return true;
 	}
 
 	bool Release(ID id) {
-		if (id >= m_unMaxSize) {
-			return false;
-		}
-
-		if (id >= m_ResourceEntries.size()) {
+		if (id >= m_unMaxSize || id >= m_ResourceEntries.size()) {
 			return false;
 		}
 
 		auto& entry = m_ResourceEntries[id];
+		std::atomic_ref<int32> refCount{ entry.nRefCount };
+
+		int32 current = refCount.load();
+
+		while (current > 1) {
+			if (refCount.compare_exchange_weak(current, current - 1)) {
+				return true;
+			}
+		}
+
+		std::lock_guard lock{ m_mtxTable };
 		if (!entry.bAlive) {
 			return false;
 		}
 
-		assert(entry.nRefCount > 0);
-		--entry.nRefCount;
-
-		if (entry.nRefCount == 0) {
-			auto& pResource = entry.pResource;
-			if (m_CleanUpFn && pResource) {
-				m_CleanUpFn(pResource);
-			}
-
-
-			m_KeyIDMap.erase(entry.key);
-
-			//entry.pResource.reset();
-			entry.bAlive = false;
-			entry.nRefCount = 0;
-			entry.key = KeyType{};
-
-
-			FreeID(id);
+		const int32 previous = refCount.fetch_sub(1);
+		if (previous > 1) {
+			return true;
 		}
+
+		if (previous != 1) {
+			refCount.fetch_add(1);
+			assert(false && "Invalud resource ref count");
+			return false;
+		}
+
+		if (m_CleanUpFn && entry.pResource) {
+			m_CleanUpFn(entry.pResource);
+		}
+
+		m_KeyIDMap.erase(entry.key);
+		entry.bAlive = false;
+		entry.key = KeyType{};
+		FreeID(id);
 
 		return true;
 	}
@@ -302,6 +323,8 @@ private:
 
 	std::vector<ID> m_FreeIDs;
 	ID m_NextID = 0;
+
+	mutable std::recursive_mutex m_mtxTable;
 
 };
 
@@ -352,6 +375,7 @@ public:
 public:
 	// Initialize
 	void Initialize(ComPtr<ID3D12Device> pd3dDevice, size_t nMaxSize, bool bUseDescriptorHeap, D3D12_DESCRIPTOR_HEAP_TYPE d3dHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES, D3D12_DESCRIPTOR_HEAP_FLAGS d3dHeapFlags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE) {
+		std::lock_guard lock{ m_mtxTable };
 		m_pd3dDeviceRef = pd3dDevice;
 		m_unMaxSize = nMaxSize;
 
@@ -377,6 +401,7 @@ public:
 
 	// Register
 	Handle Register(const KeyType& key, ResourcePtr pResource, OUT ResourceDesc* pResourceDesc = nullptr, const void* pContext = nullptr, size_t nContextSize = 0) {
+		std::lock_guard lock{ m_mtxTable };
 		auto it = m_KeyIDMap.find(key);
 		if (it != m_KeyIDMap.end()) {
 			return { this, it->second };
@@ -445,6 +470,7 @@ public:
 
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCPUHandleByName(const KeyType& key) const {
+		std::lock_guard lock{ m_mtxTable };
 		auto it = m_KeyIDMap.find(key);
 		if (it == m_KeyIDMap.end())
 			return CD3DX12_CPU_DESCRIPTOR_HANDLE{};
@@ -456,6 +482,7 @@ public:
 
 	// Look Up
 	Handle GetHandle(const KeyType& key) {
+		std::lock_guard lock{ m_mtxTable };
 		auto it = m_KeyIDMap.find(key);
 		if (it == m_KeyIDMap.end()) {
 			return {};
@@ -480,7 +507,8 @@ public:
 		return handle.GetResource();
 	}
 
-	const ResourcePtr& GetResourceByName(const KeyType& key) const {
+	const ResourcePtr GetResourceByName(const KeyType& key) const {
+		std::lock_guard lock{ m_mtxTable };
 		auto it = m_KeyIDMap.find(key);
 		if (it == m_KeyIDMap.end())
 			return nullptr;
@@ -503,47 +531,68 @@ private:
 
 private:
 	bool AddRef(ID id) {
-		if (id >= m_unMaxSize) {
+		if (id >= m_unMaxSize || id >= m_ResourceEntries.size()) {
 			return false;
 		}
 
 		auto& entry = m_ResourceEntries[id];
+		std::atomic_ref<int32> refCount{ entry.nRefCount };
+
+		int32 current = refCount.load();
+
+		while (current > 0) {
+			if (refCount.compare_exchange_weak(current, current + 1)) {
+				return true;
+			}
+		}
+		
+		std::lock_guard lock{ m_mtxTable };
 		if (!entry.bAlive) {
 			return false;
 		}
 
-		++entry.nRefCount;
+		refCount.fetch_add(1);
 		return true;
 	}
 
 	bool Release(ID id) {
-		if (id >= m_unMaxSize) {
-			return false;
-		}
-
-		if (id >= m_ResourceEntries.size()) {
+		if (id >= m_unMaxSize || id >= m_ResourceEntries.size()) {
 			return false;
 		}
 
 		auto& entry = m_ResourceEntries[id];
+		std::atomic_ref<int32> refCount{ entry.nRefCount };
+
+		int32 current = refCount.load();
+
+		while (current > 1) {
+			if (refCount.compare_exchange_weak(current, current - 1)) {
+				return true;
+			}
+		}
+
+		std::lock_guard lock{ m_mtxTable };
 		if (!entry.bAlive) {
 			return false;
 		}
 
-		assert(entry.nRefCount > 0);
-		--entry.nRefCount;
-
-		if (entry.nRefCount == 0) {
-			m_KeyIDMap.erase(entry.key);
-
-			entry.pResource.reset();
-			entry.bAlive = false;
-			entry.nRefCount = 0;
-			entry.key = KeyType{};
-			entry.un64DescriptorIndex = std::numeric_limits<uint64>::max();
-
-			FreeID(id);
+		const int32 previous = refCount.fetch_sub(1);
+		if (previous > 1) {
+			return true;
 		}
+
+		if (previous != 1) {
+			refCount.fetch_add(1);
+			assert(false && "Invalud resource ref count");
+			return false;
+		}
+
+		m_KeyIDMap.erase(entry.key);
+		entry.pResource.reset();
+		entry.bAlive = false;
+		entry.key = KeyType{};
+		entry.un64DescriptorIndex = std::numeric_limits<uint64>::max();
+		FreeID(id);
 
 		return true;
 	}
@@ -586,6 +635,8 @@ private:
 
 	std::vector<ID> m_FreeIDs;
 	ID m_NextID = 0;
+
+	mutable std::recursive_mutex m_mtxTable;
 };
 
 template<typename KeyType>

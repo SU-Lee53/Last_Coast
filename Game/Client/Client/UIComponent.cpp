@@ -1,6 +1,12 @@
 ﻿#include "pch.h"
 #include "UIComponent.h"
 
+const TextureRef<Texture>& IUIComponent::GetTextureRef() const
+{
+	static const TextureRef<Texture> g_EmptyTextureRef{};
+	return g_EmptyTextureRef;
+}
+
 RECT IUIComponent::GetScreenRect() const
 {
 	const float fScreenWidth = static_cast<float>(WinCore::g_dwClientWidth);

@@ -66,6 +66,7 @@ void ModelManager::Initialize()
 
 void ModelManager::LoadGameModels()
 {
+	std::lock_guard lock{ m_mtxModel };
 	//LoadModelFromFile("Ch33_nonPBR");
 	//LoadModelFromFile("player_f_02");
 	//LoadModelFromFile("player_m_02");
@@ -74,6 +75,7 @@ void ModelManager::LoadGameModels()
 
 void ModelManager::Add(const std::string& strModelName, std::shared_ptr<IGameObject> pObj)
 {
+	std::lock_guard lock{ m_mtxModel };
 	if (!m_pModelPool.contains(strModelName)) {
 		m_pModelPool.insert({ strModelName, pObj });
 	}
@@ -81,6 +83,7 @@ void ModelManager::Add(const std::string& strModelName, std::shared_ptr<IGameObj
 
 std::shared_ptr<IGameObject> ModelManager::Get(const std::string& strObjName)
 {
+	std::lock_guard lock{ m_mtxModel };
 	auto it = m_pModelPool.find(strObjName);
 	if (it == m_pModelPool.end()) {
 		return nullptr;
@@ -91,6 +94,7 @@ std::shared_ptr<IGameObject> ModelManager::Get(const std::string& strObjName)
 
 std::shared_ptr<IGameObject> ModelManager::LoadOrGet(const std::string& strFileName, bool bUseNameFilenameOnRoot)
 {
+	std::lock_guard lock{ m_mtxModel };
 	auto it = m_pModelPool.find(strFileName);
 	if (it == m_pModelPool.end()) {
 		return LoadModelFromFile(strFileName, bUseNameFilenameOnRoot);
@@ -101,6 +105,7 @@ std::shared_ptr<IGameObject> ModelManager::LoadOrGet(const std::string& strFileN
 
 std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& strFileName, bool bUseNameFilenameOnRoot)
 {
+	std::lock_guard lock{ m_mtxModel };
 	if (auto pObj = Get(strFileName)) {
 		return pObj;
 	}
@@ -302,6 +307,7 @@ MATERIALLOADINFO ModelManager::LoadMaterialInfoFromFiles(const nlohmann::json& i
 
 const std::vector<COLLISIONMESHINFO>* ModelManager::GetCollisionInfos(const std::string& strModelName) const
 {
+	std::lock_guard lock{ m_mtxModel };
 	auto it = m_CollisionInfoPool.find(strModelName);
 	if (it == m_CollisionInfoPool.end())
 		return nullptr;

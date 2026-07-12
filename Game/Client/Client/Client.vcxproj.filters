@@ -624,6 +624,9 @@
     </ClInclude>
     <ClInclude Include="Sound.h" />
     <ClInclude Include="HelicopterObject.h" />
+    <ClInclude Include="HelicopterAnimationController.h" />
+    <ClInclude Include="LoadingManager.h" />
+    <ClInclude Include="LoadingScene.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">
@@ -1046,6 +1049,9 @@
     </ClCompile>
     <ClCompile Include="Sound.cpp" />
     <ClCompile Include="HelicopterObject.cpp" />
+    <ClCompile Include="HelicopterAnimationController.cpp" />
+    <ClCompile Include="LoadingManager.cpp" />
+    <ClCompile Include="LoadingScene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl">

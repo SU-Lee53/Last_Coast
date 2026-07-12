@@ -14,6 +14,7 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 
 	std::string strNavMesh = "GAME";
 	// Init managers
+	LOADING->Initialize();
 	AI->Initialize(strNavMesh);
 	COMPUTE->Initialize();
 	RESOURCE->Initialize(g_pD3DCore->GetDevice());
@@ -54,6 +55,7 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 GameFramework::~GameFramework()
 {
 	RENDER->WaitForGPUComplete();
+	LOADING->Shutdown();
 }
 
 void GameFramework::Update()
@@ -62,33 +64,48 @@ void GameFramework::Update()
 	SOUND->Update();
 	GUI->Update();
 
-	//UI->Clear();
-
 	INPUT->Update();
+
+
+	const bool bWasAsyncLoading = SCENE->IsInAsyncSceneChanging();
+
 	SCENE->ProcessInput();
-	AI->UpdateAll(DT);   // 에이전트 이동 먼저 → Zombie::PostUpdate에서 최신 위치 사용
+
+	if (!bWasAsyncLoading) {
+		AI->UpdateAll(DT);  // 에이전트 이동 먼저 → Zombie::PostUpdate에서 최신 위치 사용
+	}
+
 	SCENE->Update();
 
-	SOUND->UpdateSoundQueue();
-	PARTICLE->Update();
+	const bool bIsAsyncLoading =
+		SCENE->IsInAsyncSceneChanging();
 
-	// 게임 중간에 리소스 생성이 필요할 수 있으므로 대기
-	// 리소스 생성될게 없으면 바로 리턴함
-	RESOURCE->WaitForCopyComplete();
-	TEXTURE->WaitForCopyComplete();
+	const bool bSceneTransitionFrame =
+		bWasAsyncLoading || bIsAsyncLoading;
 
-	COMPUTE->ExecuteIndirect();
-	COMPUTE->WaitForGPUComplete();
-	COMPUTE->Reset();
+	if (!bSceneTransitionFrame) {
+		SOUND->UpdateSoundQueue();
+		PARTICLE->Update();
+	}
+
+	if (bIsAsyncLoading) {
+		RESOURCE->PollCopyComplete();
+		TEXTURE->PollCopyComplete();
+	}
+	else {
+		RESOURCE->WaitForCopyComplete();
+		TEXTURE->WaitForCopyComplete();
+	}
+
+	if (!bSceneTransitionFrame) {
+		COMPUTE->ExecuteIndirect();
+		COMPUTE->WaitForGPUComplete();
+		COMPUTE->Reset();
+	}
 }
 
 void GameFramework::Render()
 {
-	// TODO : Render Logic Here
-	//RENDER->Render(g_pD3DCore->GetCommandList());
-	//EFFECT->Render(g_pD3DCore->GetCommandList());
-	//UI->Render(g_pD3DCore->GetCommandList());
-
 	RENDER->Reset();
 
 	SCENE->PrepareRender();
@@ -98,7 +115,6 @@ void GameFramework::Render()
 	TIME->GetFrameRate(L"Game", tstrFrameRate);
 	tstrFrameRate = std::format(L"{}", tstrFrameRate);
 	::SetWindowText(WinCore::g_hWnd, tstrFrameRate.data());
-
 }
 
 void GameFramework::CleanUp()

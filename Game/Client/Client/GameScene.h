@@ -11,6 +11,8 @@ class HelicopterDepartEvent;
 class GameScene : public Scene {
 public:
 	void BuildObjects() override;
+	void FinalizeBuild() override;
+
 	void OnEnterScene() override;
 	void OnLeaveScene() override;
 	void ProcessInput() override;

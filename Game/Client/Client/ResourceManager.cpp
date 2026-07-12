@@ -14,6 +14,8 @@ void ResourceManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 
 IndexBuffer ResourceManager::CreateIndexBuffer(const std::vector<UINT>& Indices)
 {
+	std::lock_guard lock{ m_mtxCopy };
+
 	HRESULT hr;
 
 	ShaderResource Buffer{};
@@ -83,6 +85,8 @@ IndexBuffer ResourceManager::CreateIndexBuffer(const std::vector<UINT>& Indices)
 
 ComPtr<ID3D12Resource> ResourceManager::CreateBufferResource(void* pData, UINT nBytes, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates)
 {
+	std::lock_guard lock{ m_mtxCopy };
+
 	ComPtr<ID3D12Resource> pd3dBuffer = NULL;
 
 	CD3DX12_HEAP_PROPERTIES d3dHeapPropertiesDesc = CD3DX12_HEAP_PROPERTIES(d3dHeapType);
@@ -156,28 +160,72 @@ ComPtr<ID3D12Resource> ResourceManager::CreateBufferResource(void* pData, UINT n
 
 void ResourceManager::WaitForCopyComplete()
 {
-	if (m_PendingUploadBuffers.empty()) {
+	std::lock_guard lock{ m_mtxCopy };
+
+	uint64 un64ExpectedFenceValue = GetPendingCopyFenceValue();
+	if (un64ExpectedFenceValue == 0) {
 		return;
 	}
 
-	UINT64 ui64ExpectedFenceValue = 0;
-	for (const PendingUploadBuffer& pending : m_PendingUploadBuffers) {
-		if (pending.ui64FenceValue > ui64ExpectedFenceValue) {
-			ui64ExpectedFenceValue = pending.ui64FenceValue;
-		}
-	}
-
-	if (m_pd3dFence->GetCompletedValue() < ui64ExpectedFenceValue) {
-		m_pd3dFence->SetEventOnCompletion(ui64ExpectedFenceValue, m_hFenceEvent);
+	if (m_pd3dFence->GetCompletedValue() < un64ExpectedFenceValue) {
+		m_pd3dFence->SetEventOnCompletion(un64ExpectedFenceValue, m_hFenceEvent);
 		::WaitForSingleObject(m_hFenceEvent, INFINITE);
 	}
 
 	ReleaseCompletedUploadBuffers();
 }
 
+void ResourceManager::PollCopyComplete()
+{
+	std::lock_guard lock{ m_mtxCopy };
+
+	ReleaseCompletedUploadBuffers();
+}
+
+bool ResourceManager::IsCopyComplete()
+{
+	std::lock_guard lock{ m_mtxCopy };
+
+	PollCopyComplete();
+	return m_PendingUploadBuffers.empty();
+}
+
+bool ResourceManager::IsFenceComplete(uint64 ui64FenceValue) const
+{
+	std::lock_guard lock{ m_mtxCopy };
+
+	if (ui64FenceValue == 0) {
+		return true;
+	}
+
+	return m_pd3dFence->GetCompletedValue() >= ui64FenceValue;
+}
+
+uint64 ResourceManager::GetLastSubmittedFenceValue() const
+{
+	std::lock_guard lock{ m_mtxCopy };
+	return m_un64FenceValue;
+}
+
+uint64 ResourceManager::GetPendingCopyFenceValue() const
+{
+	std::lock_guard lock{ m_mtxCopy };
+
+	uint64 un64ExpectedFenceValue = 0;
+	for (const auto& pendingBuffer : m_PendingUploadBuffers) {
+		if (pendingBuffer.ui64FenceValue > un64ExpectedFenceValue) {
+			un64ExpectedFenceValue = pendingBuffer.ui64FenceValue;
+		}
+	}
+
+	return un64ExpectedFenceValue;
+}
+
 void ResourceManager::ReleaseCompletedUploadBuffers()
 {
-	UINT64 ui64CompletedValue = m_pd3dFence->GetCompletedValue();
+	std::lock_guard lock{ m_mtxCopy };
+
+	uint64 ui64CompletedValue = m_pd3dFence->GetCompletedValue();
 	m_CommandListPool.ReclaimEnded(ui64CompletedValue);
 
 	std::erase_if(m_PendingUploadBuffers, [ui64CompletedValue](const PendingUploadBuffer& pended) {
@@ -231,6 +279,8 @@ void ResourceManager::ExcuteCommandList(CommandListPair& cmdPair)
 
 CommandListPair* ResourceManager::AllocateCommandListSafe()
 {
+	std::lock_guard lock{ m_mtxCopy };
+
 	if (!m_CommandListPool.HasFree()) {
 		ReleaseCompletedUploadBuffers();
 	}
@@ -248,17 +298,19 @@ CommandListPair* ResourceManager::AllocateCommandListSafe()
 	return cmdList;
 }
 
-UINT64 ResourceManager::Fence()
+uint64 ResourceManager::Fence()
 {
-	m_nFenceValue++;
-	m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), m_nFenceValue);
+	std::lock_guard lock{ m_mtxCopy };
 
-	return m_nFenceValue;
+	m_un64FenceValue++;
+	m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), m_un64FenceValue);
+
+	return m_un64FenceValue;
 }
 
 void ResourceManager::WaitForGPUComplete()
 {
-	const UINT64 expectedFenceValue = m_nFenceValue;
+	const uint64 expectedFenceValue = m_un64FenceValue;
 
 	if (m_pd3dFence->GetCompletedValue() < expectedFenceValue)
 	{
