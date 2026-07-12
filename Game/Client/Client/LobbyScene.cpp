@@ -198,7 +198,7 @@ void LobbyScene::BuildObjects()
 			m_pUIBoard->InsertUI(pReadyButton);
 
 			// 방장 전용 시작 버튼 — 호스트에게만 표시, 서버가 전원 레디 검증
-			m_pStartButton = std::make_shared<TextButton>(L"Malgun Gothic");
+			m_pStartButton = std::make_shared<TextButton>(L"Noto Sans KR");
 			m_pStartButton->SetText("Start Game");
 			m_pStartButton->SetLayer(0);
 			m_pStartButton->SetAnchor(Vector2{ 0.0, 0.0 });
@@ -217,7 +217,7 @@ void LobbyScene::BuildObjects()
 
 			m_pUIBoard->InsertUI(m_pStartButton);
 
-			std::shared_ptr<TextButton> pOfflineButton = std::make_shared<TextButton>(L"Malgun Gothic");
+			std::shared_ptr<TextButton> pOfflineButton = std::make_shared<TextButton>(L"Noto Sans KR");
 			pOfflineButton->SetText("Test Offline");
 			pOfflineButton->SetLayer(0);
 			pOfflineButton->SetAnchor(Vector2{ 1.0, 1.0 });
@@ -331,7 +331,7 @@ void LobbyScene::Update()
 
 				newPreview.wstrUsername = ::StringToWString(ev.username);
 				newPreview.bReady = ev.bReady;   // 기존 인원의 현재 레디 상태 반영 (late-join)
-				newPreview.pNameTag = std::make_shared<TextBox>(L"Malgun Gothic");
+				newPreview.pNameTag = std::make_shared<TextBox>(L"Noto Sans KR");
 				newPreview.pNameTag->SetText(newPreview.wstrUsername + (ev.bReady ? L"  [READY]" : L""));
 				if (ev.bReady)
 					newPreview.pNameTag->SetColor(Vector3{ 0.4f, 1.0f, 0.4f });
