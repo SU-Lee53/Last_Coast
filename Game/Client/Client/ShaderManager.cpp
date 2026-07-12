@@ -236,6 +236,7 @@ void ShaderManager::CompileShaders()
 
 	Compile("DebugLineVS", L"DebugLineShader.hlsl", L"VSDebugLine", SHADER_TYPE::VS);
 	Compile("DebugLineGreenPS", L"DebugLineShader.hlsl", L"PSDebugLineGreen", SHADER_TYPE::PS);
+	Compile("DebugLineRedPS", L"DebugLineShader.hlsl", L"PSDebugLineRed", SHADER_TYPE::PS);
 
 	// Compute
 	Compile("HDRIToCubeMapCS", L"HDRIToCubeMap.hlsl", L"CSHDRIToCubeMap", SHADER_TYPE::CS);

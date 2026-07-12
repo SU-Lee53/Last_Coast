@@ -81,6 +81,10 @@ namespace AIDLL
 
 	constexpr float QUANT_SCALE = 1000.0f; // 1mm 정밀도
 
+	// T-junction 엣지 매칭 허용치 (타일 경계에서 엣지 분할이 달라 끝점이 안 맞는 경우)
+	constexpr float EDGE_MATCH_DIST  = 10.0f; // cm — 두 엣지 간 최대 수직 거리
+	constexpr float EDGE_MIN_OVERLAP = 20.0f; // cm — 인접 판정 최소 겹침 길이
+
 	class NavMeshImpl : public INavMesh
 	{
 	public:
@@ -127,6 +131,9 @@ namespace AIDLL
 		// 고립된 섬 폴리곤은 여기에 없음 → FindPolygonContaining 등에서 제외
 		std::unordered_set<int> m_MainComponentPolys;
 
+		// 같은 내용의 리스트 (GetRandomPoint 랜덤 추첨용)
+		std::vector<int> m_MainComponentPolyList;
+
 		// 인접성 구축 (LoadFromJson 이후 호출)
 		void BuildAdjacency();
 
@@ -148,6 +155,12 @@ namespace AIDLL
 		static bool SegmentIntersect2D(const Vector3& P1, const Vector3& P2,
 		                               const Vector3& P3, const Vector3& P4,
 		                               float& OutT, float& OutS);
+
+		// 두 엣지(A1→B1, A2→B2)가 같은 직선 위에서 겹치는지 검사 (T-junction 대응)
+		// 겹치면 edge1(A1→B1) 방향 파라미터 구간 [OutLo, OutHi] (cm) 반환
+		static bool GetEdgeOverlap(const Vector3& A1, const Vector3& B1,
+		                           const Vector3& A2, const Vector3& B2,
+		                           float& OutLo, float& OutHi);
 		std::pair<float, Vector3> ClosestPointOnPolygon(const Vector3& p, const NavMeshPolygon& poly,const NavMeshTile& tile) const;
 
 		inline static std::string g_strAIBasePath = "../Resources/NavMesh";

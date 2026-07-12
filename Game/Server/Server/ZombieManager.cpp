@@ -275,11 +275,26 @@ void ZombieManager::Tick(float fDeltaTime,
 			}
 		}
 
-		// yaw 갱신 — 이동 방향 기반
+		// yaw 갱신 — 이동 방향 기반 + 회전 속도 제한 스무딩
+		// 틱당 delta(~10cm) 생값 atan2는 flock 힘의 미세 진동에 yaw가 널뛰고,
+		// 200ms 샘플링을 거쳐 클라이언트에서 빙글빙글 도는 것처럼 보간된다.
+		// AI DLL 경로 방향 스무딩(g_fTurnSpeed)과 동일한 5 rad/s 제한.
 		Vector3 v3NewPos = zombie.pAgent->GetPosition();
 		Vector3 v3XZDelta(v3NewPos.x - zombie.v3PrevPos.x, 0.f, v3NewPos.z - zombie.v3PrevPos.z);
-		if (v3XZDelta.LengthSquared() > 0.0001f)
-			zombie.fYaw = std::atan2f(v3XZDelta.x, v3XZDelta.z);
+		if (v3XZDelta.LengthSquared() > 1.f) // 틱당 1cm 초과 이동 시만 (정지 시 노이즈 필터)
+		{
+			float fTargetYaw = std::atan2f(v3XZDelta.x, v3XZDelta.z);
+			float fYawDiff = fTargetYaw - zombie.fYaw;
+			fYawDiff = std::fmodf(fYawDiff + DirectX::XM_PI, DirectX::XM_2PI);
+			if (fYawDiff < 0.f) fYawDiff += DirectX::XM_2PI;
+			fYawDiff -= DirectX::XM_PI;
+
+			const float fMaxStep = 5.f * fDeltaTime;
+			zombie.fYaw += std::clamp(fYawDiff, -fMaxStep, fMaxStep);
+			zombie.fYaw = std::fmodf(zombie.fYaw + DirectX::XM_PI, DirectX::XM_2PI);
+			if (zombie.fYaw < 0.f) zombie.fYaw += DirectX::XM_2PI;
+			zombie.fYaw -= DirectX::XM_PI;
+		}
 
 		// Chase 상태인데 이동 없으면 위치 출력
 		if (zombie.pAgent->GetBehaviorState() == AIBehaviorState::Chasing &&

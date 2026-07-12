@@ -1,8 +1,10 @@
 ﻿#include "pch.h"
 #include "GameEvent.h"
+#include "EventSequence.h"
 #include "Skybox.h"
 #include "BloodEffect.h"
 #include "FireEffect.h"
+#include "CrashFireEffect.h"
 #include "MuzzleFlashEffect.h"
 #include "ExplosionEffect.h"
 #include "ToneMappingVolume.h"
@@ -11,7 +13,6 @@
 #include "CrashDebris.h"
 #include "HelicopterObject.h"
 #include "SpatialTraits.h"
-#include "HelicopterAnimationController.h"
 #include "Skeleton.h"
 
 void ILoopEvent::Update(Scene* pScene)
@@ -568,6 +569,9 @@ void HelicopterCrashEvent::OnUpdateEvent(Scene* pScene)
 		else {
 			SpawnExplosion(m_v3HeliEnd);
 			if (m_pHeli) m_pHeli->SetRotorActive(false); // 추락 후 잔해 → 로터 정지
+			// 잔해 화재 — 차량 화재와 동일한 불 파티클을 추락 지점에 상시 유지
+			if (const auto& pSeq = pScene->GetEventSequence())
+				pSeq->AddEvent(std::make_shared<CrashSiteFireEvent>(m_v3HeliEnd));
 		}
 		m_bExploded = true;
 		// 헬기는 OnEnter에서 이미 AddObject로 등록됨 → 그대로 World에 남는다.
@@ -795,6 +799,27 @@ void CinematicCameraEvent::OnLeaveEvent(Scene* pScene)
 
 	m_pCameraSwapped.reset();
 	m_fTimeElapsed = 0.0f;
+}
+
+void CrashSiteFireEvent::OnUpdateEvent(Scene* pScene)
+{
+	// FireEvent(차량 화재)와 동일한 리스폰 주기 — 이펙트 수명 절반 시점에 겹쳐 재소환해 불이 끊기지 않게.
+	constexpr float FIRE_EFFECT_ESTIMATED_DURATION = 5.4f;
+	constexpr float FIRE_EFFECT_RESPAWN_TIME = FIRE_EFFECT_ESTIMATED_DURATION * 0.5f;
+
+	m_fElapsed += DT;
+
+	if (m_pFireEffect && m_pFireEffect->IsPlaying() && !m_pFireEffect->IsDead() && m_fElapsed < FIRE_EFFECT_RESPAWN_TIME) {
+		return;
+	}
+
+	ParticleEffectSpawnDesc desc{};
+	desc.v3Direction = Vector3::Up;
+	desc.v3Normal = Vector3::Up;
+	desc.v3Position = m_v3Pos;
+	desc.mtxWorld = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
+	m_pFireEffect = PARTICLE->Spawn<CrashFireEffect>(desc);
+	m_fElapsed = 0.f;
 }
 
 void FireEvent::Initialize(Scene* pScene)

@@ -197,6 +197,26 @@ void LobbyScene::BuildObjects()
 
 			m_pUIBoard->InsertUI(pReadyButton);
 
+			// 방장 전용 시작 버튼 — 호스트에게만 표시, 서버가 전원 레디 검증
+			m_pStartButton = std::make_shared<TextButton>(L"Malgun Gothic");
+			m_pStartButton->SetText("Start Game");
+			m_pStartButton->SetLayer(0);
+			m_pStartButton->SetAnchor(Vector2{ 0.0, 0.0 });
+			m_pStartButton->SetPivot(Vector2{ 0.5, 0.0 });
+			m_pStartButton->SetPosition(Vector2{ 1000, 800 });
+			m_pStartButton->SetTextHeight(70);
+			m_pStartButton->SetVisible(false);
+
+			m_pStartButton->SetButtonCallback(
+				[&](IUIComponent* pComp) {
+					if (NETWORK->IsHost() && m_bAllReady)
+						NETWORK->SendGameStart();
+				}
+			);
+
+
+			m_pUIBoard->InsertUI(m_pStartButton);
+
 			std::shared_ptr<TextButton> pOfflineButton = std::make_shared<TextButton>(L"Malgun Gothic");
 			pOfflineButton->SetText("Test Offline");
 			pOfflineButton->SetLayer(0);
@@ -310,8 +330,11 @@ void LobbyScene::Update()
 				AddObject(newPreview.pPlayer);
 
 				newPreview.wstrUsername = ::StringToWString(ev.username);
+				newPreview.bReady = ev.bReady;   // 기존 인원의 현재 레디 상태 반영 (late-join)
 				newPreview.pNameTag = std::make_shared<TextBox>(L"Malgun Gothic");
-				newPreview.pNameTag->SetText(newPreview.wstrUsername);
+				newPreview.pNameTag->SetText(newPreview.wstrUsername + (ev.bReady ? L"  [READY]" : L""));
+				if (ev.bReady)
+					newPreview.pNameTag->SetColor(Vector3{ 0.4f, 1.0f, 0.4f });
 				newPreview.pNameTag->SetLayer(0);
 				newPreview.pNameTag->SetAnchor(Vector2{ 0.0f, 0.0f });
 				newPreview.pNameTag->SetPivot(Vector2{ 0.5f, 0.5f });
@@ -343,6 +366,28 @@ void LobbyScene::Update()
 			auto it = std::find_if(m_ActivePreviews.begin(), m_ActivePreviews.end(), [&](const LobbyPreviewPlayer& p) { return p.nPlayerId == ev.playerId; });
 			if (it != m_ActivePreviews.end() && ev.characterType < GameContext::g_unCharacterModels)
 				it->pPlayer->SetPlayerModel(GameContext::g_strCharacterNames[ev.characterType]);
+		}
+
+		// 방장에게만 시작 버튼 표시 (방장 승계 포함 실시간 갱신)
+		if (m_pStartButton) {
+			m_pStartButton->SetVisible(NETWORK->IsHost());
+
+			// 전원 레디(본인 + 리모트 전부) 여부
+			bool bAllReady = m_bReadyState;
+			for (const auto& p : m_ActivePreviews) {
+				if (!p.bReady) { bAllReady = false; break; }
+			}
+			m_bAllReady = bAllReady;
+
+			// 색: 전원 레디 전 = 회색 / 전원 레디 = 흰색 / 전원 레디 + 호버 = 빨간색
+			Vector3 v3Color;
+			if (!m_bAllReady)
+				v3Color = Vector3{ 0.45f, 0.45f, 0.45f };
+			else if (m_pStartButton->WasHovered())
+				v3Color = Vector3{ 1.0f, 0.2f, 0.2f };
+			else
+				v3Color = Vector3{ 1.0f, 1.0f, 1.0f };
+			m_pStartButton->SetColor(v3Color);
 		}
 
 		// 다른 플레이어 레디 상태 변경 → 닉네임 옆에 [READY] 표시 (레디면 초록).

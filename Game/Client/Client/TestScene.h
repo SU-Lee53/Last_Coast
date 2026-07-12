@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "Scene.h"
-#include "NavMeshDebugRenderer.h"
 #include "ZombiePool.h"
 
 class TestScene : public Scene {
@@ -26,7 +25,6 @@ private:
 
 private:
 	ZombiePool m_ZombiePool;
-	std::unique_ptr<NavMeshDebugRenderer> m_pNavMeshDebugRenderer;
 
 	// serverId → 클라이언트 Zombie 인스턴스 (서버 연결 시 사용)
 	std::unordered_map<int, std::shared_ptr<Zombie>> m_ServerZombies;

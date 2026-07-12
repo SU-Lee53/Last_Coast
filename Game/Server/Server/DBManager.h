@@ -1,4 +1,5 @@
 #pragma once
+#include "pch.h"
 
 #include <windows.h>
 #include <sql.h>
@@ -6,12 +7,8 @@
 #include <string>
 
 class DBManager {
+    DECLARE_SINGLE(DBManager)
 public:
-    static DBManager& GetInstance() {
-        static DBManager instance;
-        return instance;
-    }
-
     bool Initialize(const std::wstring& dsn);
     void Cleanup();
 

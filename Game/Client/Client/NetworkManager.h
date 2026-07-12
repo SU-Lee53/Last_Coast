@@ -192,6 +192,8 @@ public:
 	std::vector<ReadyStateEvent> ConsumeReadyStates();
 	// 게임 시작 신호 (서버 발송)
 	bool                         ConsumeGameStart();
+	// 방장 전용: 게임 시작 요청 (서버가 전원 레디 검증 후 S2C_GAME_START 브로드캐스트)
+	void                         SendGameStart();
 
 	// ── 탈출 시퀀스 (서버 권위) ────────────────────────────────────────────────
 	// 서버가 보낸 최신 탈출 상태가 있으면 true + phase(0=서바이벌,1=탈출가능)/남은초 반환.
@@ -245,6 +247,10 @@ public:
 
 	int						GetPlayerID() const { return m_nPlayerID; }
 
+	// 방장(호스트) 플레이어 ID. 서버가 S2C_HOST_CHANGE 로 통지 (-1 = 미정)
+	int						GetHostId() const { return m_nHostId.load(); }
+	bool					IsHost() const { return m_nPlayerID >= 0 && m_nHostId.load() == m_nPlayerID; }
+
 	const std::string&		GetErrorLog() { return m_strErrorLog; }
 
 private:
@@ -259,6 +265,7 @@ private:
 	volatile bool			m_bConnected = false;
 	std::string				m_strErrorLog;
 	int						m_nPlayerID = -1;
+	std::atomic<int>		m_nHostId{ -1 };   // 네트워크 스레드 쓰기 / 게임 스레드 읽기
 
 	// 원격 플레이어 상태. 네트워크 스레드(쓰기) / 게임 스레드(읽기) 공유 → m_Mutex 보호
 	std::unordered_map<int, RemotePlayerState> m_RemotePlayers;

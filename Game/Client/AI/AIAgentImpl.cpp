@@ -246,7 +246,20 @@ namespace AIDLL
 			// ── Boids 힘 블렌딩 ────────────────────────────────────────────
 			// m_v3PathDir: waypoint skip 판정에만 사용 (순수 경로 방향, 변경 없음)
 			// v3FinalDir: 실제 이동에 사용 (경로 방향 + flock 힘 합산 후 정규화)
-			Vector3 v3FinalDir = m_v3PathDir + m_v3FlockForce;
+
+			// waypoint 근접 시 flock 힘 거리 비례 감쇠 — 좁은 길에서 여러 좀비가
+			// 같은 waypoint로 수렴할 때 분리력이 도달 판정 진입을 막아
+			// waypoint 주위를 맴도는 궤도 회전 방지
+			float fFlockScale = 1.0f;
+			{
+				Vector3 v3ToCurWP = m_Path[m_nPathIndex].Destination() - m_v3Position;
+				v3ToCurWP.y = 0.f;
+				const float fWPDist = v3ToCurWP.Length();
+				if (fWPDist < g_fFlockDampRadius)
+					fFlockScale = fWPDist / g_fFlockDampRadius;
+			}
+
+			Vector3 v3FinalDir = m_v3PathDir + m_v3FlockForce * fFlockScale;
 			v3FinalDir.y = 0.f;
 			float fFinalLen = v3FinalDir.Length();
 			if (fFinalLen > 1e-4f)

@@ -219,8 +219,12 @@ void Zombie::PostUpdate()
 					float t = (fSpan > 0.f) ? (fRenderTime - s0.fTime) / fSpan : 1.f;
 					v3InterpPos = Vector3::Lerp(s0.v3Pos, s1.v3Pos, t);
 
+					// 최단경로 wrap — fmodf는 음수 입력에 음수를 반환하므로
+					// 보정 없이는 diff < -π일 때 반대 방향으로 한 바퀴 돈다
 					float fYawDiff = s1.fYaw - s0.fYaw;
-					fYawDiff = std::fmodf(fYawDiff + XM_PI, XM_2PI) - XM_PI;
+					fYawDiff = std::fmodf(fYawDiff + XM_PI, XM_2PI);
+					if (fYawDiff < 0.f) fYawDiff += XM_2PI;
+					fYawDiff -= XM_PI;
 					fInterpYaw = s0.fYaw + fYawDiff * t;
 
 					bFound = true;
@@ -336,9 +340,23 @@ void Zombie::PostUpdate()
 
 		if (v3XZDelta.LengthSquared() > 0.0001f)
 		{
-			float fYaw = std::atan2f(v3XZDelta.x, v3XZDelta.z);
-			GetTransform()->SetRotation(0.f, fYaw, 0.f);
-			m_v3Forward = Vector3(sinf(fYaw), 0.f, cosf(fYaw));
+			// 회전 속도 제한 스무딩 — 프레임 delta 기반 atan2 즉시 스냅은
+			// flock/충돌 해소로 인한 방향 미세 진동을 그대로 노출한다.
+			// AI DLL의 경로 방향 스무딩(g_fTurnSpeed)과 동일한 5 rad/s 사용
+			float fTargetYaw = std::atan2f(v3XZDelta.x, v3XZDelta.z);
+			float fYawDiff = fTargetYaw - m_fCurrentYaw;
+			fYawDiff = std::fmodf(fYawDiff + XM_PI, XM_2PI);
+			if (fYawDiff < 0.f) fYawDiff += XM_2PI;
+			fYawDiff -= XM_PI;
+
+			const float fMaxStep = 5.f * DT;
+			m_fCurrentYaw += std::clamp(fYawDiff, -fMaxStep, fMaxStep);
+			m_fCurrentYaw = std::fmodf(m_fCurrentYaw + XM_PI, XM_2PI);
+			if (m_fCurrentYaw < 0.f) m_fCurrentYaw += XM_2PI;
+			m_fCurrentYaw -= XM_PI;
+
+			GetTransform()->SetRotation(0.f, m_fCurrentYaw, 0.f);
+			m_v3Forward = Vector3(sinf(m_fCurrentYaw), 0.f, cosf(m_fCurrentYaw));
 		}
 	}
 

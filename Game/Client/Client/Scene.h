@@ -116,6 +116,9 @@ public:
 
 	std::shared_ptr<Camera> SwapCamera(std::shared_ptr<Camera>& pNewCamera);
 
+	// 게임 이벤트가 후속 이벤트를 띄울 때 사용 (예: 헬기 추락 폭발 → 잔해 화재)
+	const std::shared_ptr<EventSequence>& GetEventSequence() const { return m_pEventSequence; }
+
 	// 컷씬용 임시 오브젝트(월드/스폐셜 미등록). PrepareRender에서 직접 Render 호출.
 	// 이벤트(예: HelicopterCrashEvent)가 매 프레임 Transform 갱신 후 사용.
 	void SetCinematicProp(const std::shared_ptr<IGameObject>& pProp) { m_pCinematicProp = pProp; }

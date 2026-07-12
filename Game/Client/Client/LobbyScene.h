@@ -11,6 +11,7 @@
 */
 
 interface IThirdPersonPlayer;
+class TextButton;
 
 class LobbyScene : public Scene {
 public:
@@ -54,6 +55,10 @@ private:
 
 	std::shared_ptr<TextBox> m_pWeaponNameTextbox = nullptr;
 	int32 m_nCurWeaponIndex = 0;
+
+	// 방장 전용 게임 시작 버튼 (호스트일 때만 표시)
+	std::shared_ptr<TextButton> m_pStartButton = nullptr;
+	bool m_bAllReady = false;   // 방 인원 전원 레디 여부 (버튼 활성화 룩 + 클릭 가드)
 
 
 	bool m_bProceed = false;

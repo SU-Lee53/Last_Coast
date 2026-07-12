@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -167,6 +167,7 @@
     <ClInclude Include="BloodEffect.h" />
     <ClInclude Include="BloomPass.h" />
     <ClInclude Include="BoundingBoxDebugPass.h" />
+    <ClInclude Include="NavMeshDebugPass.h" />
     <ClInclude Include="BoundingCapsule.h" />
     <ClInclude Include="BulletImpactEffect.h" />
     <ClInclude Include="Camera.h" />
@@ -189,6 +190,7 @@
     <ClInclude Include="DynamicObject.h" />
     <ClInclude Include="EventSequence.h" />
     <ClInclude Include="ExplosionEffect.h" />
+    <ClInclude Include="CrashFireEffect.h" />
     <ClInclude Include="FireEffect.h" />
     <ClInclude Include="GameEvent.h" />
     <ClInclude Include="HelicopterObject.h" />
@@ -236,7 +238,6 @@
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MeshRenderer.h" />
     <ClInclude Include="ModelManager.h" />
-    <ClInclude Include="NavMeshDebugRenderer.h" />
     <ClInclude Include="NetworkManager.h" />
     <ClInclude Include="NetworkTestScene.h" />
     <ClInclude Include="NodeObject.h" />
@@ -298,7 +299,6 @@
     <ClInclude Include="WinCore.h" />
     <ClInclude Include="WInSockCommon.h" />
     <ClInclude Include="World.h" />
-    <ClInclude Include="HelicopterAnimationController.h" />
     <ClInclude Include="Zombie.h" />
     <ClInclude Include="ZombieAnimationController.h" />
     <ClInclude Include="ZombiePool.h" />
@@ -364,6 +364,7 @@
     <ClCompile Include="BloodEffect.cpp" />
     <ClCompile Include="BloomPass.cpp" />
     <ClCompile Include="BoundingBoxDebugPass.cpp" />
+    <ClCompile Include="NavMeshDebugPass.cpp" />
     <ClCompile Include="BoundingCapsule.cpp" />
     <ClCompile Include="BulletImpactEffect.cpp" />
     <ClCompile Include="Camera.cpp" />
@@ -384,6 +385,7 @@
     <ClCompile Include="DynamicObject.cpp" />
     <ClCompile Include="EventSequence.cpp" />
     <ClCompile Include="ExplosionEffect.cpp" />
+    <ClCompile Include="CrashFireEffect.cpp" />
     <ClCompile Include="FireEffect.cpp" />
     <ClCompile Include="GameEvent.cpp" />
     <ClCompile Include="HelicopterObject.cpp" />
@@ -428,7 +430,6 @@
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MeshRenderer.cpp" />
     <ClCompile Include="ModelManager.cpp" />
-    <ClCompile Include="NavMeshDebugRenderer.cpp" />
     <ClCompile Include="NetworkManager.cpp" />
     <ClCompile Include="NetworkTestScene.cpp" />
     <ClCompile Include="NodeObject.cpp" />
@@ -482,7 +483,6 @@
     <ClCompile Include="WeaponObject.cpp" />
     <ClCompile Include="WinCore.cpp" />
     <ClCompile Include="World.cpp" />
-    <ClCompile Include="HelicopterAnimationController.cpp" />
     <ClCompile Include="Zombie.cpp" />
     <ClCompile Include="ZombieAnimationController.cpp" />
     <ClCompile Include="ZombiePool.cpp" />

@@ -118,8 +118,6 @@ void TestScene::Update()
 				ImGui::ProgressBar(pZombie->GetHP() / 100.f, ImVec2(-1.f, 0.f));
 				if (pZombie->IsDead()) ImGui::TextColored(ImVec4(1, 0, 0, 1), "[id=%d] DEAD", nServerId);
 
-				if (zombieIdx == 0 && m_pNavMeshDebugRenderer)
-					m_pNavMeshDebugRenderer->UpdatePathNodes(pZombie->GetPathDebugInfo().Waypoints);
 
 				const auto& debugInfo = pZombie->GetPathDebugInfo();
 				ImGui::Separator();
@@ -160,15 +158,6 @@ void TestScene::Update()
 				ImGui::Text("Collision {%s : %s}", pair.pSelf->GetName().c_str(), pair.pOther->GetName().c_str());
 			}
 
-			// NavMesh 디버그 렌더링 토글
-			ImGui::NewLine();
-			ImGui::Text("====== NavMesh Debug ======");
-			if (m_pNavMeshDebugRenderer) {
-				bool bEnabled = m_pNavMeshDebugRenderer->IsEnabled();
-				if (ImGui::Checkbox("Show NavMesh", &bEnabled)) {
-					m_pNavMeshDebugRenderer->SetEnabled(bEnabled);
-				}
-			}
 		}
 		else {
 			ImGui::Text("No Animation");

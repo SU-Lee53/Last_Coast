@@ -179,20 +179,33 @@ namespace AIDLL
     {
         const int n = static_cast<int>(m_Agents.size());
         if (n < 2)
+        {
+            // 이전 프레임 힘 잔존 방지 (좀비 2→1마리 감소 시 마지막 힘이 영구히 남음)
+            for (auto& agent : m_Agents)
+                agent->SetFlockForce(Vector3::Zero);
             return;
+        }
 
         // 격자 빌드: O(n), 셀 크기 = Cohesion 반경 → 3×3 체크로 모든 반경 커버
         m_FlockGrid.Build(m_Agents, g_fCohesionRadius);
         if (m_FlockGrid.nCellsX == 0)
+        {
+            for (auto& agent : m_Agents)
+                agent->SetFlockForce(Vector3::Zero);
             return;
+        }
 
         for (int i = 0; i < n; ++i)
         {
             auto& AgentA  = m_Agents[i];
             AIBehaviorState StateA = AgentA->GetBehaviorState();
 
-            // Idle 상태는 군집 행동 없음
-            if (StateA == AIBehaviorState::Idle)
+            // Idle: 군집 행동 없음
+            // Attacking/Alert: AIAgentImpl::Update()가 이동을 스킵하므로 힘 계산 불필요
+            //   (겹침 허용 — 단, 이웃의 Separation 대상으로는 그리드에 남아 있음)
+            if (StateA == AIBehaviorState::Idle ||
+                StateA == AIBehaviorState::Attacking ||
+                StateA == AIBehaviorState::Alert)
             {
                 AgentA->SetFlockForce(Vector3::Zero);
                 continue;
@@ -342,10 +355,7 @@ namespace AIDLL
             Sep = 0.8f; Ali = 0.4f; Coh = 0.5f; break;
         case AIBehaviorState::Chasing:
             Sep = 0.9f; Ali = 0.6f; Coh = 0.3f; break;
-        case AIBehaviorState::Attacking:
-            Sep = 1.2f; Ali = 0.0f; Coh = 0.0f; break;
-        case AIBehaviorState::Alert:
-            Sep = 0.6f; Ali = 0.2f; Coh = 0.4f; break;
+        // Attacking/Alert는 UpdateFlocking에서 계산 자체를 스킵 (이동 없음 → 겹침 허용)
         default:
             Sep = 0.0f; Ali = 0.0f; Coh = 0.0f; break;
         }

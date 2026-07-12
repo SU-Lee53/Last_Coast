@@ -164,6 +164,8 @@ namespace AIDLL
 			for (int nPolyID : components[nMainIdx])
 				m_MainComponentPolys.insert(nPolyID);
 
+			m_MainComponentPolyList.assign(components[nMainIdx].begin(), components[nMainIdx].end());
+
 			//if (components.size() > 1)
 			//	printf("[NavMesh] WARNING: %d 개의 단절된 섬 발견. 메인(Component %d, %d polys) 외 폴리곤 제외.\n",
 			//	       (int)components.size(), nMainIdx, (int)components[nMainIdx].size());
@@ -239,6 +241,107 @@ namespace AIDLL
 				}
 			}
 		}
+
+		// ─────────────────────────────────────────────────────────────────────
+		// 2차 패스: 타일 경계 T-junction 매칭
+		// 타일마다 경계 엣지 분할이 달라 끝점이 정확히 일치하지 않는 경우,
+		// 남은 미매칭 엣지끼리 같은 직선 위 겹침(overlap)을 검사해 인접 등록
+		// ─────────────────────────────────────────────────────────────────────
+		struct BorderEdge { Vector3 v3A; Vector3 v3B; int nPolyID; };
+		std::vector<BorderEdge> BorderEdges;
+		BorderEdges.reserve(EdgeToPolyID.size());
+
+		for (const auto& [Edge, nPolyID] : EdgeToPolyID)
+		{
+			BorderEdges.push_back({
+				Vector3(Edge.nX1 / QUANT_SCALE, Edge.nY1 / QUANT_SCALE, Edge.nZ1 / QUANT_SCALE),
+				Vector3(Edge.nX2 / QUANT_SCALE, Edge.nY2 / QUANT_SCALE, Edge.nZ2 / QUANT_SCALE),
+				nPolyID });
+		}
+
+		// XZ 공간 해시: 엣지 AABB가 걸치는 모든 셀에 등록
+		constexpr float fCellSize = 500.0f;  // cm
+		std::unordered_map<int64, std::vector<int>> Cells;
+		auto CellKey = [](int64 cx, int64 cz) -> int64 { return (cx << 32) | (cz & 0xffffffffll); };
+
+		for (int i = 0; i < (int)BorderEdges.size(); ++i)
+		{
+			const auto& E = BorderEdges[i];
+			int64 nMinCX = (int64)std::floor(std::min(E.v3A.x, E.v3B.x) / fCellSize);
+			int64 nMaxCX = (int64)std::floor(std::max(E.v3A.x, E.v3B.x) / fCellSize);
+			int64 nMinCZ = (int64)std::floor(std::min(E.v3A.z, E.v3B.z) / fCellSize);
+			int64 nMaxCZ = (int64)std::floor(std::max(E.v3A.z, E.v3B.z) / fCellSize);
+
+			for (int64 cx = nMinCX; cx <= nMaxCX; ++cx)
+				for (int64 cz = nMinCZ; cz <= nMaxCZ; ++cz)
+					Cells[CellKey(cx, cz)].push_back(i);
+		}
+
+		auto AddAdjacency = [this](int nA, int nB)
+		{
+			auto& Neighbors = m_Adjacency[nA];
+			if (std::find(Neighbors.begin(), Neighbors.end(), nB) == Neighbors.end())
+			{
+				Neighbors.push_back(nB);
+				m_Adjacency[nB].push_back(nA);
+			}
+		};
+
+		std::unordered_set<uint64> TestedPairs;
+		for (const auto& [_, EdgeIndices] : Cells)
+		{
+			for (size_t a = 0; a < EdgeIndices.size(); ++a)
+			{
+				for (size_t b = a + 1; b < EdgeIndices.size(); ++b)
+				{
+					int nIdx1 = std::min(EdgeIndices[a], EdgeIndices[b]);
+					int nIdx2 = std::max(EdgeIndices[a], EdgeIndices[b]);
+					if (nIdx1 == nIdx2) continue;
+
+					uint64 nPairKey = ((uint64)nIdx1 << 32) | (uint64)nIdx2;
+					if (!TestedPairs.insert(nPairKey).second) continue;
+
+					const auto& E1 = BorderEdges[nIdx1];
+					const auto& E2 = BorderEdges[nIdx2];
+					if (E1.nPolyID == E2.nPolyID) continue;
+
+					float fLo, fHi;
+					if (GetEdgeOverlap(E1.v3A, E1.v3B, E2.v3A, E2.v3B, fLo, fHi))
+						AddAdjacency(E1.nPolyID, E2.nPolyID);
+				}
+			}
+		}
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// GetEdgeOverlap
+	// 두 엣지가 같은 직선 위(수직 거리 EDGE_MATCH_DIST 이내)에서
+	// EDGE_MIN_OVERLAP 이상 겹치면 edge1 방향 파라미터 구간 반환
+	// ─────────────────────────────────────────────────────────────────────────
+	bool NavMeshImpl::GetEdgeOverlap(const Vector3& A1, const Vector3& B1,
+	                                 const Vector3& A2, const Vector3& B2,
+	                                 float& OutLo, float& OutHi)
+	{
+		Vector3 v3Dir = B1 - A1;
+		float fLen = v3Dir.Length();
+		if (fLen < 1.0f)
+			return false;
+		v3Dir /= fLen;
+
+		// edge2 양 끝점의 edge1 직선까지 수직 거리 + 투영 파라미터
+		Vector3 v3WA = A2 - A1;
+		Vector3 v3WB = B2 - A1;
+		float fTA = v3WA.Dot(v3Dir);
+		float fTB = v3WB.Dot(v3Dir);
+		float fPerpA = (v3WA - v3Dir * fTA).Length();
+		float fPerpB = (v3WB - v3Dir * fTB).Length();
+
+		if (fPerpA > EDGE_MATCH_DIST || fPerpB > EDGE_MATCH_DIST)
+			return false;
+
+		OutLo = std::max(0.0f, std::min(fTA, fTB));
+		OutHi = std::min(fLen, std::max(fTA, fTB));
+		return (OutHi - OutLo) >= EDGE_MIN_OVERLAP;
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
@@ -557,7 +660,48 @@ namespace AIDLL
 		}
 
 		if (SharedVerts.size() < 2)
+		{
+			// 정확히 일치하는 정점이 2개 미만 → T-junction 인접일 수 있음
+			// 두 폴리곤의 엣지 쌍 중 같은 직선 위에서 겹치는 구간을 포털로 사용
+			int nSizeA = (int)PolyA.Indices.size();
+			int nSizeB = (int)PolyB.Indices.size();
+
+			for (int iA = 0; iA < nSizeA; ++iA)
+			{
+				int nA1 = PolyA.Indices[iA];
+				int nA2 = PolyA.Indices[(iA + 1) % nSizeA];
+				if (nA1 < 0 || nA1 >= (int)TileA.Vertices.size()) continue;
+				if (nA2 < 0 || nA2 >= (int)TileA.Vertices.size()) continue;
+
+				const Vector3& v3A1 = TileA.Vertices[nA1].v3Position;
+				const Vector3& v3A2 = TileA.Vertices[nA2].v3Position;
+
+				Vector3 v3Dir = v3A2 - v3A1;
+				float fLen = v3Dir.Length();
+				if (fLen < 1.0f) continue;
+				v3Dir /= fLen;
+
+				for (int iB = 0; iB < nSizeB; ++iB)
+				{
+					int nB1 = PolyB.Indices[iB];
+					int nB2 = PolyB.Indices[(iB + 1) % nSizeB];
+					if (nB1 < 0 || nB1 >= (int)TileB.Vertices.size()) continue;
+					if (nB2 < 0 || nB2 >= (int)TileB.Vertices.size()) continue;
+
+					float fLo, fHi;
+					if (!GetEdgeOverlap(v3A1, v3A2,
+					                    TileB.Vertices[nB1].v3Position,
+					                    TileB.Vertices[nB2].v3Position, fLo, fHi))
+						continue;
+
+					// PolyA winding 순서 유지: v3A1→v3A2 방향으로 겹침 구간 [fLo, fHi]
+					outV1 = v3A1 + v3Dir * fLo;
+					outV2 = v3A1 + v3Dir * fHi;
+					return true;
+				}
+			}
 			return false;
+		}
 
 		// 폴리곤 A의 winding order에 따라 정점 순서 결정
 		// 연속된 엣지인 경우 (idx 차이가 1) 순서대로, 아니면 wrap-around 처리
@@ -700,8 +844,9 @@ namespace AIDLL
 				return true;
 
 			// 해당 엣지가 공유 엣지인지 확인 (인접 폴리곤 탐색)
-			const Vector3& v3ExitE1 = Tile.Vertices[Poly.Indices[nMinEdgeIdx]].v3Position;
-			const Vector3& v3ExitE2 = Tile.Vertices[Poly.Indices[(nMinEdgeIdx + 1) % nNumVerts]].v3Position;
+			// T-junction 포털은 엣지의 일부 구간일 수 있으므로 끝점 일치 대신
+			// "ray 교차점이 포털 구간 위에 있는가"로 판정
+			const Vector3 v3Hit = From + (To - From) * fMinT;
 
 			int nNextPolyID = -1;
 			auto adjIt = m_Adjacency.find(nCurrentPolyID);
@@ -713,15 +858,20 @@ namespace AIDLL
 					if (!GetSharedEdge(nCurrentPolyID, nNeighborID, v3SharedV1, v3SharedV2))
 						continue;
 
-					// QUANT_SCALE 정밀도로 엣지 일치 확인 (방향 무관)
-					auto IsCloseXZ = [](const Vector3& A, const Vector3& B) -> bool
-					{
-						return std::abs(static_cast<int64>((A.x - B.x) * QUANT_SCALE)) == 0 &&
-						       std::abs(static_cast<int64>((A.z - B.z) * QUANT_SCALE)) == 0;
-					};
+					Vector3 v3Portal = v3SharedV2 - v3SharedV1;
+					v3Portal.y = 0.0f;
+					float fPortalLen = v3Portal.Length();
+					if (fPortalLen < 1e-3f) continue;
+					v3Portal /= fPortalLen;
 
-					if ((IsCloseXZ(v3SharedV1, v3ExitE1) && IsCloseXZ(v3SharedV2, v3ExitE2)) ||
-					    (IsCloseXZ(v3SharedV1, v3ExitE2) && IsCloseXZ(v3SharedV2, v3ExitE1)))
+					Vector3 v3ToHit = v3Hit - v3SharedV1;
+					v3ToHit.y = 0.0f;
+					float fAlong = v3ToHit.Dot(v3Portal);
+					float fPerp = (v3ToHit - v3Portal * fAlong).Length();
+
+					constexpr float fOnPortalEps = 1.0f;  // cm
+					if (fPerp <= fOnPortalEps &&
+					    fAlong >= -fOnPortalEps && fAlong <= fPortalLen + fOnPortalEps)
 					{
 						nNextPolyID = nNeighborID;
 						break;
@@ -832,6 +982,16 @@ namespace AIDLL
 	{
 		if (m_Tiles.empty())
 			return Vector3::Zero;
+
+		// 메인 컴포넌트가 구축된 경우: 도달 가능한 폴리곤에서만 추첨
+		// (고립 섬 폴리곤 제외 — 스폰/배회 목표가 경로 불가 지점에 잡히는 것 방지)
+		if (!m_MainComponentPolyList.empty())
+		{
+			static std::mt19937 mainRng{ std::random_device{}() };
+			std::uniform_int_distribution<int> mainPolyDist(0, static_cast<int>(m_MainComponentPolyList.size()) - 1);
+			int nPolyID = m_MainComponentPolyList[mainPolyDist(mainRng)];
+			return GetPolygonCenter(GetTileFromID(nPolyID), GetPolyFromID(nPolyID));
+		}
 
 		// 유효한 타일(폴리곤 존재) 목록 수집
 		std::vector<int> validTiles;
