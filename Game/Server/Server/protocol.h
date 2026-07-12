@@ -35,13 +35,15 @@ enum PACKET_TYPE {
 	S2C_REGISTER_RESULT,
 	C2S_READY,                                    // 클라이언트 → 서버: 레디 상태 변경
 	S2C_READY_STATE,                              // 서버 → 클라이언트: 누군가 레디 상태 변경
-	S2C_GAME_START,                               // 서버 → 클라이언트: 4명 레디 완료, 게임 시작
+	S2C_GAME_START,                               // 서버 → 클라이언트: 방장이 시작 요청 + 전원 레디 확인 → 게임 시작
 	C2S_PLAYER_CHARACTER,                         // 클라이언트 → 서버: 캐릭터 모델 선택 통지
 	S2C_PLAYER_CHARACTER,                         // 서버 → 클라이언트: 캐릭터 모델 브로드캐스트
 	S2C_ESCAPE_STATE,                             // 서버 → 클라이언트: 탈출 시퀀스 상태/남은시간 (UI)
 	C2S_PLAYER_ESCAPE,                            // 클라이언트 → 서버: 탈출 키 입력 (누구든 1명)
 	S2C_GAME_END,                                 // 서버 → 클라이언트: 게임 종료(탈출 성공) — 전원
-	S2C_ZOMBIE_STATE_BATCH                        // 서버 → 클라이언트: 여러 좀비 상태를 한 패킷에 묶어 전송
+	S2C_ZOMBIE_STATE_BATCH,                       // 서버 → 클라이언트: 여러 좀비 상태를 한 패킷에 묶어 전송
+	C2S_GAME_START,                               // 클라이언트 → 서버: 방장이 게임 시작 요청 (전원 레디 시 서버가 S2C_GAME_START 브로드캐스트)
+	S2C_HOST_CHANGE                               // 서버 → 클라이언트: 방장(호스트) 플레이어 ID 통지 (입장/방장 퇴장 시)
 };
 
 // ── 게임 이벤트 ID (서버 트리거, 클라 효과 카탈로그) ──────────────────────────
@@ -145,6 +147,17 @@ struct S2C_ReadyState {
 struct S2C_GameStart {
 	unsigned char size;
 	PACKET_TYPE   type;
+};
+
+struct C2S_GameStart {
+	unsigned char size;
+	PACKET_TYPE   type;
+};
+
+struct S2C_HostChange {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           hostPlayerId;
 };
 
 struct S2C_AddPlayer {

@@ -13,6 +13,7 @@
 #include "LightShaftPass.h"
 #include "DeferredFogPass.h"
 #include "BoundingBoxDebugPass.h"
+#include "NavMeshDebugPass.h"
 #include "UIPass.h"
 
 void RenderGraph::BuildGraph()
@@ -88,6 +89,10 @@ void RenderGraph::BuildGraph()
 	pBoundingBoxDebugPass->Initialize();
 	m_pAdjLists.push_back(pBoundingBoxDebugPass);
 
+	std::shared_ptr<IRenderPass> pNavMeshDebugPass = std::make_shared<NavMeshDebugPass>();
+	pNavMeshDebugPass->Initialize();
+	m_pAdjLists.push_back(pNavMeshDebugPass);
+
 	std::shared_ptr<IRenderPass> pUIPass = std::make_shared<UIPass>();
 	pUIPass->Initialize();
 	m_pAdjLists.push_back(pUIPass);
@@ -127,7 +132,8 @@ void RenderGraph::BuildGraph()
 	pBloomPass->Connect(pAutoExposurePass);
 	pAutoExposurePass->Connect(pToneMappingPass);
 	pToneMappingPass->Connect(pBoundingBoxDebugPass);
-	pBoundingBoxDebugPass->Connect(pUIPass);
+	pBoundingBoxDebugPass->Connect(pNavMeshDebugPass);
+	pNavMeshDebugPass->Connect(pUIPass);
 
 	m_unEntryNodeIndex = 0;
 	m_llPassTime.resize(m_pAdjLists.size(), 0);
@@ -196,6 +202,7 @@ void RenderGraph::ShowDebugInfo() const
 		"AutoExposurePass",
 		"ToneMappingPass",
 		"BoundingBoxDebugPass",
+		"NavMeshDebugPass",
 		"pUIPass"
 	};
 

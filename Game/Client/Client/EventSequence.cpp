@@ -2,11 +2,23 @@
 #include "EventSequence.h"
 
 
+void EventSequence::FlushPendingEvents()
+{
+	if (m_pPendingEvents.empty()) {
+		return;
+	}
+
+	m_pEvents.insert(m_pEvents.end(), m_pPendingEvents.begin(), m_pPendingEvents.end());
+	m_pPendingEvents.clear();
+}
+
 void EventSequence::Initialize()
 {
 	if (!m_pCurScene) {
 		return;
 	}
+
+	FlushPendingEvents();
 
 	for (auto& pEvent : m_pEvents) {
 		pEvent->Initialize(m_pCurScene);
@@ -18,6 +30,8 @@ void EventSequence::Update()
 	if (!m_pCurScene) {
 		return;
 	}
+
+	FlushPendingEvents();
 
 	for (auto& pEvent : m_pEvents) {
 		pEvent->Update(m_pCurScene);

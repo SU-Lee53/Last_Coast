@@ -1,9 +1,9 @@
 ﻿#include "pch.h"
 #include "Session.h"
-#include "ZombieManager.h"
-#include "ServerSpatialGrid.h"
-#include "DBManager.h"
+#include "GameWorld.h"
 #include <concurrent_queue.h>
+
+std::array<Session, MAX_PLAYERS> clients;
 
 // 송신용 EXP_OVER 재사용 풀 (스레드 안전 lock-free 큐). 풀 크기는 동시 in-flight 송신 수만큼만 자란다.
 static concurrency::concurrent_queue<EXP_OVER*> g_SendOverPool;
@@ -22,15 +22,9 @@ EXP_OVER* AcquireSendOver()
 
 void ReleaseSendOver(EXP_OVER* o)
 {
-	if (o) g_SendOverPool.push(o);
+	if (o) 
+		g_SendOverPool.push(o);
 }
-
-extern Room* find_empty_room();
-
-extern ZombieManager                g_ZombieManager;
-extern ServerSpatialGrid            g_SpatialGrid;
-extern concurrency::concurrent_unordered_map<int, Vector3> g_PlayerPositions;
-extern std::atomic<bool>            g_bEscapeRequested;   // 탈출 키 입력됨(누구든). 틱 스레드가 소비.
 
 void Session::init(SOCKET s, int id, Room* room)
 {
@@ -40,6 +34,15 @@ void Session::init(SOCKET s, int id, Room* room)
 	memset(&m_transform, 0, sizeof(m_transform));
 	m_room = room;
 	m_prev_recv = 0;
+
+	// 슬롯 재사용 시 이전 세션의 로비 상태가 남지 않도록 리셋
+	// (m_bReady 잔류 시 새 접속자가 레디한 것으로 카운트되어 전원 레디 오판)
+	m_bReady = false;
+	m_bRunning = false;
+	m_bAiming = false;
+	m_fAimPitch = 0.f;
+	m_weaponType = 3;      // 기본 PISTOL
+	m_characterType = 0;   // 기본 캐릭터
 }
 
 void Session::do_recv()
@@ -62,382 +65,53 @@ void Session::do_send(int num_bytes, char* mess)
 	WSASend(m_client, &o->m_wsa, 1, 0, 0, &o->m_over, nullptr);
 }
 
-void Session::send_add_player(int player_id)
-{
-	S2C_AddPlayer packet;
-	packet.size = sizeof(S2C_AddPlayer);
-	packet.type = S2C_ADD_PLAYER;
-	packet.playerId = player_id;
-	Session& pl = clients[player_id];
-	memcpy(packet.username, pl.m_username, sizeof(packet.username));
-	packet.transform = pl.m_transform;
-	packet.bRunning = pl.m_bRunning;
-	packet.bAiming = pl.m_bAiming;
-	packet.fAimPitch = pl.m_fAimPitch;
-	packet.weaponType = pl.m_weaponType;
-	packet.bReady = pl.m_bReady;
-	packet.characterType = pl.m_characterType;
-	do_send(packet.size, reinterpret_cast<char*>(&packet));
-}
-
-void Session::send_avatar_info()
-{
-	S2C_AvatarInfo packet;
-	packet.size = sizeof(S2C_AvatarInfo);
-	packet.type = S2C_AVATAR_INFO;
-	packet.playerId = m_id;
-	packet.transform = m_transform;
-	do_send(packet.size, reinterpret_cast<char*>(&packet));
-}
-
-void Session::send_transform_packet(int mover)
-{
-	if (m_room == nullptr) return;
-
-	S2C_Transform packet;
-	packet.size = sizeof(S2C_Transform);
-	packet.type = S2C_TRANSFORM;
-	packet.playerId = mover;
-	packet.transform = clients[mover].m_transform;
-	packet.bRunning = clients[mover].m_bRunning;
-	packet.bAiming = clients[mover].m_bAiming;
-	packet.fAimPitch = clients[mover].m_fAimPitch;
-
-	for (int p : m_room->players) {
-		if (p == -1) continue;
-		if (p == mover) continue;
-		clients[p].do_send(packet.size, reinterpret_cast<char*>(&packet));
-	}
-}
-
-void Session::send_login_success()
-{
-	S2C_LoginResult packet;
-	packet.size = sizeof(S2C_LoginResult);
-	packet.type = S2C_LOGIN_RESULT;
-	packet.success = true;
-	strncpy_s(packet.message, "Login successful.", sizeof(packet.message));
-	do_send(packet.size, reinterpret_cast<char*>(&packet));
-}
-
-void Session::send_remove_player(int player_id)
-{
-	S2C_RemovePlayer packet;
-	packet.size = sizeof(S2C_RemovePlayer);
-	packet.type = S2C_REMOVE_PLAYER;
-	packet.playerId = player_id;
-	do_send(packet.size, reinterpret_cast<char*>(&packet));
-}
-
-void Session::send_player_reload(int player_id)
-{
-	S2C_PlayerReload packet;
-	packet.size = sizeof(S2C_PlayerReload);
-	packet.type = S2C_PLAYER_RELOAD;
-	packet.playerId = player_id;
-	do_send(packet.size, reinterpret_cast<char*>(&packet));
-}
-
+// ─────────────────────────────────────────────────────────────────────────────
+// C2S 패킷 디스패치 — 파싱만 담당. 로비/게임 로직은 PacketHandlers,
+// 전투 판정(사격/근접)은 CombatSystem 이 처리한다.
+// ─────────────────────────────────────────────────────────────────────────────
 bool Session::process_packet(unsigned char* p)
 {
+	PacketHandlers& handlers = WORLD->GetHandlers();
+	CombatSystem&   combat   = WORLD->GetCombat();
+
 	PACKET_TYPE type = *reinterpret_cast<PACKET_TYPE*>(&p[1]);
 	switch (type) {
-	case C2S_LOGIN: {
-		C2S_Login* packet = reinterpret_cast<C2S_Login*>(p);
-		std::string id(packet->username);
-		std::string pw(packet->password);
-
-		if (DBManager::GetInstance().Login(id, pw)) {
-			strncpy_s(m_username, packet->username, MAX_NAME_LEN);
-			// std::cout << "Player[" << m_id << "] logged in as " << m_username << std::endl;
-
-			// 방 할당
-			Room* room = find_empty_room();
-			if (room == nullptr) {
-				S2C_LoginResult res;
-				res.size = sizeof(S2C_LoginResult);
-				res.type = S2C_LOGIN_RESULT;
-				res.success = false;
-				strncpy_s(res.message, "No Room Available", sizeof(res.message));
-				do_send(res.size, reinterpret_cast<char*>(&res));
-				break;
-			}
-			
-			room->add_player(m_id);
-			m_room = room;
-
-			send_login_success();
-			send_avatar_info();
-
-			// 방에 있는 다른 플레이어들에게 접속 알림
-			for (int other_id : room->players) {
-				if (other_id == -1 || other_id == m_id) continue;
-				clients[other_id].send_add_player(m_id);
-				send_add_player(other_id);
-			}
-
-			// 이미 스폰된 좀비 목록을 신규 클라이언트에게 전송
-			for (auto& [nZombieId, zombie] : g_ZombieManager.GetZombies())
-			{
-				if (!zombie.bAlive || !zombie.pAgent) continue;
-				send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
-			}
-		} else {
-			S2C_LoginResult res;
-			res.size = sizeof(S2C_LoginResult);
-			res.type = S2C_LOGIN_RESULT;
-			res.success = false;
-			strncpy_s(res.message, "Invalid ID or Password", sizeof(res.message));
-			do_send(res.size, reinterpret_cast<char*>(&res));
-		}
-	}
-	break;
-	case C2S_REGISTER: {
-		C2S_Register* packet = reinterpret_cast<C2S_Register*>(p);
-		std::string id(packet->username);
-		std::string pw(packet->password);
-
-		S2C_RegisterResult res;
-		res.size = sizeof(S2C_RegisterResult);
-		res.type = S2C_REGISTER_RESULT;
-
-		if (DBManager::GetInstance().Register(id, pw)) {
-			res.success = true;
-			strncpy_s(res.message, "Register Successful", sizeof(res.message));
-		} else {
-			res.success = false;
-			strncpy_s(res.message, "Register Failed (ID Exists?)", sizeof(res.message));
-		}
-		do_send(res.size, reinterpret_cast<char*>(&res));
-	}
-	break;
-	case C2S_TRANSFORM: {
-		C2S_Transform* packet = reinterpret_cast<C2S_Transform*>(p);
-		m_transform = packet->transform;
-		m_bRunning = packet->bRunning;
-		m_bAiming = packet->bAiming;
-		m_fAimPitch = packet->fAimPitch;
-
-		float x = m_transform.m[3][0];
-		float y = m_transform.m[3][1];
-		float z = m_transform.m[3][2];
-
-		// 좀비 AI용 플레이어 위치 갱신
-		g_PlayerPositions[m_id] = Vector3{ x, y, z };
-		//std::cout << "[Transform] Player[" << m_id << "] pos(" << x << "," << y << "," << z << ")\n";
-
-		send_transform_packet(m_id);
-	}
-					  break;
-	case C2S_PLAYER_SHOOT: {
-		C2S_PlayerShoot* packet = reinterpret_cast<C2S_PlayerShoot*>(p);
-
-		Vector3 v3Origin{ packet->originX, packet->originY, packet->originZ };
-		Vector3 v3Dir{ packet->dirX, packet->dirY, packet->dirZ };
-		v3Dir.Normalize();
-
-		//std::cout << "[Shoot] Player[" << m_id << "] origin("
-		//          << v3Origin.x << "," << v3Origin.y << "," << v3Origin.z
-		//          << ") dir(" << v3Dir.x << "," << v3Dir.y << "," << v3Dir.z << ")\n";
-
-		constexpr float fMaxDist = 5000.f;
-		const float     fDamage  = packet->damage; // 무기/펠릿 데미지 (클라 전송)
-
-		// ── 1. 좀비 히트 검사 (BoundingSphere) ──────────────────────────────
-		int   nHitZombieId = -1;
-		float fZombieDist  = fMaxDist;
-		g_ZombieManager.RayTestZombies(v3Origin, v3Dir, fMaxDist, nHitZombieId, fZombieDist);
-
-		// ── 2. 정적 오브젝트 히트 검사 (OBB 그리드) ─────────────────────────
-		ServerRayHitResult staticHit;
-		g_SpatialGrid.RayTestStatics(v3Origin, v3Dir, fMaxDist, staticHit);
-
-		//std::cout << "[Shoot] zombieHit=" << nHitZombieId
-		//          << " zombieDist=" << fZombieDist
-		//          << " staticHit=" << staticHit.bHit
-		//          << " staticDist=" << staticHit.fDistance << "\n";
-
-		// ── 3. 가장 가까운 히트 채택 ────────────────────────────────────────
-		S2C_ShootResult result{};
-		result.size = sizeof(S2C_ShootResult);
-		result.type = S2C_SHOOT_RESULT;
-		result.shooterPlayerId = m_id;
-		result.hitZombieId = -1;
-		result.damage = 0.f;
-		result.bHit = 0;
-		result.muzzleX  = packet->muzzleX;
-		result.muzzleY  = packet->muzzleY;
-		result.muzzleZ  = packet->muzzleZ;
-		result.shootDirX = v3Dir.x;
-		result.shootDirY = v3Dir.y;
-		result.shootDirZ = v3Dir.z;
-
-		bool bZombieCloser = (nHitZombieId >= 0) &&
-			(!staticHit.bHit || fZombieDist <= staticHit.fDistance);
-
-		if (bZombieCloser)
-		{
-			// 좀비와 사격자 사이에 벽이 있는지 추가 차폐 체크
-			Vector3 v3ZombieHitPoint = v3Origin + v3Dir * fZombieDist;
-			bool bBlocked = g_SpatialGrid.IsLineOfSightBlocked(v3Origin, v3ZombieHitPoint);
-
-			if (!bBlocked)
-			{
-				result.bHit = 2; // zombie
-				result.hitX = v3Origin.x + v3Dir.x * fZombieDist;
-				result.hitY = v3Origin.y + v3Dir.y * fZombieDist;
-				result.hitZ = v3Origin.z + v3Dir.z * fZombieDist;
-				result.hitNormalX = -v3Dir.x;
-				result.hitNormalY = -v3Dir.y;
-				result.hitNormalZ = -v3Dir.z;
-				result.hitZombieId = nHitZombieId;
-				result.damage = fDamage;
-
-				// 데미지 적용 (사망 시 bAlive=false로 AI 중단, despawn은 보내지 않음)
-				// 클라이언트가 TakeDamage → 사망 몽타주 → 자체 제거 처리
-				g_ZombieManager.ApplyDamageToZombie(nHitZombieId, fDamage);
-			}
-			else if (staticHit.bHit)
-			{
-				// 벽에 차폐된 경우 → 벽 히트로 처리
-				result.bHit = 1; // static
-				result.hitX = staticHit.v3HitPoint.x;
-				result.hitY = staticHit.v3HitPoint.y;
-				result.hitZ = staticHit.v3HitPoint.z;
-				result.hitNormalX = staticHit.v3HitNormal.x;
-				result.hitNormalY = staticHit.v3HitNormal.y;
-				result.hitNormalZ = staticHit.v3HitNormal.z;
-			}
-		}
-		else if (staticHit.bHit)
-		{
-			result.bHit = 1; // static
-			result.hitX = staticHit.v3HitPoint.x;
-			result.hitY = staticHit.v3HitPoint.y;
-			result.hitZ = staticHit.v3HitPoint.z;
-			result.hitNormalX = staticHit.v3HitNormal.x;
-			result.hitNormalY = staticHit.v3HitNormal.y;
-			result.hitNormalZ = staticHit.v3HitNormal.z;
-		}
-
-		// ── 4. 전체 클라이언트에 결과 브로드캐스트 ──────────────────────────
-		for (auto& cl : clients)
-			if (cl.m_is_connected)
-				cl.send_shoot_result(result);
+	case C2S_LOGIN:
+		handlers.Login(*this, *reinterpret_cast<C2S_Login*>(p));
 		break;
-	}
-	case C2S_PLAYER_RELOAD: {
-		//std::cout << "[Reload] Player[" << m_id << "] requested reload\n";
-		for (auto& cl : clients) {
-			if (cl.m_is_connected) {
-				cl.send_player_reload(m_id);
-			}
-		}
-	}
-	break;
-	case C2S_PLAYER_MELEE: {
-		C2S_PlayerMelee* packet = reinterpret_cast<C2S_PlayerMelee*>(p);
-
-		Vector3 v3Origin{ packet->originX, packet->originY, packet->originZ };
-		Vector3 v3Dir{ packet->dirX, packet->dirY, packet->dirZ };
-		v3Dir.Normalize();
-
-		constexpr float fRange  = 200.f;
-		constexpr float fDamage = 50.f;
-
-		// 단일 레이 — 전방 사거리 내 가장 가까운 좀비 1마리
-		int   nHitZombieId = -1;
-		float fHitDist     = fRange;
-		g_ZombieManager.RayTestZombies(v3Origin, v3Dir, fRange, nHitZombieId, fHitDist);
-
-		// 근접공격 모션을 전체 클라이언트에 브로드캐스트 (리모트 애니메이션)
-		for (auto& cl : clients)
-			if (cl.m_is_connected)
-				cl.send_player_melee(m_id);
-
-		// 히트 시 데미지 적용 + 피 이펙트 브로드캐스트
-		if (nHitZombieId >= 0)
-		{
-			g_ZombieManager.ApplyDamageToZombie(nHitZombieId, fDamage);
-			Vector3 v3Hit = v3Origin + v3Dir * fHitDist;
-			for (auto& cl : clients)
-				if (cl.m_is_connected)
-					cl.send_melee_hit(m_id, nHitZombieId, fDamage, v3Hit);
-		}
-	}
-	break;
-	case C2S_PLAYER_WEAPON: {
-		C2S_PlayerWeapon* packet = reinterpret_cast<C2S_PlayerWeapon*>(p);
-		m_weaponType = packet->weaponType;   // late-join 동기화용으로 저장
-
-		// 무기 교체를 전체 클라이언트에 브로드캐스트 (본인 포함; 클라가 본인 필터)
-		for (auto& cl : clients)
-			if (cl.m_is_connected)
-				cl.send_player_weapon(m_id, m_weaponType);
-	}
-	break;
-	case C2S_PLAYER_CHARACTER: {
-		C2S_PlayerCharacter* packet = reinterpret_cast<C2S_PlayerCharacter*>(p);
-		m_characterType = packet->characterType;   // late-join 동기화용으로 저장
-
-		// 캐릭터 모델 선택을 전체 클라이언트에 브로드캐스트 (본인 포함; 클라가 본인 필터)
-		for (auto& cl : clients)
-			if (cl.m_is_connected)
-				cl.send_player_character(m_id, m_characterType);
-	}
-	break;
-	case C2S_PLAYER_ESCAPE: {
-		// 탈출 키 입력 — 플래그만 세움. 실제 종료 판정/브로드캐스트는 틱 스레드가
-		// 탈출 가능 상태(Ready)일 때만 처리한다 (스레드 안전 + 단일 권위).
-		g_bEscapeRequested = true;
-	}
-	break;
-	case C2S_CHAT: {
-		C2S_Chat* packet = reinterpret_cast<C2S_Chat*>(p);
-		// 메시지 널 종단 보장
-		char msg[MAX_CHAT_LEN];
-		memcpy_s(msg, sizeof(msg), packet->message, MAX_CHAT_LEN);
-		msg[MAX_CHAT_LEN - 1] = '\0';
-
-		std::cout << "[Chat] Player[" << m_id << "] " << m_username << ": " << msg << std::endl;
-
-		// 모든 접속 클라이언트(보낸 사람 포함)에게 브로드캐스트
-		for (auto& cl : clients)
-			if (cl.m_is_connected)
-				cl.send_chat(m_id, m_username, msg);
-	}
-	break;
-	case C2S_READY: {
-		C2S_Ready* packet = reinterpret_cast<C2S_Ready*>(p);
-		m_bReady = packet->bReady;
-		std::cout << "[Ready] Player[" << m_id << "] is " << (m_bReady ? "READY" : "NOT READY") << std::endl;
-
-		// 방 안의 모든 클라이언트에게 레디 상태 브로드캐스트
-		if (m_room) {
-			for (int other_id : m_room->players) {
-				if (other_id == -1) continue;
-				clients[other_id].send_ready_state(m_id, m_bReady);
-			}
-
-			// 4명이 모두 레디인지 확인
-			int nReadyCount = 0;
-			int nConnectedCount = 0;
-			for (int other_id : m_room->players) {
-				if (other_id == -1) continue;
-				++nConnectedCount;
-				if (clients[other_id].m_bReady) ++nReadyCount;
-			}
-			// [테스트] 1명만 들어와도 시작 가능 (원래 2명). 정식 빌드에선 >= 2 로 복구.
-			if (nConnectedCount >= 1 && nReadyCount == nConnectedCount) {
-				std::cout << "[Room] All " << nConnectedCount << " players ready! Starting game." << std::endl;
-				for (int other_id : m_room->players) {
-					if (other_id == -1) continue;
-					clients[other_id].send_game_start();
-				}
-			}
-		}
-	}
-	break;
+	case C2S_REGISTER:
+		handlers.Register(*this, *reinterpret_cast<C2S_Register*>(p));
+		break;
+	case C2S_TRANSFORM:
+		handlers.Transform(*this, *reinterpret_cast<C2S_Transform*>(p));
+		break;
+	case C2S_PLAYER_SHOOT:
+		combat.ResolveShoot(*this, *reinterpret_cast<C2S_PlayerShoot*>(p));
+		break;
+	case C2S_PLAYER_MELEE:
+		combat.ResolveMelee(*this, *reinterpret_cast<C2S_PlayerMelee*>(p));
+		break;
+	case C2S_PLAYER_RELOAD:
+		handlers.Reload(*this);
+		break;
+	case C2S_PLAYER_WEAPON:
+		handlers.Weapon(*this, *reinterpret_cast<C2S_PlayerWeapon*>(p));
+		break;
+	case C2S_PLAYER_CHARACTER:
+		handlers.Character(*this, *reinterpret_cast<C2S_PlayerCharacter*>(p));
+		break;
+	case C2S_PLAYER_ESCAPE:
+		handlers.Escape(*this);
+		break;
+	case C2S_CHAT:
+		handlers.Chat(*this, *reinterpret_cast<C2S_Chat*>(p));
+		break;
+	case C2S_READY:
+		handlers.Ready(*this, *reinterpret_cast<C2S_Ready*>(p));
+		break;
+	case C2S_GAME_START:
+		handlers.GameStart(*this);
+		break;
 	default:
 		std::cout << "Unknown packet type received from player[" << m_id << "].\n";
 		return false;
@@ -445,86 +119,144 @@ bool Session::process_packet(unsigned char* p)
 	return true;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// S2C 전송 함수들
+// ─────────────────────────────────────────────────────────────────────────────
+
+void Session::send_add_player(int player_id)
+{
+	S2C_AddPlayer packet;
+	packet.playerId = player_id;
+	Session& pl = clients[player_id];
+	memcpy(packet.username, pl.m_username, sizeof(packet.username));
+	{
+		std::lock_guard<std::mutex> lg(pl.m_state_lock); // 다른 세션의 transform 읽기 — tearing 방지
+		packet.transform = pl.m_transform;
+		packet.bRunning = pl.m_bRunning;
+		packet.bAiming = pl.m_bAiming;
+		packet.fAimPitch = pl.m_fAimPitch;
+	}
+	packet.weaponType = pl.m_weaponType;
+	packet.bReady = pl.m_bReady;
+	packet.characterType = pl.m_characterType;
+	send_packet(S2C_ADD_PLAYER, packet);
+}
+
+void Session::send_avatar_info()
+{
+	S2C_AvatarInfo packet;
+	packet.playerId = m_id;
+	packet.transform = m_transform;
+	send_packet(S2C_AVATAR_INFO, packet);
+}
+
+void Session::send_transform_packet(int mover)
+{
+	if (m_room == nullptr) return;
+
+	S2C_Transform packet;
+	packet.playerId = mover;
+	{
+		std::lock_guard<std::mutex> lg(clients[mover].m_state_lock);
+		packet.transform = clients[mover].m_transform;
+		packet.bRunning = clients[mover].m_bRunning;
+		packet.bAiming = clients[mover].m_bAiming;
+		packet.fAimPitch = clients[mover].m_fAimPitch;
+	}
+
+	for (int p : m_room->players) {
+		if (p == -1) continue;
+		if (p == mover) continue;
+		clients[p].send_packet(S2C_TRANSFORM, packet);
+	}
+}
+
+void Session::send_login_success()
+{
+	S2C_LoginResult packet;
+	packet.success = true;
+	strncpy_s(packet.message, "Login successful.", sizeof(packet.message));
+	send_packet(S2C_LOGIN_RESULT, packet);
+}
+
+void Session::send_remove_player(int player_id)
+{
+	S2C_RemovePlayer packet;
+	packet.playerId = player_id;
+	send_packet(S2C_REMOVE_PLAYER, packet);
+}
+
+void Session::send_player_reload(int player_id)
+{
+	S2C_PlayerReload packet;
+	packet.playerId = player_id;
+	send_packet(S2C_PLAYER_RELOAD, packet);
+}
+
 void Session::send_player_melee(int attacker_id)
 {
 	S2C_PlayerMelee packet;
-	packet.size = sizeof(S2C_PlayerMelee);
-	packet.type = S2C_PLAYER_MELEE;
 	packet.attackerPlayerId = attacker_id;
-	do_send(packet.size, reinterpret_cast<char*>(&packet));
+	send_packet(S2C_PLAYER_MELEE, packet);
 }
 
 void Session::send_melee_hit(int attacker_id, int zombie_id, float damage, const Vector3& v3Hit)
 {
 	S2C_MeleeHit packet;
-	packet.size = sizeof(S2C_MeleeHit);
-	packet.type = S2C_MELEE_HIT;
 	packet.attackerPlayerId = attacker_id;
 	packet.zombieId = zombie_id;
 	packet.damage = damage;
 	packet.hitX = v3Hit.x;
 	packet.hitY = v3Hit.y;
 	packet.hitZ = v3Hit.z;
-	do_send(packet.size, reinterpret_cast<char*>(&packet));
+	send_packet(S2C_MELEE_HIT, packet);
 }
 
 void Session::send_player_weapon(int player_id, unsigned char weapon_type)
 {
 	S2C_PlayerWeapon packet;
-	packet.size = sizeof(S2C_PlayerWeapon);
-	packet.type = S2C_PLAYER_WEAPON;
 	packet.playerId = player_id;
 	packet.weaponType = weapon_type;
-	do_send(packet.size, reinterpret_cast<char*>(&packet));
+	send_packet(S2C_PLAYER_WEAPON, packet);
 }
 
 void Session::send_player_character(int player_id, unsigned char character_type)
 {
 	S2C_PlayerCharacter packet;
-	packet.size = sizeof(S2C_PlayerCharacter);
-	packet.type = S2C_PLAYER_CHARACTER;
 	packet.playerId = player_id;
 	packet.characterType = character_type;
-	do_send(packet.size, reinterpret_cast<char*>(&packet));
+	send_packet(S2C_PLAYER_CHARACTER, packet);
 }
 
-void Session::send_chat(int sender_id, const char* username, const char* message)
+void Session::send_chat(int sender_id, const std::string& username, const std::string& message)
 {
 	S2C_Chat packet;
-	packet.size = sizeof(S2C_Chat);
-	packet.type = S2C_CHAT;
 	packet.playerId = sender_id;
-	strncpy_s(packet.username, username, MAX_NAME_LEN - 1);
-	strncpy_s(packet.message, message, MAX_CHAT_LEN - 1);
-	do_send(packet.size, reinterpret_cast<char*>(&packet));
+	strncpy_s(packet.username, username.c_str(), MAX_NAME_LEN - 1);
+	strncpy_s(packet.message, message.c_str(), MAX_CHAT_LEN - 1);
+	send_packet(S2C_CHAT, packet);
 }
 
 void Session::send_spawn_zombie(int nZombieId, const Vector3& v3Pos)
 {
 	S2C_SpawnZombie p;
-	p.size = sizeof(S2C_SpawnZombie);
-	p.type = S2C_SPAWN_ZOMBIE;
 	p.zombieId = nZombieId;
 	p.x = v3Pos.x;
 	p.y = v3Pos.y;
 	p.z = v3Pos.z;
-	do_send(p.size, reinterpret_cast<char*>(&p));
+	send_packet(S2C_SPAWN_ZOMBIE, p);
 }
 
 void Session::send_despawn_zombie(int nZombieId)
 {
 	S2C_DespawnZombie p;
-	p.size = sizeof(S2C_DespawnZombie);
-	p.type = S2C_DESPAWN_ZOMBIE;
 	p.zombieId = nZombieId;
-	do_send(p.size, reinterpret_cast<char*>(&p));
+	send_packet(S2C_DESPAWN_ZOMBIE, p);
 }
 
 void Session::send_zombie_state(int nZombieId, float x, float z, float yaw, float waypointX, float waypointZ, ZombieBehaviorState state)
 {
 	S2C_ZombieState p;
-	p.size = sizeof(S2C_ZombieState);
-	p.type = S2C_ZOMBIE_STATE;
 	p.zombieId = nZombieId;
 	p.x = x;
 	p.z = z;
@@ -532,7 +264,7 @@ void Session::send_zombie_state(int nZombieId, float x, float z, float yaw, floa
 	p.waypointX = waypointX;
 	p.waypointZ = waypointZ;
 	p.behaviorState = state;
-	do_send(p.size, reinterpret_cast<char*>(&p));
+	send_packet(S2C_ZOMBIE_STATE, p);
 }
 
 void Session::send_zombie_state_batch(const ZombieStateEntry* entries, int count)
@@ -552,27 +284,18 @@ void Session::send_zombie_state_batch(const ZombieStateEntry* entries, int count
 	do_send(nBytes, reinterpret_cast<char*>(&p));
 }
 
-void Session::send_shoot_result(const S2C_ShootResult& result)
-{
-	do_send(result.size, const_cast<char*>(reinterpret_cast<const char*>(&result)));
-}
-
 void Session::send_zombie_attack(int nZombieId, int nTargetPlayerId, float fDamage)
 {
 	S2C_ZombieAttack p;
-	p.size = sizeof(S2C_ZombieAttack);
-	p.type = S2C_ZOMBIE_ATTACK;
 	p.zombieId = nZombieId;
 	p.targetPlayerId = nTargetPlayerId;
 	p.damage = fDamage;
-	do_send(p.size, reinterpret_cast<char*>(&p));
+	send_packet(S2C_ZOMBIE_ATTACK, p);
 }
 
 void Session::send_game_event(int event_id, const Vector3& v3Pos, float fTargetValue, float fDuration, int preset_id)
 {
 	S2C_GameEvent p;
-	p.size = sizeof(S2C_GameEvent);
-	p.type = S2C_GAME_EVENT;
 	p.eventId = event_id;
 	p.x = v3Pos.x;
 	p.y = v3Pos.y;
@@ -580,41 +303,40 @@ void Session::send_game_event(int event_id, const Vector3& v3Pos, float fTargetV
 	p.fTargetValue = fTargetValue;
 	p.fDuration = fDuration;
 	p.presetId = preset_id;
-	do_send(p.size, reinterpret_cast<char*>(&p));
+	send_packet(S2C_GAME_EVENT, p);
 }
 
 void Session::send_ready_state(int player_id, bool bReady)
 {
 	S2C_ReadyState p;
-	p.size = sizeof(S2C_ReadyState);
-	p.type = S2C_READY_STATE;
 	p.playerId = player_id;
 	p.bReady = bReady;
-	do_send(p.size, reinterpret_cast<char*>(&p));
+	send_packet(S2C_READY_STATE, p);
 }
 
 void Session::send_game_start()
 {
 	S2C_GameStart p;
-	p.size = sizeof(S2C_GameStart);
-	p.type = S2C_GAME_START;
-	do_send(p.size, reinterpret_cast<char*>(&p));
+	send_packet(S2C_GAME_START, p);
+}
+
+void Session::send_host_change(int host_id)
+{
+	S2C_HostChange p;
+	p.hostPlayerId = host_id;
+	send_packet(S2C_HOST_CHANGE, p);
 }
 
 void Session::send_escape_state(unsigned char phase, float remain_seconds)
 {
 	S2C_EscapeState p;
-	p.size = sizeof(S2C_EscapeState);
-	p.type = S2C_ESCAPE_STATE;
 	p.phase = phase;
 	p.fRemainSeconds = remain_seconds;
-	do_send(p.size, reinterpret_cast<char*>(&p));
+	send_packet(S2C_ESCAPE_STATE, p);
 }
 
 void Session::send_game_end()
 {
 	S2C_GameEnd p;
-	p.size = sizeof(S2C_GameEnd);
-	p.type = S2C_GAME_END;
-	do_send(p.size, reinterpret_cast<char*>(&p));
+	send_packet(S2C_GAME_END, p);
 }

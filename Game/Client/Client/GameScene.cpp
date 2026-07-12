@@ -15,7 +15,6 @@
 #include "BloodEffect.h"
 #include "MuzzleFlashEffect.h"
 #include "ZombieAnimationController.h"
-#include "HelicopterAnimationController.h"
 #include "ThirdPersonCamera.h"
 #include "BulletImpactEffect.h"
 #include "EventSequence.h"

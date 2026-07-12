@@ -53,8 +53,18 @@ public:
 
 public:
 	void		init(SOCKET s, int id, Room* room);
-	void		do_recv();									
+	void		do_recv();
 	void		do_send(int num_bytes, char* mess);
+
+	// S2C 공통 전송 — size/type 세팅 + do_send. 나머지 필드는 호출부가 채워 전달.
+	// 예외: 가변 길이 패킷(send_zombie_state_batch)은 do_send 직접 사용.
+	template<typename T>
+	void send_packet(PACKET_TYPE type, T& packet)
+	{
+		packet.size = static_cast<unsigned char>(sizeof(T));
+		packet.type = type;
+		do_send(packet.size, reinterpret_cast<char*>(&packet));
+	}
 
 	void		send_avatar_info();
 	void		send_transform_packet(int mover);
@@ -68,16 +78,16 @@ public:
 	void send_zombie_state(int nZombieId, float x, float z, float yaw, float waypointX, float waypointZ, ZombieBehaviorState state);
 	void send_zombie_state_batch(const ZombieStateEntry* entries, int count);
 	void send_zombie_attack(int nZombieId, int nTargetPlayerId, float fDamage);
-	void send_shoot_result(const S2C_ShootResult& result);
 	void send_player_reload(int player_id);
 	void send_player_melee(int attacker_id);
 	void send_melee_hit(int attacker_id, int zombie_id, float damage, const Vector3& v3Hit);
-	void send_chat(int sender_id, const char* username, const char* message);
+	void send_chat(int sender_id, const std::string& username, const std::string& message);
 	void send_player_weapon(int player_id, unsigned char weapon_type);
 	void send_player_character(int player_id, unsigned char character_type);
 	void send_game_event(int event_id, const Vector3& v3Pos, float fTargetValue, float fDuration, int preset_id = 0);
 	void send_ready_state(int player_id, bool bReady);
 	void send_game_start();
+	void send_host_change(int host_id);
 	void send_escape_state(unsigned char phase, float remain_seconds);
 	void send_game_end();
 
@@ -89,6 +99,9 @@ public:
 	std::atomic<bool> m_is_connected;
 	int			m_prev_recv;
 	char		m_username[MAX_NAME_LEN];
+	// m_transform + 이동 플래그 보호 — 워커 스레드가 쓰고(C2S_TRANSFORM)
+	// 틱 스레드/다른 세션 핸들러가 읽음(위치 스냅샷, send_add_player 등). 행렬 tearing 방지.
+	std::mutex	m_state_lock;
 	TransformData m_transform;
 	bool          m_bRunning = false;
 	bool          m_bAiming = false;
@@ -97,3 +110,14 @@ public:
 	bool          m_bReady = false;
 	unsigned char m_characterType = 0; // 기본 캐릭터 모델 인덱스 (g_strCharacterNames[0])
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 전체 클라이언트 브로드캐스트 헬퍼 (워커/게임 틱 스레드 공용)
+// ─────────────────────────────────────────────────────────────────────────────
+template<typename Fn>
+void BroadcastAll(Fn fn)
+{
+	for (auto& cl : clients)
+		if (cl.m_is_connected)
+			fn(cl);
+}

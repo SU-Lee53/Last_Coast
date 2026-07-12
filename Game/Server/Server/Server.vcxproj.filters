@@ -1,60 +1,137 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Session">
-      <UniqueIdentifier>{97c29025-03ee-456b-b7e9-88a34d76c2b1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Network">
-      <UniqueIdentifier>{3e949fcf-322f-416d-be33-02a9da4a78d4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Pch">
-      <UniqueIdentifier>{ae9856fb-6daa-441f-a3fe-ca23b6d756a7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Main">
+    <Filter Include="00.Entry">
       <UniqueIdentifier>{04fa3e46-39dc-425f-a851-f2e3352e9575}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Server">
+    <Filter Include="01.Network">
+      <UniqueIdentifier>{3e949fcf-322f-416d-be33-02a9da4a78d4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Game">
       <UniqueIdentifier>{7682c945-3240-40b0-845e-963283c5fb8c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Room">
+    <Filter Include="02.Game\Systems">
+      <UniqueIdentifier>{97c29025-03ee-456b-b7e9-88a34d76c2b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Game\Zombie">
       <UniqueIdentifier>{fda6111b-b94f-44a0-81eb-817a016cf2ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03.Collision">
+      <UniqueIdentifier>{b3d5a1c7-8e42-4f19-9a67-2c5e8d0f4b31}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="04.DB">
+      <UniqueIdentifier>{c7e91f24-5a38-4d06-b8f2-7d1a9c3e6058}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="99.Utility">
+      <UniqueIdentifier>{f5b78b99-5b05-407c-98ba-10a4a93e90de}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="99.pch">
+      <UniqueIdentifier>{ae9856fb-6daa-441f-a3fe-ca23b6d756a7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="pch.cpp">
-      <Filter>Pch</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp">
-      <Filter>Main</Filter>
+      <Filter>00.Entry</Filter>
+    </ClCompile>
+    <ClCompile Include="Network.cpp">
+      <Filter>01.Network</Filter>
     </ClCompile>
     <ClCompile Include="Session.cpp">
-      <Filter>Session</Filter>
+      <Filter>01.Network</Filter>
+    </ClCompile>
+    <ClCompile Include="GameWorld.cpp">
+      <Filter>02.Game</Filter>
+    </ClCompile>
+    <ClCompile Include="GameLoop.cpp">
+      <Filter>02.Game</Filter>
     </ClCompile>
     <ClCompile Include="Room.cpp">
-      <Filter>Room</Filter>
+      <Filter>02.Game</Filter>
     </ClCompile>
-    <ClCompile Include="ZombieManager.cpp" />
-    <ClCompile Include="ServerSpatialGrid.cpp" />
-    <ClCompile Include="SimpleMath.cpp" />
+    <ClCompile Include="PacketHandlers.cpp">
+      <Filter>02.Game\Systems</Filter>
+    </ClCompile>
+    <ClCompile Include="CombatSystem.cpp">
+      <Filter>02.Game\Systems</Filter>
+    </ClCompile>
+    <ClCompile Include="CheckpointSystem.cpp">
+      <Filter>02.Game\Systems</Filter>
+    </ClCompile>
+    <ClCompile Include="EscapeSequence.cpp">
+      <Filter>02.Game\Systems</Filter>
+    </ClCompile>
+    <ClCompile Include="ZombieManager.cpp">
+      <Filter>02.Game\Zombie</Filter>
+    </ClCompile>
+    <ClCompile Include="ServerSpatialGrid.cpp">
+      <Filter>03.Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="ServerBoundingCapsule.cpp">
+      <Filter>03.Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="DBManager.cpp">
+      <Filter>04.DB</Filter>
+    </ClCompile>
+    <ClCompile Include="SimpleMath.cpp">
+      <Filter>99.Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>99.pch</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="pch.h">
-      <Filter>Pch</Filter>
-    </ClInclude>
     <ClInclude Include="protocol.h">
-      <Filter>Server</Filter>
+      <Filter>01.Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Network.h">
+      <Filter>01.Network</Filter>
     </ClInclude>
     <ClInclude Include="Session.h">
-      <Filter>Session</Filter>
+      <Filter>01.Network</Filter>
+    </ClInclude>
+    <ClInclude Include="GameWorld.h">
+      <Filter>02.Game</Filter>
+    </ClInclude>
+    <ClInclude Include="GameLoop.h">
+      <Filter>02.Game</Filter>
     </ClInclude>
     <ClInclude Include="Room.h">
-      <Filter>Room</Filter>
+      <Filter>02.Game</Filter>
     </ClInclude>
-    <ClInclude Include="ZombieManager.h" />
-    <ClInclude Include="ServerSpatialGrid.h" />
-    <ClInclude Include="SimpleMath.h" />
+    <ClInclude Include="PacketHandlers.h">
+      <Filter>02.Game\Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="CombatSystem.h">
+      <Filter>02.Game\Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="CheckpointSystem.h">
+      <Filter>02.Game\Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="EscapeSequence.h">
+      <Filter>02.Game\Systems</Filter>
+    </ClInclude>
+    <ClInclude Include="ZombieManager.h">
+      <Filter>02.Game\Zombie</Filter>
+    </ClInclude>
+    <ClInclude Include="ServerSpatialGrid.h">
+      <Filter>03.Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="ServerBoundingCapsule.h">
+      <Filter>03.Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="DBManager.h">
+      <Filter>04.DB</Filter>
+    </ClInclude>
+    <ClInclude Include="SimpleMath.h">
+      <Filter>99.Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>99.pch</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="SimpleMath.inl" />
+    <None Include="SimpleMath.inl">
+      <Filter>99.Utility</Filter>
+    </None>
   </ItemGroup>
 </Project>

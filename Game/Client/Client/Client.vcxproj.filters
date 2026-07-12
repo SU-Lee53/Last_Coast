@@ -421,6 +421,9 @@
     <ClInclude Include="BoundingBoxDebugPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
+    <ClInclude Include="NavMeshDebugPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
     <ClInclude Include="DirectionalCascadeShadowMapPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
@@ -433,7 +436,6 @@
     <ClInclude Include="TerrainTestScene.h">
       <Filter>02.Game\Scene\Test</Filter>
     </ClInclude>
-    <ClInclude Include="NavMeshDebugRenderer.h" />
     <ClInclude Include="AIManagerWrapper.h" />
     <ClInclude Include="TestScene.h">
       <Filter>02.Game\Scene\Test</Filter>
@@ -523,6 +525,9 @@
       <Filter>02.Game\Particle\Particles</Filter>
     </ClInclude>
     <ClInclude Include="ExplosionEffect.h">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="CrashFireEffect.h">
       <Filter>02.Game\Particle\Particles</Filter>
     </ClInclude>
     <ClInclude Include="FireEffect.h">
@@ -864,6 +869,9 @@
     <ClCompile Include="BoundingBoxDebugPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
+    <ClCompile Include="NavMeshDebugPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
     <ClCompile Include="SkyboxPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
@@ -885,7 +893,6 @@
     <ClCompile Include="MapTestScene.cpp">
       <Filter>02.Game\Scene\Test</Filter>
     </ClCompile>
-    <ClCompile Include="NavMeshDebugRenderer.cpp" />
     <ClCompile Include="AIManagerWrapper.cpp" />
     <ClCompile Include="TestScene.cpp">
       <Filter>02.Game\Scene\Test</Filter>
@@ -978,6 +985,9 @@
       <Filter>02.Game\Particle\Particles</Filter>
     </ClCompile>
     <ClCompile Include="ExplosionEffect.cpp">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="CrashFireEffect.cpp">
       <Filter>02.Game\Particle\Particles</Filter>
     </ClCompile>
     <ClCompile Include="FireEffect.cpp">

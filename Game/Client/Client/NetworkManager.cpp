@@ -506,6 +506,12 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		m_bPendingGameStart.store(true);
 		break;
 	}
+	case S2C_HOST_CHANGE: {
+		if (size < static_cast<int>(sizeof(S2C_HostChange))) return;
+		auto* p = reinterpret_cast<const S2C_HostChange*>(data);
+		m_nHostId.store(p->hostPlayerId);
+		break;
+	}
 	case S2C_ESCAPE_STATE: {
 		if (size < static_cast<int>(sizeof(S2C_EscapeState))) return;
 		auto* p = reinterpret_cast<const S2C_EscapeState*>(data);
@@ -740,6 +746,16 @@ void NetworkManager::SendReady(bool bReady)
 	p.size   = sizeof(C2S_Ready);
 	p.type   = C2S_READY;
 	p.bReady = bReady;
+	SendPacket(&p, p.size);
+}
+
+void NetworkManager::SendGameStart()
+{
+	if (!m_bConnected || m_bOfflineMode) return;
+
+	C2S_GameStart p;
+	p.size = sizeof(C2S_GameStart);
+	p.type = C2S_GAME_START;
 	SendPacket(&p, p.size);
 }
 

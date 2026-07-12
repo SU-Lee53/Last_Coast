@@ -109,5 +109,10 @@ namespace AIDLL
 
 		// ── 1. 이미 지나친 waypoint 건너뜀 ───────────────────────────────────
 		constexpr static float g_fArrivalThreshold = 50.0f;  // 10cm → 50cm
+
+		// waypoint 근접 시 flock 힘 감쇠 반경 (Separation 반경 150cm와 동일)
+		// 분리력(150cm)이 도달 판정(50cm) 진입을 막아 waypoint 주위를
+		// 맴도는 궤도 회전(orbiting)을 차단한다
+		constexpr static float g_fFlockDampRadius = 150.0f;
     };
 }

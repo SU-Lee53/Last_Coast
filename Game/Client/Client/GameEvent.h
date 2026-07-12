@@ -16,8 +16,8 @@
 
 class CrashDebris;
 class FireEffect;
+class CrashFireEffect;
 class HelicopterObject;
-class FireEffect;
 
 interface IGameEvent abstract {
 public:
@@ -113,6 +113,19 @@ private:
 	std::vector<Vector3> m_v3FirePos;
 	std::vector<std::shared_ptr<FireEffect>> m_pFireEffects;
 	std::vector<float> m_fFireEffectElapsed;
+};
+
+// 추락 잔해 화재 — 지정 위치에 차량 화재(FireEvent)와 동일한 리스폰 루프로
+// 대형 불 파티클(CrashFireEffect)을 유지. 헬기 추락 폭발 직후 HelicopterCrashEvent가 띄운다.
+class CrashSiteFireEvent : public ILoopEvent {
+public:
+	CrashSiteFireEvent(const Vector3& v3Pos) : m_v3Pos{ v3Pos } {}
+	virtual void OnUpdateEvent(Scene* pScene) override;
+
+private:
+	Vector3 m_v3Pos;
+	std::shared_ptr<CrashFireEffect> m_pFireEffect;
+	float m_fElapsed = 0.f;
 };
 
 // 폭발 연출 (서버 GE_EXPLOSION). 지정 위치에 파티클 + 3D 사운드 1회 재생 후 종료.
