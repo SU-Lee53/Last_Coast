@@ -8,6 +8,7 @@ class InputTextBox;
 class MapTestScene : public Scene {
 public:
 	void BuildObjects() override;
+	void FinalizeBuild() override;
 	void OnEnterScene() override;
 	void OnLeaveScene() override;
 	void ProcessInput() override;

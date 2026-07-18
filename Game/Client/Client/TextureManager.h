@@ -3,6 +3,31 @@
 
 //#define ASSERT_WHEN_TEXTURE_NAME_IS_BLANK
 
+/*
+*	TextureManager uses 4 kinds of lock
+* 
+*	Use 2 Lock for loading texture
+*		1. Publish Lock -> Lock for table lookup (already loaded) & registry
+*		2. Key Lock -> Per key lock for preventing redundant texture loading
+* 
+*	Use 2 more lock for recording and submitting commandlist
+*		1. Submit Lock -> Lock commandlist queue submission
+*		2. Fence Lock -> Lock for waiting GPU work when all cmdlists are busy
+* 
+*	Why per key lock?
+*		If two threads comes for loading same texture, this will happen :
+*			1. Both threads checks table, but table is empty
+*			2. Both thread creates textures
+*			3. Only one texture can be register into table, other one will be deleted
+*		
+*		to prevent this redundant situation, we will use per key lock. and this will happen
+*			1. Both threads checks table, but table is empty
+*			2. Both thread trying to acquire/create key lock, only one thread can acquire
+*			3. Lock acquired thread will load texture, other one will wait
+* 
+*/
+
+
 constexpr static UINT MAX_TEXTURE_COUNT = 800;
 
 enum class TEXTURE_RESOURCE_TYPE {
@@ -112,6 +137,8 @@ private:
 	void ReleaseCompletedUploadBuffers();
 	void CreateUploadBuffer(ID3D12Resource** ppUploadBuffer, uint32 unBytes);
 
+	std::shared_ptr<std::mutex> GetTextureLoadMutex(const std::string& strTextureName);
+
 private:
 	TextureTable m_SRVTextureTable;
 	TextureTable m_RTVTextureTable;
@@ -120,7 +147,6 @@ private:
 
 private:
 	CommandListPool						m_CommandListPool;
-	std::vector<PendingUploadBuffer>	m_PendingUploadBuffers;
 
 	static uint32 g_unRTVFromCoreCount;
 	static uint32 g_unDSVFromCoreCount;
@@ -146,8 +172,11 @@ private:
 	HANDLE					m_hFenceEvent = nullptr;
 	uint64					m_un64FenceValue = 0;
 
-	mutable std::recursive_mutex m_mtxCopy;	// protects cmdlist, uploadbuffer, copy fence
 	mutable std::recursive_mutex m_mtxTextureLoad; // protects file loading and lookup
+	concurrency::concurrent_unordered_map<std::string, std::shared_ptr<std::mutex>> m_TextureLoadMutexRegistry;
+
+	mutable std::mutex m_mtxSubmit;	// lock for queue submission + fence
+	mutable std::mutex m_mtxFence;	// lock for fence wait
 
 #pragma endregion
 

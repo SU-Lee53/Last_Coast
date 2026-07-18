@@ -140,8 +140,8 @@ using namespace AIDLL;
 #include "WinSockCommon.h"
 
 // Additional Helper Headers
-#include "CommandListPool.h"
 #include "Typedef.h"
+#include "CommandListPool.h"
 #include "Defines.h"
 #include "CB_Types.h"
 #include "Concepts.h"

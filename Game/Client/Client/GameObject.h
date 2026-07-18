@@ -110,7 +110,7 @@ protected:
 	OBJECT_MOBILITY_TYPE m_eObjectType;
 
 public:
-	static uint64 g_GameObjectIDBase;
+	static std::atomic_uint64_t g_GameObjectIDBase;
 
 };
 

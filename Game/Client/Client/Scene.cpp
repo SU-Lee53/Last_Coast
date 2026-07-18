@@ -512,121 +512,6 @@ std::shared_ptr<DirectionalLight> Scene::GetSunLight() const
 	return nullptr;
 }
 
-HRESULT Scene::LoadFromFiles(const std::string& strFileName)
-{
-	std::string strFilePath = std::format("{}/{}.bin", g_strSceneBasePath, strFileName);
-
-	auto bson = ::ReadBinaryFile(strFilePath);
-	if (bson.empty()) {
-		__debugbreak();
-		return E_INVALIDARG;
-	}
-
-	nlohmann::json jScene = nlohmann::json::from_bson(bson);;
-
-	if (jScene.contains("StaticMeshActors")) {
-		size_t nObjects = jScene["StaticMeshActors"].size();
-		m_World.Reserve<StaticObject>(nObjects);
-		for (const auto& jObject : jScene["StaticMeshActors"]) {
-			std::shared_ptr<StaticObject> pObj = std::make_shared<StaticObject>();
-			pObj->SetName(jObject["ActorName"].get<std::string>());
-
-			Matrix mtxWorldMatrix = ::ReadMatrixFromJson(jObject["Transform"]["WorldMatrix"]);
-			pObj->GetTransform()->SetWorldMatrix(mtxWorldMatrix);
-
-			std::string strMeshName = jObject["MeshName"].get<std::string>();
-			auto pMeshObject = MODEL->LoadOrGet(strMeshName, true)->CopyObject<NodeObject>();
-			pObj->SetChild(pMeshObject);
-
-			// 콜리전 메시를 자식이 아닌 루트 StaticObject에 직접 추가
-			//const auto* pCollisionInfos = MODEL->GetCollisionInfos(strMeshName);
-			//if (pCollisionInfos) {
-			//	for (const auto& info : *pCollisionInfos) {
-			//		pObj->AddComponent<StaticCollider>(info);
-			//	}
-			//}
-
-			//m_pGameObjects.push_back(pObj);
-			AddObject(pObj);
-		}
-	}
-
-	// Lights 로드
-
-	if (jScene.contains("Lights")) {
-		size_t nLights = jScene["Lights"].size();
-		m_pLights.reserve(nLights);
-		for (const auto& jLight : jScene["Lights"]) {
-			std::string strType = jLight["Type"].get<std::string>();
-
-			// PointLight
-			if (strType == "PointLight") {
-				std::shared_ptr<PointLight> pLight = std::make_shared<PointLight>();
-				// Transform (Position)
-				Matrix mtxWorldMatrix = ::ReadMatrixFromJson(jLight["Transform"]["WorldMatrix"]);
-				Vector3 v3Position(mtxWorldMatrix._41, mtxWorldMatrix._42, mtxWorldMatrix._43);
-				pLight->m_v3Position = v3Position;
-
-				// Color와 Intensity로 Diffuse 계산
-				float intensity = jLight["Intensity"].get<float>();
-				float colorX = jLight["Color"]["X"].get<float>();
-				float colorY = jLight["Color"]["Y"].get<float>();
-				float colorZ = jLight["Color"]["Z"].get<float>();
-
-				pLight->m_v3Color = Vector3(colorX, colorY, colorZ);
-				pLight->m_fIntensity = intensity;
-
-				// Range & Attenuation
-				pLight->m_fRange = jLight["Range"].get<float>();
-				pLight->m_fAttenuation0 = jLight["Attenuation0"].get<float>();
-				pLight->m_fAttenuation1 = jLight["Attenuation1"].get<float>();
-				pLight->m_fAttenuation2 = jLight["Attenuation2"].get<float>();
-
-				m_pLights.push_back(pLight);
-			}
-			// SpotLight
-			else if (strType == "SpotLight") {
-				std::shared_ptr<SpotLight> pLight = std::make_shared<SpotLight>();
-				// Transform (Position)
-				Matrix mtxWorldMatrix = ::ReadMatrixFromJson(jLight["Transform"]["WorldMatrix"]);
-				Vector3 v3Position(mtxWorldMatrix._41, mtxWorldMatrix._42, mtxWorldMatrix._43);
-				pLight->m_v3Position = v3Position;
-
-				// Direction
-				float dirX = jLight["Direction"]["X"].get<float>();
-				float dirY = jLight["Direction"]["Y"].get<float>();
-				float dirZ = jLight["Direction"]["Z"].get<float>();
-				pLight->m_v3Direction = Vector3(dirX, dirY, dirZ);
-
-				// Color와 Intensity로 Diffuse 계산
-				float intensity = jLight["Intensity"].get<float>();
-				float colorX = jLight["Color"]["X"].get<float>();
-				float colorY = jLight["Color"]["Y"].get<float>();
-				float colorZ = jLight["Color"]["Z"].get<float>();
-
-				pLight->m_v3Color = Vector3(colorX, colorY, colorZ);
-				pLight->m_fIntensity = intensity;
-
-				// Range & Attenuation
-				pLight->m_fRange = jLight["Range"].get<float>();
-				pLight->m_fAttenuation0 = jLight["Attenuation0"].get<float>();
-				pLight->m_fAttenuation1 = jLight["Attenuation1"].get<float>();
-				pLight->m_fAttenuation2 = jLight["Attenuation2"].get<float>();
-
-				// Falloff
-				pLight->m_fFalloff = jLight["Falloff"].get<float>();
-
-				// Cone Angles
-				pLight->m_fPhi = jLight["Theta"].get<float>();
-				pLight->m_fTheta = jLight["Phi"].get<float>();
-				m_pLights.push_back(pLight);
-			}
-		}
-	}
-
-	return S_OK;
-}
-
 // 좀비 스폰 포인트를 별도 JSON 파일에서 로드 (씬 .bin 과 분리).
 // 언리얼 SaveSpawnPointsToJson 출력 → { "ZombieSpawnPoints": [ { Transform.WorldMatrix } ] }
 // WorldMatrix translation(_41,_42,_43)에서 위치만 추출. 파일 없으면 빈 목록.
@@ -826,5 +711,325 @@ void Scene::ShowDebugOptions()
 	}
 
 	
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+// Scene Loading
+
+struct STATICOBJECTLOADDESC {
+	std::string strObjectName;
+	std::string strMeshName;
+	Matrix mtxWorld;
+
+	size_t unModelIndex = 0;
+	std::shared_ptr<IGameObject> pModel;
+
+	static std::vector<STATICOBJECTLOADDESC> ParseStaticObjectFromJson(const nlohmann::json& jScene) {
+		std::vector<STATICOBJECTLOADDESC> loadDescs;
+
+		if (!jScene.contains("StaticMeshActors")) {
+			return loadDescs;
+		}
+
+		const auto& jObjects = jScene["StaticMeshActors"];
+		size_t nObjects = jObjects.size();
+		loadDescs.reserve(nObjects);
+		for (const auto& jObject : jObjects) {
+			loadDescs.push_back(STATICOBJECTLOADDESC{
+				.strObjectName = jObject["ActorName"].get<std::string>(),
+				.strMeshName = jObject["MeshName"].get<std::string>(),
+				.mtxWorld = ::ReadMatrixFromJson(jObject["Transform"]["WorldMatrix"])
+				}
+			);
+		}
+		
+		return loadDescs;
+	}
+
+};
+
+HRESULT Scene::LoadFromFiles(const std::string& strFileName)
+{
+	std::string strFilePath = std::format("{}/{}.bin", g_strSceneBasePath, strFileName);
+
+	auto bson = ::ReadBinaryFile(strFilePath);
+	if (bson.empty()) {
+		__debugbreak();
+		return E_INVALIDARG;
+	}
+
+	nlohmann::json jScene = nlohmann::json::from_bson(bson);;
+
+#ifndef TIME_RECORD
+	auto staticObjectLoadDesc = STATICOBJECTLOADDESC::ParseStaticObjectFromJson(jScene);
+	m_World.Reserve<StaticObject>(staticObjectLoadDesc.size());
+
+	std::unordered_map<std::string, size_t> modelMap;
+	modelMap.reserve(staticObjectLoadDesc.size());
+
+	std::vector<std::string> strModelNames;
+	strModelNames.reserve(staticObjectLoadDesc.size());
+
+	for (auto& desc : staticObjectLoadDesc) {
+		auto [it, bInserted] = modelMap.try_emplace(desc.strMeshName, strModelNames.size());
+		if (bInserted) {
+			strModelNames.push_back(desc.strMeshName);
+		}
+
+		desc.unModelIndex = it->second;
+	}
+
+	std::vector<std::shared_ptr<IGameObject>> pLoadedModels(strModelNames.size());
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, strModelNames.size()), [&](const tbb::blocked_range<size_t>& range) {
+		for (size_t i = range.begin(); i < range.end(); ++i) {
+			pLoadedModels[i] = MODEL->LoadOrGet(strModelNames[i], true);
+		}
+		});
+
+	for (auto& desc : staticObjectLoadDesc) {
+		desc.pModel = pLoadedModels[desc.unModelIndex];
+
+		if (!desc.pModel) {
+			assert(false && "Model Loading Failed");
+			return E_FAIL;
+		}
+	}
+
+	if (staticObjectLoadDesc.size() < 30) {
+		for (const auto& desc : staticObjectLoadDesc) {
+			auto pObj = std::make_shared<StaticObject>();
+			pObj->SetName(desc.strObjectName);
+			pObj->GetTransform()->SetWorldMatrix(desc.mtxWorld);
+
+			auto pMeshObject = desc.pModel->CopyObject<NodeObject>();
+			pObj->SetChild(pMeshObject);
+
+			AddObject(pObj);
+		}
+	}
+	else {
+		std::vector<std::shared_ptr<StaticObject>> pLoadedObjects(staticObjectLoadDesc.size());
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, staticObjectLoadDesc.size()), [&](const tbb::blocked_range<size_t>& range) {
+			for (size_t i = range.begin(); i < range.end(); ++i) {
+				const auto& desc = staticObjectLoadDesc[i];
+				auto pObj = std::make_shared<StaticObject>();
+
+				pObj->SetName(desc.strObjectName);
+				pObj->GetTransform()->SetWorldMatrix(desc.mtxWorld);
+
+				auto pMeshObject = desc.pModel->CopyObject<NodeObject>();
+				pObj->SetChild(pMeshObject);
+
+				pLoadedObjects[i] = std::move(pObj);
+			}
+			});
+
+		for (const auto& pObj : pLoadedObjects) {
+			AddObject(pObj);
+		}
+	}
+#else
+	using time = std::chrono::high_resolution_clock;
+
+	decltype(time::now()) beginLoad, endLoad, beginParse, endParse, beginModel, endModel, beginClone, endClone, beginMerge, endMerge;
+
+
+	beginLoad = time::now();
+
+	beginParse = time::now();
+	std::vector<STATICOBJECTLOADDESC> staticObjectLoadDesc;
+	{
+		staticObjectLoadDesc = STATICOBJECTLOADDESC::ParseStaticObjectFromJson(jScene);
+		m_World.Reserve<StaticObject>(staticObjectLoadDesc.size());
+	}
+	endParse = time::now();
+
+	beginModel = time::now();
+	size_t unModelCount = 0;
+	std::unordered_map<std::string, size_t> modelMap;
+	{
+		modelMap.reserve(staticObjectLoadDesc.size());
+
+		std::vector<std::string> strModelNames;
+		strModelNames.reserve(staticObjectLoadDesc.size());
+
+		// Gather unique model name and generate object model index
+		for (auto& desc : staticObjectLoadDesc) {
+			auto [it, bInserted] = modelMap.try_emplace(desc.strMeshName, strModelNames.size());
+			if (bInserted) {
+				strModelNames.push_back(desc.strMeshName);
+			}
+			desc.unModelIndex = it->second;
+		}
+		unModelCount = strModelNames.size();
+
+		// Model parallel loading
+		std::vector<std::shared_ptr<IGameObject>> pLoadedModels(unModelCount);
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, strModelNames.size()), [&](const tbb::blocked_range<size_t>& range) {
+			for (size_t i = range.begin(); i < range.end(); ++i) {
+				pLoadedModels[i] = MODEL->LoadOrGet(strModelNames[i], true);
+			}
+		});
+
+		// Link object - model after parallel loading
+		for (auto& desc : staticObjectLoadDesc) {
+			desc.pModel = pLoadedModels[desc.unModelIndex];
+
+			if (!desc.pModel) {
+				assert(false && "Model Loading Failed");
+				return E_FAIL;
+			}
+		}
+
+	}
+	endModel = time::now();
+
+
+	std::vector<std::shared_ptr<StaticObject>> pLoadedObjects(staticObjectLoadDesc.size());
+	auto fnLoadObjects = [&](size_t i) {
+		const auto& desc = staticObjectLoadDesc[i];
+
+		auto pObj = std::make_shared<StaticObject>();
+		pObj->SetName(desc.strObjectName);
+		pObj->GetTransform()->SetWorldMatrix(desc.mtxWorld);
+
+		auto pMeshObject =
+			desc.pModel->CopyObject<NodeObject>();
+
+		pObj->SetChild(pMeshObject);
+		pLoadedObjects[i] = std::move(pObj);
+	};
+
+	beginClone = time::now();
+	{
+		//for (size_t i = 0; i < staticObjectLoadDesc.size(); ++i) {
+		//	fnLoadObjects(i);
+		//}
+
+		if (staticObjectLoadDesc.size() < 30) {
+			for (size_t i = 0; i < staticObjectLoadDesc.size(); ++i) {
+				fnLoadObjects(i);
+			}
+		}
+		else {
+			tbb::parallel_for(tbb::blocked_range<size_t>(0, staticObjectLoadDesc.size()), [&](const tbb::blocked_range<size_t>& range) {
+				for (size_t i = range.begin(); i < range.end(); ++i) {
+					fnLoadObjects(i);
+				}
+				});
+		}
+	}
+	endClone = time::now();
+
+	beginMerge = time::now();
+	{
+		for (const auto& pObj : pLoadedObjects) {
+			AddObject(pObj);
+		}
+	}
+	endMerge = time::now();
+
+	endLoad = time::now();
+
+	auto fnTpToMs = [](auto beg, auto end) -> long long {
+		return std::chrono::duration_cast<std::chrono::milliseconds>(end - beg).count();
+	};
+
+	OutputDebugStringA(
+		std::format(
+			"[SceneLoad] objects={} models={} "
+			"parse={}ms preload={}ms clone={}ms "
+			"merge={}ms total={}ms\n",
+			staticObjectLoadDesc.size(),
+			modelMap.size(),
+			fnTpToMs(beginParse, endParse),
+			fnTpToMs(beginModel, endModel),
+			fnTpToMs(beginClone, endClone),
+			fnTpToMs(beginMerge, endMerge),
+			fnTpToMs(beginLoad, endLoad)
+		).c_str()
+	);
+
+#endif
+
+
+
+
+
+
+	// Lights 로드
+	if (jScene.contains("Lights")) {
+		size_t nLights = jScene["Lights"].size();
+		m_pLights.reserve(nLights);
+		for (const auto& jLight : jScene["Lights"]) {
+			std::string strType = jLight["Type"].get<std::string>();
+
+			// PointLight
+			if (strType == "PointLight") {
+				std::shared_ptr<PointLight> pLight = std::make_shared<PointLight>();
+				// Transform (Position)
+				Matrix mtxWorldMatrix = ::ReadMatrixFromJson(jLight["Transform"]["WorldMatrix"]);
+				Vector3 v3Position(mtxWorldMatrix._41, mtxWorldMatrix._42, mtxWorldMatrix._43);
+				pLight->m_v3Position = v3Position;
+
+				// Color와 Intensity로 Diffuse 계산
+				float intensity = jLight["Intensity"].get<float>();
+				float colorX = jLight["Color"]["X"].get<float>();
+				float colorY = jLight["Color"]["Y"].get<float>();
+				float colorZ = jLight["Color"]["Z"].get<float>();
+
+				pLight->m_v3Color = Vector3(colorX, colorY, colorZ);
+				pLight->m_fIntensity = intensity;
+
+				// Range & Attenuation
+				pLight->m_fRange = jLight["Range"].get<float>();
+				pLight->m_fAttenuation0 = jLight["Attenuation0"].get<float>();
+				pLight->m_fAttenuation1 = jLight["Attenuation1"].get<float>();
+				pLight->m_fAttenuation2 = jLight["Attenuation2"].get<float>();
+
+				m_pLights.push_back(pLight);
+			}
+			// SpotLight
+			else if (strType == "SpotLight") {
+				std::shared_ptr<SpotLight> pLight = std::make_shared<SpotLight>();
+				// Transform (Position)
+				Matrix mtxWorldMatrix = ::ReadMatrixFromJson(jLight["Transform"]["WorldMatrix"]);
+				Vector3 v3Position(mtxWorldMatrix._41, mtxWorldMatrix._42, mtxWorldMatrix._43);
+				pLight->m_v3Position = v3Position;
+
+				// Direction
+				float dirX = jLight["Direction"]["X"].get<float>();
+				float dirY = jLight["Direction"]["Y"].get<float>();
+				float dirZ = jLight["Direction"]["Z"].get<float>();
+				pLight->m_v3Direction = Vector3(dirX, dirY, dirZ);
+
+				// Color와 Intensity로 Diffuse 계산
+				float intensity = jLight["Intensity"].get<float>();
+				float colorX = jLight["Color"]["X"].get<float>();
+				float colorY = jLight["Color"]["Y"].get<float>();
+				float colorZ = jLight["Color"]["Z"].get<float>();
+
+				pLight->m_v3Color = Vector3(colorX, colorY, colorZ);
+				pLight->m_fIntensity = intensity;
+
+				// Range & Attenuation
+				pLight->m_fRange = jLight["Range"].get<float>();
+				pLight->m_fAttenuation0 = jLight["Attenuation0"].get<float>();
+				pLight->m_fAttenuation1 = jLight["Attenuation1"].get<float>();
+				pLight->m_fAttenuation2 = jLight["Attenuation2"].get<float>();
+
+				// Falloff
+				pLight->m_fFalloff = jLight["Falloff"].get<float>();
+
+				// Cone Angles
+				pLight->m_fPhi = jLight["Theta"].get<float>();
+				pLight->m_fTheta = jLight["Phi"].get<float>();
+				m_pLights.push_back(pLight);
+			}
+		}
+	}
+
+	return S_OK;
 }
 

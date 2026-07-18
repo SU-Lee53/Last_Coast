@@ -75,7 +75,11 @@ void ModelManager::LoadGameModels()
 
 void ModelManager::Add(const std::string& strModelName, std::shared_ptr<IGameObject> pObj)
 {
-	std::lock_guard lock{ m_mtxModel };
+	auto pLoadMutex = GetModelLoadMutex(strModelName);
+	std::lock_guard keyLock{ *pLoadMutex };
+
+	std::lock_guard poolLock{ m_mtxModel };
+
 	if (!m_pModelPool.contains(strModelName)) {
 		m_pModelPool.insert({ strModelName, pObj });
 	}
@@ -94,22 +98,44 @@ std::shared_ptr<IGameObject> ModelManager::Get(const std::string& strObjName)
 
 std::shared_ptr<IGameObject> ModelManager::LoadOrGet(const std::string& strFileName, bool bUseNameFilenameOnRoot)
 {
-	std::lock_guard lock{ m_mtxModel };
-	auto it = m_pModelPool.find(strFileName);
-	if (it == m_pModelPool.end()) {
-		return LoadModelFromFile(strFileName, bUseNameFilenameOnRoot);
+	// 1. return immediatly if already laoded
+	{
+		std::lock_guard poolLock{ m_mtxModel };
+		auto it = m_pModelPool.find(strFileName);
+		if (it != m_pModelPool.end()) {
+			return it->second;
+		}
 	}
 
-	return it->second;
+	auto pLoadMutex = GetModelLoadMutex(strFileName);
+	std::lock_guard keyLock{ *pLoadMutex };
+
+	// 2. Check again. (other thread can load same model while wait for key lock)
+	{
+		std::lock_guard poolLock{ m_mtxModel };
+		auto it = m_pModelPool.find(strFileName);
+		if (it != m_pModelPool.end()) {
+			return it->second;
+		}
+	}
+
+	// 3. File loading, parsing bson, create mesh/material without lock
+	std::shared_ptr<IGameObject> pGameObject = LoadModelFromFile(strFileName, bUseNameFilenameOnRoot);
+	if (!pGameObject) {
+		return nullptr;
+	}
+
+	// 4. short lock for insert to pool
+	{
+		std::lock_guard poolLock{ m_mtxModel };
+		m_pModelPool.insert({ strFileName, pGameObject });
+	}
+
+	return pGameObject;
 }
 
 std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& strFileName, bool bUseNameFilenameOnRoot)
 {
-	std::lock_guard lock{ m_mtxModel };
-	if (auto pObj = Get(strFileName)) {
-		return pObj;
-	}
-
 	std::string strFilePath = std::format("{}/{}.bin", g_strModelBasePath, strFileName);
 
 	auto buf = ::ReadBinaryFile(strFilePath);
@@ -147,26 +173,28 @@ std::shared_ptr<IGameObject> ModelManager::LoadModelFromFile(const std::string& 
 
 	// 콜리전 정보를 NodeObject가 아닌 별도 풀에 저장
 	// (StaticObject 루트에 붙여야 하므로 Scene::LoadFromFiles에서 꺼내 씀)
-	if (j.contains("nCollisions") && j["nCollisions"].get<size_t>() > 0) {
+	if (j.contains("nCollisions") && j["nCollisions"].get<size_t>() > 0)
+	{
 		std::vector<COLLISIONMESHINFO> collisionInfos;
 		collisionInfos.reserve(j["nCollisions"].get<size_t>());
+
 		for (const auto& jCol : j["Collisions"]) {
 			collisionInfos.push_back(LoadCollisionInfoFromJson(jCol));
 		}
 
 		if (!collisionInfos.empty()) {
+			std::lock_guard lock{ m_mtxModel };
 			m_CollisionInfoPool[strFileName] = std::move(collisionInfos);
 		}
 	}
 	else {
 		COLLISIONMESHINFO collisionInfo = GatherRenderMeshCollisionInfo(j["Hierarchy"]);
-		if (!collisionInfo.v3Positions.empty() && !collisionInfo.unIndices.empty()) {
+
+		if (!collisionInfo.v3Positions.empty() && !collisionInfo.unIndices.empty())
+		{
+			std::lock_guard lock{ m_mtxModel };
 			m_CollisionInfoPool[strFileName].push_back(std::move(collisionInfo));
 		}
-	}
-
-	if (pGameObject) {
-		Add(strFileName, pGameObject);
 	}
 
 	return pGameObject;
@@ -192,7 +220,8 @@ std::shared_ptr<IGameObject> ModelManager::LoadFrameHierarchyFromFile(const std:
 	}
 
 	if (meshLoadInfos.size() != 0) {
-		pGameObject->AddComponent<MeshRenderer>(meshLoadInfos, materialLoadInfos);
+		std::string strMaterialKeyPrefix = strFilename + "::" + std::to_string(*poutnIndex) + "::";
+		pGameObject->AddComponent<MeshRenderer>(meshLoadInfos, materialLoadInfos, strMaterialKeyPrefix);
 	}
 
 	if (pParent) {
@@ -347,6 +376,20 @@ COLLISIONMESHINFO ModelManager::GatherRenderMeshCollisionInfo(const nlohmann::js
 
 	Gather(nodeJson);
 	return info;
+}
+
+std::shared_ptr<std::mutex> ModelManager::GetModelLoadMutex(const std::string& strModelName)
+{
+	auto it = m_ModelLoadMutexRegistry.find(strModelName);
+	if (it != m_ModelLoadMutexRegistry.end()) {
+		return it->second;
+	}
+
+	auto pNewMutex = std::make_shared<std::mutex>();
+	auto [newIt, bInserted] =
+		m_ModelLoadMutexRegistry.insert({ strModelName, pNewMutex });
+
+	return newIt->second;
 }
 
 COLLISIONMESHINFO ModelManager::LoadCollisionInfoFromJson(const nlohmann::json& inJson)

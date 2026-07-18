@@ -119,6 +119,13 @@ void MapTestScene::BuildObjects()
 
 }
 
+void MapTestScene::FinalizeBuild()
+{
+	m_pPlayer->GetTransform()->SetPosition(
+		10000.f, 1000.f, 10000.f
+	);
+}
+
 void MapTestScene::OnEnterScene()
 {
 }
