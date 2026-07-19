@@ -41,6 +41,11 @@ void Session::init(SOCKET s, int id, Room* room)
 	m_bRunning = false;
 	m_bAiming = false;
 	m_fAimPitch = 0.f;
+	m_fHP = 100.f;
+	m_bDead = false;
+	m_fRespawnTimer = 0.f;
+	m_v3SpawnPos = Vector3::Zero;
+	m_bSpawnPosSet = false;
 	m_weaponType = 3;      // 기본 PISTOL
 	m_characterType = 0;   // 기본 캐릭터
 }
@@ -111,6 +116,9 @@ bool Session::process_packet(unsigned char* p)
 		break;
 	case C2S_GAME_START:
 		handlers.GameStart(*this);
+		break;
+	case C2S_LOAD_COMPLETE:
+		handlers.LoadComplete(*this);
 		break;
 	default:
 		std::cout << "Unknown packet type received from player[" << m_id << "].\n";
@@ -320,6 +328,12 @@ void Session::send_game_start()
 	send_packet(S2C_GAME_START, p);
 }
 
+void Session::send_game_begin()
+{
+	S2C_GameBegin p;
+	send_packet(S2C_GAME_BEGIN, p);
+}
+
 void Session::send_host_change(int host_id)
 {
 	S2C_HostChange p;
@@ -339,4 +353,22 @@ void Session::send_game_end()
 {
 	S2C_GameEnd p;
 	send_packet(S2C_GAME_END, p);
+}
+
+void Session::send_player_death(int player_id, float respawn_seconds)
+{
+	S2C_PlayerDeath p;
+	p.playerId        = player_id;
+	p.fRespawnSeconds = respawn_seconds;
+	send_packet(S2C_PLAYER_DEATH, p);
+}
+
+void Session::send_player_respawn(int player_id, const Vector3& v3Pos)
+{
+	S2C_PlayerRespawn p;
+	p.playerId = player_id;
+	p.x = v3Pos.x;
+	p.y = v3Pos.y;
+	p.z = v3Pos.z;
+	send_packet(S2C_PLAYER_RESPAWN, p);
 }

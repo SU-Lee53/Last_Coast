@@ -439,7 +439,7 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	case S2C_TRANSFORM: {
 		if (size < static_cast<int>(sizeof(S2C_Transform))) return;
 		auto* p = reinterpret_cast<const S2C_Transform*>(data);
-		m_PendingPlayerTransforms.push(PlayerTransformEvent{ p->playerId, p->transform, p->bRunning, p->bAiming, p->fAimPitch });
+		m_PendingPlayerTransforms.push(PlayerTransformEvent{ p->playerId, p->transform, p->bRunning, p->bAiming, p->fAimPitch, GetNetTimeSec() });
 		break;
 	}
 	case S2C_PLAYER_RELOAD: {
@@ -506,6 +506,10 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		m_bPendingGameStart.store(true);
 		break;
 	}
+	case S2C_GAME_BEGIN: {
+		m_bPendingGameBegin.store(true);
+		break;
+	}
 	case S2C_HOST_CHANGE: {
 		if (size < static_cast<int>(sizeof(S2C_HostChange))) return;
 		auto* p = reinterpret_cast<const S2C_HostChange*>(data);
@@ -521,6 +525,18 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	}
 	case S2C_GAME_END: {
 		m_bPendingGameEnd.store(true);
+		break;
+	}
+	case S2C_PLAYER_DEATH: {
+		if (size < static_cast<int>(sizeof(S2C_PlayerDeath))) return;
+		auto* p = reinterpret_cast<const S2C_PlayerDeath*>(data);
+		m_PendingPlayerDeaths.push(PlayerDeathEvent{ p->playerId, p->fRespawnSeconds });
+		break;
+	}
+	case S2C_PLAYER_RESPAWN: {
+		if (size < static_cast<int>(sizeof(S2C_PlayerRespawn))) return;
+		auto* p = reinterpret_cast<const S2C_PlayerRespawn*>(data);
+		m_PendingPlayerRespawns.push(PlayerRespawnEvent{ p->playerId, Vector3{ p->x, p->y, p->z } });
 		break;
 	}
 	default:
@@ -773,6 +789,21 @@ bool NetworkManager::ConsumeGameStart()
 	return m_bPendingGameStart.exchange(false);
 }
 
+void NetworkManager::SendLoadComplete()
+{
+	if (!m_bConnected || m_bOfflineMode) return;
+
+	C2S_LoadComplete p;
+	p.size = sizeof(C2S_LoadComplete);
+	p.type = C2S_LOAD_COMPLETE;
+	SendPacket(&p, p.size);
+}
+
+bool NetworkManager::ConsumeGameBegin()
+{
+	return m_bPendingGameBegin.exchange(false);
+}
+
 void NetworkManager::SendPlayerMelee(const Vector3& v3Origin, const Vector3& v3Direction)
 {
 	if (!m_bConnected || m_bOfflineMode) return;
@@ -803,6 +834,24 @@ std::vector<MeleeHitEvent> NetworkManager::ConsumeMeleeHits()
 	std::vector<MeleeHitEvent> out;
 	MeleeHitEvent ev;
 	while (m_PendingMeleeHits.try_pop(ev))
+		out.push_back(ev);
+	return out;
+}
+
+std::vector<PlayerDeathEvent> NetworkManager::ConsumePlayerDeaths()
+{
+	std::vector<PlayerDeathEvent> out;
+	PlayerDeathEvent ev;
+	while (m_PendingPlayerDeaths.try_pop(ev))
+		out.push_back(ev);
+	return out;
+}
+
+std::vector<PlayerRespawnEvent> NetworkManager::ConsumePlayerRespawns()
+{
+	std::vector<PlayerRespawnEvent> out;
+	PlayerRespawnEvent ev;
+	while (m_PendingPlayerRespawns.try_pop(ev))
 		out.push_back(ev);
 	return out;
 }
@@ -858,8 +907,14 @@ bool NetworkManager::GetLatestZombieState(int zombieId, ZombieServerState& outSt
 
 float NetworkManager::GetNetTimeSec()
 {
-	static ULONGLONG nEpoch = GetTickCount64();
-	return static_cast<float>(GetTickCount64() - nEpoch) * 0.001f;
+	// GetTickCount64는 해상도가 ~15.6ms — 스냅샷 시각/렌더 시각이 계단식으로
+	// 양자화되어 보간 위치가 멈췄다-점프를 반복한다 → QPC(µs급)로 교체
+	static const LARGE_INTEGER Freq = [] { LARGE_INTEGER f; QueryPerformanceFrequency(&f); return f; }();
+	static const LARGE_INTEGER Epoch = [] { LARGE_INTEGER c; QueryPerformanceCounter(&c); return c; }();
+	LARGE_INTEGER now;
+	QueryPerformanceCounter(&now);
+	return static_cast<float>(
+		static_cast<double>(now.QuadPart - Epoch.QuadPart) / static_cast<double>(Freq.QuadPart));
 }
 
 void NetworkManager::UpdateInterpolation()

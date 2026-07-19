@@ -31,6 +31,8 @@ public:
 	bool TryFire();
 
 	void SetWeapon(WEAPON_TYPE eWeaponType);
+	// 미리 만들어둔 무기 인스턴스 장착 — 슬롯 전환 시 탄약 유지용 (SetWeapon은 매번 새 복사본)
+	void SetWeaponObject(const std::shared_ptr<WeaponObject>& pWeapon, WEAPON_TYPE eWeaponType);
 	std::shared_ptr<WeaponObject> GetWeaponModel() const { return m_pWeaponModel; };
 
 	WEAPON_TYPE GetCurrentWeaponType() const { return m_eCurrentWeapon; }

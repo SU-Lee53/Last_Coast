@@ -103,7 +103,7 @@ private:
 	};
 	static constexpr size_t MAX_SNAPSHOTS = 8;
 	std::deque<ZombieSnapshot> m_Snapshots;
-	float m_fInterpDelay = 0.1f;  // 서버 전송 간격에 맞춰 자동 조절
+	float m_fInterpDelay = 0.3f;  // 고정: 서버 최대 전송 간격(200ms) * 1.5 — 가변 간격에 자동 조절은 시간축 점프 유발
 	float m_fHP = 100.f;
 	bool m_bDying = false;
 	bool m_bReadyToRemove = false;

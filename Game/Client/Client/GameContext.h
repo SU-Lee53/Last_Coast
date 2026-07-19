@@ -26,7 +26,8 @@ public:
 
 	struct GameData {
 		int32 m_nCurModelIndex = 0;
-		int32 m_nCurWeaponIndex = 0;
+		int32 m_nWeapon1Index = 0;	// 1번 슬롯 주무기
+		int32 m_nWeapon2Index = 1;	// 2번 슬롯 주무기 (3번 슬롯은 PISTOL 고정)
 	};
 
 public:

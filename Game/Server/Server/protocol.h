@@ -43,7 +43,11 @@ enum PACKET_TYPE {
 	S2C_GAME_END,                                 // 서버 → 클라이언트: 게임 종료(탈출 성공) — 전원
 	S2C_ZOMBIE_STATE_BATCH,                       // 서버 → 클라이언트: 여러 좀비 상태를 한 패킷에 묶어 전송
 	C2S_GAME_START,                               // 클라이언트 → 서버: 방장이 게임 시작 요청 (전원 레디 시 서버가 S2C_GAME_START 브로드캐스트)
-	S2C_HOST_CHANGE                               // 서버 → 클라이언트: 방장(호스트) 플레이어 ID 통지 (입장/방장 퇴장 시)
+	S2C_HOST_CHANGE,                              // 서버 → 클라이언트: 방장(호스트) 플레이어 ID 통지 (입장/방장 퇴장 시)
+	S2C_PLAYER_DEATH,                             // 서버 → 클라이언트: 플레이어 사망 통지 (부활까지 남은 시간 포함)
+	S2C_PLAYER_RESPAWN,                           // 서버 → 클라이언트: 플레이어 부활 통지 (부활 위치 포함)
+	C2S_LOAD_COMPLETE,                            // 클라이언트 → 서버: 게임씬 로딩 완료 통지
+	S2C_GAME_BEGIN                                // 서버 → 클라이언트: 전원 로딩 완료 — 게임플레이 동시 시작
 };
 
 // ── 게임 이벤트 ID (서버 트리거, 클라 효과 카탈로그) ──────────────────────────
@@ -150,6 +154,19 @@ struct S2C_GameStart {
 };
 
 struct C2S_GameStart {
+	unsigned char size;
+	PACKET_TYPE   type;
+};
+
+// 게임씬 로딩 완료 통지 (클라 → 서버). 서버는 방 전원 수신 시 S2C_GAME_BEGIN 브로드캐스트.
+struct C2S_LoadComplete {
+	unsigned char size;
+	PACKET_TYPE   type;
+};
+
+// 전원 로딩 완료 — 게임플레이 동시 시작 (서버 → 클라).
+// S2C_GAME_START(씬 로딩 개시)와 구분: 클라는 이 패킷을 받아야 정지 해제.
+struct S2C_GameBegin {
 	unsigned char size;
 	PACKET_TYPE   type;
 };
@@ -391,6 +408,24 @@ struct S2C_GameEvent {
 	float         fTargetValue;       // 목표값 (예: outputScale)
 	float         fDuration;          // 페이드 지속(초)
 	int           presetId;           // EnvironmentPresetId (GE_ENVIRONMENT 전용, 그 외 무시)
+};
+
+// ── 플레이어 사망/부활 패킷 (서버 권위: 서버가 HP 차감/사망 판정/부활 타이머 주관) ──
+
+// 서버 → 클라이언트: 플레이어 사망. 본인이면 관전 모드 진입, 리모트면 관전 후보에서 제외.
+struct S2C_PlayerDeath {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           playerId;
+	float         fRespawnSeconds;  // 부활까지 남은 시간(초) — 클라 카운트다운 UI용
+};
+
+// 서버 → 클라이언트: 플레이어 부활. 본인이면 관전 해제 + HP 회복 + 위치 이동.
+struct S2C_PlayerRespawn {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           playerId;
+	float         x, y, z;          // 부활 위치 (cm)
 };
 
 // ── 탈출 시퀀스 패킷 (마지막 체크포인트: 구조 헬기 착륙 후 서버가 주관) ───────────

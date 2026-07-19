@@ -18,6 +18,7 @@ public:
 	float GetHP()    const { return m_fHP; }
 	float GetMaxHP() const { return m_fMaxHP; }
 	bool  IsDead()   const { return m_fHP <= 0.f; }
+	void  RestoreFullHP() { m_fHP = m_fMaxHP; }   // 부활 시 호출
 
 protected:
 	std::shared_ptr<Camera> m_pCamera = nullptr;

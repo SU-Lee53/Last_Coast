@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "Scene.h"
+#include "ThirdPersonPlayer.h"
 #include "TerrainObject.h"
 #include "NodeObject.h"
 #include "Collider.h"
@@ -158,7 +159,16 @@ void Scene::PreProcessInput()
 
 void Scene::PostProcessInput()
 {
-	if (IsCinematicActive()) return; // 컷씬 중 플레이어 입력 차단
+	// 컷씬 중 게임플레이 정지는 이 입력 차단 하나로만 한다 — 나머지 업데이트
+	// (물리/카메라/애니/월드)는 계속 돌아 캐릭터가 자연스럽게 멈춰 Idle로 전환됨
+	if (IsCinematicActive()) {
+		// 입력을 스킵하면 마지막 프레임의 이동 플래그가 남아 계속 달린다 —
+		// 잔상을 지워 마찰 감속으로 자연 정지시킨다
+		if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
+			pThirdPerson->ClearMovementInput();
+		}
+		return;
+	}
 
 	if (m_pPlayer) {
 		m_pPlayer->ProcessInput();
@@ -167,10 +177,23 @@ void Scene::PostProcessInput()
 	m_World.PostProcessInput();
 }
 
+void Scene::PushCinematic()
+{
+	// 첫 진입(0→1): 조준 중이면 해제 — 컷씬 화면에 크로스헤어/줌이 남지 않게
+	if (m_nCinematicDepth == 0 && m_pPlayer) {
+		if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
+			pThirdPerson->LeaveAim();
+		}
+	}
+	++m_nCinematicDepth;
+}
+
 void Scene::PreUpdate()
 {
-	if (IsCinematicActive()) return; // 컷씬 중 정지
-
+	// 컷씬 중에도 월드는 계속 구동 — 정지는 입력 차단(PostProcessInput)만으로 한다.
+	// 하드 프리즈하면 애니메이션이 포즈 그대로 멈추고, 리모트 스냅샷이 쌓였다가
+	// 컷씬 종료 시 위치가 튄다. 좀비는 서버(온라인)/Zombie::PostUpdate(오프라인)가
+	// 이동·AI만 홀드해 제자리에서 Idle로 자연 전환된다.
 	if (m_pPlayer) {
 		m_pPlayer->PreUpdate();
 	}
@@ -180,21 +203,17 @@ void Scene::PreUpdate()
 
 void Scene::FixedUpdate()
 {
-	const bool bFrozen = IsCinematicActive(); // 컷씬 중 플레이어/월드(좀비) 정지
-
-	// Component Update
-	if (!bFrozen) {
-		if (m_pPlayer) {
-			m_pPlayer->Update();
-		}
-
-		if (m_pTerrain) {
-			m_pTerrain->Update();
-		}
-
-		m_World.FixedUpdate();
-		m_World.UpdateSpatial();
+	// Component Update — 컷씬 중에도 정지하지 않음 (입력만 차단, PreUpdate 주석 참고)
+	if (m_pPlayer) {
+		m_pPlayer->Update();
 	}
+
+	if (m_pTerrain) {
+		m_pTerrain->Update();
+	}
+
+	m_World.FixedUpdate();
+	m_World.UpdateSpatial();
 
 	m_ToneMappingVolume.Update();
 
@@ -203,36 +222,30 @@ void Scene::FixedUpdate()
 		m_pEventSequence->Update();
 	}
 
-	if (!bFrozen) {
-		CheckCollision();
-	}
+	CheckCollision();
 }
 
 void Scene::PostUpdate()
 {
-	const bool bFrozen = IsCinematicActive(); // 컷씬 중 플레이어/월드(좀비) 이동·애니 정지
+	// Post Update — 컷씬 중에도 정지하지 않음 (입력만 차단, PreUpdate 주석 참고)
+	if (m_pPlayer) {
+		m_pPlayer->PostUpdate();
+	}
 
-	// Post Update
-	if (!bFrozen) {
+	if (m_pTerrain) {
+		m_pTerrain->PostUpdate();
+	}
+
+	m_World.PostUpdate();
+
+	if (!SCENE->IsInAsyncSceneChanging()) {
+		ANIMATION->UpdateAnimationParallel();
+
 		if (m_pPlayer) {
-			m_pPlayer->PostUpdate();
+			m_pPlayer->PostAnimationUpdate();
 		}
 
-		if (m_pTerrain) {
-			m_pTerrain->PostUpdate();
-		}
-
-		m_World.PostUpdate();
-
-		if (!SCENE->IsInAsyncSceneChanging()) {
-			ANIMATION->UpdateAnimationParallel();
-
-			if (m_pPlayer) {
-				m_pPlayer->PostAnimationUpdate();
-			}
-
-			m_World.PostAnimationUpdate();
-		}
+		m_World.PostAnimationUpdate();
 	}
 
 	// 스카이박스(시간/태양)는 컷씬 중에도 갱신 — 석양 연출이 진행되어야 함.

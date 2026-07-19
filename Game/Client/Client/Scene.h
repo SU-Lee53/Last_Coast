@@ -76,7 +76,7 @@ public:
 
 	void PostInitialize();
 	void PreProcessInput();
-	void PostProcessInput();
+	virtual void PostProcessInput(); // GameScene이 전원 로딩 대기 중 입력 차단용으로 override
 	void PreUpdate();
 	void FixedUpdate();
 	void PostUpdate();
@@ -132,7 +132,7 @@ public:
 	// 컷씬(시네마틱) 게임플레이 정지: 입력/플레이어/좀비(월드) 업데이트를 멈춘다.
 	// 이벤트 시퀀스·스카이박스(시간/태양)는 계속 구동되어 연출은 진행됨.
 	// 중첩 컷씬 대비 깊이 카운터(컷씬 이벤트가 진입 시 Push, 종료 시 Pop).
-	void PushCinematic() { ++m_nCinematicDepth; }
+	void PushCinematic(); // 첫 진입(0→1) 시 조준 해제 등 정리 — Scene.cpp
 	void PopCinematic()  { if (m_nCinematicDepth > 0) --m_nCinematicDepth; }
 	bool IsCinematicActive() const { return m_nCinematicDepth > 0; }
 

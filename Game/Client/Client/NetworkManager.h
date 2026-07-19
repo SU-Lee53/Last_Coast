@@ -59,6 +59,7 @@ struct PlayerTransformEvent {
 	bool          bRunning;
 	bool          bAiming;
 	float         fAimPitch;
+	float         fRecvTime;  // 네트워크 스레드 도착 시각 (GetNetTimeSec 기준) — 보간 시간축
 };
 
 // 원격 플레이어 1명의 보간 상태
@@ -118,6 +119,18 @@ struct ChatMessageEvent {
 	int         playerId;
 	std::string username;
 	std::string message;
+};
+
+// 플레이어 사망 이벤트 (서버 권위 — 본인이면 관전 진입, 리모트면 관전 후보 제외)
+struct PlayerDeathEvent {
+	int   playerId;
+	float fRespawnSeconds;
+};
+
+// 플레이어 부활 이벤트 (본인이면 관전 해제 + HP 회복 + 위치 이동)
+struct PlayerRespawnEvent {
+	int     playerId;
+	Vector3 pos;
 };
 
 // 서버 스크립트 게임 이벤트 (폭파/포스트FX 등). eventId = GameEventId.
@@ -190,8 +203,12 @@ public:
 
 	// 어떤 플레이어의 레디 상태 변경을 수신
 	std::vector<ReadyStateEvent> ConsumeReadyStates();
-	// 게임 시작 신호 (서버 발송)
+	// 게임 시작 신호 (서버 발송) — 씬 로딩 개시
 	bool                         ConsumeGameStart();
+	// 게임씬 로딩 완료 통지 — 서버가 방 전원 수신 확인 후 S2C_GAME_BEGIN 브로드캐스트
+	void                         SendLoadComplete();
+	// 전원 로딩 완료 — 게임플레이 동시 시작 신호
+	bool                         ConsumeGameBegin();
 	// 방장 전용: 게임 시작 요청 (서버가 전원 레디 검증 후 S2C_GAME_START 브로드캐스트)
 	void                         SendGameStart();
 
@@ -202,6 +219,10 @@ public:
 	void  SendPlayerEscape();
 	// 게임 종료(탈출 성공) 신호 소비 (1회)
 	bool  ConsumeGameEnd();
+
+	// ── 플레이어 사망/부활 소비 (서버 권위) ─────────────────────────────────────
+	std::vector<PlayerDeathEvent>     ConsumePlayerDeaths();
+	std::vector<PlayerRespawnEvent>   ConsumePlayerRespawns();
 
 	// ── 플레이어 이벤트 소비 (Task: Remote Player Sync) ─────────────────────────
 	std::vector<PlayerJoinEvent>      ConsumePlayerJoins();
@@ -305,7 +326,10 @@ private:
 	concurrency::concurrent_queue<CharacterChangeEvent>          m_PendingPlayerCharacters;
 	concurrency::concurrent_queue<GameEventMsg>                  m_PendingGameEvents;
 	concurrency::concurrent_queue<ReadyStateEvent>               m_PendingReadyStates;
+	concurrency::concurrent_queue<PlayerDeathEvent>              m_PendingPlayerDeaths;
+	concurrency::concurrent_queue<PlayerRespawnEvent>            m_PendingPlayerRespawns;
 	std::atomic<bool>                                            m_bPendingGameStart{ false };
+	std::atomic<bool>                                            m_bPendingGameBegin{ false };
 
 	// 탈출 시퀀스 상태 (서버가 주기적으로 보냄 = 최신값만 유지) + 종료 신호
 	std::atomic<int>                                            m_nEscapePhase{ -1 };   // -1=없음, 0=서바이벌, 1=탈출가능

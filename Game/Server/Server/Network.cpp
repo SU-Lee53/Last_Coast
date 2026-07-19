@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "Network.h"
 #include "Room.h"
+#include "GameWorld.h"
 
 namespace
 {
@@ -84,6 +85,10 @@ void Network::Disconnect(int id)
 			if (other_id == -1) continue;
 			clients[other_id].send_host_change(room->host_id);
 		}
+
+		// 로딩 대기 중 이탈 — 남은 인원이 전부 로딩 완료 상태면 그대로 시작
+		// (안 하면 이탈자의 로딩 완료를 영원히 기다리며 전원이 멈춰 있는다)
+		WORLD->GetHandlers().TryBeginGame(room);
 	}
 
 	closesocket(cl.m_client);

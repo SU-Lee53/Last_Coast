@@ -16,7 +16,7 @@ void LobbyScene::BuildObjects()
 
 	m_pPlayer = std::make_shared<NetworkOwnerThirdPersonPlayer>();
 	m_pPlayer->Initialize();
-	static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)->GiveWeapon((WEAPON_TYPE)m_nCurWeaponIndex);
+	static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)->GiveWeapon((WEAPON_TYPE)m_nWeapon1Index);
 
 	m_pViewCamera = std::make_shared<Camera>();
 	m_pViewCamera->SetViewport(0, 0, WinCore::g_dwClientWidth, WinCore::g_dwClientHeight, 0.f, 1.f);
@@ -112,69 +112,65 @@ void LobbyScene::BuildObjects()
 
 		}
 
-		// Weapon Selector
+		// Weapon Selector — 1/2번 슬롯 주무기 선택 (3번 슬롯은 인게임 권총 고정)
 		{
-			std::shared_ptr<TextBox> pWeaponText = std::make_shared<TextBox>(L"Noto Sans KR");
-			pWeaponText->SetText(L"Weapon : ");
-			pWeaponText->SetLayer(0);
-			pWeaponText->SetAnchor(Vector2{ 0.0, 0.0 });
-			pWeaponText->SetPivot(Vector2{ 1.0,0.0 });	// Pivot to right
-			pWeaponText->SetPosition(Vector2{ 900,600 });
-			pWeaponText->SetTextHeight(70);
-			m_pUIBoard->InsertUI(pWeaponText);
+			auto BuildWeaponSelector = [&](const std::wstring& strLabel, float fY,
+				int32* pnIndex, std::shared_ptr<TextBox>* ppNameTextbox) {
 
-			std::shared_ptr<TextButton> pWeaponPrev = std::make_shared<TextButton>(L"Noto Sans KR");
-			pWeaponPrev->SetText(L"<<");
-			pWeaponPrev->SetLayer(0);
-			pWeaponPrev->SetAnchor(Vector2{ 0.0, 0.0 });
-			pWeaponPrev->SetPivot(Vector2{ 1.0,0.0 });	// Pivot to right
-			pWeaponPrev->SetPosition(Vector2{ 1000,600 });
-			pWeaponPrev->SetTextHeight(70);
+				std::shared_ptr<TextBox> pWeaponText = std::make_shared<TextBox>(L"Noto Sans KR");
+				pWeaponText->SetText(strLabel);
+				pWeaponText->SetLayer(0);
+				pWeaponText->SetAnchor(Vector2{ 0.0, 0.0 });
+				pWeaponText->SetPivot(Vector2{ 1.0,0.0 });	// Pivot to right
+				pWeaponText->SetPosition(Vector2{ 900, fY });
+				pWeaponText->SetTextHeight(70);
+				m_pUIBoard->InsertUI(pWeaponText);
 
-			pWeaponPrev->SetButtonCallback(
-				[&](IUIComponent* pComp) {
+				// 선택 변경 공통 처리 — 미리보기 무기 교체 + 이름 갱신 + 서버 통지
+				auto OnWeaponChanged = [this, pnIndex, ppNameTextbox](int nDelta) {
 					const int32 nMainWeaponCount = static_cast<int32>(GameContext::g_unWeapons - 2);
-					m_nCurWeaponIndex = (m_nCurWeaponIndex - 1 + nMainWeaponCount) % nMainWeaponCount;
+					*pnIndex = (*pnIndex + nDelta + nMainWeaponCount) % nMainWeaponCount;
 					if (auto p = static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
-						p->GiveWeapon((WEAPON_TYPE)m_nCurWeaponIndex);
-						m_pWeaponNameTextbox->SetText(GameContext::g_strWeaponNames[m_nCurWeaponIndex]);
-						NETWORK->SendPlayerWeapon(static_cast<unsigned char>(m_nCurWeaponIndex));
+						p->GiveWeapon((WEAPON_TYPE)*pnIndex);
+						(*ppNameTextbox)->SetText(GameContext::g_strWeaponNames[*pnIndex]);
+						NETWORK->SendPlayerWeapon(static_cast<unsigned char>(*pnIndex));
 					}
-				}
-			);
+				};
 
-			m_pUIBoard->InsertUI(pWeaponPrev);
+				std::shared_ptr<TextButton> pWeaponPrev = std::make_shared<TextButton>(L"Noto Sans KR");
+				pWeaponPrev->SetText(L"<<");
+				pWeaponPrev->SetLayer(0);
+				pWeaponPrev->SetAnchor(Vector2{ 0.0, 0.0 });
+				pWeaponPrev->SetPivot(Vector2{ 1.0,0.0 });	// Pivot to right
+				pWeaponPrev->SetPosition(Vector2{ 1000, fY });
+				pWeaponPrev->SetTextHeight(70);
+				pWeaponPrev->SetButtonCallback(
+					[OnWeaponChanged](IUIComponent* pComp) { OnWeaponChanged(-1); });
+				m_pUIBoard->InsertUI(pWeaponPrev);
 
-			std::shared_ptr<TextButton> pWeaponNext = std::make_shared<TextButton>(L"Noto Sans KR");
-			pWeaponNext->SetText(L">>");
-			pWeaponNext->SetLayer(0);
-			pWeaponNext->SetAnchor(Vector2{ 0.0, 0.0 });
-			pWeaponNext->SetPivot(Vector2{ 0.0,0.0 });	// Pivot to left
-			pWeaponNext->SetPosition(Vector2{ 1400,600 });
-			pWeaponNext->SetTextHeight(70);
+				std::shared_ptr<TextButton> pWeaponNext = std::make_shared<TextButton>(L"Noto Sans KR");
+				pWeaponNext->SetText(L">>");
+				pWeaponNext->SetLayer(0);
+				pWeaponNext->SetAnchor(Vector2{ 0.0, 0.0 });
+				pWeaponNext->SetPivot(Vector2{ 0.0,0.0 });	// Pivot to left
+				pWeaponNext->SetPosition(Vector2{ 1400, fY });
+				pWeaponNext->SetTextHeight(70);
+				pWeaponNext->SetButtonCallback(
+					[OnWeaponChanged](IUIComponent* pComp) { OnWeaponChanged(+1); });
+				m_pUIBoard->InsertUI(pWeaponNext);
 
-			pWeaponNext->SetButtonCallback(
-				[&](IUIComponent* pComp) {
-					m_nCurWeaponIndex = (m_nCurWeaponIndex + 1) % static_cast<int32>(GameContext::g_unWeapons - 2);
-					if (auto p = static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
-						p->GiveWeapon((WEAPON_TYPE)m_nCurWeaponIndex);
-						m_pWeaponNameTextbox->SetText(GameContext::g_strWeaponNames[m_nCurWeaponIndex]);
-						NETWORK->SendPlayerWeapon(static_cast<unsigned char>(m_nCurWeaponIndex));
-					}
-				}
-			);
-			m_pUIBoard->InsertUI(pWeaponNext);
+				*ppNameTextbox = std::make_shared<TextBox>(L"Noto Sans KR");
+				(*ppNameTextbox)->SetText(GameContext::g_strWeaponNames[*pnIndex]);
+				(*ppNameTextbox)->SetLayer(0);
+				(*ppNameTextbox)->SetAnchor(Vector2{ 0.0, 0.0 });
+				(*ppNameTextbox)->SetPivot(Vector2{ 0.5, 0.0 });
+				(*ppNameTextbox)->SetPosition(Vector2{ 1200, fY });
+				(*ppNameTextbox)->SetTextHeight(70);
+				m_pUIBoard->InsertUI(*ppNameTextbox);
+			};
 
-			m_pWeaponNameTextbox = std::make_shared<TextBox>(L"Noto Sans KR");
-			m_pWeaponNameTextbox->SetText(GameContext::g_strWeaponNames[m_nCurWeaponIndex]);
-			m_pWeaponNameTextbox->SetLayer(0);
-			m_pWeaponNameTextbox->SetAnchor(Vector2{ 0.0, 0.0 });
-			m_pWeaponNameTextbox->SetPivot(Vector2{ 0.5, 0.0 });
-			m_pWeaponNameTextbox->SetPosition(Vector2{ 1200,600 });
-			m_pWeaponNameTextbox->SetTextHeight(70);
-
-			m_pUIBoard->InsertUI(m_pWeaponNameTextbox);
-
+			BuildWeaponSelector(L"Weapon 1 : ", 570.f, &m_nWeapon1Index, &m_pWeapon1NameTextbox);
+			BuildWeaponSelector(L"Weapon 2 : ", 640.f, &m_nWeapon2Index, &m_pWeapon2NameTextbox);
 		}
 
 		// Buttons
@@ -184,7 +180,7 @@ void LobbyScene::BuildObjects()
 			pReadyButton->SetLayer(0);
 			pReadyButton->SetAnchor(Vector2{ 0.0, 0.0 });
 			pReadyButton->SetPivot(Vector2{ 0.5, 0.0 });
-			pReadyButton->SetPosition(Vector2{ 1000,700 });
+			pReadyButton->SetPosition(Vector2{ 1000,730 });
 			pReadyButton->SetTextHeight(70);
 
 			pReadyButton->SetButtonCallback(
@@ -203,7 +199,7 @@ void LobbyScene::BuildObjects()
 			m_pStartButton->SetLayer(0);
 			m_pStartButton->SetAnchor(Vector2{ 0.0, 0.0 });
 			m_pStartButton->SetPivot(Vector2{ 0.5, 0.0 });
-			m_pStartButton->SetPosition(Vector2{ 1000, 800 });
+			m_pStartButton->SetPosition(Vector2{ 1000, 820 });
 			m_pStartButton->SetTextHeight(70);
 			m_pStartButton->SetVisible(false);
 
@@ -242,7 +238,7 @@ void LobbyScene::OnEnterScene()
 	// 로비 진입 시 본인 캐릭터/무기 선택을 서버에 1회 통지 (이미 접속한 다른 클라에 반영 + 서버 기본값 보정)
 	if (NETWORK->IsConnected() && !NETWORK->IsOffline()) {
 		NETWORK->SendPlayerCharacter(static_cast<unsigned char>(m_nCurModelIndex));
-		NETWORK->SendPlayerWeapon(static_cast<unsigned char>(m_nCurWeaponIndex));
+		NETWORK->SendPlayerWeapon(static_cast<unsigned char>(m_nWeapon1Index));
 	}
 }
 
@@ -250,7 +246,8 @@ void LobbyScene::OnLeaveScene()
 {
 	GameContext::GameData data;
 	data.m_nCurModelIndex = m_nCurModelIndex;
-	data.m_nCurWeaponIndex = m_nCurWeaponIndex;
+	data.m_nWeapon1Index = m_nWeapon1Index;
+	data.m_nWeapon2Index = m_nWeapon2Index;
 	GCTX->SetGameData(data);
 }
 

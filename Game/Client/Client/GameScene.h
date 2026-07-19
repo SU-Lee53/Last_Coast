@@ -16,6 +16,7 @@ public:
 	void OnEnterScene() override;
 	void OnLeaveScene() override;
 	void ProcessInput() override;
+	void PostProcessInput() override;
 	void Update() override;
 	void SyncSceneWithServer() override;
 
@@ -44,6 +45,15 @@ private:
 	void ProcessServerGameEvents();
 	// 마지막 체크포인트 후: 구조 헬기 착륙 감지 → 2분 서바이벌 → 헬기 반경 내 F키 탈출
 	void UpdateEscapeSequence();
+
+	// ── 사망/관전/부활 ──────────────────────────────────────────────────────
+	// 사망 감지(온라인=서버 패킷, 오프라인=로컬 HP) → 관전 진입 → 좌클릭 대상 순환 → 부활
+	void UpdateDeathAndSpectate();
+	void EnterSpectateMode();
+	// respawnPos=nullptr 이면 제자리 부활 (오프라인)
+	void LeaveSpectateMode(const Vector3* respawnPos);
+	// 다음 살아있는 리모트 플레이어로 카메라 이동. 후보 없으면 내 시체 시점 유지 + false
+	bool CycleSpectateTarget();
 
 	// 자체 UI 채팅 (기존 ImGui 채팅 창 대체)
 	// 히스토리/입력 UI 컴포넌트 생성, Enter 폴링으로 열기/전송/닫기, 히스토리 갱신
@@ -78,6 +88,20 @@ private:
 	std::shared_ptr<HelicopterDepartEvent> m_pDepartEvent;  // 출발 컷씬 이벤트 (완료 폴링)
 	std::shared_ptr<TextBox> m_pEscapeText;  // 탈출 안내 HUD (총알 UI와 동일한 TextBox 방식)
 	static constexpr float ESCAPE_RADIUS = 500.f; // 탈출 가능 반경 (헬기 5m 이내)
+
+	// ── 전원 로딩 동기화 ─────────────────────────────────────────────────────
+	// 게임씬 진입 시 서버에 C2S_LOAD_COMPLETE 통지 → S2C_GAME_BEGIN(전원 로딩 완료)
+	// 수신까지 시네마틱 정지로 게임플레이(입력/플레이어/좀비) 홀드.
+	bool m_bWaitingAllLoaded = false;
+	std::shared_ptr<TextBox> m_pLoadWaitText;   // 화면 중앙 "다른 플레이어 대기 중" 안내
+
+	// ── 사망/관전/부활 상태 ──────────────────────────────────────────────────
+	static constexpr float OFFLINE_RESPAWN_SECONDS = 10.f; // 오프라인 부활 대기 (온라인은 서버가 줌)
+	bool  m_bSpectating       = false;
+	int   m_nSpectateTargetId = -1;    // 관전 중인 리모트 playerId (-1 = 대상 없음)
+	float m_fRespawnRemain    = 0.f;   // 부활까지 남은 시간(초) — HUD 카운트다운
+	std::unordered_set<int> m_DeadPlayers;       // 죽어있는 리모트 (관전 후보 제외)
+	std::shared_ptr<TextBox> m_pSpectateText;    // 우상단 관전/부활 HUD
 
 	// ── 채팅 UI ──────────────────────────────────────────────────────────────
 	static constexpr int    CHAT_VISIBLE_LINES = 8;     // 화면에 표시할 히스토리 줄 수

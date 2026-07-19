@@ -3,6 +3,7 @@
 
 class Session;
 class GameWorld;
+class Room;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // C2S 패킷 핸들러 모음 — Session::process_packet 에서 위임받는다.
@@ -21,7 +22,12 @@ public:
 	void Chat(Session& self, const C2S_Chat& pkt);
 	void Ready(Session& self, const C2S_Ready& pkt);
 	void GameStart(Session& self);
+	void LoadComplete(Session& self);
 	void Escape(Session& self);
+
+	// 로딩 대기 중 전원 로딩 완료 여부 판정 — 완료 시 S2C_GAME_BEGIN 브로드캐스트 + 게임 시작.
+	// LoadComplete 수신 시와, 로딩 중 플레이어 이탈(Network::Disconnect) 시 호출.
+	void TryBeginGame(Room* room);
 
 private:
 	GameWorld& m_World;

@@ -84,6 +84,12 @@ void PacketHandlers::Transform(Session& self, const C2S_Transform& pkt)
 		// 틱 스레드가 m_transform을 읽으므로(위치 스냅샷) 락으로 tearing 방지
 		std::lock_guard<std::mutex> lg(self.m_state_lock);
 		self.m_transform = pkt.transform;
+
+		// 첫 위치 보고 = 게임씬 시작 스폰 위치 (체크포인트 이전 부활 지점)
+		if (!self.m_bSpawnPosSet) {
+			self.m_v3SpawnPos = Vector3{ pkt.transform.m[3][0], pkt.transform.m[3][1], pkt.transform.m[3][2] };
+			self.m_bSpawnPosSet = true;
+		}
 		self.m_bRunning = pkt.bRunning;
 		self.m_bAiming = pkt.bAiming;
 		self.m_fAimPitch = pkt.fAimPitch;
@@ -161,20 +167,74 @@ void PacketHandlers::GameStart(Session& self)
 
 	// 최소 인원 제한 없음 — 방에 들어온 전원이 레디면 시작 가능
 	if (nConnectedCount >= 1 && nReadyCount == nConnectedCount) {
-		std::cout << "[Room] Host[" << self.m_id << "] started game with " << nConnectedCount << " players.\n";
+		std::cout << "[Room] Host[" << self.m_id << "] started loading with " << nConnectedCount << " players.\n";
+
+		// S2C_GAME_START = 씬 로딩 개시 신호일 뿐, 게임은 아직 시작하지 않는다.
+		// 전원이 C2S_LOAD_COMPLETE 를 보내면 TryBeginGame 이 S2C_GAME_BEGIN + StartGame.
+		for (int other_id : self.m_room->players) {
+			if (other_id == -1) continue;
+			clients[other_id].m_bLoadComplete = false;
+		}
+		m_World.SetAwaitingLoads(true);
+
 		for (int other_id : self.m_room->players) {
 			if (other_id == -1) continue;
 			clients[other_id].send_game_start();
 		}
-		m_World.StartGame(); // 이제부터 틱 스레드가 좀비 스폰/AI/체크포인트를 돌린다
 	}
 	else {
 		std::cout << "[Room] Host[" << self.m_id << "] start rejected: " << nReadyCount << "/" << nConnectedCount << " ready.\n";
 	}
 }
 
-void PacketHandlers::Escape(Session&)
+void PacketHandlers::LoadComplete(Session& self)
 {
+	if (!self.m_room) return;
+
+	// 게임이 이미 시작된 뒤 도착한 로딩 완료(지각 진입) — 본인만 즉시 시작시킨다
+	if (m_World.IsGameStarted()) {
+		self.send_game_begin();
+		return;
+	}
+
+	self.m_bLoadComplete = true;
+	std::cout << "[Room] Player[" << self.m_id << "] load complete.\n";
+	TryBeginGame(self.m_room);
+}
+
+void PacketHandlers::TryBeginGame(Room* room)
+{
+	// 시작 요청으로 로딩 대기 중일 때만 판정 (로비 이탈 등 무관한 호출은 무시)
+	if (!room || !m_World.IsAwaitingLoads() || m_World.IsGameStarted()) return;
+
+	int nLoadedCount = 0;
+	for (int other_id : room->players) {
+		if (other_id == -1) continue;
+		if (!clients[other_id].m_bLoadComplete) return; // 아직 로딩 중인 플레이어 존재
+		++nLoadedCount;
+	}
+
+	m_World.SetAwaitingLoads(false);
+
+	// 로딩 중 전원 이탈 — 시작 취소
+	if (nLoadedCount == 0) {
+		std::cout << "[Room] All players left during loading. Game start canceled.\n";
+		return;
+	}
+
+	std::cout << "[Room] All " << nLoadedCount << " players loaded. Game begin!\n";
+	for (int other_id : room->players) {
+		if (other_id == -1) continue;
+		clients[other_id].send_game_begin();
+	}
+	m_World.StartGame(); // 이제부터 틱 스레드가 좀비 스폰/AI/체크포인트를 돌린다
+}
+
+void PacketHandlers::Escape(Session& self)
+{
+	// 죽은(관전 중) 플레이어의 탈출 요청은 무시 — 클라도 막지만 서버가 최종 권위.
+	if (self.m_bDead) return;
+
 	// 탈출 키 입력 — 플래그만 세움. 실제 종료 판정/브로드캐스트는 틱 스레드가
 	// 탈출 가능 상태(Ready)일 때만 처리한다 (스레드 안전 + 단일 권위).
 	m_World.GetEscape().Request();

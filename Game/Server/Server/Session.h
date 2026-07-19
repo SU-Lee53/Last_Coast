@@ -87,9 +87,12 @@ public:
 	void send_game_event(int event_id, const Vector3& v3Pos, float fTargetValue, float fDuration, int preset_id = 0);
 	void send_ready_state(int player_id, bool bReady);
 	void send_game_start();
+	void send_game_begin();
 	void send_host_change(int host_id);
 	void send_escape_state(unsigned char phase, float remain_seconds);
 	void send_game_end();
+	void send_player_death(int player_id, float respawn_seconds);
+	void send_player_respawn(int player_id, const Vector3& v3Pos);
 
 public:
 	SOCKET		m_client;
@@ -108,7 +111,19 @@ public:
 	float         m_fAimPitch = 0.f;
 	unsigned char m_weaponType = 3;   // 기본 PISTOL (WEAPON_TYPE::PISTOL == 3)
 	bool          m_bReady = false;
+	bool          m_bLoadComplete = false; // 게임씬 로딩 완료 여부 — 시작 요청 시 리셋, 전원 true면 S2C_GAME_BEGIN
 	unsigned char m_characterType = 0; // 기본 캐릭터 모델 인덱스 (g_strCharacterNames[0])
+
+	// ── 플레이어 HP/사망 (서버 권위) — 게임 틱 스레드가 씀.
+	//    m_bDead는 Escape 패킷 핸들러(IOCP 스레드)도 읽음 — bool 스테일 읽기는 무해 ──
+	float m_fHP           = 100.f;
+	bool  m_bDead         = false;
+	float m_fRespawnTimer = 0.f;   // 남은 부활 대기 시간(초)
+
+	// 게임씬 진입 후 첫 C2S_TRANSFORM 위치 = 시작 스폰 위치.
+	// 체크포인트를 하나도 안 지났을 때의 부활 지점. m_state_lock으로 보호.
+	Vector3 m_v3SpawnPos   = Vector3::Zero;
+	bool    m_bSpawnPosSet = false;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

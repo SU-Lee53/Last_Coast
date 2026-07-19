@@ -55,6 +55,12 @@ void WeaponSocket::SetWeapon(WEAPON_TYPE eWeaponType)
 	m_eCurrentWeapon = eWeaponType;
 }
 
+void WeaponSocket::SetWeaponObject(const std::shared_ptr<WeaponObject>& pWeapon, WEAPON_TYPE eWeaponType)
+{
+	m_pWeaponModel = pWeapon;
+	m_eCurrentWeapon = eWeaponType;
+}
+
 Skeleton::Skeleton(std::shared_ptr<IGameObject> pOwner)
 	: IComponent{ pOwner }
 {

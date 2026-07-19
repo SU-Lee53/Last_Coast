@@ -17,6 +17,11 @@ namespace
 	constexpr DWORD ESCAPE_SPAWN_INTERVAL_MS = 800; // 더 자주 스폰
 	constexpr int   ESCAPE_MAX_ZOMBIES       = 130; // 더 많이 동시 존재
 	constexpr int   ESCAPE_SPAWN_BURST       = 1;   // 스폰 1회당 마리수
+
+	// 플레이어 사망/부활 (서버 권위)
+	constexpr float PLAYER_MAX_HP          = 100.f;
+	constexpr float ZOMBIE_ATTACK_DAMAGE   = 10.f;
+	constexpr float PLAYER_RESPAWN_SECONDS = 10.f; // 사망 → 부활 대기 시간
 }
 
 void GameLoop::Run()
@@ -53,6 +58,15 @@ void GameLoop::Run()
 		if (!bInitialSpawnDone)
 		{
 			bInitialSpawnDone = true;
+
+			// 게임 시작 시 전원 HP/사망 상태 리셋 (재시작 대비)
+			for (auto& cl : clients) {
+				if (!cl.m_is_connected) continue;
+				cl.m_fHP = PLAYER_MAX_HP;
+				cl.m_bDead = false;
+				cl.m_fRespawnTimer = 0.f;
+			}
+
 			for (int i = 0; i < INITIAL_SPAWN_ON_START; ++i)
 			{
 				if (zombies.GetZombies().size() >= static_cast<size_t>(INITIAL_ZOMBIES)) break;
@@ -71,6 +85,7 @@ void GameLoop::Run()
 		// ── 플레이어 위치 스냅샷 (clients 배열에서 직접 읽기, 세션 락으로 tearing 방지) ──
 		std::unordered_map<int, Vector3> playerSnapshots;
 		for (int i = 0; i < MAX_PLAYERS; ++i) {
+			if (clients[i].m_bDead) continue; // 죽은 플레이어는 좀비 타겟/체크포인트 판정에서 제외
 			if (clients[i].m_is_connected) {
 				std::lock_guard<std::mutex> lg(clients[i].m_state_lock);
 				float x = clients[i].m_transform.m[3][0];
@@ -167,13 +182,57 @@ void GameLoop::Run()
 			}
 
 			// 공격 데미지 발동 (Notify 딜레이 후 — 실제 데미지)
+			// 서버가 HP를 차감하고 사망 판정까지 내린다 (서버 권위).
 			for (auto& [nZombieId, nTargetId] : attacks)
 			{
+				if (nTargetId < 0 || nTargetId >= MAX_PLAYERS) continue;
+				Session& target = clients[nTargetId];
+				if (!target.m_is_connected || target.m_bDead) continue;
+
 				BroadcastAll([&](Session& cl) {
-					cl.send_zombie_attack(nZombieId, nTargetId, 10.f);
+					cl.send_zombie_attack(nZombieId, nTargetId, ZOMBIE_ATTACK_DAMAGE);
 					});
+
+				target.m_fHP = std::max(0.f, target.m_fHP - ZOMBIE_ATTACK_DAMAGE);
+				if (target.m_fHP <= 0.f)
+				{
+					target.m_bDead = true;
+					target.m_fRespawnTimer = PLAYER_RESPAWN_SECONDS;
+					BroadcastAll([&](Session& cl) {
+						cl.send_player_death(nTargetId, PLAYER_RESPAWN_SECONDS);
+						});
+					std::cout << "[Server] 플레이어 " << nTargetId << " 사망 — "
+						<< PLAYER_RESPAWN_SECONDS << "초 후 부활\n";
+				}
 			}
 		} // if (!bZombieFrozen)
+
+		// ── 부활 타이머 (컷씬 중에도 진행) ────────────────────────────────────
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			Session& cl = clients[i];
+			if (!cl.m_is_connected || !cl.m_bDead) continue;
+
+			cl.m_fRespawnTimer -= fActualDT;
+			if (cl.m_fRespawnTimer > 0.f) continue;
+
+			cl.m_bDead = false;
+			cl.m_fHP = PLAYER_MAX_HP;
+			cl.m_fRespawnTimer = 0.f;
+
+			// 부활 위치 = 마지막 발동 체크포인트, 하나도 없으면 게임 시작 스폰 위치
+			Vector3 v3Respawn;
+			{
+				std::lock_guard<std::mutex> lg(cl.m_state_lock);
+				v3Respawn = cl.m_v3SpawnPos;
+			}
+			if (const Vector3* pCpPos = WORLD->GetCheckpoints().GetLastFiredPos())
+				v3Respawn = *pCpPos;
+			BroadcastAll([&](Session& other) {
+				other.send_player_respawn(i, v3Respawn);
+				});
+			std::cout << "[Server] 플레이어 " << i << " 부활\n";
+		}
 
 		// ── 체크포인트 트리거: 전원이 지점 도달 시 이벤트 발사 ────────────────────
 		// 진행축 +X. 모든 연결 플레이어의 min(x)가 체크포인트 x를 넘으면 1회 발사.

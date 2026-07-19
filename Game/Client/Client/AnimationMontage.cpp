@@ -338,6 +338,28 @@ void PlayerAnimationMontage::BuildMontage()
 	}
 
 
+	// 7. Weapon Draw — 무기 슬롯 교체 모션 (권총/주무기 구분, 종료 notify로 교체 잠금 해제)
+	{
+		auto AddDrawSection = [this](const std::string& strSectionName, const std::string& strAnimName) {
+			MontageSection drawSection{};
+			drawSection.strName = strSectionName;
+			drawSection.pAnimationToPlay = ANIMATION->Get(strAnimName);
+			drawSection.eEndRule = MONTAGE_SECTION_END_RULE::STOP;
+			m_MontageSections.push_back(drawSection);
+
+			MontageNotify drawEndNotify;
+			drawEndNotify.nSectionIndex = m_MontageSections.size() - 1;
+			drawEndNotify.fTime = ANIMATION->Get(strAnimName)->GetDuration() - 0.1f;
+			drawEndNotify.pCallback = [](std::shared_ptr<IGameObject> pObj) {
+				std::static_pointer_cast<IThirdPersonPlayer>(pObj)->OnWeaponDrawEnd();
+			};
+			m_Notifies.push_back(drawEndNotify);
+		};
+
+		AddDrawSection("Pistol Draw", "Drawing Pistol");
+		AddDrawSection("Rifle Draw", "Drawing Rifle");
+	}
+
 	// 2. Pistol Reload
 	{
 		MontageSection reloadSection{};

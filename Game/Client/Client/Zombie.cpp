@@ -88,7 +88,7 @@ void Zombie::PoolReset()
 	m_fLastAppliedTime       = -1.f;
 	m_fCurrentYaw            = 0.f;
 	m_fTargetYaw             = 0.f;
-	m_fInterpDelay           = 0.1f;
+	m_fInterpDelay           = 0.3f;
 	m_Snapshots.clear();
 	m_xmOBBCollided.clear();
 	// AI 에이전트 상태는 재활성화 시 SetPosition/SetTarget으로 재설정됨
@@ -140,11 +140,17 @@ void Zombie::PostUpdate()
 	// ── 감지 처리 + Goal 기반 AI 구동 ─────────────────────────────────────
 	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
 
+	// 컷씬 중: 감지/Think/공격과 경로 이동만 홀드 — 중력/충돌/애니 감쇠는 유지해
+	// 제자리에 자연스럽게 멈춰 Idle로 전환된다. 에이전트 위치는 아래 SyncPosition이
+	// 매 프레임 현재 위치로 되돌리므로 컷씬 종료 후 위치 스냅이 없다.
+	// (온라인은 서버가 좀비를 정지시켜 스냅샷이 멈추므로 같은 효과가 저절로 난다)
+	const bool bCinematic = CUR_SCENE->IsCinematicActive();
+
 	// 공격 애니메이션 재생 중엔 AI 상태 전환 차단
 	auto pAC = GetComponent<ZombieAnimationController>();
 	bool bAttackMontageActive = pAC && pAC->GetMontage() && pAC->GetMontage()->GetBlendWeight() > 0.f;
 
-	if (!bOnline)
+	if (!bOnline && !bCinematic)
 	{
 		// 오프라인 전용: FOV/LOS 감지 + Think() + 경보 전파
 		// 온라인 모드에서는 서버가 AI를 담당하므로 이 블록 전체를 스킵
@@ -156,8 +162,10 @@ void Zombie::PostUpdate()
 		float fDist = Vector3::Distance(v3ZombiePos, v3PlayerPos);
 
 		// 시야(FOV)/LOS 제거 — 반경(m_fSightRange) 내에 있으면 무조건 인지.
-		bool bVisible = (fDist <= m_fSightRange);
-		bool bHeard   = (fDist <= m_fHearingRange);
+		// 죽은(관전 중) 플레이어는 감지 대상에서 제외 — 부활까지 좀비가 무시.
+		bool bTargetAlive = !Target->IsDead();
+		bool bVisible = bTargetAlive && (fDist <= m_fSightRange);
+		bool bHeard   = bTargetAlive && (fDist <= m_fHearingRange);
 
 		m_pAIAgent->UpdateSensoryStimulus(0, v3PlayerPos, bVisible, bHeard);
 
@@ -282,11 +290,17 @@ void Zombie::PostUpdate()
 		// state만 보면 A* 대기 중 제자리 걷기 발생,
 		// 즉시 delta만 보면 프레임마다 값이 튀어 flicker 발생
 		// → 이동 감지 시 즉시 1, 멈추면 5/s 속도로 감소 (약 0.2s 유지)
+		//
+		// 판정은 프레임 절대 이동량(cm)이 아니라 속도(cm/s)로 — 절대량 기준(>1cm)은
+		// 프레임레이트가 높거나 배회처럼 느린 이동에서 한 프레임 이동이 1cm 미만이 되어
+		// 걷는 중인데 Idle로 떨어지고, 경계에서 걸렸다 풀렸다 하며 걷기 애니가 끊긴다.
 		bool bMoving = (m_eServerBehaviorState != ZBS_Idle &&
 		                m_eServerBehaviorState != ZBS_Alert &&
 		                m_eServerBehaviorState != ZBS_Attacking);
 		float fDeltaXZSq = v3Delta.x * v3Delta.x + v3Delta.z * v3Delta.z;
-		if (bMoving && fDeltaXZSq > 1.f) // 이번 프레임 XZ 이동 > 1cm
+		float fDTSafe = std::max(DT, 0.0001f);
+		float fSpeedXZ = std::sqrt(fDeltaXZSq) / fDTSafe; // cm/s
+		if (bMoving && fSpeedXZ > 30.f) // 30cm/s 미만은 보간 잔떨림으로 간주 (플레이어와 동일 기준)
 			m_fMoveSpeedSqXZ = 1.f;
 		else
 			m_fMoveSpeedSqXZ = std::max(0.f, m_fMoveSpeedSqXZ - DT * 5.f);
@@ -298,6 +312,13 @@ void Zombie::PostUpdate()
 		v3Delta.x = v3AgentPos.x - v3CurrentPos.x;
 		v3Delta.z = v3AgentPos.z - v3CurrentPos.z;
 		v3Delta.y = m_fVerticalVelocity * DT;
+
+		// 컷씬 중 XZ 이동 홀드 — 아래 SyncPosition(v3NewPos)이 에이전트를 현재
+		// 위치로 되돌려, 에이전트가 경로를 따라 앞서 나가는 것도 함께 막는다
+		if (bCinematic) {
+			v3Delta.x = 0.f;
+			v3Delta.z = 0.f;
+		}
 	}
 
 	// ── 충돌/지형 해소 (온라인·오프라인 공통) ────────────────────────────────
@@ -572,32 +593,23 @@ void Zombie::ApplyServerState(float serverX, float serverZ, float serverYaw,
 		return;
 	m_fLastAppliedTime = receivedTime;
 
-	// 스냅샷 저장 — 메인 스레드 현재 시간 기준 (PostUpdate와 동일 시간축)
-	float fNow = NetworkManager::GetNetTimeSec();
-
-	// 서버 전송 간격 측정 → 보간 딜레이 자동 조절
-	if (!m_Snapshots.empty())
-	{
-		float fInterval = fNow - m_Snapshots.back().fTime;
-		if (fInterval > 0.01f)
-			m_fInterpDelay = fInterval * 1.5f; // 간격의 1.5배로 여유
-	}
-
-	// 정지→이동 전환 시 보간 딜레이 축소 (과거 스냅샷 지연으로 멈춰 보이는 현상 방지)
-	bool bWasStationary = (m_eServerBehaviorState == ZBS_Attacking ||
-	                       m_eServerBehaviorState == ZBS_Idle ||
-	                       m_eServerBehaviorState == ZBS_Alert);
-	bool bNowMoving     = (state == ZBS_Wandering ||
-	                       state == ZBS_Investigating ||
-	                       state == ZBS_Chasing);
-	if (bWasStationary && bNowMoving)
-		m_fInterpDelay = 0.05f;
+	// 스냅샷 시각 = 네트워크 스레드 패킷 도착 시각 (PostUpdate의 GetNetTimeSec와 동일 시간축).
+	// 소비 프레임 시각으로 스탬프하면 프레임 타이밍 노이즈가 시간축에 유입된다.
+	//
+	// 보간 딜레이는 고정: 서버가 상태 변경 시 OR 200ms마다 전송해 간격이 33~200ms로
+	// 근본적으로 가변 — '마지막 간격 * 1.5' 방식은 상태 변경 패킷 하나에 delay가
+	// 붕괴/복귀하며 렌더 시간축이 앞뒤로 점프해 위치 팝·뒷걸음질을 유발했다.
+	// 최대 전송 간격(200ms) * 1.5 = 0.3s면 패킷 손실 없는 한 항상 두 스냅샷 사이 보장.
 
 	float fY = m_pAIAgent->GetPosition().y;
 	ZombieSnapshot snap;
 	snap.v3Pos = Vector3(serverX, fY, serverZ);
 	snap.fYaw  = serverYaw;
-	snap.fTime = fNow;
+	snap.fTime = receivedTime;
+
+	// 스냅샷 시각은 단조 증가해야 보간 구간 탐색이 성립 — 역행 입력은 직전 시각으로 클램프
+	if (!m_Snapshots.empty() && snap.fTime < m_Snapshots.back().fTime)
+		snap.fTime = m_Snapshots.back().fTime;
 
 	m_Snapshots.push_back(snap);
 	while (m_Snapshots.size() > MAX_SNAPSHOTS)
@@ -609,7 +621,7 @@ void Zombie::ApplyServerState(float serverX, float serverZ, float serverYaw,
 void Zombie::TriggerAttackHit()
 {
 	auto pTarget = m_wpTarget.lock();
-	if (!pTarget)
+	if (!pTarget || pTarget->IsDead())
 		return;
 
 	// Notify 시점에 여전히 공격 사거리 이내일 때만 데미지 적용

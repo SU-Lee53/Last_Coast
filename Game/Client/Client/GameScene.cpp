@@ -67,11 +67,12 @@ void GameScene::FinalizeBuild()
 {
 	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
 	m_pPlayer->Initialize();
+	//m_pPlayer->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
 	m_pPlayer->GetTransform()->SetPosition(29000, -3536.692724, 25000);
 	if (auto pThirdPerson = static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 		const auto& data = GCTX->GetGameData();
 		pThirdPerson->SetPlayerModel(GameContext::g_strCharacterNames[data.m_nCurModelIndex]);
-		pThirdPerson->GiveWeapon((WEAPON_TYPE)data.m_nCurWeaponIndex);
+		pThirdPerson->SetWeaponSlots((WEAPON_TYPE)data.m_nWeapon1Index, (WEAPON_TYPE)data.m_nWeapon2Index);
 		if (bOnline)
 			NETWORK->SendPlayerCharacter(static_cast<unsigned char>(data.m_nCurModelIndex)); // late-join 리모트에 모델 반영
 	}
@@ -80,6 +81,17 @@ void GameScene::FinalizeBuild()
 	m_pSkybox->LoadSkyboxParameters("Start");
 
 	BuildChatUI();
+
+	// 전원 로딩 대기 안내 (화면 중앙). OnEnterScene에서 온라인일 때만 표시.
+	m_pLoadWaitText = std::make_shared<TextBox>(L"Noto Sans KR");
+	m_pLoadWaitText->SetText(L"다른 플레이어를 기다리는 중...");
+	m_pLoadWaitText->SetLayer(0);
+	m_pLoadWaitText->SetAnchor(Vector2{ 0.5f, 0.5f });   // 화면 중앙
+	m_pLoadWaitText->SetPivot(Vector2{ 0.5f, 0.5f });
+	m_pLoadWaitText->SetPosition(Vector2{ 0.f, 0.f });
+	m_pLoadWaitText->SetTextHeight(48.f);
+	m_pLoadWaitText->SetVisible(false);
+	m_pUIBoard->InsertUI(m_pLoadWaitText);
 
 	// 탈출 시퀀스 안내 HUD (총알/체력 UI와 동일하게 TextBox → UIBoard). 평소엔 숨김.
 	m_pEscapeText = std::make_shared<TextBox>(L"Noto Sans KR");
@@ -91,10 +103,47 @@ void GameScene::FinalizeBuild()
 	m_pEscapeText->SetTextHeight(60.f);
 	m_pEscapeText->SetVisible(false);
 	m_pUIBoard->InsertUI(m_pEscapeText);
+
+	// 관전/부활 HUD (화면 우상단). 죽어서 관전 중일 때만 표시.
+	m_pSpectateText = std::make_shared<TextBox>(L"Noto Sans KR");
+	m_pSpectateText->SetText(L"");
+	m_pSpectateText->SetLayer(0);
+	m_pSpectateText->SetAnchor(Vector2{ 1.f, 0.f });   // 화면 우상단
+	m_pSpectateText->SetPivot(Vector2{ 1.f, 0.f });
+	m_pSpectateText->SetPosition(Vector2{ -30.f, 30.f });
+	m_pSpectateText->SetTextHeight(36.f);
+	m_pSpectateText->SetVisible(false);
+	m_pUIBoard->InsertUI(m_pSpectateText);
+
+	// ── 전원 로딩 동기화 시작 ────────────────────────────────────────────────
+	// 씬 셋업(플레이어/UI)이 모두 끝난 여기서 서버에 로딩 완료를 알리고,
+	// S2C_GAME_BEGIN 수신까지 입력 차단(PostProcessInput) + 중앙 대기 안내 표시.
+	// OnEnterScene은 FinalizeBuild보다 먼저 호출되므로 여기서 해야 UI가 존재한다.
+	if (bOnline) {
+		m_bWaitingAllLoaded = true;
+		m_pLoadWaitText->SetVisible(true);
+
+		NETWORK->ConsumeGameBegin(); // 이전 게임의 잔여 신호 제거 (재시작 대비)
+		NETWORK->SendLoadComplete();
+	}
 }
 
 void GameScene::OnEnterScene()
 {
+}
+
+void GameScene::PostProcessInput()
+{
+	// 전원 로딩 대기 중: 플레이어 입력만 차단 — 카메라/물리/월드/UI 업데이트는
+	// 정상 구동되어 화면·대기 안내가 제대로 나온다 (시네마틱 정지를 쓰면
+	// 카메라 갱신까지 멈춰 초기 뷰(원점)에 방치됨).
+	if (m_bWaitingAllLoaded) {
+		if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
+			pThirdPerson->ClearMovementInput(); // 이동 입력 잔상 제거 (컷씬 차단과 동일)
+		}
+		return;
+	}
+	Scene::PostProcessInput();
 }
 
 void GameScene::OnLeaveScene()
@@ -295,6 +344,16 @@ void GameScene::Update()
 		return;
 	}
 
+	// 전원 로딩 대기 — 서버의 동시 시작 신호(또는 연결 끊김) 시 입력 차단 해제
+	if (m_bWaitingAllLoaded) {
+		if (NETWORK->ConsumeGameBegin() || !NETWORK->IsConnected()) {
+			m_bWaitingAllLoaded = false;
+			if (m_pLoadWaitText) {
+				m_pLoadWaitText->SetVisible(false);
+			}
+		}
+	}
+
 	UpdateOfflineSpawner();
 	SyncSceneWithServer();
 	ProcessNetworkZombies();
@@ -302,6 +361,7 @@ void GameScene::Update()
 	ProcessShootResults();
 	ProcessMeleeResults();
 	ProcessServerGameEvents();
+	UpdateDeathAndSpectate();
 	UpdateEscapeSequence();
 	RemoveDeadZombies();
 	UpdateChat();
@@ -491,6 +551,150 @@ void GameScene::ProcessServerGameEvents()
 	}
 }
 
+// ── 사망/관전/부활 ───────────────────────────────────────────────────────────
+// 온라인: 서버가 HP 차감/사망 판정/부활 타이머를 주관 (S2C_PLAYER_DEATH / S2C_PLAYER_RESPAWN).
+// 오프라인: 로컬 HP로 사망 판정 + 로컬 타이머로 제자리 부활.
+// 관전: 죽으면 카메라 owner를 살아있는 리모트로 교체, 좌클릭으로 다음 대상 순환.
+void GameScene::UpdateDeathAndSpectate()
+{
+	const bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
+
+	if (bOnline)
+	{
+		for (const auto& ev : NETWORK->ConsumePlayerDeaths())
+		{
+			if (ev.playerId == NETWORK->GetPlayerID()) {
+				m_fRespawnRemain = ev.fRespawnSeconds;
+				if (!m_bSpectating) EnterSpectateMode();
+			}
+			else {
+				m_DeadPlayers.insert(ev.playerId);
+				// 보고 있던 대상이 죽으면 다음 대상으로
+				if (m_bSpectating && m_nSpectateTargetId == ev.playerId)
+					CycleSpectateTarget();
+			}
+		}
+
+		for (const auto& ev : NETWORK->ConsumePlayerRespawns())
+		{
+			if (ev.playerId == NETWORK->GetPlayerID()) {
+				if (m_bSpectating) LeaveSpectateMode(&ev.pos);
+			}
+			else {
+				m_DeadPlayers.erase(ev.playerId);
+			}
+		}
+
+		if (m_bSpectating)
+			m_fRespawnRemain = std::max(0.f, m_fRespawnRemain - DT);
+	}
+	else
+	{
+		// 오프라인: 로컬 사망 감지 + 로컬 부활 타이머 (리모트가 없으므로 내 시체 시점 유지)
+		if (!m_bSpectating && m_pPlayer && m_pPlayer->IsDead()) {
+			m_fRespawnRemain = OFFLINE_RESPAWN_SECONDS;
+			EnterSpectateMode();
+		}
+		if (m_bSpectating) {
+			m_fRespawnRemain -= DT;
+			if (m_fRespawnRemain <= 0.f) {
+				LeaveSpectateMode(nullptr);
+				return;
+			}
+		}
+	}
+
+	if (!m_bSpectating) {
+		if (m_pSpectateText) m_pSpectateText->SetVisible(false);
+		return;
+	}
+
+	// 관전 대상이 방을 나갔으면 다음 대상으로
+	if (m_nSpectateTargetId >= 0 && !m_RemotePlayers.contains(m_nSpectateTargetId))
+		CycleSpectateTarget();
+
+	// 좌클릭 → 다음 관전 대상 순환
+	if (!INPUT->IsTextInputMode() && INPUT->GetButtonDown(VK_LBUTTON))
+		CycleSpectateTarget();
+
+	// ── 우상단 HUD: 관전 대상 이름 + 부활 카운트다운 ─────────────────────────
+	if (!m_pSpectateText) return;
+	m_pSpectateText->SetVisible(true);
+	m_pSpectateText->SetColor(Vector3{ 1.f, 0.85f, 0.3f });
+
+	const int nRemain = static_cast<int>(std::ceil(std::max(0.f, m_fRespawnRemain)));
+	if (m_nSpectateTargetId >= 0)
+	{
+		// 대상 이름 조회 (방 멤버 스냅샷). 못 찾으면 playerId 표시.
+		std::wstring wstrName = std::to_wstring(m_nSpectateTargetId);
+		for (const auto& ev : NETWORK->GetRoomPlayersSnapshot()) {
+			if (ev.playerId == m_nSpectateTargetId) {
+				wstrName = StringToWString(ev.username);
+				break;
+			}
+		}
+		m_pSpectateText->SetText(std::format(L"관전 중: {}  |  부활까지 {}초  [좌클릭: 다음]", wstrName, nRemain));
+	}
+	else
+	{
+		m_pSpectateText->SetText(std::format(L"부활까지 {}초", nRemain));
+	}
+}
+
+void GameScene::EnterSpectateMode()
+{
+	m_bSpectating = true;
+	m_nSpectateTargetId = -1;
+	CycleSpectateTarget(); // 살아있는 리모트가 있으면 바로 관전, 없으면 내 시체 시점
+}
+
+void GameScene::LeaveSpectateMode(const Vector3* respawnPos)
+{
+	m_bSpectating = false;
+	m_nSpectateTargetId = -1;
+	m_fRespawnRemain = 0.f;
+
+	if (m_pPlayer) {
+		m_pPlayer->RestoreFullHP();
+		if (respawnPos)
+			m_pPlayer->GetTransform()->SetPosition(*respawnPos);
+		if (m_pPlayer->GetCamera())
+			m_pPlayer->GetCamera()->SetOwner(m_pPlayer); // 카메라 원복
+	}
+	if (m_pSpectateText) m_pSpectateText->SetVisible(false);
+}
+
+bool GameScene::CycleSpectateTarget()
+{
+	if (!m_pPlayer || !m_pPlayer->GetCamera()) return false;
+
+	// 살아있는 리모트 후보 (id 오름차순 순환)
+	std::vector<int> candidates;
+	candidates.reserve(m_RemotePlayers.size());
+	for (const auto& [id, pRemote] : m_RemotePlayers)
+		if (pRemote && !m_DeadPlayers.contains(id))
+			candidates.push_back(id);
+
+	if (candidates.empty()) {
+		m_nSpectateTargetId = -1;
+		m_pPlayer->GetCamera()->SetOwner(m_pPlayer); // 후보 없음 → 내 시체 시점
+		return false;
+	}
+
+	std::sort(candidates.begin(), candidates.end());
+	int nNext = candidates.front();
+	for (size_t i = 0; i < candidates.size(); ++i) {
+		if (candidates[i] == m_nSpectateTargetId) {
+			nNext = candidates[(i + 1) % candidates.size()];
+			break;
+		}
+	}
+
+	m_nSpectateTargetId = nNext;
+	m_pPlayer->GetCamera()->SetOwner(m_RemotePlayers[nNext]);
+	return true;
+}
+
 // 마지막 체크포인트 후 탈출 시퀀스 (서버 권위).
 //  - 시간 카운트다운/상태/종료 판정은 모두 서버가 함 (S2C_ESCAPE_STATE / S2C_GAME_END).
 //  - 클라는 받은 상태로 UI를 그리고, 탈출 가능 + 헬기 반경 안에서 F를 누르면 서버에 1회 전송.
@@ -566,7 +770,8 @@ void GameScene::UpdateEscapeSequence()
 		if (bInRange) {
 			m_pEscapeText->SetColor(Vector3{ 0.4f, 1.f, 0.4f });
 			m_pEscapeText->SetText(L"[F] 탈출!");
-			if (!m_bEscapeKeySent && INPUT->GetButtonDown('F')) {
+			// 사망(관전) 중에는 탈출 불가 — 시체가 반경 안에 있어도 F 무시
+			if (!m_bEscapeKeySent && !m_pPlayer->IsDead() && INPUT->GetButtonDown('F')) {
 				NETWORK->SendPlayerEscape();
 				m_bEscapeKeySent = true;
 			}
@@ -931,8 +1136,8 @@ void GameScene::ProcessNetworkZombies()
 		}
 		else
 		{
-			// 데미지는 나 자신이 타겟인 경우에만 적용
-			if (ev.targetPlayerId == NETWORK->GetPlayerID())
+			// 데미지는 나 자신이 타겟인 경우에만 적용 (이미 죽어있으면 무시)
+			if (ev.targetPlayerId == NETWORK->GetPlayerID() && !m_pPlayer->IsDead())
 				m_pPlayer->TakeDamage(ev.damage);
 		}
 	}
@@ -1038,7 +1243,7 @@ void GameScene::SyncSceneWithServer()
 		auto remotePlayer = std::make_shared<NetworkRemoteThirdPersonPlayer>();
 		remotePlayer->Initialize();
 
-		remotePlayer->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.initialTransform.m), ev.bRunning, ev.bAiming, ev.fAimPitch);
+		remotePlayer->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.initialTransform.m), ev.bRunning, ev.bAiming, ev.fAimPitch, NetworkManager::GetNetTimeSec());
 		remotePlayer->GiveWeapon(static_cast<WEAPON_TYPE>(ev.weaponType));
 		if (ev.characterType < GameContext::g_unCharacterModels)
 			remotePlayer->SetPlayerModel(GameContext::g_strCharacterNames[ev.characterType]);
@@ -1052,12 +1257,15 @@ void GameScene::SyncSceneWithServer()
 			RemoveObject(it->second);
 			m_RemotePlayers.erase(it);
 		}
+		// 서버가 슬롯 id를 재사용하므로 사망 기록도 함께 제거 — 안 하면 같은 id로
+		// 들어온 새 플레이어가 관전 후보에서 영구 제외된다.
+		m_DeadPlayers.erase(id);
 	}
 
 	for (auto& ev : NETWORK->ConsumePlayerTransforms()) {
 		auto it = m_RemotePlayers.find(ev.playerId);
 		if (it != m_RemotePlayers.end()) {
-			it->second->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.transform.m), ev.bRunning, ev.bAiming, ev.fAimPitch);
+			it->second->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.transform.m), ev.bRunning, ev.bAiming, ev.fAimPitch, ev.fRecvTime);
 		}
 	}
 
@@ -1075,6 +1283,7 @@ void GameScene::SyncSceneWithServer()
 		auto it = m_RemotePlayers.find(ev.playerId);
 		if (it != m_RemotePlayers.end()) {
 			it->second->GiveWeapon(static_cast<WEAPON_TYPE>(ev.weaponType));
+			it->second->PlayWeaponDrawAction();	// 리모트도 꺼내기 모션 동기화
 		}
 	}
 

@@ -70,3 +70,12 @@ void CheckpointSystem::Update(float minPlayerX, DWORD now, GameWorld& world)
 			<< " (" << cp.events.size() << " events, freeze " << fMaxFreeze << "s)\n";
 	}
 }
+
+const Vector3* CheckpointSystem::GetLastFiredPos() const
+{
+	const Vector3* pBest = nullptr;
+	for (const auto& cp : m_Checkpoints)
+		if (cp.bFired && (!pBest || cp.v3Pos.x > pBest->x))
+			pBest = &cp.v3Pos;
+	return pBest;
+}

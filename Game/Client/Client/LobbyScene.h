@@ -53,8 +53,11 @@ private:
 	std::shared_ptr<TextBox> m_pModelNameTextbox = nullptr;
 	int32 m_nCurModelIndex = 0;
 
-	std::shared_ptr<TextBox> m_pWeaponNameTextbox = nullptr;
-	int32 m_nCurWeaponIndex = 0;
+	// 1/2번 슬롯 주무기 선택 (3번 슬롯은 인게임 권총 고정)
+	std::shared_ptr<TextBox> m_pWeapon1NameTextbox = nullptr;
+	std::shared_ptr<TextBox> m_pWeapon2NameTextbox = nullptr;
+	int32 m_nWeapon1Index = 0;
+	int32 m_nWeapon2Index = 1;
 
 	// 방장 전용 게임 시작 버튼 (호스트일 때만 표시)
 	std::shared_ptr<TextButton> m_pStartButton = nullptr;

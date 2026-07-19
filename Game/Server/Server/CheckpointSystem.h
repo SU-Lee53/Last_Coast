@@ -16,7 +16,6 @@ struct EventEmit {
 	int     presetId;         // EnvironmentPresetId (GE_ENVIRONMENT 전용)
 	float   fFreezeDuration;  // 컷씬 길이(초). >0 이면 그 동안 서버 좀비 AI 정지(온라인 스냅 방지). 비컷씬=0
 
-	// 명시적 생성자 — 중첩 중괄호 {{...}}로 vector<EventEmit> 초기화 시 MSVC 변환 오류 방지.
 	EventEmit(int eventId_, const Vector3& pos_, float fTargetValue_,
 		float fDuration_, int presetId_, float fFreezeDuration_)
 		: eventId(eventId_), pos(pos_), fTargetValue(fTargetValue_)
@@ -44,6 +43,9 @@ public:
 	void Update(float minPlayerX, DWORD now, GameWorld& world);
 
 	bool IsEmpty() const { return m_Checkpoints.empty(); }
+
+	// 발동된 체크포인트 중 가장 전방(x 최대) 위치. 없으면 nullptr — 부활 위치 판정용.
+	const Vector3* GetLastFiredPos() const;
 
 private:
 	std::vector<Checkpoint> m_Checkpoints;

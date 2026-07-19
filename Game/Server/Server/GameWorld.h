@@ -36,6 +36,11 @@ public:
 	bool IsGameStarted() const { return m_bGameStarted; }
 	void StartGame()           { m_bGameStarted = true; }
 
+	// 전원 로딩 대기 상태 — 방장이 시작 요청 후 전원이 C2S_LOAD_COMPLETE 를 보낼 때까지 true.
+	// (워커 스레드 set/read — 로딩 완료/이탈 시 TryBeginGame 판정 가드)
+	bool IsAwaitingLoads() const     { return m_bAwaitingLoads; }
+	void SetAwaitingLoads(bool bSet) { m_bAwaitingLoads = bSet; }
+
 	// 컷씬 동기화 좀비 정지 — until(timeGetTime, ms)까지 좀비 AI/이동/공격/스폰 정지.
 	// 클라 컷씬과 동기화해 종료 후 스냅 방지. (틱 스레드 전용)
 	bool IsZombieFrozen(DWORD now) const { return now < m_dwZombieFreezeUntil; }
@@ -52,6 +57,7 @@ private:
 	PacketHandlers     m_Handlers;
 
 	std::atomic<bool>  m_bGameStarted{ false };
+	std::atomic<bool>  m_bAwaitingLoads{ false };
 	std::atomic<bool>  m_bRunning{ true };
 	DWORD              m_dwZombieFreezeUntil = 0;
 };

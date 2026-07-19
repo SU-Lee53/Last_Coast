@@ -49,6 +49,15 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pWeaponName->SetTextHeight(50);
 		pUIBoard->InsertUI(pWeaponName);
 
+		pWeaponSlots = std::make_shared<TextBox>(L"Noto Sans KR");
+		pWeaponSlots->SetText(L"");
+		pWeaponSlots->SetLayer(0);
+		pWeaponSlots->SetAnchor(Vector2{ 1, 1 });
+		pWeaponSlots->SetPivot(Vector2{ 1,1 });
+		pWeaponSlots->SetPosition(Vector2{ -50, -160 });
+		pWeaponSlots->SetTextHeight(35);
+		pUIBoard->InsertUI(pWeaponSlots);
+
 		pReloadAlert = std::make_shared<TextBox>(L"Noto Sans KR");
 		pReloadAlert->SetText(L"2");
 		pReloadAlert->SetLayer(0);
@@ -92,6 +101,18 @@ void IThirdPersonPlayer::PlayerHUD::Update(const IThirdPersonPlayer& player)
 		}
 
 		pAmmo->SetText(wstrAmmo);
+	}
+
+	if (pWeaponSlots && player.HasWeaponSlots()) {
+		std::wstring wstrSlots;
+		for (int i = 0; i < 3; ++i) {
+			const std::string& strName = GameContext::g_strWeaponNames[std::to_underlying(player.GetWeaponInSlot(i))];
+			if (i == player.GetCurrentWeaponSlot())
+				wstrSlots += std::format(L"[{} {}]  ", i + 1, ::StringToWString(strName));
+			else
+				wstrSlots += std::format(L"{} {}  ", i + 1, ::StringToWString(strName));
+		}
+		pWeaponSlots->SetText(wstrSlots);
 	}
 
 	if (pReloadAlert) {
@@ -221,6 +242,72 @@ void IThirdPersonPlayer::GiveWeapon(WEAPON_TYPE eWeaponType)
 	// 리모트 플레이어는 카메라가 없으므로 재전송 루프가 생기지 않음.
 	if (GetCamera()) {
 		NetworkManager::GetInstance()->SendPlayerWeapon(std::to_underlying(eWeaponType));
+	}
+}
+
+void IThirdPersonPlayer::SetWeaponSlots(WEAPON_TYPE eWeapon1, WEAPON_TYPE eWeapon2)
+{
+	m_eWeaponSlots = { eWeapon1, eWeapon2, WEAPON_TYPE::PISTOL };
+
+	// 슬롯별 인스턴스 1회 생성 — 이후 전환은 이 인스턴스를 재사용해 탄약 유지
+	auto pOwner = static_pointer_cast<IThirdPersonPlayer>(shared_from_this());
+	for (int i = 0; i < 3; ++i) {
+		m_pSlotWeapons[i] = static_pointer_cast<WeaponObject>(GCTX->GetWeaponCopy(m_eWeaponSlots[i]));
+		m_pSlotWeapons[i]->SetOwner(pOwner);
+	}
+
+	m_nCurrentWeaponSlot = 0;
+	GiveWeapon(m_eWeaponSlots[0]);
+}
+
+void IThirdPersonPlayer::SelectWeaponSlot(int nSlot)
+{
+	if (nSlot < 0 || nSlot >= 3 || nSlot == m_nCurrentWeaponSlot) return;
+	if (!m_pSlotWeapons[nSlot]) return;			// 슬롯 미설정 (리모트 등)
+	if (m_bInMeleeAttack || m_bInWeaponSwap) return;
+	if (auto pWeapon = GetCurrentWeaponObject(); pWeapon && pWeapon->IsInReloading()) return;
+
+	m_nCurrentWeaponSlot = nSlot;
+	GiveWeapon(m_eWeaponSlots[nSlot]);
+	PlayWeaponDrawAction();
+}
+
+void IThirdPersonPlayer::PlayWeaponDrawAction()
+{
+	auto pAnimationCtrl =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>());
+
+	m_bInWeaponSwap = true;
+
+	// 현재 장착된(= 방금 교체된) 무기 기준으로 꺼내기 모션 선택
+	if (m_pWeaponSocket->GetCurrentWeaponType() == WEAPON_TYPE::PISTOL) {
+		pAnimationCtrl->GetMontage()->PlayMontage("Pistol Draw");
+	}
+	else {
+		pAnimationCtrl->GetMontage()->PlayMontage("Rifle Draw");
+	}
+}
+
+void IThirdPersonPlayer::OnWeaponDrawEnd()
+{
+	m_bInWeaponSwap = false;
+
+	auto pAnimationCtrl =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>());
+
+	// 조준 유지 중이면 새 무기의 조준 idle로 복귀, 아니면 상태머신으로 블렌드 아웃
+	if (m_bAiming) {
+		if (m_pWeaponSocket->GetCurrentWeaponType() == WEAPON_TYPE::PISTOL) {
+			pAnimationCtrl->GetMontage()->JumpToSection("Pistol Aiming Idle");
+		}
+		else {
+			pAnimationCtrl->GetMontage()->JumpToSection("Rifle Aiming Idle");
+		}
+	}
+	else {
+		pAnimationCtrl->GetMontage()->StopMontage();
 	}
 }
 
@@ -587,7 +674,7 @@ void IThirdPersonPlayer::ProcessLocalActionInput()
 		}
 
 		if ((INPUT->GetButtonDown(VK_LBUTTON) || INPUT->GetButtonPressed(VK_LBUTTON)) && m_bAiming) {
-			if (!m_bInMeleeAttack) {
+			if (!m_bInMeleeAttack && !m_bInWeaponSwap) {
 				m_bFiredThisFrame = m_pWeaponSocket->TryFire();
 				if (m_bFiredThisFrame) {
 					PlayFireAction();
@@ -615,7 +702,7 @@ void IThirdPersonPlayer::ProcessLocalActionInput()
 	}
 
 	if ((INPUT->GetButtonDown(VK_LCONTROL) || INPUT->GetButtonPressed(VK_LCONTROL)) && m_bAiming) {
-		if (!m_bInMeleeAttack) {
+		if (!m_bInMeleeAttack && !m_bInWeaponSwap) {
 			m_bFiredThisFrame = m_pWeaponSocket->TryFire();
 			if (m_bFiredThisFrame) {
 				PlayFireAction();
@@ -623,13 +710,18 @@ void IThirdPersonPlayer::ProcessLocalActionInput()
 		}
 	}
 
+	// 무기 슬롯 전환 — 1/2번 = 로비 선택 주무기, 3번 = 권총 고정
+	if (INPUT->GetButtonDown('1')) SelectWeaponSlot(0);
+	if (INPUT->GetButtonDown('2')) SelectWeaponSlot(1);
+	if (INPUT->GetButtonDown('3')) SelectWeaponSlot(2);
+
 	//  Melee attack
-	if (INPUT->GetButtonDown('V') && !m_bInMeleeAttack) {
+	if (INPUT->GetButtonDown('V') && !m_bInMeleeAttack && !m_bInWeaponSwap) {
 		PlayMeleeStartAction();
 	}
 
 	// Reloading
-	if (INPUT->GetButtonDown('R')) {
+	if (INPUT->GetButtonDown('R') && !m_bInWeaponSwap) {
 		PlayReloadStartAction();
 	}
 
@@ -778,7 +870,10 @@ void IThirdPersonPlayer::EnterAim()
 		std::static_pointer_cast<PlayerAnimationController>(
 			GetComponent<AnimationController>());
 
-	if (GetCurrentWeaponObject()->IsInReloading() == false) {
+	// 교체(Weapon Draw) 몽타주 재생 중엔 aim idle 재생을 보류 —
+	// 여기서 끊으면 종료 notify가 누락되어 m_bInWeaponSwap 이 영구히 true 로 남는다.
+	// OnWeaponDrawEnd 가 m_bAiming 을 보고 aim idle로 복귀시킨다.
+	if (GetCurrentWeaponObject()->IsInReloading() == false && !m_bInWeaponSwap) {
 		if (m_pWeaponSocket->GetCurrentWeaponType() != WEAPON_TYPE::PISTOL) {
 			pAnimationCtrl->GetMontage()->PlayMontage("Rifle Aiming Idle");
 		}
@@ -818,7 +913,7 @@ void IThirdPersonPlayer::LeaveAim()
 	// TODO:
 	// 현재 StopMontage()는 조준 idle뿐 아니라 fire/melee montage도 끊을 수 있음.
 	// 서버 이벤트 기반 애니메이션이 들어오면 Aim montage만 멈추는 방식으로 분리 필요.
-	if (!GetCurrentWeaponObject()->IsInReloading() && !m_bInMeleeAttack) {
+	if (!GetCurrentWeaponObject()->IsInReloading() && !m_bInMeleeAttack && !m_bInWeaponSwap) {
 		pAnimationCtrl->GetMontage()->StopMontage();
 	}
 
@@ -834,6 +929,10 @@ void IThirdPersonPlayer::PlayFireAction()
 	}
 
 	m_bFiredThisFrame = true;
+
+	// 리모트: 발사 이벤트가 Weapon Draw 몽타주를 끊으면 종료 notify가 안 오므로
+	// 여기서 잠금을 푼다 (무기 자체는 draw 시작 시 이미 교체 완료 상태).
+	m_bInWeaponSwap = false;
 
 	auto pAnimationCtrl = std::static_pointer_cast<PlayerAnimationController>(GetComponent<AnimationController>());
 
@@ -864,7 +963,8 @@ void IThirdPersonPlayer::PlayFireAction()
 
 void IThirdPersonPlayer::PlayMeleeStartAction()
 {
-	if (m_bInMeleeAttack) {
+	// 무기 교체 몽타주를 끊으면 종료 notify 누락으로 m_bInWeaponSwap 이 안 풀린다
+	if (m_bInMeleeAttack || m_bInWeaponSwap) {
 		return;
 	}
 
@@ -899,6 +999,7 @@ void IThirdPersonPlayer::PlayReloadStartAction()
 {
 	auto pWeapon = GetCurrentWeaponObject();
 	if (pWeapon->IsInReloading() == true) return;
+	if (m_bInWeaponSwap) return;	// 교체 몽타주 보호 (종료 notify 누락 방지)
 
 	std::cout << ">>> [Player] PlayReloadStartAction called (Local: " << (GetCamera() ? "YES" : "NO") << ") <<<\n";
 
@@ -970,7 +1071,23 @@ void IThirdPersonPlayer::ApplyWeaponChanged(WEAPON_TYPE eWeaponType)
 		}
 	}
 
-	m_pWeaponSocket->SetWeapon(eWeaponType);
+	// 슬롯 캐시에 있는 무기면 그 인스턴스 재장착 (탄약 유지 — 근접공격 복귀 포함).
+	// 현재 슬롯 우선 → 동일 무기를 두 슬롯에 넣어도 현재 슬롯 것이 잡힌다.
+	std::shared_ptr<WeaponObject> pCached = nullptr;
+	if (m_pSlotWeapons[m_nCurrentWeaponSlot] && m_eWeaponSlots[m_nCurrentWeaponSlot] == eWeaponType) {
+		pCached = m_pSlotWeapons[m_nCurrentWeaponSlot];
+	}
+	else {
+		for (int i = 0; i < 3; ++i) {
+			if (m_pSlotWeapons[i] && m_eWeaponSlots[i] == eWeaponType) { pCached = m_pSlotWeapons[i]; break; }
+		}
+	}
+
+	if (pCached)
+		m_pWeaponSocket->SetWeaponObject(pCached, eWeaponType);
+	else
+		m_pWeaponSocket->SetWeapon(eWeaponType);
+
 	if (m_PlayerHUD.pWeaponName) {
 		const std::string& strWeaponName = GameContext::g_strWeaponNames[std::to_underlying(eWeaponType)];
 		m_PlayerHUD.pWeaponName->SetText(::StringToWString(strWeaponName));
@@ -1122,6 +1239,15 @@ void LocalThirdPersonPlayer::ProcessInput()
 		ToggleMouseLook();
 	}
 
+	// 사망(관전) 중: 시점 회전만 허용 — 이동/사격/근접/재장전 차단
+	if (IsDead()) {
+		if (m_bAiming) LeaveAim();
+		m_bMoved = false;
+		m_v3MoveDirection = Vector3::Zero;
+		ProcessLocalCameraInput();
+		return;
+	}
+
 	ProcessLocalCameraInput();
 	ProcessLocalMovementInput();
 	ProcessLocalActionInput();
@@ -1141,6 +1267,15 @@ void NetworkOwnerThirdPersonPlayer::ProcessInput()
 		ToggleMouseLook();
 	}
 
+	// 사망(관전) 중: 시점 회전만 허용 — 이동/사격/근접/재장전 차단
+	if (IsDead()) {
+		if (m_bAiming) LeaveAim();
+		m_bMoved = false;
+		m_v3MoveDirection = Vector3::Zero;
+		ProcessLocalCameraInput();
+		return;
+	}
+
 	// 카메라는 클라가 돌림
 	ProcessLocalCameraInput();
 	ProcessLocalMovementInput();
@@ -1155,11 +1290,23 @@ void NetworkOwnerThirdPersonPlayer::SendLocalCommandToServer()
 	
 	static bool bLastAiming = false;
 	static bool bLastRunning = false;
-	
+	static float fLastSendTime = -1.f;
+
 	// 상태 변화 체크 (또는 움직임 체크)
 	bool bStateChanged = (bLastAiming != m_bAiming) || (bLastRunning != m_bRunning);
-	
-	if (m_bMoved || bStateChanged || m_bAiming) {
+
+	float fNow = NetworkManager::GetNetTimeSec();
+
+	// 이동/조준 갱신은 30Hz로 스로틀. 매 프레임 전송하면 고프레임에서 4~16ms
+	// 간격의 소형 패킷이 되고, TCP 병합으로 리모트에 버스트로 몰려 도착해
+	// 도착시각 기반 스냅샷 보간이 요동친다(속도가 0↔정상 깜빡임 → 걷기 애니 미재생).
+	bool bMoveTick = (m_bMoved || m_bAiming) && (fNow - fLastSendTime >= 1.f / 30.f);
+
+	// 정지 중에도 100ms 킵얼라이브 전송 — 안 보내면 리모트가 정지를 모른다:
+	// 마지막 이동 스냅샷 속도로 외삽해 오버슈트하고, 걷기 애니가 제자리에서 고착됨
+	bool bKeepAlive = (fNow - fLastSendTime >= 0.1f);
+
+	if (bMoveTick || bStateChanged || bKeepAlive) {
 		C2S_Transform packet;
 		packet.size = sizeof(C2S_Transform);
 		packet.type = C2S_TRANSFORM;
@@ -1173,13 +1320,14 @@ void NetworkOwnerThirdPersonPlayer::SendLocalCommandToServer()
 		else packet.fAimPitch = 0.f;
 
 		NetworkManager::GetInstance()->SendPacket(&packet, packet.size);
-		
+
 		bLastAiming = m_bAiming;
 		bLastRunning = m_bRunning;
+		fLastSendTime = fNow;
 	}
 }
 
-void NetworkRemoteThirdPersonPlayer::UpdateNetworkTransform(const Matrix& mtxWorld, bool bRunning, bool bAiming, float fAimPitch)
+void NetworkRemoteThirdPersonPlayer::UpdateNetworkTransform(const Matrix& mtxWorld, bool bRunning, bool bAiming, float fAimPitch, float receivedTime)
 {
 	auto pTransform = GetTransform();
 
@@ -1194,32 +1342,169 @@ void NetworkRemoteThirdPersonPlayer::UpdateNetworkTransform(const Matrix& mtxWor
 		LeaveAim();
 	}
 
-	pTransform->SetWorldMatrix(mtxWorld);
+	// ── 위치/회전: 즉시 스냅 대신 스냅샷 축적 → Update()에서 지연 보간 ──────
+	TransformSnapshot snap;
+	snap.fTime = receivedTime;
 
-	// 이동 속도 계산은 지터 필터 적용
-	float fCurrentTime = TIME->GetTotalTime();
-	float fActualDT = fCurrentTime - m_fLastPacketTime;
+	// 스냅샷 시각은 단조 증가해야 보간 구간 탐색이 성립 — 역행 입력은 직전 시각으로 클램프
+	if (!m_Snapshots.empty() && snap.fTime < m_Snapshots.back().fTime)
+		snap.fTime = m_Snapshots.back().fTime;
 
-	if (fActualDT < 0.01f) {
+	Matrix mtxCopy = mtxWorld;
+	if (!mtxCopy.Decompose(snap.v3Scale, snap.qRot, snap.v3Pos)) {
+		// 분해 불가능한 비정상 행렬 — 예전처럼 그대로 적용하고 히스토리 리셋
+		m_Snapshots.clear();
+		pTransform->SetWorldMatrix(mtxWorld);
 		return;
 	}
 
-	m_fLastPacketTime = fCurrentTime;
+	// 패킷 간격 EMA의 1.5배를 보간 딜레이로. 마지막 간격 하나로 정하면
+	// 간격 흔들림(프레임 정렬/네트워크 지터)마다 렌더 시간축이 앞뒤로 점프해 위치 팝 발생.
+	// 0.5s 초과 갭은 패킷 손실/일시정지 — 정상 전송 간격이 아니므로 EMA에서 제외.
+	// 하한은 정지 킵얼라이브 간격(100ms)보다 커야 한다 — 이동 중 EMA(~16ms)로
+	// 하한까지 내려간 채 정지하면 렌더 시각이 최신 스냅샷을 추월, 마지막 이동
+	// 속도로 외삽해 오버슈트했다가 되돌아오며 걷기 애니가 추가 재생된다.
+	if (!m_Snapshots.empty()) {
+		float fInterval = snap.fTime - m_Snapshots.back().fTime;
+		if (fInterval > 0.01f && fInterval < 0.5f) {
+			m_fAvgPacketInterval = (m_fAvgPacketInterval <= 0.f)
+				? fInterval
+				: m_fAvgPacketInterval + 0.1f * (fInterval - m_fAvgPacketInterval);
+			m_fInterpDelay = std::clamp(m_fAvgPacketInterval * 1.5f, 0.12f, 0.25f);
+		}
+	}
 
-	Vector3 v3PrevPos = pTransform->GetPosition();
-	Vector3 v3Delta = mtxWorld.Translation() - v3PrevPos;
-	v3Delta.y = 0.f;
+	// 첫 스냅샷이거나 순간이동(리스폰/재배치)이면 보간 없이 즉시 적용
+	if (m_Snapshots.empty() ||
+		Vector3::DistanceSquared(m_Snapshots.back().v3Pos, snap.v3Pos) > TELEPORT_DIST * TELEPORT_DIST) {
+		m_Snapshots.clear();
+		m_fSmoothedSpeed = 0.f; // 순간이동 직후 프레임 델타가 걷기로 오인되지 않도록
+		pTransform->SetWorldMatrix(mtxWorld);
+	}
 
-	float fDistSq = v3Delta.LengthSquared();
+	// 정지(킵얼라이브만 수신) 후 도착한 첫 이동 스냅샷: 직전 스냅샷 시각을 새
+	// 스냅샷 직전으로 당겨 이동 구간을 실제 프레임 길이 수준으로 압축한다.
+	// 안 하면 한 프레임 이동량이 킵얼라이브 갭(최대 100ms) 전체에 퍼져,
+	// 살짝만 움직여도 리모트 걷기 애니가 그만큼 길게 재생된다.
+	// 직전 구간도 이동 중이었다면(감속 슬라이드 중 킵얼라이브 등) 정상 이동
+	// 데이터이므로 압축하지 않는다.
+	if (m_Snapshots.size() >= 2) {
+		auto& back = m_Snapshots.back();
+		const auto& prev = m_Snapshots[m_Snapshots.size() - 2];
+		const float fStillEpsSq = 1.f; // 1cm² — 정지 판정 (킵얼라이브 위치 지터 허용)
+		float fPrevDx = back.v3Pos.x - prev.v3Pos.x;
+		float fPrevDz = back.v3Pos.z - prev.v3Pos.z;
+		float fCurDx = snap.v3Pos.x - back.v3Pos.x;
+		float fCurDz = snap.v3Pos.z - back.v3Pos.z;
+		bool bWasStill  = (fPrevDx * fPrevDx + fPrevDz * fPrevDz) < fStillEpsSq;
+		bool bNowMoving = (fCurDx * fCurDx + fCurDz * fCurDz) >= fStillEpsSq;
+		if (bWasStill && bNowMoving) {
+			back.fTime = std::max(back.fTime, snap.fTime - MOVE_START_SEGMENT);
+		}
+	}
 
-	if (fDistSq > 0.000001f) {
+	m_Snapshots.push_back(snap);
+
+	// 정리는 수량이 아니라 시간 기준 — 전송 주기가 어떻든 보간 딜레이(≤0.25s)
+	// 구간이 항상 창 안에 남는다. 수량 고정이면 전송이 빨라질 때 창이 딜레이보다
+	// 짧아져, 렌더 시점이 항상 최고(最古) 스냅샷 이전에 갇혀 위치가 계단식으로 튄다.
+	while (m_Snapshots.size() > 2 && m_Snapshots.front().fTime < snap.fTime - SNAPSHOT_WINDOW)
+		m_Snapshots.pop_front();
+	while (m_Snapshots.size() > MAX_SNAPSHOTS)
+		m_Snapshots.pop_front();
+
+	// 이동 속도/애니메이션 상태는 여기서 계산하지 않는다 — 패킷 델타 기준이면
+	// 애니(패킷 시각)와 위치(보간 시각)의 시간축이 어긋나 멈춘 뒤에도 걷기가 남는다.
+	// ApplyInterpolatedTransform()에서 실제 적용되는 보간 위치의 프레임 델타로 계산.
+	m_fLastPacketTime = TIME->GetTotalTime(); // 패킷 타임아웃 판정용 (SyncSceneWithServer)
+}
+
+void NetworkRemoteThirdPersonPlayer::Update()
+{
+	ApplyInterpolatedTransform();
+	IThirdPersonPlayer::Update();
+}
+
+// 매 프레임: 도착 시각 기준 m_fInterpDelay만큼 과거 시점의 스냅샷 보간값을 적용.
+// 좀비(Zombie::PostUpdate 온라인 분기)와 동일한 시간축/외삽 규칙.
+void NetworkRemoteThirdPersonPlayer::ApplyInterpolatedTransform()
+{
+	if (m_Snapshots.empty())
+		return;
+
+	const float fRenderTime = NetworkManager::GetNetTimeSec() - m_fInterpDelay;
+
+	// 기본값: 최신 스냅샷 (스냅샷 1개뿐이거나 구간을 못 찾은 경우)
+	Vector3    v3Scale = m_Snapshots.back().v3Scale;
+	Quaternion qRot    = m_Snapshots.back().qRot;
+	Vector3    v3Pos   = m_Snapshots.back().v3Pos;
+
+	if (fRenderTime <= m_Snapshots.front().fTime) {
+		// 렌더 시점이 가장 오래된 스냅샷보다 과거 — 가장 오래된 값 유지
+		v3Scale = m_Snapshots.front().v3Scale;
+		qRot    = m_Snapshots.front().qRot;
+		v3Pos   = m_Snapshots.front().v3Pos;
+	}
+	else {
+		bool bFound = false;
+		for (int i = static_cast<int>(m_Snapshots.size()) - 1; i >= 1; --i) {
+			const auto& s0 = m_Snapshots[i - 1];
+			const auto& s1 = m_Snapshots[i];
+			if (s0.fTime <= fRenderTime && fRenderTime <= s1.fTime) {
+				float fSpan = s1.fTime - s0.fTime;
+				float t = (fSpan > 0.f) ? (fRenderTime - s0.fTime) / fSpan : 1.f;
+				v3Pos   = Vector3::Lerp(s0.v3Pos, s1.v3Pos, t);
+				qRot    = Quaternion::Slerp(s0.qRot, s1.qRot, t); // 최단경로 회전 보간
+				v3Scale = Vector3::Lerp(s0.v3Scale, s1.v3Scale, t);
+				bFound = true;
+				break;
+			}
+		}
+
+		// 렌더 시점이 최신 스냅샷보다 미래(패킷 공백) — 위치만 속도 기반 외삽(클램프),
+		// 회전/스케일은 최신값 유지
+		if (!bFound && m_Snapshots.size() >= 2) {
+			const auto& s0 = m_Snapshots[m_Snapshots.size() - 2];
+			const auto& s1 = m_Snapshots.back();
+			float fSpan = s1.fTime - s0.fTime;
+			if (fSpan > 0.f) {
+				Vector3 v3Vel = (s1.v3Pos - s0.v3Pos) * (1.f / fSpan);
+				float fExtrap = std::min(fRenderTime - s1.fTime, MAX_EXTRAPOLATION);
+				v3Pos = s1.v3Pos + v3Vel * fExtrap;
+			}
+		}
+	}
+
+	// ── 애니메이션 속도 = 실제 적용되는 보간 위치의 프레임 델타 ─────────────
+	// 화면에 보이는 이동과 애니 상태가 정의상 항상 일치 (좀비와 동일한 철학).
+	Vector3 v3DeltaXZ = v3Pos - GetTransform()->GetPosition();
+	v3DeltaXZ.y = 0.f;
+	float fDistSq = v3DeltaXZ.LengthSquared();
+	float fDT = std::max(DT, 0.0001f);
+	float fSpeedRaw = std::sqrt(fDistSq) / fDT;
+
+	// 프레임 델타는 패킷 도착 버스트/프레임 정렬로 한두 프레임 0이 될 수 있다.
+	// 원값을 그대로 쓰면 m_bMoved가 매 프레임 토글되고, 상태머신은 전이 때마다
+	// 블렌드를 재시작하므로 가중치가 0 근처에 머물러 걷기 모션이 아예 안 보인다.
+	// 짧은 EMA로 스무딩해 1~2 프레임 공백을 넘긴다 (정지 감지 지연 ~80ms).
+	m_fSmoothedSpeed += 0.35f * (fSpeedRaw - m_fSmoothedSpeed);
+
+	if (m_fSmoothedSpeed > 30.f) { // 30cm/s 미만은 보간 잔떨림으로 간주 — 걷기 오발동 방지
 		m_bMoved = true;
-		m_v3MoveDirection = v3Delta;
-		m_v3MoveDirection.Normalize();
-		m_fMoveSpeed = std::sqrt(fDistSq) / fActualDT;
+		if (fDistSq > 1e-4f) { // 공백 프레임엔 직전 이동 방향 유지
+			m_v3MoveDirection = v3DeltaXZ;
+			m_v3MoveDirection.Normalize();
+		}
+		m_fMoveSpeed = m_fSmoothedSpeed;
 	}
 	else {
 		m_bMoved = false;
 		m_fMoveSpeed = 0.f;
 	}
+
+	Matrix mtx = Matrix::CreateScale(v3Scale) * Matrix::CreateFromQuaternion(qRot);
+	mtx._41 = v3Pos.x;
+	mtx._42 = v3Pos.y;
+	mtx._43 = v3Pos.z;
+	GetTransform()->SetWorldMatrix(mtx);
 }

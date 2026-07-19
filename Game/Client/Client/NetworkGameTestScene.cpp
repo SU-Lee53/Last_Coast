@@ -134,7 +134,7 @@ void NetworkGameTestScene::SyncSceneWithServer()
 		auto remotePlayer = std::make_shared<NetworkRemoteThirdPersonPlayer>();
 		remotePlayer->Initialize();
 
-		remotePlayer->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.initialTransform.m), ev.bRunning, ev.bAiming, ev.fAimPitch);
+		remotePlayer->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.initialTransform.m), ev.bRunning, ev.bAiming, ev.fAimPitch, NetworkManager::GetNetTimeSec());
 		remotePlayer->GiveWeapon(WEAPON_TYPE::AK);
 		AddObject(remotePlayer);
 		m_RemotePlayers[ev.playerId] = remotePlayer;
@@ -151,7 +151,7 @@ void NetworkGameTestScene::SyncSceneWithServer()
 	for (auto& ev : NETWORK->ConsumePlayerTransforms()) {
 		auto it = m_RemotePlayers.find(ev.playerId);
 		if (it != m_RemotePlayers.end()) {
-			it->second->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.transform.m), ev.bRunning, ev.bAiming, ev.fAimPitch);
+			it->second->UpdateNetworkTransform(reinterpret_cast<Matrix&>(ev.transform.m), ev.bRunning, ev.bAiming, ev.fAimPitch, ev.fRecvTime);
 		}
 	}
 
