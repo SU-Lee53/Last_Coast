@@ -72,11 +72,10 @@ private:
 	HANDLE					m_hFenceEvent = nullptr;
 	uint64					m_un64FenceValue = 0;
 
-	mutable std::recursive_mutex m_mtxCopy;
-
+	mutable std::mutex m_mtxSubmit;	// lock for queue submission + fence
+	mutable std::mutex m_mtxFence;	// lock for fence wait
 private:
 	CommandListPool			m_CommandListPool;
-	std::vector<PendingUploadBuffer> m_PendingUploadBuffers;
 
 
 };
@@ -84,8 +83,6 @@ private:
 template<typename T>
 inline VertexBuffer ResourceManager::CreateVertexBuffer(const std::vector<T>& vertices, uint32 nType)
 {
-	std::lock_guard lock{ m_mtxCopy };
-
 	HRESULT hr;
 
 	ShaderResource Buffer{};
@@ -142,8 +139,8 @@ inline VertexBuffer ResourceManager::CreateVertexBuffer(const std::vector<T>& ve
 		}
 		Buffer.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
+		cmdList->AddPendingUploadBuffer(pUploadBuffer);
 		ExcuteCommandList(*cmdList);
-		m_PendingUploadBuffers.push_back({ pUploadBuffer, cmdList, cmdList->ui64FenceValue });
 	}
 
 	D3D12_VERTEX_BUFFER_VIEW VertexBufferView;

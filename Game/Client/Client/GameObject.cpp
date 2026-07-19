@@ -3,11 +3,11 @@
 #include "Transform.h"
 #include "TerrainObject.h"
 
-uint64 IGameObject::g_GameObjectIDBase = 0;
+atomic_uint64_t IGameObject::g_GameObjectIDBase = 0;
 
 IGameObject::IGameObject(OBJECT_MOBILITY_TYPE eType) : m_eObjectType{ eType }
 {
-	m_unGameObjectRuntimeID = g_GameObjectIDBase++;
+	m_unGameObjectRuntimeID = g_GameObjectIDBase.fetch_add(1);
 }
 
 IGameObject::~IGameObject()

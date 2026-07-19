@@ -1,15 +1,15 @@
 ﻿#include "pch.h"
 #include "MeshRenderer.h"
 
-MeshRenderer::ID MeshRenderer::g_ui64RendererIDBase = 0;
+std::atomic_uint64_t MeshRenderer::g_ui64RendererIDBase = 0;
 
 MeshRenderer::MeshRenderer(std::shared_ptr<IGameObject> pOwner)
 	: IComponent{ pOwner }
 {
-	m_RuntimeID = ++g_ui64RendererIDBase;
+	m_RuntimeID = g_ui64RendererIDBase.fetch_add(1) + 1;
 }
 
-MeshRenderer::MeshRenderer(std::shared_ptr<IGameObject> pOwner, const std::vector<MESHLOADINFO>& meshLoadInfos, const std::vector<MATERIALLOADINFO>& materialLoadInfo)
+MeshRenderer::MeshRenderer(std::shared_ptr<IGameObject> pOwner, const std::vector<MESHLOADINFO>& meshLoadInfos, const std::vector<MATERIALLOADINFO>& materialLoadInfo, const std::string& strMaterialKeyPrefix)
 	: IComponent{ pOwner }
 {
 	m_pMeshes.reserve(meshLoadInfos.size());
@@ -48,7 +48,7 @@ MeshRenderer::MeshRenderer(std::shared_ptr<IGameObject> pOwner, const std::vecto
 
 	uint32 unCount = 0;
 	for (const auto& materialInfo : materialLoadInfo) {
-		std::string strMaterialKey = pOwner->GetName() + std::to_string(unCount++);
+		std::string strMaterialKey = strMaterialKeyPrefix + pOwner->GetName() + std::to_string(unCount++);
 		MaterialHandle handle{};
 		switch (m_eMeshType)
 		{
@@ -84,7 +84,12 @@ MeshRenderer::MeshRenderer(std::shared_ptr<IGameObject> pOwner, const std::vecto
 		m_MaterialIDs.push_back(handle);
 	}
 
-	m_RuntimeID = ++g_ui64RendererIDBase;
+	m_RuntimeID = g_ui64RendererIDBase.fetch_add(1) + 1;
+}
+
+MeshRenderer::MeshRenderer(std::shared_ptr<IGameObject> pOwner, CloneTag)
+	: IComponent{ pOwner }
+{
 }
 
 void MeshRenderer::Initialize()
@@ -98,8 +103,7 @@ void MeshRenderer::Update()
 
 std::shared_ptr<IComponent> MeshRenderer::Copy(std::shared_ptr<IGameObject> pNewOwner) const
 {
-	std::shared_ptr<MeshRenderer> pClone = std::make_shared<MeshRenderer>(pNewOwner);
-	g_ui64RendererIDBase--; // 의도치 않게 올라간 RuntimeIDBase 를 다시 하나 내려주어야 함 (필수는 아니고 디버깅이 편함)
+	auto pClone = std::shared_ptr<MeshRenderer>(new MeshRenderer(pNewOwner, CloneTag{}));
 
 	pClone->m_pMeshes = m_pMeshes;
 	pClone->m_MaterialIDs = m_MaterialIDs;

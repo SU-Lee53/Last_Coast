@@ -1,13 +1,6 @@
 ﻿#include "pch.h"
 #include "SceneManager.h"
-#include "AnimationTestScene.h"
-#include "NetworkTestScene.h"
-#include "TerrainTestScene.h"
-#include "MapTestScene.h"
-#include "TestScene.h"
-#include "GameScene.h"
 #include "LogInScene.h"
-#include "LobbyScene.h"
 
 void SceneManager::Initialize()
 {

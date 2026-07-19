@@ -24,6 +24,8 @@ class HelicopterObject;
 
 using CollisionPair = std::pair<std::shared_ptr<IGameObject>, std::shared_ptr<IGameObject>>;
 
+//#define TIME_RECORD
+
 class Scene {
 	friend class SceneManager;
 
@@ -90,9 +92,6 @@ public:
 	virtual void SyncSceneWithServer() {}
 
 public:
-	//const std::vector<std::shared_ptr<IGameObject>>& GetStaticObjectsInScene() const { return m_pStaticObjects; }
-	//const std::vector<std::shared_ptr<IGameObject>>& GetDynamicObjectsInScene() const { return m_pDynamicObjects; }
-
 	const WorldType& GetWorld() const { return m_World; }
 	const std::shared_ptr<IPlayer>& GetPlayer() const { return m_pPlayer; }
 	const std::shared_ptr<TerrainObject>& GetTerrain() const { return m_pTerrain; }

@@ -10,7 +10,10 @@ public:
 	
 public:
 	MeshRenderer(std::shared_ptr<IGameObject> pOwner);
-	MeshRenderer(std::shared_ptr<IGameObject> pOwner, const std::vector<MESHLOADINFO>& meshLoadInfos, const std::vector<MATERIALLOADINFO>& materialLoadInfo);
+	MeshRenderer(std::shared_ptr<IGameObject> pOwner, 
+		const std::vector<MESHLOADINFO>& meshLoadInfos, 
+		const std::vector<MATERIALLOADINFO>& materialLoadInfo,
+		const std::string& strMaterialKeyPrefix = "");
 	virtual ~MeshRenderer() {}
 
 public:
@@ -38,8 +41,13 @@ protected:
 	MeshRenderer::ID m_RuntimeID = 0;	// ID 가 같다 -> 인스턴싱이 가능하다
 	MESH_TYPE m_eMeshType = MESH_TYPE::UNDEFINED;
 
+private:
+	struct CloneTag {};
+	MeshRenderer(std::shared_ptr<IGameObject> pOwner, CloneTag);	// Prevent id generate
+
 protected:
-	static MeshRenderer::ID g_ui64RendererIDBase;
+	static std::atomic_uint64_t g_ui64RendererIDBase;
+
 };
 
 template <>
