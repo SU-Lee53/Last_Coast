@@ -26,10 +26,8 @@ struct MontageSection {
 	std::string strJumpTarget;
 };
 
-struct MontageNotify {
-	int nSectionIndex;
-	float fTime;
-	std::function<void(std::shared_ptr<IGameObject>)> pCallback;
+struct MontageNotify : AnimationNotify {
+	int nSectionIndex = -1;
 };
 
 class AnimationMontage {

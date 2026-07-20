@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "AnimationStateMachine.h"
 #include "ThirdPersonPlayer.h"
+#include "Sound.h"
 
 AnimationStateMachine::AnimationStateMachine()
 {
@@ -34,6 +35,7 @@ void AnimationStateMachine::Initialize(std::shared_ptr<IGameObject> pOwner, floa
 	m_fCurrentTransitionTime = 0.0f;
 	m_fCurrentAnimationStartOffset = 0.0f;
 	m_fBeforeAnimationTimeAtTransition = 0.0f;
+	m_fPreviousAnimationTime = 0.0f;
 }
 
 void AnimationStateMachine::Update()
@@ -79,6 +81,7 @@ void AnimationStateMachine::Update()
 
 		// Play new animation from first frame
 		m_fCurrentAnimationStartOffset = 0.0f;
+		m_fPreviousAnimationTime = 0.0f;
 	}
 
 	auto pSkeleton = pOwner->GetComponent<Skeleton>();
@@ -98,6 +101,15 @@ void AnimationStateMachine::Update()
 
 	const float fStateElapsed = m_fTotalAnimationTime - m_fLastAnimationChangedTime;
 	const float fCurrentAnimTime = pCurrentAnimation->GetLoopedAnimationTime(m_fCurrentAnimationStartOffset + fStateElapsed);
+
+	if (fCurrentAnimTime < m_fPreviousAnimationTime) {
+		HandleNotifies(m_fPreviousAnimationTime, pCurrentAnimation->GetDuration(), m_pCurrentState);
+		HandleNotifies(0.f, fCurrentAnimTime, m_pCurrentState);
+	}
+	else {
+		HandleNotifies(m_fPreviousAnimationTime, fCurrentAnimTime, m_pCurrentState);
+	}
+	m_fPreviousAnimationTime = fCurrentAnimTime;
 
 	if (m_pBeforeState &&
 		m_pBeforeState->pAnimationToPlay &&
@@ -145,6 +157,22 @@ void AnimationStateMachine::Update()
 	}
 }
 
+void AnimationStateMachine::HandleNotifies(float fPrevTime, float fCurrentTime, const std::shared_ptr<AnimationState>& pState)
+{
+	auto pOwner = m_wpOwner.lock();
+	if (!pOwner || !pState) {
+		return;
+	}
+
+	for (const auto& notify : pState->notifies) {
+		if (notify.fTime >= fPrevTime && notify.fTime < fCurrentTime) {
+			if (notify.pCallback) {
+				notify.pCallback(pOwner);
+			}
+		}
+	}
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // PlayerAnimationStateMachine
 
@@ -184,6 +212,28 @@ void PlayerAnimationStateMachine::InitializeStateGraph()
 	m_pStates.push_back(pIdle);
 	m_pStates.push_back(pWalk);
 	m_pStates.push_back(pRun);
+
+	m_pLeftFootstepSound = SOUND->GetSound("footstep_left");
+	m_pRightFootstepSound = SOUND->GetSound("footstep_right");
+
+	auto fnLeftFootstepCallback = [this](std::shared_ptr<IGameObject> pObj) {
+		SOUND->PlayAt(m_pLeftFootstepSound, pObj->GetTransform()->GetPosition());
+	};
+	auto fnRightFootstepCallback = [this](std::shared_ptr<IGameObject> pObj) {
+		SOUND->PlayAt(m_pRightFootstepSound, pObj->GetTransform()->GetPosition());
+	};
+
+	float fWalkLeftTime = 0.34f;
+	float fWalkRightTime = 0.83f;
+
+	pWalk->AddNotify(fWalkLeftTime, fnLeftFootstepCallback);
+	pWalk->AddNotify(fWalkRightTime, fnRightFootstepCallback);
+
+	float fRunLeftTime = 0.22f;
+	float fRunRightTime = 0.68f;
+
+	pRun->AddNotify(fRunLeftTime, fnLeftFootstepCallback);
+	pRun->AddNotify(fRunRightTime, fnRightFootstepCallback);
 
 }
 

@@ -62,9 +62,67 @@ void Zombie::Update()
 {
 	if (!m_bPoolActive) return;
 
+	UpdateIdleSound();
+
 	for (const auto& pChild : m_pChildren) {
 		pChild->Update();
 	}
+}
+
+void Zombie::UpdateIdleSound()
+{
+	if (IsDead()) {
+		return;
+	}
+
+	m_fIdleSoundTimer -= DT;
+	if (m_fIdleSoundTimer > 0.f) {
+		return;
+	}
+
+	m_fIdleSoundTimer = RandomGenerator::GenerateRandomFloatInRange(
+		m_fIdleSoundIntervalMin,
+		m_fIdleSoundIntervalMax
+	);
+
+	auto pTarget = m_wpTarget.lock();
+	if (!pTarget) {
+		return;
+	}
+
+	const Vector3 v3SoundPosition = GetTransform()->GetPosition();
+	if (Vector3::DistanceSquared(v3SoundPosition, pTarget->GetTransform()->GetPosition()) >
+		SOUND_3D_MAX_DISTANCE * SOUND_3D_MAX_DISTANCE) {
+		return;
+	}
+
+	if (RandomGenerator::GenerateRandomFloatInRange(0.f, 1.f) > m_fIdleSoundPlayChance) {
+		return;
+	}
+
+	static const std::array<std::string, 15> strIdleSoundNames = {
+		"zombie_idle_1",
+		"zombie_idle_2",
+		"zombie_idle_3",
+		"zombie_idle_4",
+		"zombie_idle_5",
+		"zombie_idle_6",
+		"zombie_idle_7",
+		"zombie_idle_8",
+		"zombie_idle_9",
+		"zombie_idle_10",
+		"zombie_idle_11",
+		"zombie_idle_12",
+		"zombie_idle_13",
+		"zombie_idle_14",
+		"zombie_idle_15"
+	};
+
+	const int nSoundIndex = RandomGenerator::GenerateRandomIntInRange(
+		0,
+		static_cast<int>(strIdleSoundNames.size()) - 1
+	);
+	SOUND->PlayAt(strIdleSoundNames[nSoundIndex], v3SoundPosition);
 }
 
 void Zombie::Shutdown()
@@ -83,6 +141,7 @@ void Zombie::PoolReset()
 	m_fVerticalVelocity = 0.f;
 	m_fMoveSpeedSqXZ    = 0.f;
 	m_bWasVisible       = false;
+	m_fIdleSoundTimer   = 0.f;
 	m_nServerId              = -1;
 	m_eServerBehaviorState   = ZBS_Idle;
 	m_fLastAppliedTime       = -1.f;
@@ -103,6 +162,10 @@ void Zombie::PoolActivate()
 	m_fVerticalVelocity = 0.f;
 	m_fMoveSpeedSqXZ    = 0.f;
 	m_bWasVisible       = false;
+	m_fIdleSoundTimer   = RandomGenerator::GenerateRandomFloatInRange(
+		m_fIdleSoundIntervalMin,
+		m_fIdleSoundIntervalMax
+	);
 	m_xmOBBCollided.clear();
 }
 

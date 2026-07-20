@@ -34,7 +34,7 @@ public:
 	void Initialize();
 
 	void LoadWeaponData();
-	void LoadWeaponSounds();
+	void LoadGameSounds();
 	void LoadPlayerModels();
 	void LoadZombieModels();
 	void LoadHelicopterModel();

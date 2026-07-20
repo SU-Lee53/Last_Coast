@@ -16,11 +16,16 @@ struct AnimationState {
 	std::vector<size_t> channelIndices;
 
 	std::vector<TransitionEdges> pConnectedEdges;
+	std::vector<AnimationNotify> notifies;
 	std::function<bool(std::shared_ptr<IGameObject>)> fnStateTransitionCallback;
 
 	void Connect(std::shared_ptr<AnimationState> pState, double dTransitionTime) {
 		assert(this != pState.get());
 		pConnectedEdges.push_back({ dTransitionTime, pState });
+	}
+
+	void AddNotify(float fTime, std::function<void(std::shared_ptr<IGameObject>)> pCallback) {
+		notifies.push_back({ fTime, std::move(pCallback) });
 	}
 
 	bool operator==(const AnimationState& other) const {
@@ -42,6 +47,7 @@ public:
 
 private:
 	virtual void InitializeStateGraph() = 0;
+	void HandleNotifies(float fPrevTime, float fCurrentTime, const std::shared_ptr<AnimationState>& pState);
 
 protected:
 	std::vector<std::shared_ptr<AnimationState>> m_pStates;
@@ -56,6 +62,7 @@ protected:
 
 	float m_fCurrentAnimationStartOffset = 0.0f;
 	float m_fBeforeAnimationTimeAtTransition = 0.0f;
+	float m_fPreviousAnimationTime = 0.0f;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -68,4 +75,8 @@ public:
 	static bool IdleCallback(std::shared_ptr<IGameObject> pObj);
 	static bool WalkCallback(std::shared_ptr<IGameObject> pObj);
 	static bool RunCallback(std::shared_ptr<IGameObject> pObj);
+
+private:
+	std::shared_ptr<class Sound> m_pLeftFootstepSound = nullptr;
+	std::shared_ptr<class Sound> m_pRightFootstepSound = nullptr;
 };

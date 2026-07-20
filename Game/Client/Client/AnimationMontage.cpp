@@ -393,6 +393,58 @@ void ZombieAnimationMontage::BuildMontage()
 	deathSection.eEndRule = MONTAGE_SECTION_END_RULE::FREEZE;
 	m_MontageSections.push_back(deathSection);
 
+	MontageNotify attackSoundNotify{};
+	attackSoundNotify.nSectionIndex = 0;
+	attackSoundNotify.fTime = 0.85f;
+	attackSoundNotify.pCallback = [](std::shared_ptr<IGameObject> pObj) {
+		static const std::array<std::string, 12> strAttackSoundNames = {
+			"zombie_attack_1",
+			"zombie_attack_2",
+			"zombie_attack_3",
+			"zombie_attack_4",
+			"zombie_attack_5",
+			"zombie_attack_6",
+			"zombie_attack_7",
+			"zombie_attack_8",
+			"zombie_attack_9",
+			"zombie_attack_10",
+			"zombie_attack_11",
+			"zombie_attack_12"
+		};
+
+		const int nSoundIndex = RandomGenerator::GenerateRandomIntInRange(
+			0,
+			static_cast<int>(strAttackSoundNames.size()) - 1
+		);
+		SOUND->PlayAt(strAttackSoundNames[nSoundIndex], pObj->GetTransform()->GetPosition());
+	};
+	m_Notifies.push_back(attackSoundNotify);
+
+	MontageNotify deathSoundNotify{};
+	deathSoundNotify.nSectionIndex = 1;
+	deathSoundNotify.fTime = 0.05f;
+	deathSoundNotify.pCallback = [](std::shared_ptr<IGameObject> pObj) {
+		static const std::array<std::string, 10> strDeathSoundNames = {
+			"zombie_dead_1",
+			"zombie_dead_2",
+			"zombie_dead_3",
+			"zombie_dead_4",
+			"zombie_dead_5",
+			"zombie_dead_6",
+			"zombie_dead_7",
+			"zombie_dead_8",
+			"zombie_dead_9",
+			"zombie_dead_10"
+		};
+
+		const int nSoundIndex = RandomGenerator::GenerateRandomIntInRange(
+			0,
+			static_cast<int>(strDeathSoundNames.size()) - 1
+		);
+		SOUND->PlayAt(strDeathSoundNames[nSoundIndex], pObj->GetTransform()->GetPosition());
+	};
+	m_Notifies.push_back(deathSoundNotify);
+
 	MontageNotify hitNotify{};
 	hitNotify.nSectionIndex = 0;
 	hitNotify.fTime = 1.2f;

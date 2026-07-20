@@ -1427,7 +1427,6 @@ void GameScene::SyncSceneWithServer()
 	for (auto id : NETWORK->ConsumePlayerReloads()) {
 		auto it = m_RemotePlayers.find(id);
 		if (it != m_RemotePlayers.end()) {
-			std::cout << "[Scene] Playing Reload for Remote Player " << id << std::endl;
 			it->second->PlayReloadStartAction();
 		}
 	}

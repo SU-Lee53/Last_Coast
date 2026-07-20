@@ -58,6 +58,7 @@ public:
 private:
 	void ApplyGravity();
 	void ResolveCollision(Vector3& outv3Delta);
+	void UpdateIdleSound();
 
 private:
 	std::shared_ptr<IAIAgent> m_pAIAgent;  // AIManagerWrapper가 shared_ptr 반환
@@ -85,6 +86,11 @@ private:
 	const float		m_fStepHeight = 50_cm;
 
 	Vector3 m_v3Forward = { 0.f, 0.f, 1.f };  // 좀비 전방 벡터 (매 프레임 이동 방향으로 갱신)
+
+	static constexpr float m_fIdleSoundIntervalMin = 4.f;
+	static constexpr float m_fIdleSoundIntervalMax = 8.f;
+	static constexpr float m_fIdleSoundPlayChance = 0.3f;
+	float m_fIdleSoundTimer = 0.f;
 
 	bool m_bWasVisible = false;  // 이전 프레임 시야 여부 (경보 전파 rising edge 감지용)
 	float m_fMoveSpeedSqXZ = 0.f;

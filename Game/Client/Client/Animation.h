@@ -9,6 +9,11 @@ struct KeyFrame {
 		: fTime{ fTime }, animationKeys{ v3Translate, v4Rotate, v3Scale } { }
 };
 
+struct AnimationNotify {
+	float fTime = 0.f;
+	std::function<void(std::shared_ptr<IGameObject>)> pCallback;
+};
+
 class Animation {
 	friend class AnimationManager;
 

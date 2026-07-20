@@ -32,7 +32,7 @@ void GameContext::Initialize()
 {
 	LoadWeaponData();
 	LoadZombieModels();
-	LoadWeaponSounds(); 
+	LoadGameSounds();
 	LoadHelicopterModel();
 }
 
@@ -90,42 +90,85 @@ void GameContext::LoadWeaponData()
 	}
 }
 
-void GameContext::LoadWeaponSounds()
+void GameContext::LoadGameSounds()
 {
+	const std::string strSoundPath = "../Resources/Sounds/";
+
 	// Rifle1
-	SOUND->AddSound("m4_shot_close", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_Noise-Exterior-Close_01.wav", false, true, SoundCategory::SFX);
-	//SOUND->AddSound("rifle_shot_distant1", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_Noise-Exterior-Distant_01.wav", false, true, SoundCategory::SFX);
-	SOUND->AddSound("rifle_on_reload", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_ClipIn_01.wav", false, true, SoundCategory::SFX);
-	SOUND->AddSound("rifle_mid_reload", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_ClipOut_01.wav", false, true, SoundCategory::SFX);
-	SOUND->AddSound("rifle_end_reload", "../Resources/Sounds/Rifle/SW_Weapons_Rifle_Bolt_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("m4_shot_close", strSoundPath + "Rifle/SW_Weapons_Rifle_Noise-Exterior-Close_01.wav", false, true, SoundCategory::SFX);
+	//SOUND->AddSound("rifle_shot_distant1", strSoundPath + "Rifle/SW_Weapons_Rifle_Noise-Exterior-Distant_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("rifle_on_reload", strSoundPath + "Rifle/SW_Weapons_Rifle_ClipIn_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("rifle_mid_reload", strSoundPath + "Rifle/SW_Weapons_Rifle_ClipOut_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("rifle_end_reload", strSoundPath + "Rifle/SW_Weapons_Rifle_Bolt_01.wav", false, true, SoundCategory::SFX);
 	
-	SOUND->AddSound("ak_shot_close", "../Resources/Sounds/Rifle/ak_fire.wav", false, true, SoundCategory::SFX);
-	SOUND->AddSound("lmg_shot_close", "../Resources/Sounds/Rifle/lmg_fire.wav", false, true, SoundCategory::SFX);
-	SOUND->AddSound("rifle_shot_close", "../Resources/Sounds/Rifle/rifle_fire.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("ak_shot_close", strSoundPath + "Rifle/ak_fire.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("lmg_shot_close", strSoundPath + "Rifle/lmg_fire.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("rifle_shot_close", strSoundPath + "Rifle/rifle_fire.wav", false, true, SoundCategory::SFX);
 
 
 
 	// Shotgun
-	SOUND->AddSound("shotgun_shot_close", "../Resources/Sounds/Shotgun/shotgun_fire.wav", false, true, SoundCategory::SFX);
-	//SOUND->AddSound("shotgun_shot_distant", "../Resources/Sounds/Shotgun/SW_Weapons_Shotgun_Noise-Interior-Distant_01.wav", false, true, SoundCategory::SFX);
-	SOUND->AddSound("shotgun_on_reload", "../Resources/Sounds/Shotgun/SW_Weapons_Shotgun_ClipIn_01.wav", false, true, SoundCategory::SFX);
-	SOUND->AddSound("shotgun_mid_reload", "../Resources/Sounds/Rifle/SW_Weapons_Shotgun_ClipOut_01.wav", false, true, SoundCategory::SFX);
-	SOUND->AddSound("shotgun_end_reload", "../Resources/Sounds/Shotgun/shotgun_trimmed_longtail.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("shotgun_shot_close", strSoundPath + "Shotgun/shotgun_fire.wav", false, true, SoundCategory::SFX);
+	//SOUND->AddSound("shotgun_shot_distant", strSoundPath + "Shotgun/SW_Weapons_Shotgun_Noise-Interior-Distant_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("shotgun_on_reload", strSoundPath + "Shotgun/SW_Weapons_Shotgun_ClipIn_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("shotgun_mid_reload", strSoundPath + "Rifle/SW_Weapons_Shotgun_ClipOut_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("shotgun_end_reload", strSoundPath + "Shotgun/shotgun_trimmed_longtail.wav", false, true, SoundCategory::SFX);
 	
 	// Pistol
-	SOUND->AddSound("pistol_shot_close", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_Noise-Interior-Close_01.wav", false, true, SoundCategory::SFX);
-	//SOUND->AddSound("pistol_shot_distant", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_Noise-Interior-Distant_01.wav", false, true, SoundCategory::SFX);
-	SOUND->AddSound("pistol_on_reload", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_ClipIn_01.wav", false, true, SoundCategory::SFX);
-	SOUND->AddSound("pistol_mid_reload", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_ClipOut_01.wav", false, true, SoundCategory::SFX);
-	SOUND->AddSound("pistol_end_reload", "../Resources/Sounds/Pistol/SW_Weapons_Pistol_Slide_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("pistol_shot_close", strSoundPath + "Pistol/SW_Weapons_Pistol_Noise-Interior-Close_01.wav", false, true, SoundCategory::SFX);
+	//SOUND->AddSound("pistol_shot_distant", strSoundPath + "Pistol/SW_Weapons_Pistol_Noise-Interior-Distant_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("pistol_on_reload", strSoundPath + "Pistol/SW_Weapons_Pistol_ClipIn_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("pistol_mid_reload", strSoundPath + "Pistol/SW_Weapons_Pistol_ClipOut_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("pistol_end_reload", strSoundPath + "Pistol/SW_Weapons_Pistol_Slide_01.wav", false, true, SoundCategory::SFX);
 
 	// Impact
-	SOUND->AddSound("impact_on_zombie", "../Resources/Sounds/Impacts/SW_ImpactHeadshot_01.wav", false, true, SoundCategory::SFX);
-	SOUND->AddSound("impact_on_object", "../Resources/Sounds/Impacts/SW_ImpactPlasterDebris_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("impact_on_zombie", strSoundPath + "Impacts/SW_ImpactHeadshot_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("impact_on_object", strSoundPath + "Impacts/SW_ImpactPlasterDebris_01.wav", false, true, SoundCategory::SFX);
 
 	// Impact
-	SOUND->AddSound("explosion", "../Resources/Sounds/Explosive.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("explosion", strSoundPath + "Explosive.wav", false, true, SoundCategory::SFX);
 
+
+	SOUND->AddSound("footstep_left", strSoundPath + "Footstep_Left.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("footstep_right", strSoundPath + "Footstep_Right.wav", false, true, SoundCategory::SFX);
+
+	SOUND->AddSound("zombie_idle_1", strSoundPath + "Zombie/idle1.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_idle_2", strSoundPath + "Zombie/idle2.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_idle_3", strSoundPath + "Zombie/idle3.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_idle_4", strSoundPath + "Zombie/idle4.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_idle_5", strSoundPath + "Zombie/idle5.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_idle_6", strSoundPath + "Zombie/idle6.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_idle_7", strSoundPath + "Zombie/idle7.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_idle_8", strSoundPath + "Zombie/idle8.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_idle_9", strSoundPath + "Zombie/idle9.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_idle_10", strSoundPath + "Zombie/idle10.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_idle_11", strSoundPath + "Zombie/idle11.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_idle_12", strSoundPath + "Zombie/idle12.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_idle_13", strSoundPath + "Zombie/idle13.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_idle_14", strSoundPath + "Zombie/idle14.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_idle_15", strSoundPath + "Zombie/idle15.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_attack_1", strSoundPath + "Zombie/attack1.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_attack_2", strSoundPath + "Zombie/attack2.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_attack_3", strSoundPath + "Zombie/attack3.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_attack_4", strSoundPath + "Zombie/attack4.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_attack_5", strSoundPath + "Zombie/attack5.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_attack_6", strSoundPath + "Zombie/attack6.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_attack_7", strSoundPath + "Zombie/attack7.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_attack_8", strSoundPath + "Zombie/attack8.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_attack_9", strSoundPath + "Zombie/attack9.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_attack_10", strSoundPath + "Zombie/attack10.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_attack_11", strSoundPath + "Zombie/attack11.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_attack_12", strSoundPath + "Zombie/attack12.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_dead_1", strSoundPath + "Zombie/dead1.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_dead_2", strSoundPath + "Zombie/dead2.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_dead_3", strSoundPath + "Zombie/dead3.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_dead_4", strSoundPath + "Zombie/dead4.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_dead_5", strSoundPath + "Zombie/dead5.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_dead_6", strSoundPath + "Zombie/dead6.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_dead_7", strSoundPath + "Zombie/dead7.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_dead_8", strSoundPath + "Zombie/dead8.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_dead_9", strSoundPath + "Zombie/dead9.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("zombie_dead_10", strSoundPath + "Zombie/dead10.wav", false, true, SoundCategory::SFX);
 
 }
 
