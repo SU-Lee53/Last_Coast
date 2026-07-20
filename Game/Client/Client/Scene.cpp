@@ -260,12 +260,12 @@ void Scene::PostUpdate()
 
 	// Update 3D audio listener from the active camera.
 	if (m_pPlayer) {
-		//const std::shared_ptr<Camera>& pCamera = GetCamera();
-		//SOUND->SetListenerAttributes(pCamera->GetPosition(), Vector3::Zero, pCamera->GetLook(), pCamera->GetUp());
-		const auto& pTransform = m_pPlayer->GetTransform();
-		auto v3Pos = pTransform->GetPosition();
-		v3Pos.y += 1.75_m;
-		SOUND->SetListenerAttributes(v3Pos, Vector3::Zero, pTransform->GetLook(), pTransform->GetUp());
+		const std::shared_ptr<Camera>& pCamera = GetCamera();
+		SOUND->SetListenerAttributes(pCamera->GetPosition(), Vector3::Zero, pCamera->GetLook(), pCamera->GetUp());
+		//const auto& pTransform = m_pPlayer->GetTransform();
+		//auto v3Pos = pTransform->GetPosition();
+		//v3Pos.y += 1.75_m;
+		//SOUND->SetListenerAttributes(v3Pos, Vector3::Zero, pTransform->GetLook(), pTransform->GetUp());
 	}
 }
 
