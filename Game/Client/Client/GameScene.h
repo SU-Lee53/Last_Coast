@@ -21,6 +21,10 @@ public:
 	void SyncSceneWithServer() override;
 
 private:
+	void BuildPauseMenuUI();
+	void SetPauseMenuOpen(bool bOpen);
+	void RefreshPauseVolumeText();
+
 	Vector3 v3TerrainPos;
 	Vector3 v3TerrainRotation = Vector3{ 0,0,0 };
 
@@ -110,6 +114,13 @@ private:
 	std::shared_ptr<InputTextBox>                       m_pChatInput;
 	std::array<std::shared_ptr<TextBox>, CHAT_VISIBLE_LINES> m_pChatLines{};
 	std::vector<std::wstring>                           m_ChatHistory;
+
+	// ── Pause Menu ───────────────────────────────────────────────────────────
+	bool m_bPauseMenuOpen = false;
+	bool m_bReturnToMenu = false;
+	bool m_bRestoreMouseLook = false;
+	std::vector<std::shared_ptr<IUIComponent>> m_pPauseMenuComponents;
+	std::shared_ptr<TextBox> m_pPauseVolumeText;
 
 	// End credits
 	bool m_bEndCreditsPlaying = false;

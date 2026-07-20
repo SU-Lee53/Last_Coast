@@ -3,7 +3,7 @@
 #define SOUND_MAX 1.0f
 #define SOUND_MIN 0.0f
 #define SOUND_DEFAULT 0.5f
-#define SOUND_WEIGHT 0.1f
+#define SOUND_WEIGHT 0.05f
 
 #define SOUND_DISTANCE_FACTOR 100.0f
 #define SOUND_3D_MIN_DISTANCE 100.0f		

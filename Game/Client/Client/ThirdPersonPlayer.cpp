@@ -415,6 +415,13 @@ void IThirdPersonPlayer::ToggleMouseLook()
 	}
 }
 
+void IThirdPersonPlayer::SetMouseLookEnabled(bool bEnable)
+{
+	if (m_bMouseInUse != bEnable) {
+		ToggleMouseLook();
+	}
+}
+
 void IThirdPersonPlayer::OnBeginMouseLook()
 {
 	UpdateMouseLookData();

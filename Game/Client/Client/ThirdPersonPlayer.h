@@ -149,6 +149,7 @@ public:
 	// 입력 처리가 차단된 프레임(컷씬/로딩 대기)에 호출 — 직전 프레임의 이동/달리기
 	// 입력 잔상을 지워 계속 달리는 것을 막는다. 방향은 유지해 마찰 감속으로 자연 정지.
 	void ClearMovementInput() { m_bMoved = false; m_bRunning = false; }
+	void SetMouseLookEnabled(bool bEnable);
 
 protected:
 	// Player action

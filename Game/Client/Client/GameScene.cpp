@@ -126,6 +126,10 @@ void GameScene::FinalizeBuild()
 		NETWORK->ConsumeGameBegin(); // 이전 게임의 잔여 신호 제거 (재시작 대비)
 		NETWORK->SendLoadComplete();
 	}
+
+	// 기존 HUD보다 나중에 삽입해 같은 최상위 레이어 안에서 Pause 오버레이가
+	// HUD 위에 그려지도록 한다. HUD 자체는 온라인 상태 갱신을 위해 계속 유지한다.
+	BuildPauseMenuUI();
 }
 
 void GameScene::OnEnterScene()
@@ -134,6 +138,14 @@ void GameScene::OnEnterScene()
 
 void GameScene::PostProcessInput()
 {
+	if (m_bPauseMenuOpen) {
+		if (auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
+			pThirdPerson->ClearMovementInput();
+		}
+		m_World.PostProcessInput();
+		return;
+	}
+
 	// 전원 로딩 대기 중: 플레이어 입력만 차단 — 카메라/물리/월드/UI 업데이트는
 	// 정상 구동되어 화면·대기 안내가 제대로 나온다 (시네마틱 정지를 쓰면
 	// 카메라 갱신까지 멈춰 초기 뷰(원점)에 방치됨).
@@ -148,15 +160,31 @@ void GameScene::PostProcessInput()
 
 void GameScene::OnLeaveScene()
 {
+	if (m_bPauseMenuOpen) {
+		// 메뉴 씬으로 나갈 때는 게임용 Mouse Look 상태를 복원하지 않는다.
+		m_bRestoreMouseLook = false;
+		SetPauseMenuOpen(false);
+	}
 	ClearEndCreditsUI();
 }
 
 void GameScene::ProcessInput()
 {
+	if (INPUT->GetButtonDown(VK_ESCAPE) && !m_bEndCreditsPlaying) {
+		SetPauseMenuOpen(!m_bPauseMenuOpen);
+	}
 }
 
 void GameScene::Update()
 {
+	if (m_bReturnToMenu) {
+		m_bReturnToMenu = false;
+		m_bRestoreMouseLook = false;
+		SetPauseMenuOpen(false);
+		SCENE->ChangeScene<MenuScene>();
+		return;
+	}
+
 	//ImGui::Begin("Test");
 	//{
 	//	if (ImGui::Button("Change Scene")) {
@@ -365,6 +393,133 @@ void GameScene::Update()
 	UpdateEscapeSequence();
 	RemoveDeadZombies();
 	UpdateChat();
+}
+
+void GameScene::BuildPauseMenuUI()
+{
+	if (!m_pUIBoard) return;
+
+	auto fnAddPauseComponent = [this](const std::shared_ptr<IUIComponent>& pComponent) {
+		pComponent->SetVisible(false);
+		m_pUIBoard->InsertUI(pComponent);
+		m_pPauseMenuComponents.push_back(pComponent);
+	};
+
+	const float fScreenWidth = static_cast<float>(WinCore::g_dwClientWidth);
+	const float fScreenHeight = static_cast<float>(WinCore::g_dwClientHeight);
+
+	std::shared_ptr<ImageBox> pBackground = std::make_shared<ImageBox>("Color");
+	pBackground->SetLayer(0);
+	pBackground->SetAnchor(Vector2{ 0.5f, 0.5f });
+	pBackground->SetPivot(Vector2{ 0.5f, 0.5f });
+	pBackground->SetSize(Vector2{ fScreenWidth, fScreenHeight });
+	pBackground->SetColor(Vector4{ 0.0f, 0.0f, 0.0f, 0.72f });
+	fnAddPauseComponent(pBackground);
+
+	std::shared_ptr<TextBox> pTitle = std::make_shared<TextBox>(L"Noto Sans KR");
+	pTitle->SetText(L"PAUSED");
+	pTitle->SetLayer(0);
+	pTitle->SetAnchor(Vector2{ 0.5f, 0.5f });
+	pTitle->SetPivot(Vector2{ 0.5f, 0.5f });
+	pTitle->SetPosition(Vector2{ 0.f, -190.f });
+	pTitle->SetTextHeight(72.f);
+	fnAddPauseComponent(pTitle);
+
+	auto fnMakeButton = [&fnAddPauseComponent](const std::wstring& wstrText, const Vector2& v2Position, auto fnCallback) {
+		std::shared_ptr<TextButton> pButton = std::make_shared<TextButton>(L"Noto Sans KR");
+		pButton->SetText(wstrText);
+		pButton->SetLayer(0);
+		pButton->SetAnchor(Vector2{ 0.5f, 0.5f });
+		pButton->SetPivot(Vector2{ 0.5f, 0.5f });
+		pButton->SetPosition(v2Position);
+		pButton->SetTextHeight(46.f);
+		pButton->SetButtonCallback(std::move(fnCallback));
+		fnAddPauseComponent(pButton);
+	};
+
+	fnMakeButton(L"RESUME", Vector2{ 0.f, -85.f }, [this](IUIComponent*) {
+		SetPauseMenuOpen(false);
+	});
+	fnMakeButton(L"RETURN TO MENU", Vector2{ 0.f, -20.f }, [this](IUIComponent*) {
+		m_bReturnToMenu = true;
+	});
+
+	std::shared_ptr<TextBox> pVolumeLabel = std::make_shared<TextBox>(L"Noto Sans KR");
+	pVolumeLabel->SetText(L"VOLUME");
+	pVolumeLabel->SetLayer(0);
+	pVolumeLabel->SetAnchor(Vector2{ 0.5f, 0.5f });
+	pVolumeLabel->SetPivot(Vector2{ 0.5f, 0.5f });
+	pVolumeLabel->SetPosition(Vector2{ -110.f, 80.f });
+	pVolumeLabel->SetTextHeight(38.f);
+	fnAddPauseComponent(pVolumeLabel);
+
+	m_pPauseVolumeText = std::make_shared<TextBox>(L"Noto Sans KR");
+	m_pPauseVolumeText->SetLayer(0);
+	m_pPauseVolumeText->SetAnchor(Vector2{ 0.5f, 0.5f });
+	m_pPauseVolumeText->SetPivot(Vector2{ 0.5f, 0.5f });
+	m_pPauseVolumeText->SetPosition(Vector2{ 65.f, 80.f });
+	m_pPauseVolumeText->SetTextHeight(38.f);
+	fnAddPauseComponent(m_pPauseVolumeText);
+	RefreshPauseVolumeText();
+
+	fnMakeButton(L"<<", Vector2{ 0.f, 80.f }, [this](IUIComponent*) {
+		SOUND->SetMasterVolume(SOUND->GetMasterVolume() - SOUND_WEIGHT);
+		RefreshPauseVolumeText();
+	});
+	fnMakeButton(L">>", Vector2{ 130.f, 80.f }, [this](IUIComponent*) {
+		SOUND->SetMasterVolume(SOUND->GetMasterVolume() + SOUND_WEIGHT);
+		RefreshPauseVolumeText();
+	});
+	fnMakeButton(L"QUIT GAME", Vector2{ 0.f, 180.f }, [](IUIComponent*) {
+		::PostQuitMessage(0);
+	});
+}
+
+void GameScene::SetPauseMenuOpen(bool bOpen)
+{
+	if (m_bPauseMenuOpen == bOpen) return;
+
+	m_bPauseMenuOpen = bOpen;
+	for (const auto& pComponent : m_pPauseMenuComponents) {
+		if (pComponent) {
+			pComponent->SetVisible(m_bPauseMenuOpen);
+		}
+	}
+	if (m_pChatInput) {
+		m_pChatInput->SetVisible(!m_bPauseMenuOpen);
+	}
+
+	if (m_pUIBoard) {
+		m_pUIBoard->ClearFocus();
+	}
+	INPUT->SetTextInputMode(false);
+
+	auto pThirdPerson = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer);
+	if (m_bPauseMenuOpen) {
+		if (pThirdPerson) {
+			pThirdPerson->ClearMovementInput();
+			pThirdPerson->LeaveAim();
+			m_bRestoreMouseLook = pThirdPerson->IsMouseOn();
+			pThirdPerson->SetMouseLookEnabled(false);
+		}
+		else {
+			m_bRestoreMouseLook = false;
+			::ClipCursor(nullptr);
+			INPUT->ShowCursor();
+		}
+		RefreshPauseVolumeText();
+	}
+	else if (pThirdPerson && m_bRestoreMouseLook) {
+		pThirdPerson->SetMouseLookEnabled(true);
+		m_bRestoreMouseLook = false;
+	}
+}
+
+void GameScene::RefreshPauseVolumeText()
+{
+	if (!m_pPauseVolumeText) return;
+	const int nPercent = static_cast<int>(std::round(SOUND->GetMasterVolume() * 100.f));
+	m_pPauseVolumeText->SetText(std::to_wstring(nPercent));
 }
 
 void GameScene::BeginEndCredits()
@@ -614,7 +769,7 @@ void GameScene::UpdateDeathAndSpectate()
 		CycleSpectateTarget();
 
 	// 좌클릭 → 다음 관전 대상 순환
-	if (!INPUT->IsTextInputMode() && INPUT->GetButtonDown(VK_LBUTTON))
+	if (!m_bPauseMenuOpen && !INPUT->IsTextInputMode() && INPUT->GetButtonDown(VK_LBUTTON))
 		CycleSpectateTarget();
 
 	// ── 우상단 HUD: 관전 대상 이름 + 부활 카운트다운 ─────────────────────────
@@ -771,7 +926,7 @@ void GameScene::UpdateEscapeSequence()
 			m_pEscapeText->SetColor(Vector3{ 0.4f, 1.f, 0.4f });
 			m_pEscapeText->SetText(L"[F] 탈출!");
 			// 사망(관전) 중에는 탈출 불가 — 시체가 반경 안에 있어도 F 무시
-			if (!m_bEscapeKeySent && !m_pPlayer->IsDead() && INPUT->GetButtonDown('F')) {
+			if (!m_bPauseMenuOpen && !m_bEscapeKeySent && !m_pPlayer->IsDead() && INPUT->GetButtonDown('F')) {
 				NETWORK->SendPlayerEscape();
 				m_bEscapeKeySent = true;
 			}
@@ -836,7 +991,7 @@ void GameScene::UpdateChat()
 	// 3) Enter로 입력창 토글: 포커스 -> 타이핑 -> Enter로 전송 후 포커스 해제.
 	//    키 입력과 그것이 변환된 WM_CHAR 사이의 이중 발동을 피하려고
 	//    WM_CHAR enter 콜백이 아닌 폴링으로만 처리한다.
-	if (INPUT->GetButtonDown(VK_RETURN)) {
+	if (!m_bPauseMenuOpen && INPUT->GetButtonDown(VK_RETURN)) {
 		if (m_pChatInput->IsFocused()) {
 			const std::wstring& wstrText = m_pChatInput->GetCommittedText();
 			if (!wstrText.empty())
