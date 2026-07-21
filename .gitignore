@@ -16,3 +16,4 @@ Intermediates/
 *.md
 !/**/Dependencies/**/x64/
 obj/
+*.zip
