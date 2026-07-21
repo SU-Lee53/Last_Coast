@@ -21,6 +21,7 @@
 class Crosshair;
 class HitMarker;
 class TextBox;
+class ImageBox;
 
 
 class IThirdPersonPlayer : public IPlayer {
@@ -29,11 +30,19 @@ private:
 		std::shared_ptr<Crosshair>	pCrosshair = nullptr;
 		std::shared_ptr<HitMarker>	pHitMarker = nullptr;
 		std::shared_ptr<TextBox>	pHealthText = nullptr;
-		std::shared_ptr<TextBox>	pHealthImage = nullptr;
+		std::shared_ptr<ImageBox>	pHealthImage = nullptr;	// 체력 숫자 왼쪽 십자 아이콘
 		std::shared_ptr<TextBox>	pAmmo = nullptr;
 		std::shared_ptr<TextBox>	pWeaponName = nullptr;
-		std::shared_ptr<TextBox>	pWeaponSlots = nullptr;	// 1/2/3 슬롯 목록 + 현재 슬롯 하이라이트
 		std::shared_ptr<TextBox>	pReloadAlert = nullptr;
+
+		// 무기 슬롯 UI — 슬롯별 아이콘 + 번호, 현재 슬롯 하이라이트
+		std::shared_ptr<ImageBox>	pSlotImages[3] = {};
+		std::shared_ptr<TextBox>	pSlotLabels[3] = {};
+		WEAPON_TYPE					eSlotIconTypes[3] = { WEAPON_TYPE::COUNT, WEAPON_TYPE::COUNT, WEAPON_TYPE::COUNT };	// 아이콘 교체 감지용
+
+		// 소모품 슬롯 UI — 붕대 / 폭발 수류탄 / 디코이 수류탄 (아이콘 + 보유 개수)
+		std::shared_ptr<ImageBox>	pItemImages[3] = {};
+		std::shared_ptr<TextBox>	pItemCounts[3] = {};
 
 		void Initialize(const IThirdPersonPlayer& player);
 		void Update(const IThirdPersonPlayer& player);

@@ -6,6 +6,11 @@ IImageSprite::IImageSprite(const std::string& strTexturePath)
 	m_TextureHandle = TEXTURE->LoadTexture(strTexturePath);
 }
 
+void IImageSprite::SetTexture(const std::string& strTexturePath)
+{
+	m_TextureHandle = TEXTURE->LoadTexture(strTexturePath);
+}
+
 UIRectData ImageBox::MakeSBData() const
 {
 	RECT screenRect = GetScreenRect();

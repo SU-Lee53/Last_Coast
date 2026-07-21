@@ -24,12 +24,19 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pHealthText->SetText(L"0");
 		pHealthText->SetLayer(0);
 		pHealthText->SetAnchor(Vector2{ 1, 1 });
-		pHealthText->SetPivot(Vector2{ 1,1 });
-		pHealthText->SetPosition(Vector2{ -50, -100 });
+		pHealthText->SetPivot(Vector2{ 0,1 });	// 좌하단 피벗 — 아이콘 옆에 왼쪽 정렬로 붙임
+		pHealthText->SetPosition(Vector2{ -170, -100 });
 		pHealthText->SetTextHeight(50);
 		pUIBoard->InsertUI(pHealthText);
 
-		//pHealthImage
+		// HP 아이콘 — 체력 숫자 왼쪽
+		pHealthImage = std::make_shared<ImageBox>("../Resources/Textures/health.png");
+		pHealthImage->SetLayer(0);
+		pHealthImage->SetAnchor(Vector2{ 1, 1 });
+		pHealthImage->SetPivot(Vector2{ 1, 1 });
+		pHealthImage->SetPosition(Vector2{ -175.f, -103.f });
+		pHealthImage->SetSize(Vector2{ 44, 44 });
+		pUIBoard->InsertUI(pHealthImage);
 
 		pAmmo = std::make_shared<TextBox>(L"Noto Sans KR");
 		pAmmo->SetText(L"1");
@@ -49,14 +56,71 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pWeaponName->SetTextHeight(50);
 		pUIBoard->InsertUI(pWeaponName);
 
-		pWeaponSlots = std::make_shared<TextBox>(L"Noto Sans KR");
-		pWeaponSlots->SetText(L"");
-		pWeaponSlots->SetLayer(0);
-		pWeaponSlots->SetAnchor(Vector2{ 1, 1 });
-		pWeaponSlots->SetPivot(Vector2{ 1,1 });
-		pWeaponSlots->SetPosition(Vector2{ -50, -160 });
-		pWeaponSlots->SetTextHeight(35);
-		pUIBoard->InsertUI(pWeaponSlots);
+		// 무기 슬롯 UI — 슬롯별 아이콘 + 번호, 현재 슬롯 하이라이트 (권총은 작게)
+		constexpr float fSlotY = -160.f;
+		constexpr float fSlotGap = 20.f;
+		const Vector2 v2SlotSizes[3] = { { 150.f, 75.f }, { 150.f, 75.f }, { 100.f, 50.f } };
+		float fRight = -20.f;
+		constexpr float fMaxSlotH = 75.f;
+		for (int i = 2; i >= 0; --i) {
+			const Vector2& v2Size = v2SlotSizes[i];
+			const float fY = fSlotY - (fMaxSlotH - v2Size.y) * 0.5f;	// 큰 아이콘 기준 세로 중앙정렬
+
+			eSlotIconTypes[i] = player.GetWeaponInSlot(i);
+			pSlotImages[i] = std::make_shared<ImageBox>(GameContext::GetWeaponIconPath(eSlotIconTypes[i]));
+			pSlotImages[i]->SetLayer(0);
+			pSlotImages[i]->SetAnchor(Vector2{ 1, 1 });
+			pSlotImages[i]->SetPivot(Vector2{ 1, 1 });
+			pSlotImages[i]->SetPosition(Vector2{ fRight, fY });
+			pSlotImages[i]->SetSize(v2Size);
+			pUIBoard->InsertUI(pSlotImages[i]);
+
+			// 슬롯 번호 — 아이콘 좌측, 세로 중앙 (아이콘 안쪽에 겹침)
+			constexpr float fLabelH = 25.f;
+			pSlotLabels[i] = std::make_shared<TextBox>(L"Noto Sans KR");
+			pSlotLabels[i]->SetText(std::to_wstring(i + 1));
+			pSlotLabels[i]->SetLayer(0);
+			pSlotLabels[i]->SetAnchor(Vector2{ 1, 1 });
+			pSlotLabels[i]->SetPivot(Vector2{ 1, 1 });
+			pSlotLabels[i]->SetPosition(Vector2{ fRight - v2Size.x + 30.f, fY - (v2Size.y - fLabelH) * 0.5f });
+			pSlotLabels[i]->SetTextHeight(fLabelH);
+			pUIBoard->InsertUI(pSlotLabels[i]);
+
+			fRight -= v2Size.x + fSlotGap;
+		}
+
+		// 소모품 슬롯 UI — 무기 슬롯 위 한 줄, 오른쪽 정렬 (붕대 / 폭발 수류탄 / 디코이 수류탄)
+		{
+			constexpr const char* strItemIcons[3] = {
+				"../Resources/Textures/bandage.png",
+				"../Resources/Textures/frag_grenade.png",
+				"../Resources/Textures/decoy_grenade.png",
+			};
+			constexpr float fItemSize = 55.f;
+			constexpr float fItemGap = 15.f;
+			constexpr float fItemY = -250.f;	// 무기 슬롯 상단(-235) 위
+			for (int i = 0; i < 3; ++i) {
+				const float fItemRight = -20.f - (2 - i) * (fItemSize + fItemGap);
+
+				pItemImages[i] = std::make_shared<ImageBox>(strItemIcons[i]);
+				pItemImages[i]->SetLayer(0);
+				pItemImages[i]->SetAnchor(Vector2{ 1, 1 });
+				pItemImages[i]->SetPivot(Vector2{ 1, 1 });
+				pItemImages[i]->SetPosition(Vector2{ fItemRight, fItemY });
+				pItemImages[i]->SetSize(Vector2{ fItemSize, fItemSize });
+				pUIBoard->InsertUI(pItemImages[i]);
+
+				// 보유 개수 — 아이콘 우하단 (아이템 시스템 구현 후 갱신 연결)
+				pItemCounts[i] = std::make_shared<TextBox>(L"Noto Sans KR");
+				pItemCounts[i]->SetText(L"0");
+				pItemCounts[i]->SetLayer(0);
+				pItemCounts[i]->SetAnchor(Vector2{ 1, 1 });
+				pItemCounts[i]->SetPivot(Vector2{ 1, 1 });
+				pItemCounts[i]->SetPosition(Vector2{ fItemRight - 2.f, fItemY - 2.f });
+				pItemCounts[i]->SetTextHeight(20);
+				pUIBoard->InsertUI(pItemCounts[i]);
+			}
+		}
 
 		pReloadAlert = std::make_shared<TextBox>(L"Noto Sans KR");
 		pReloadAlert->SetText(L"2");
@@ -87,11 +151,7 @@ void IThirdPersonPlayer::PlayerHUD::Update(const IThirdPersonPlayer& player)
 		pHealthText->SetText(wstrHP);
 	}
 
-	if (pHealthImage) {
-
-	}
-
-	if (pAmmo) {
+if (pAmmo) {
 		std::wstring wstrAmmo;
 		if (pWeapon) {
 			wstrAmmo = std::format(L"{} / {}", pWeapon->GetAmmoInClip(), pWeapon->GetTotalAmmo());
@@ -103,16 +163,21 @@ void IThirdPersonPlayer::PlayerHUD::Update(const IThirdPersonPlayer& player)
 		pAmmo->SetText(wstrAmmo);
 	}
 
-	if (pWeaponSlots && player.HasWeaponSlots()) {
-		std::wstring wstrSlots;
+	if (pSlotImages[0] && player.HasWeaponSlots()) {
+		const int nCurSlot = player.GetCurrentWeaponSlot();
+		const Vector4 v4Selected{ 1.f, 1.f, 1.f, 1.f };
+		const Vector4 v4Dimmed{ 0.45f, 0.45f, 0.45f, 0.8f };
+
 		for (int i = 0; i < 3; ++i) {
-			const std::string& strName = GameContext::g_strWeaponNames[std::to_underlying(player.GetWeaponInSlot(i))];
-			if (i == player.GetCurrentWeaponSlot())
-				wstrSlots += std::format(L"[{} {}]  ", i + 1, ::StringToWString(strName));
-			else
-				wstrSlots += std::format(L"{} {}  ", i + 1, ::StringToWString(strName));
+			const WEAPON_TYPE eSlotWeapon = player.GetWeaponInSlot(i);
+			if (eSlotIconTypes[i] != eSlotWeapon) {
+				eSlotIconTypes[i] = eSlotWeapon;
+				pSlotImages[i]->SetTexture(GameContext::GetWeaponIconPath(eSlotWeapon));
+			}
+			// 현재 슬롯만 밝게, 나머지 어둡게
+			pSlotImages[i]->SetColor(i == nCurSlot ? v4Selected : v4Dimmed);
+			if (pSlotLabels[i]) pSlotLabels[i]->SetColor(i == nCurSlot ? v4Selected : v4Dimmed);
 		}
-		pWeaponSlots->SetText(wstrSlots);
 	}
 
 	if (pReloadAlert) {

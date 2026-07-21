@@ -5,6 +5,8 @@ interface IImageSprite abstract{
 public:
 	IImageSprite(const std::string & strTexturePath);
 
+	void SetTexture(const std::string& strTexturePath);
+
 protected:
 	TextureRef<Texture> m_TextureHandle{};
 

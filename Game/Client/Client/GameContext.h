@@ -44,6 +44,9 @@ public:
 	std::shared_ptr<NodeObject> GetZombieCopy(uint32 unIndex);
 	TextureRef<Texture> GetImage(const std::string& strName);
 
+	// 무기 → UI 아이콘 경로 (Textures/<이름소문자>.png)
+	static std::string GetWeaponIconPath(WEAPON_TYPE eWeaponType);
+
 	const Vector3& GetWeaponOffsetPosition(WEAPON_TYPE eWeaponType) const { return m_WeaponStats[std::to_underlying(eWeaponType)].v3OffsetPosition; }
 	const Vector3& GetWeaponOffsetRotation(WEAPON_TYPE eWeaponType) const { return m_WeaponStats[std::to_underlying(eWeaponType)].v3OffsetRotation; }
 
