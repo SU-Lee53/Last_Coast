@@ -67,8 +67,8 @@ void GameScene::FinalizeBuild()
 {
 	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
 	m_pPlayer->Initialize();
-	//m_pPlayer->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
-	m_pPlayer->GetTransform()->SetPosition(29000, -3536.692724, 25000);
+	m_pPlayer->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
+	//m_pPlayer->GetTransform()->SetPosition(29000, -3536.692724, 25000);
 	if (auto pThirdPerson = static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 		const auto& data = GCTX->GetGameData();
 		pThirdPerson->SetPlayerModel(GameContext::g_strCharacterNames[data.m_nCurModelIndex]);
@@ -134,6 +134,7 @@ void GameScene::FinalizeBuild()
 
 void GameScene::OnEnterScene()
 {
+	ChangeAmbience(EP_NIGHT, 0.f);
 }
 
 void GameScene::PostProcessInput()
@@ -160,6 +161,15 @@ void GameScene::PostProcessInput()
 
 void GameScene::OnLeaveScene()
 {
+	SOUND->Stop(m_pAmbienceChannel);
+	SOUND->Stop(m_pPreviousAmbienceChannel);
+	m_pAmbienceChannel = nullptr;
+	m_pPreviousAmbienceChannel = nullptr;
+	m_fAmbienceFadeElapsed = 0.f;
+	m_fAmbienceFadeDuration = 0.f;
+	m_fPreviousAmbienceStartVolume = 1.f;
+	m_nAmbiencePresetId = -1;
+
 	if (m_bPauseMenuOpen) {
 		// 메뉴 씬으로 나갈 때는 게임용 Mouse Look 상태를 복원하지 않는다.
 		m_bRestoreMouseLook = false;
@@ -184,6 +194,7 @@ void GameScene::Update()
 		SCENE->ChangeScene<MenuScene>();
 		return;
 	}
+	UpdateAmbience();
 
 	//ImGui::Begin("Test");
 	//{
@@ -346,17 +357,20 @@ void GameScene::Update()
 
 		if (ImGui::Button("Env Preset 1")) {
 			// 환경 프리셋 전환: 한 이벤트로 포스트FX/안개/시간/앰비언트 전체를 페이드.
-			m_pEventSequence->AddEvent(std::make_shared<EnvironmentTransitionEvent>(GetEnvironmentPreset(1), 1.5f));
+			m_pEventSequence->AddEvent(std::make_shared<EnvironmentTransitionEvent>(GetEnvironmentPreset(EP_NIGHT), 1.5f));
+			ChangeAmbience(EP_NIGHT, 1.5f);
 		}
 
 		if (ImGui::Button("Env Preset 2")) {
 			// 환경 프리셋 전환: 한 이벤트로 포스트FX/안개/시간/앰비언트 전체를 페이드.
-			m_pEventSequence->AddEvent(std::make_shared<EnvironmentTransitionEvent>(GetEnvironmentPreset(2), 1.5f));
+			m_pEventSequence->AddEvent(std::make_shared<EnvironmentTransitionEvent>(GetEnvironmentPreset(EP_DAWN), 1.5f));
+			ChangeAmbience(EP_DAWN, 1.5f);
 		}
 
 		if (ImGui::Button("Env Preset 3")) {
 			// 환경 프리셋 전환: 한 이벤트로 포스트FX/안개/시간/앰비언트 전체를 페이드.
-			m_pEventSequence->AddEvent(std::make_shared<EnvironmentTransitionEvent>(GetEnvironmentPreset(3), 1.5f));
+			m_pEventSequence->AddEvent(std::make_shared<EnvironmentTransitionEvent>(GetEnvironmentPreset(EP_SUNSET), 1.5f));
+			ChangeAmbience(EP_SUNSET, 1.5f);
 		}
 
 	}
@@ -688,6 +702,7 @@ void GameScene::ProcessServerGameEvents()
 			break;
 		case GE_ENVIRONMENT:
 			// 환경 프리셋 전환: 한 이벤트로 포스트FX/안개/시간/앰비언트 전체를 페이드.
+			ChangeAmbience(ev.presetId, ev.fDuration > 0.f ? ev.fDuration : 1.5f);
 			m_pEventSequence->AddEvent(std::make_shared<EnvironmentTransitionEvent>(
 				GetEnvironmentPreset(ev.presetId), ev.fDuration > 0.f ? ev.fDuration : 1.5f));
 			break;
@@ -703,6 +718,57 @@ void GameScene::ProcessServerGameEvents()
 		default:
 			break;
 		}
+	}
+}
+
+void GameScene::ChangeAmbience(int nPresetId, float fFadeDuration)
+{
+	if (m_nAmbiencePresetId == nPresetId) return;
+
+	const char* strSoundName = "ambience_night";
+	switch (nPresetId) {
+	case EP_DAWN:
+		strSoundName = "ambience_foggy_dawn";
+		break;
+	case EP_SUNSET:
+		strSoundName = "ambience_sunrise";
+		break;
+	case EP_NIGHT:
+	default:
+		break;
+	}
+
+	SOUND->Stop(m_pPreviousAmbienceChannel);
+	m_pPreviousAmbienceChannel = m_pAmbienceChannel;
+	m_fPreviousAmbienceStartVolume = m_fAmbienceFadeDuration > 0.f ?
+		std::clamp(m_fAmbienceFadeElapsed / m_fAmbienceFadeDuration, 0.f, 1.f) : 1.f;
+	m_pAmbienceChannel = SOUND->Play(strSoundName);
+	m_nAmbiencePresetId = nPresetId;
+	m_fAmbienceFadeElapsed = 0.f;
+	m_fAmbienceFadeDuration = std::max(0.f, fFadeDuration);
+
+	if (m_fAmbienceFadeDuration <= 0.f) {
+		SOUND->Stop(m_pPreviousAmbienceChannel);
+		m_pPreviousAmbienceChannel = nullptr;
+		SOUND->SetChannelVolume(m_pAmbienceChannel, 1.f);
+		return;
+	}
+	SOUND->SetChannelVolume(m_pAmbienceChannel, 0.f);
+}
+
+void GameScene::UpdateAmbience()
+{
+	if (m_fAmbienceFadeDuration <= 0.f) return;
+
+	m_fAmbienceFadeElapsed += DT;
+	const float fRatio = std::clamp(m_fAmbienceFadeElapsed / m_fAmbienceFadeDuration, 0.f, 1.f);
+	SOUND->SetChannelVolume(m_pAmbienceChannel, fRatio);
+	SOUND->SetChannelVolume(m_pPreviousAmbienceChannel, m_fPreviousAmbienceStartVolume * (1.f - fRatio));
+
+	if (fRatio >= 1.f) {
+		SOUND->Stop(m_pPreviousAmbienceChannel);
+		m_pPreviousAmbienceChannel = nullptr;
+		m_fAmbienceFadeDuration = 0.f;
 	}
 }
 
@@ -724,6 +790,12 @@ void GameScene::UpdateDeathAndSpectate()
 			}
 			else {
 				m_DeadPlayers.insert(ev.playerId);
+
+				// Disable nametag when player is dead
+				auto nameTagIt = m_RemotePlayerNameTags.find(ev.playerId);
+				if (nameTagIt != m_RemotePlayerNameTags.end())
+					nameTagIt->second->SetEnabled(false);
+
 				// 보고 있던 대상이 죽으면 다음 대상으로
 				if (m_bSpectating && m_nSpectateTargetId == ev.playerId)
 					CycleSpectateTarget();
@@ -737,6 +809,11 @@ void GameScene::UpdateDeathAndSpectate()
 			}
 			else {
 				m_DeadPlayers.erase(ev.playerId);
+
+				// Enable nametag when player is revivied
+				auto nameTagIt = m_RemotePlayerNameTags.find(ev.playerId);
+				if (nameTagIt != m_RemotePlayerNameTags.end())
+					nameTagIt->second->SetEnabled(true);
 			}
 		}
 
@@ -805,6 +882,11 @@ void GameScene::EnterSpectateMode()
 
 void GameScene::LeaveSpectateMode(const Vector3* respawnPos)
 {
+	auto nameTagIt = m_RemotePlayerNameTags.find(m_nSpectateTargetId);
+	if (nameTagIt != m_RemotePlayerNameTags.end() && !m_DeadPlayers.contains(m_nSpectateTargetId)) {
+		nameTagIt->second->SetEnabled(true);
+	}
+
 	m_bSpectating = false;
 	m_nSpectateTargetId = -1;
 	m_fRespawnRemain = 0.f;
@@ -822,6 +904,11 @@ void GameScene::LeaveSpectateMode(const Vector3* respawnPos)
 bool GameScene::CycleSpectateTarget()
 {
 	if (!m_pPlayer || !m_pPlayer->GetCamera()) return false;
+
+	auto previousNameTagIt = m_RemotePlayerNameTags.find(m_nSpectateTargetId);
+	if (previousNameTagIt != m_RemotePlayerNameTags.end() && !m_DeadPlayers.contains(m_nSpectateTargetId)) {
+		previousNameTagIt->second->SetEnabled(true);
+	}
 
 	// 살아있는 리모트 후보 (id 오름차순 순환)
 	std::vector<int> candidates;
@@ -847,6 +934,12 @@ bool GameScene::CycleSpectateTarget()
 
 	m_nSpectateTargetId = nNext;
 	m_pPlayer->GetCamera()->SetOwner(m_RemotePlayers[nNext]);
+
+	auto nameTagIt = m_RemotePlayerNameTags.find(nNext);
+	if (nameTagIt != m_RemotePlayerNameTags.end()) {
+		nameTagIt->second->SetEnabled(false);
+	}
+
 	return true;
 }
 
@@ -1404,6 +1497,19 @@ void GameScene::SyncSceneWithServer()
 			remotePlayer->SetPlayerModel(GameContext::g_strCharacterNames[ev.characterType]);
 		AddObject(remotePlayer);
 		m_RemotePlayers[ev.playerId] = remotePlayer;
+
+		std::shared_ptr<TextBillboard> pNameTag = std::make_shared<TextBillboard>(L"Noto Sans KR");
+		pNameTag->SetText(::StringToWString(ev.username));
+		pNameTag->SetLayer(0);
+		pNameTag->SetAnchor(Vector2{ 0.0f, 0.0f });
+		pNameTag->SetPivot(Vector2{ 0.5f, 0.5f });
+		pNameTag->SetTextHeight(30.f);
+		pNameTag->SetTarget(remotePlayer);
+		pNameTag->SetWorldOffset(Vector3{ 0.f, 2.0_m, 0.f });
+		pNameTag->SetMaxDistance(50_m);
+		pNameTag->SetDistanceScale(5_m, 50_m, 1.2f, 0.6f);
+		m_pUIBoard->InsertUI(pNameTag);
+		m_RemotePlayerNameTags[ev.playerId] = pNameTag;
 	}
 
 	for (auto id : NETWORK->ConsumePlayerLeaves()) {
@@ -1412,6 +1518,13 @@ void GameScene::SyncSceneWithServer()
 			RemoveObject(it->second);
 			m_RemotePlayers.erase(it);
 		}
+
+		auto nameTagIt = m_RemotePlayerNameTags.find(id);
+		if (nameTagIt != m_RemotePlayerNameTags.end()) {
+			m_pUIBoard->RemoveUI(nameTagIt->second);
+			m_RemotePlayerNameTags.erase(nameTagIt);
+		}
+
 		// 서버가 슬롯 id를 재사용하므로 사망 기록도 함께 제거 — 안 하면 같은 id로
 		// 들어온 새 플레이어가 관전 후보에서 영구 제외된다.
 		m_DeadPlayers.erase(id);

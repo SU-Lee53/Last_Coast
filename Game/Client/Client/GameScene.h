@@ -4,6 +4,7 @@
 
 class TextBox;
 class InputTextBox;
+class TextBillboard;
 class ImageBox;
 class HelicopterCrashEvent;
 class HelicopterDepartEvent;
@@ -47,6 +48,8 @@ private:
 	void ProcessMeleeResults();
 	// 서버 스크립트 게임 이벤트(폭파/포스트FX) 소비 → EventSequence에 등록
 	void ProcessServerGameEvents();
+	void ChangeAmbience(int nPresetId, float fFadeDuration);
+	void UpdateAmbience();
 	// 마지막 체크포인트 후: 구조 헬기 착륙 감지 → 2분 서바이벌 → 헬기 반경 내 F키 탈출
 	void UpdateEscapeSequence();
 
@@ -77,7 +80,18 @@ private:
 	static constexpr int   OFFLINE_MAX_ZOMBIES   = 100;   // 동시 존재 최대 마리수
 	static constexpr float OFFLINE_SPAWN_INTERVAL = 2.0f; // 스폰 간격 (초)
 	float m_fOfflineSpawnTimer = 0.f;
-	//std::unique_ptr<NavMeshDebugRenderer> m_pNavMeshDebugRenderer;
+
+	// 챕터 환경음 교차 페이드 상태
+	FMOD_CHANNEL* m_pAmbienceChannel = nullptr;
+	FMOD_CHANNEL* m_pPreviousAmbienceChannel = nullptr;
+	float m_fAmbienceFadeElapsed = 0.f;
+	float m_fAmbienceFadeDuration = 0.f;
+	float m_fPreviousAmbienceStartVolume = 1.f;
+	int m_nAmbiencePresetId = -1;
+
+	// playerId -> Remote player name tag
+	std::unordered_map<int, std::shared_ptr<TextBillboard>> m_RemotePlayerNameTags;
+
 
 	// serverId → 클라이언트 Zombie 인스턴스 (서버 연결 시 사용)
 	std::unordered_map<int, std::shared_ptr<Zombie>> m_ServerZombies;
