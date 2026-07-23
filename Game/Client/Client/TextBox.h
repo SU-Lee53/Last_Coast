@@ -1,7 +1,12 @@
 ﻿#pragma once
 #include "UIComponent.h"
 
+class IGameObject;
+
 interface IText abstract {
+public:
+	const static std::wstring g_wstrDefaultFontName;
+
 public:
 	IText(Font::ID font);
 	IText(const std::wstring& wstrFontname);
@@ -37,7 +42,7 @@ protected:
 class TextBox : public IUIComponent, public IText {
 public:
 	TextBox(Font::ID font) : IText{ font } {}
-	TextBox(const std::wstring& wstrFontname) : IText{ wstrFontname } {}
+	TextBox(const std::wstring& wstrFontname = IText::g_wstrDefaultFontName) : IText{ wstrFontname } {}
 
 	virtual void Update() override;
 	virtual UIRectData MakeSBData() const override;
@@ -54,7 +59,7 @@ public:
 		m_fnBeginHoverCallback = g_fnDefaultBeginHover;
 		m_fnEndHoverCallback = g_fnDefaultEndHover;
 	}
-	TextButton(const std::wstring& wstrFontname) : IText{ wstrFontname } {
+	TextButton(const std::wstring& wstrFontname = IText::g_wstrDefaultFontName) : IText{ wstrFontname } {
 		SetColor(Vector3{ 0.8, 0.8, 0.8 });
 		m_fnBeginHoverCallback = g_fnDefaultBeginHover;
 		m_fnEndHoverCallback = g_fnDefaultEndHover;
@@ -87,7 +92,7 @@ public:
 		m_wstrCompositionText.reserve(m_maxLength);
 	}
 
-	InputTextBox(const std::wstring& wstrFontname)
+	InputTextBox(const std::wstring& wstrFontname = IText::g_wstrDefaultFontName)
 		: IText{ wstrFontname } {
 		SetText(m_wstrCommittedText);
 	}
@@ -126,4 +131,28 @@ private:
 
 	Vector4 m_v4TextColor = Vector4{ 1.f, 1.f, 1.f, 1.f };
 	Vector4 m_v4PlaceholderColor = Vector4{ 0.5f, 0.5f, 0.5f, 1.f };
+};
+
+class TextBillboard : public TextBox {
+public:
+	TextBillboard(Font::ID font) : TextBox{ font } {}
+	TextBillboard(const std::wstring& wstrFontname) : TextBox{ wstrFontname } {}
+
+	virtual void Update() override;
+
+	void SetTarget(const std::shared_ptr<IGameObject>& pTarget) { m_wpTarget = pTarget; }
+	void SetWorldOffset(const Vector3& v3WorldOffset) { m_v3WorldOffset = v3WorldOffset; }
+	void SetEnabled(bool bEnabled) { m_bEnabled = bEnabled; }
+	void SetMaxDistance(float fMaxDistance) { m_fMaxDistance = fMaxDistance; }
+	void SetDistanceScale(float fNearDistance, float fFarDistance, float fNearScale, float fFarScale);
+
+private:
+	std::weak_ptr<IGameObject> m_wpTarget;
+	Vector3 m_v3WorldOffset{};
+	float m_fMaxDistance = 0.f;
+	float m_fNearScaleDistance = 0.f;
+	float m_fFarScaleDistance = 0.f;
+	float m_fNearScale = 1.f;
+	float m_fFarScale = 1.f;
+	bool m_bEnabled = true;
 };

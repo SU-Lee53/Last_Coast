@@ -4,6 +4,8 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // IText
 
+const std::wstring IText::g_wstrDefaultFontName = L"Noto Sans KR";
+
 IText::IText(Font::ID font)
 {
 	m_fontID = font;
@@ -366,4 +368,84 @@ void InputTextBox::ShowControllImGui()
 		m_wstrPlaceholderText = StringToWString(strInput);
 	}
 	IUIComponent::ShowControllImGui();
+}
+
+void TextBillboard::Update()
+{
+	TextBox::Update();
+
+	std::shared_ptr<IGameObject> pTarget = m_wpTarget.lock();
+	const std::shared_ptr<Camera>& pCamera = CUR_SCENE->GetCamera();
+
+	// Make invisible when...
+	//	- UI Disabled
+	//	- Target or camera is null
+	//	- Character is hiding
+	if (!m_bEnabled || !pTarget || !pCamera || (pTarget->IsCharacter() && CUR_SCENE->IsHidingCharacters())) {
+		SetVisible(false);
+		return;
+	}
+
+	Vector3 v3WorldPosition = pTarget->GetTransform()->GetPosition() + m_v3WorldOffset;
+
+	// Distance cutoff
+	float fDistance = Vector3::Distance(v3WorldPosition, pCamera->GetPosition());
+	if (m_fMaxDistance > 0.f && fDistance > m_fMaxDistance) {
+		SetVisible(false);
+		return;
+	}
+
+	// VP Transform target position
+	Vector4 v4ClipPosition = Vector4::Transform(
+		Vector4{ v3WorldPosition.x, v3WorldPosition.y, v3WorldPosition.z, 1.0f },
+		pCamera->GetViewProjectMatrix()
+	);
+
+	// Make invisivle when position is...
+	//	- behind camera
+	//	- out of depth range
+	if (v4ClipPosition.w <= 0.01f ||
+		v4ClipPosition.z < 0.0f ||
+		v4ClipPosition.z > v4ClipPosition.w) {
+		SetVisible(false);
+		return;
+	}
+
+	// Make invisivle when position is out of screen space
+	float fNdcX = v4ClipPosition.x / v4ClipPosition.w;
+	float fNdcY = v4ClipPosition.y / v4ClipPosition.w;
+
+	if (fNdcX < -1.0f || fNdcX > 1.0f ||
+		fNdcY < -1.0f || fNdcY > 1.0f) {
+		SetVisible(false);
+		return;
+	}
+
+	// Transform into screen space
+	float fScreenX = (fNdcX + 1.0f) * 0.5f * static_cast<float>(WinCore::g_dwClientWidth);
+	float fScreenY = (1.0f - fNdcY) * 0.5f * static_cast<float>(WinCore::g_dwClientHeight);
+
+	if (m_fFarScaleDistance > m_fNearScaleDistance) {
+		float fScaleRatio = ::SmoothStep(fDistance, m_fNearScaleDistance, m_fFarScaleDistance);
+		float fDistanceScale = std::lerp(m_fNearScale, m_fFarScale, fScaleRatio);
+		m_v2Size.x *= fDistanceScale;
+		m_v2Size.y *= fDistanceScale;
+	}
+
+	SetPosition(Vector2{ fScreenX, fScreenY });
+	SetVisible(true);
+}
+
+void TextBillboard::SetDistanceScale(float fNearDistance, float fFarDistance, float fNearScale, float fFarScale)
+{
+	if (fNearDistance < 0.f ||
+		fFarDistance <= fNearDistance ||
+		fNearScale <= 0.f ||
+		fFarScale <= 0.f)
+		return;
+
+	m_fNearScaleDistance = fNearDistance;
+	m_fFarScaleDistance = fFarDistance;
+	m_fNearScale = fNearScale;
+	m_fFarScale = fFarScale;
 }
