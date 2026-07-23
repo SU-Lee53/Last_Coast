@@ -174,6 +174,13 @@ void SoundManager::Stop(FMOD_CHANNEL* pChannel) const
 	}
 }
 
+void SoundManager::SetChannelVolume(FMOD_CHANNEL* pChannel, float fVolume) const
+{
+	if (pChannel) {
+		FMOD_Channel_SetVolume(pChannel, std::clamp(fVolume, SOUND_MIN, SOUND_MAX));
+	}
+}
+
 bool SoundManager::IsPlaying(FMOD_CHANNEL* pChannel) const
 {
 	if (!pChannel) {

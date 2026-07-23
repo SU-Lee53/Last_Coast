@@ -44,6 +44,7 @@ public:
 	void Pause(FMOD_CHANNEL* pChannel) const;
 	void Resume(FMOD_CHANNEL* pChannel) const;
 	void Stop(FMOD_CHANNEL* pChannel) const;
+	void SetChannelVolume(FMOD_CHANNEL* pChannel, float fVolume) const;
 	bool IsPlaying(FMOD_CHANNEL* pChannel) const;
 
 	void SetCategoryVolume(SoundCategory eCategory, float fVolume);

@@ -1,0 +1,44 @@
+Malibu coastal ambience source records
+Created: 2026-07-22
+
+Every source below is marked CC0 on its linked OpenGameArt page.
+Only environmental recordings and sound effects were used. No music tracks were used.
+
+Continuous ocean surf
+Source: Enemy Ship Approaching by yd
+Used file: oceanwaves.ogg from oceanwaves.zip
+Page: https://opengameart.org/content/enemy-ship-approaching
+License: CC0
+Note: Only the standalone ocean wave recording from the source archive was used.
+
+Individual beach waves
+Source: Beach Ocean Waves by jasinski, submitted by qubodup
+Used files: wave_01 through wave_04 CC0 FLAC files
+Page: https://opengameart.org/content/beach-ocean-waves
+License: CC0
+
+Wind
+Source: Wind by IgnasD
+Used files: Wind.ogg, Wind2.ogg, Wind3.ogg
+Page: https://opengameart.org/content/wind
+License: CC0
+
+Night crickets
+Source: cricket sounds by syncopika
+Used file: cricketsounds090613.wav
+Page: https://opengameart.org/content/cricket-sounds
+License: CC0
+
+Morning birds
+Source: AMB Morning Sounds (Perfect Loop) by Kresiek The Furry
+Used file: amb_morning.wav
+Page: https://opengameart.org/content/amb-morning-sounds-perfect-loop
+License: CC0
+
+Seagulls
+Source: Solo Seagull Sound Effects, submitted by Rango Mango with permission for commercial use and no attribution requirement
+Used files: Seagull Ambient 1.wav, Seagull Ambient 2.wav, Seagull Ambient 3.wav
+Page: https://opengameart.org/content/solo-seagull-sound-effects
+License shown on page: CC0
+
+CC0 legal information: https://creativecommons.org/publicdomain/zero/1.0/

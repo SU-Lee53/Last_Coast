@@ -128,6 +128,9 @@ void GameContext::LoadGameSounds()
 	// Impact
 	SOUND->AddSound("explosion", strSoundPath + "Explosive.wav", false, true, SoundCategory::SFX);
 
+	SOUND->AddSound("ambience_night", strSoundPath + "Ambience/Malibu_Night_Loop.wav", true, false, SoundCategory::BGM);
+	SOUND->AddSound("ambience_foggy_dawn", strSoundPath + "Ambience/Malibu_FoggyDawn_Loop.wav", true, false, SoundCategory::BGM);
+	SOUND->AddSound("ambience_sunrise", strSoundPath + "Ambience/Malibu_Sunrise_Loop.wav", true, false, SoundCategory::BGM);
 
 	SOUND->AddSound("footstep_left", strSoundPath + "Footstep_Left.wav", false, true, SoundCategory::SFX);
 	SOUND->AddSound("footstep_right", strSoundPath + "Footstep_Right.wav", false, true, SoundCategory::SFX);
