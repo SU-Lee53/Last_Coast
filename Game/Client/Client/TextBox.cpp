@@ -432,7 +432,7 @@ void TextBillboard::Update()
 		m_v2Size.y *= fDistanceScale;
 	}
 
-	SetPosition(Vector2{ fScreenX, fScreenY });
+	SetPosition(ScreenToReferencePosition(Vector2{ fScreenX, fScreenY }));
 	SetVisible(true);
 }
 

@@ -196,122 +196,6 @@ void GameScene::Update()
 	}
 	UpdateAmbience();
 
-	//ImGui::Begin("Test");
-	//{
-	//	if (ImGui::Button("Change Scene")) {
-	//		SCENE->ChangeScene<MapTestScene>();
-	//		ImGui::End();
-	//		return;
-	//	}
-	//
-	//	ImGui::InputFloat3("Set Pos", reinterpret_cast<float*>(&v3PlayerPos));
-	//	if (ImGui::Button("Move To Pos")) {
-	//		m_pPlayer->GetTransform()->SetPosition(v3PlayerPos);
-	//	}
-	//
-	//	if (ImGui::Button("Move To PlayerStart")) {
-	//		m_pPlayer->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
-	//	}
-	//
-	//	if (ImGui::BeginTabBar("Debug")) {
-	//		if (ImGui::BeginTabItem("Player")) {
-	//			if (auto pPlayer = std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
-	//				ImGui::Text("Press `(~) to use mouse control");
-	//				ImGui::Text("Mouse : %s", pPlayer->IsMouseOn() ? "ON" : "OFF");
-	//
-	//				ImGui::Text("Move Speed : %f\n", pPlayer->GetMoveSpeed());
-	//
-	//				const Vector3& v3PlayerMoveDirection = pPlayer->GetMoveDirection();
-	//				ImGui::Text("Move Direction : (%f, %f, %f)", v3PlayerMoveDirection.x, v3PlayerMoveDirection.y, v3PlayerMoveDirection.z);
-	//
-	//				const auto& transform = pPlayer->GetTransform();
-	//				Vector3 v3PlayerPos = transform->GetPosition();
-	//				ImGui::Text("Player Position : (%f, %f, %f)", v3PlayerPos.x, v3PlayerPos.y, v3PlayerPos.z);
-	//
-	//				ImGui::Text("====== Collision Result ======");
-	//				for (const auto& pair : m_pCollisionPairs) {
-	//					ImGui::Text("Collision {%s : %s}", pair.pSelf->GetName().c_str(), pair.pOther->GetName().c_str());
-	//				}
-	//
-	//			}
-	//			else {
-	//				ImGui::Text("No Animation");
-	//			}
-	//			ImGui::EndTabItem();
-	//		}
-	//		if (ImGui::BeginTabItem("Lights")) {
-	//			ImGui::Text("Elapsed TIme : %f", TIME->GetTimeElapsed());
-	//			ImGui::Text("Total TIme : %f", TIME->GetTotalTime());
-	//
-	//			float fAmbient = m_v4GlobalAmbient.x;
-	//			ImGui::DragFloat("GlobalAmbient", (float*)&fAmbient, 0.001f, 0.f, 1.f);
-	//			m_v4GlobalAmbient = XMVectorReplicate(fAmbient);
-	//			ImGui::Text("NumLights : %d", m_pLights.size());
-	//			for (uint32 i = 0; i < m_pLights.size(); ++i) {
-	//				if (ImGui::TreeNode(std::format("Index : {}", i).c_str())) {
-	//					m_pLights[i]->ShowControllImGui();
-	//					ImGui::TreePop();
-	//				}
-	//			}
-	//			ImGui::EndTabItem();
-	//		}
-	//		if (ImGui::BeginTabItem("Skybox")) {
-	//			if (m_pSkybox) {
-	//				m_pSkybox->ShowControllImGui();
-	//			}
-	//			ImGui::EndTabItem();
-	//		}
-	//
-	//		if (ImGui::BeginTabItem("Objects")) {
-	//			for (const auto& pObj : m_World.GetObjects<StaticObject>()) {
-	//				if (ImGui::TreeNode(pObj->GetName().c_str())) {
-	//					auto pTransform = pObj->GetTransform();
-	//					const Vector3 v3Position = pTransform->GetPosition();
-	//					ImGui::Text("Position : (%f, %f, %f)", v3Position.x, v3Position.y, v3Position.z);
-	//
-	//					pObj->ShowControlImGui();
-	//
-	//					ImGui::TreePop();
-	//				}
-	//			}
-	//
-	//			ImGui::EndTabItem();
-	//		}
-	//
-	//		if (ImGui::BeginTabItem("Terrain")) {
-	//			ImGui::DragFloat3("Terrain Position", (float*)&v3TerrainPos, 0.1f);
-	//			ImGui::DragFloat3("Terrain Rotation", (float*)&v3TerrainRotation, 0.1f);
-	//
-	//			m_pTerrain->GetTransform()->SetPosition(v3TerrainPos);
-	//			m_pTerrain->GetTransform()->SetRotation(v3TerrainRotation);
-	//
-	//			ImGui::EndTabItem();
-	//		}
-	//
-	//		ImGui::EndTabBar();
-	//	}
-	//
-	//}
-	//ImGui::End();
-
-	// ── 좀비 네트워크 디버그 ────────────────────────────────────────────────
-	//ImGui::Begin("Zombie Network Debug");
-	//{
-	//	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
-	//	ImGui::Text("Online: %s", bOnline ? "YES" : "NO");
-	//	ImGui::Text("Connected: %s", NETWORK->IsConnected() ? "YES" : "NO");
-	//	ImGui::Text("Offline: %s", NETWORK->IsOffline() ? "YES" : "NO");
-	//	ImGui::Text("Pool Active: %d / Free: %d", m_ZombiePool.GetActiveCount(), m_ZombiePool.GetFreeCount());
-	//	ImGui::Text("ServerZombies map: %d", (int)m_ServerZombies.size());
-	//	for (auto& [nId, pZ] : m_ServerZombies)
-	//	{
-	//		if (!pZ) continue;
-	//		Vector3 v3Pos = pZ->GetTransform()->GetPosition();
-	//		ImGui::Text("  [%d] pos(%.0f, %.0f, %.0f) active=%d hp=%.0f",
-	//			nId, v3Pos.x, v3Pos.y, v3Pos.z, pZ->IsPoolActive() ? 1 : 0, pZ->GetHP());
-	//	}
-	//}
-	//ImGui::End();
 
 	// ====== Test ======
 	ImGui::Begin("Test");
@@ -419,14 +303,11 @@ void GameScene::BuildPauseMenuUI()
 		m_pPauseMenuComponents.push_back(pComponent);
 	};
 
-	const float fScreenWidth = static_cast<float>(WinCore::g_dwClientWidth);
-	const float fScreenHeight = static_cast<float>(WinCore::g_dwClientHeight);
-
 	std::shared_ptr<ImageBox> pBackground = std::make_shared<ImageBox>("Color");
 	pBackground->SetLayer(0);
 	pBackground->SetAnchor(Vector2{ 0.5f, 0.5f });
 	pBackground->SetPivot(Vector2{ 0.5f, 0.5f });
-	pBackground->SetSize(Vector2{ fScreenWidth, fScreenHeight });
+	pBackground->SetFillScreen(true);
 	pBackground->SetColor(Vector4{ 0.0f, 0.0f, 0.0f, 0.72f });
 	fnAddPauseComponent(pBackground);
 
@@ -576,16 +457,14 @@ void GameScene::BuildEndCreditsUI()
 		L"",
 	};
 
-	const float fScreenWidth = static_cast<float>(WinCore::g_dwClientWidth);
-	const float fScreenHeight = static_cast<float>(WinCore::g_dwClientHeight);
-	const float fBaseY = fScreenHeight * 0.5f + 120.0f;
+	const float fBaseY = IUIComponent::g_fReferenceScreenHeight * 0.5f + 120.0f;
 
 	m_pEndBackgroundImage = std::make_shared<ImageBox>("Color");
 	m_pEndBackgroundImage->SetLayer(0);
 	m_pEndBackgroundImage->SetAnchor(Vector2{ 0.5f, 0.5f });
 	m_pEndBackgroundImage->SetPivot(Vector2{ 0.5f, 0.5f });
 	m_pEndBackgroundImage->SetPosition(Vector2{ 0.0f, 0.0f });
-	m_pEndBackgroundImage->SetSize(Vector2{ fScreenWidth, fScreenHeight });
+	m_pEndBackgroundImage->SetFillScreen(true);
 	m_pEndBackgroundImage->SetColor(Vector4{ 0.0f, 0.0f, 0.0f, 0.0f });
 	m_pUIBoard->InsertUI(m_pEndBackgroundImage);
 
@@ -627,17 +506,15 @@ void GameScene::UpdateEndCredits()
 		fScrollT = 1.0f;
 	}
 
-	const float fScreenWidth = static_cast<float>(WinCore::g_dwClientWidth);
-	const float fScreenHeight = static_cast<float>(WinCore::g_dwClientHeight);
+	const float fReferenceScreenHeight = IUIComponent::g_fReferenceScreenHeight;
 	const float fCreditHeight = END_CREDITS_FIRST_LINE_OFFSET_Y
 		+ static_cast<float>(m_pEndCreditTexts.size()) * END_CREDITS_LINE_HEIGHT
 		+ 120.0f;
-	const float fStartY = fScreenHeight * 0.5f + 120.0f;
-	const float fEndY = -fScreenHeight * 0.5f - fCreditHeight;
+	const float fStartY = fReferenceScreenHeight * 0.5f + 120.0f;
+	const float fEndY = -fReferenceScreenHeight * 0.5f - fCreditHeight;
 	const float fBaseY = fStartY + (fEndY - fStartY) * fScrollT;
 
 	if (m_pEndBackgroundImage) {
-		m_pEndBackgroundImage->SetSize(Vector2{ fScreenWidth, fScreenHeight });
 		m_pEndBackgroundImage->SetColor(Vector4{ 0.0f, 0.0f, 0.0f, fFadeT });
 	}
 

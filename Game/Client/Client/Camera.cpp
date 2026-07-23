@@ -280,6 +280,17 @@ void Camera::SetViewportsAndScissorRects(ComPtr<ID3D12GraphicsCommandList> pd3dC
 	pd3dCommandList->RSSetScissorRects(1, &m_d3dScissorRect);
 }
 
+void Camera::Resize(uint32 unWidth, uint32 unHeight)
+{
+	if (unWidth == 0 || unHeight == 0)
+		return;
+
+	m_fAspectRatio = static_cast<float>(unWidth) / static_cast<float>(unHeight);
+	SetViewport(0, 0, static_cast<int>(unWidth), static_cast<int>(unHeight));
+	SetScissorRect(0, 0, static_cast<LONG>(unWidth), static_cast<LONG>(unHeight));
+	RebuildProjectionMatrix();
+}
+
 CameraData Camera::MakeCBData() const
 {
 	CameraData camData{

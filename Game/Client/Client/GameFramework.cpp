@@ -66,6 +66,9 @@ void GameFramework::Update()
 
 	INPUT->Update();
 
+	if (INPUT->GetButtonDown(VK_F9)) {
+		WinCore::RequestToggleFullscreen();
+	}
 
 	const bool bWasAsyncLoading = SCENE->IsInAsyncSceneChanging();
 

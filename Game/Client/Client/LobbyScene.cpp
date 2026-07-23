@@ -275,6 +275,11 @@ void LobbyScene::ProcessInput()
 
 void LobbyScene::Update()
 {
+	if (INPUT->GetButtonDown(VK_ESCAPE)) {
+		SCENE->PopScene();
+		return;
+	}
+
 	if (m_pMainCamera != m_pViewCamera) {
 		m_pSwappedPlayerCamera = SwapCamera(m_pViewCamera);
 	}
@@ -408,7 +413,9 @@ void LobbyScene::Update()
 				float ndcY = clipPos.y / clipPos.w;
 				float screenX = (ndcX + 1.0f) * 0.5f * WinCore::g_dwClientWidth;
 				float screenY = (1.0f - ndcY) * 0.5f * WinCore::g_dwClientHeight;
-				preview.pNameTag->SetPosition(Vector2{ screenX, screenY });
+				preview.pNameTag->SetPosition(
+					IUIComponent::ScreenToReferencePosition(Vector2{ screenX, screenY })
+				);
 			}
 			else {
 				preview.pNameTag->SetPosition(Vector2{ -10000.f, -10000.f });

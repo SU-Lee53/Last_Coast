@@ -109,11 +109,13 @@ void MenuScene::Update()
 {
 	if (m_bProceed) {
 		// Proceed to LobbyScene
+		m_bProceed = false;
 		SCENE->PushScene<LobbyScene>();	// Test
 		return;
 	}
 
-	if (INPUT->GetButtonDown(VK_BACK)) {
+	if (INPUT->GetButtonDown(VK_ESCAPE)) {
 		SCENE->PopScene();
+		return;
 	}
 }

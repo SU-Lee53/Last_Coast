@@ -30,6 +30,7 @@ public:
 	template<typename T> requires std::derived_from<T, Scene>
 	void PushScene();
 	void PopScene() {
+		m_pSceneStack.back()->OnLeaveScene();
 		m_pSceneStack.pop_back();
 	}
 

@@ -51,7 +51,7 @@ using namespace std::string_literals;
 
 // D3D12
 #include <d3d12.h>
-#include <dxgi1_4.h>
+#include <dxgi1_5.h>
 #include <dxgidebug.h>
 #include <d3dx/d3dx12.h>
 

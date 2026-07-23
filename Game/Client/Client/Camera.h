@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 class Camera {
 public:
@@ -65,6 +65,8 @@ public:
 	void SetScissorRect(LONG xLeft, LONG yTop, LONG xRight, LONG yBottom);
 
 	virtual void SetViewportsAndScissorRects(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
+
+	void Resize(uint32 unWidth, uint32 unHeight);
 
 	CameraData MakeCBData() const;
 

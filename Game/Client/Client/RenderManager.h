@@ -52,7 +52,7 @@ struct GBuffer {
 	std::array<TextureRef<RenderTargetTexture>, GBuffer::g_unNumGBuffers> GBuffers;
 
 	void Initialize();
-
+	void Reset();
 };
 
 struct PostProcessingResources {
@@ -73,6 +73,7 @@ struct PostProcessingResources {
 	TextureRef<RWRenderTargetTexture> LuminanceFinalBuffer; // 1x1
 	
 	void Initialize();
+	void Reset();
 };
 
 constexpr UINT DESCRIPTOR_PER_DRAW = 100'000;
@@ -88,6 +89,8 @@ public:
 
 public:
 	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
+	bool Resize(uint32 unWidth, uint32 unHeight);
+
 	void BuildRenderGraph();
 	void Render();
 	void ShowDebugOptions();
@@ -204,6 +207,9 @@ private:
 	void CreateRenderTarget();
 	void CreateDepthStencil();
 
+	void CreateResolutionDependentResources();
+	void ReleaseResolutionDependentResources();
+
 private:
 	void Present();
 
@@ -230,6 +236,7 @@ private:
 	uint64 m_un64FenceValues								= 0;
 
 	uint32 m_unCurrentContextIndex = 0;
+	bool m_bAllowTearing = false;
 
 	// SRV - RTV/DSV
 	TextureRef<RenderTargetTexture> m_BackBufferIDs[g_unMaxPendingFrames];

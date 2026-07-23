@@ -39,8 +39,8 @@ public:
 		m_v2Anchor = Vector2{ 0,0 };
 		m_v2Pivot = Vector2{0.5f, 0.5f};
 		m_v2Position = Vector2{
-			static_cast<float>(WinCore::g_dwClientWidth) / 2.0f,
-			static_cast<float>(WinCore::g_dwClientHeight) / 2.0f
+			IUIComponent::g_fReferenceScreenWidth * 0.5f,
+			IUIComponent::g_fReferenceScreenHeight * 0.5f
 		};
 		m_v2Size = Vector2{ m_fDefaultSize, m_fDefaultSize };
 
@@ -80,8 +80,8 @@ public:
 		m_v2Anchor = Vector2{ 0,0 };
 		m_v2Pivot = Vector2{ 0.5f, 0.5f };
 		m_v2Position = Vector2{
-			static_cast<float>(WinCore::g_dwClientWidth) / 2.0f,
-			static_cast<float>(WinCore::g_dwClientHeight) / 2.0f
+			IUIComponent::g_fReferenceScreenWidth * 0.5f,
+			IUIComponent::g_fReferenceScreenHeight * 0.5f
 		};
 		m_v2Size = Vector2{ 30, 30 };
 

@@ -10,6 +10,10 @@ struct UIRectData
 
 interface IUIComponent abstract {
 public:
+	constexpr static float g_fReferenceScreenWidth = 1600.f;
+	constexpr static float g_fReferenceScreenHeight = 900.f;
+
+public:
 	virtual ~IUIComponent() = default;
 
 	virtual void Update() {};
@@ -21,6 +25,7 @@ public:
 	void SetPivot(const Vector2& v2Pivot) { m_v2Pivot = v2Pivot; }
 	void SetPosition(const Vector2& v2Pos) { m_v2Position = v2Pos; }
 	void SetSize(const Vector2& v2Size) { m_v2Size = v2Size; }
+	void SetFillScreen(bool bFillScreen) { m_bFillScreen = bFillScreen; }
 	void SetColor(const Vector4& v4Color) { m_v4Color = v4Color; }
 	void SetColor(const Vector3& v3Color) { m_v4Color = Vector4(v3Color.x, v3Color.y, v3Color.z, 1.f); }
 
@@ -61,6 +66,8 @@ public:
 
 	virtual void ShowControllImGui();
 
+public:
+	static Vector2 ScreenToReferencePosition(const Vector2& v2ScreenPosition);
 
 protected:
 	std::wstring m_strName;
@@ -75,6 +82,7 @@ protected:
 	Vector2 m_v2Size = Vector2{ 0.f, 0.f };		// 픽셀 크기
 
 	bool m_bVisible = true;
+	bool m_bFillScreen = false;
 
 };
 

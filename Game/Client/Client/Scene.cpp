@@ -478,6 +478,13 @@ TerrainHit Scene::QueryTerrainHit(const Vector3& v3WorldPos)
 
 std::shared_ptr<Camera> Scene::SwapCamera(std::shared_ptr<Camera>& pNewCamera)
 {
+	if (pNewCamera) {
+		pNewCamera->Resize(
+			WinCore::g_dwClientWidth,
+			WinCore::g_dwClientHeight
+		);
+	}
+
 	std::shared_ptr<Camera> pBefore = m_pMainCamera;
 	m_pMainCamera = pNewCamera;
 	return pBefore;

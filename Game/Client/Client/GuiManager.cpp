@@ -75,6 +75,50 @@ void GuiManager::Update()
 
 				ImGui::EndMenu();
 			}
+			if (ImGui::BeginMenu("Display")) {
+				const bool bFullscreen = WinCore::IsBorderlessFullscreen();
+
+				if (ImGui::MenuItem("Borderless Fullscreen", "F9", bFullscreen)) {
+					WinCore::RequestToggleFullscreen();
+				}
+
+				ImGui::Separator();
+				ImGui::TextDisabled("Windowed Resolution");
+
+				if (bFullscreen) {
+					ImGui::BeginDisabled();
+				}
+
+				const bool b1280x720 = !bFullscreen &&
+					WinCore::g_dwClientWidth == 1280 && WinCore::g_dwClientHeight == 720;
+				if (ImGui::MenuItem("1280 x 720", nullptr, b1280x720) && !b1280x720) {
+					WinCore::RequestResolution(1280, 720);
+				}
+
+				const bool b1600x900 = !bFullscreen &&
+					WinCore::g_dwClientWidth == 1600 && WinCore::g_dwClientHeight == 900;
+				if (ImGui::MenuItem("1600 x 900", nullptr, b1600x900) && !b1600x900) {
+					WinCore::RequestResolution(1600, 900);
+				}
+
+				const bool b1920x1080 = !bFullscreen &&
+					WinCore::g_dwClientWidth == 1920 && WinCore::g_dwClientHeight == 1080;
+				if (ImGui::MenuItem("1920 x 1080", nullptr, b1920x1080) && !b1920x1080) {
+					WinCore::RequestResolution(1920, 1080);
+				}
+
+				const bool b2560x1440 = !bFullscreen &&
+					WinCore::g_dwClientWidth == 2560 && WinCore::g_dwClientHeight == 1440;
+				if (ImGui::MenuItem("2560 x 1440", nullptr, b2560x1440) && !b2560x1440) {
+					WinCore::RequestResolution(2560, 1440);
+				}
+
+				if (bFullscreen) {
+					ImGui::EndDisabled();
+				}
+
+				ImGui::EndMenu();
+			}
 
 			ImGui::EndMainMenuBar();
 		}

@@ -22,6 +22,13 @@ void GBuffer::Initialize()
 	}
 }
 
+void GBuffer::Reset()
+{
+	for (auto& buffer : GBuffers) {
+		buffer = {};
+	}
+}
+
 void PostProcessingResources::Initialize()
 {
 	const DWORD nWidth = WinCore::g_dwClientWidth;
@@ -106,6 +113,24 @@ void PostProcessingResources::Initialize()
 
 }
 
+void PostProcessingResources::Reset()
+{
+	SSAOBuffer = {};
+	SSAOBlurBuffer = {};
+	LightShaftBuffer = {};
+
+	for (auto& buffer : BloomHalfBuffer)
+		buffer = {};
+	for (auto& buffer : BloomQuaterBuffer)
+		buffer = {};
+	for (auto& buffer : BloomEighthBuffer)
+		buffer = {};
+	for (auto& buffer : LuminanceBuffer)
+		buffer = {};
+
+	LuminanceFinalBuffer = {};
+}
+
 void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 {
 	m_pd3dDevice = pd3dDevice;
@@ -134,37 +159,51 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 	}
 
 
-	m_GBuffers.Initialize();
-	m_PostProcessingResources.Initialize();
-	{
-		m_HDRRenderTargetIDs[0] = TEXTURE->LoadRenderTargetTexture(
-			"HDR0" + std::to_string(0),
-			WinCore::g_dwClientWidth,
-			WinCore::g_dwClientHeight,
-			DXGI_FORMAT_R16G16B16A16_FLOAT,
-			DXGI_FORMAT_R16G16B16A16_FLOAT);
-
-		m_HDRRenderTargetIDs[1] = TEXTURE->LoadRenderTargetTexture(
-			"HDR1" + std::to_string(0),
-			WinCore::g_dwClientWidth,
-			WinCore::g_dwClientHeight,
-			DXGI_FORMAT_R16G16B16A16_FLOAT,
-			DXGI_FORMAT_R16G16B16A16_FLOAT);
-	}
-
-	{
-		m_LDRRenderTargetIDs = TEXTURE->LoadRenderTargetTexture(
-			"LDR" + std::to_string(0),
-			WinCore::g_dwClientWidth,
-			WinCore::g_dwClientHeight,
-			m_dxgiRenderTargetFormat,
-			m_dxgiRenderTargetFormat);
-	}
-
+	CreateResolutionDependentResources();
 
 	m_pQuadMesh = std::make_shared<QuadMesh>(-1, 1);
 
 	m_TextRenderer.Initialize(m_pd3dCommandQueue);
+}
+
+bool RenderManager::Resize(uint32 unWidth, uint32 unHeight)
+{
+	if (!m_pdxgiSwapChain || unWidth == 0 || unHeight == 0)
+		return false;
+
+	if (WinCore::g_dwClientWidth == unWidth &&
+		WinCore::g_dwClientHeight == unHeight)
+		return true;
+
+	WaitForGPUComplete();
+	ReleaseResolutionDependentResources();
+
+	UINT unSwapChainFlags = m_bAllowTearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
+	HRESULT hr = m_pdxgiSwapChain->ResizeBuffers(
+		g_unMaxPendingFrames,
+		unWidth,
+		unHeight,
+		DXGI_FORMAT_UNKNOWN,
+		unSwapChainFlags
+	);
+
+	if (FAILED(hr)) {
+		CreateRenderTarget();
+		CreateDepthStencil();
+		CreateResolutionDependentResources();
+		SHOW_ERROR("Failed to resize SwapChain");
+		return false;
+	}
+
+	WinCore::g_dwClientWidth = unWidth;
+	WinCore::g_dwClientHeight = unHeight;
+	m_unBackBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
+
+	CreateRenderTarget();
+	CreateDepthStencil();
+	CreateResolutionDependentResources();
+
+	return true;
 }
 
 void RenderManager::CreateGlobalRootSignature(ComPtr<ID3D12Device> pd3dDevice)
@@ -791,21 +830,36 @@ void RenderManager::CreateCommandQueueAndList()
 
 void RenderManager::CreateSwapChain()
 {
-	DXGI_SWAP_CHAIN_DESC1 dxgiSwapChainDesc;
-	dxgiSwapChainDesc.Width = WinCore::g_dwClientWidth;
-	dxgiSwapChainDesc.Height = WinCore::g_dwClientHeight;
-	dxgiSwapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	dxgiSwapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	dxgiSwapChainDesc.BufferCount = g_unMaxPendingFrames;
-	dxgiSwapChainDesc.SampleDesc.Count = 1;
-	dxgiSwapChainDesc.SampleDesc.Quality = 0;
-	dxgiSwapChainDesc.Scaling = DXGI_SCALING_NONE;
-	dxgiSwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	dxgiSwapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-	//dxgiSwapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING | DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-	dxgiSwapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+	ComPtr<IDXGIFactory4> pFactory = DXGI_FACTORY;
+	ComPtr<IDXGIFactory5> pFactory5;
 
-	DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc;
+	BOOL bAllowTearing = FALSE;
+	if (SUCCEEDED(pFactory.As(&pFactory5))) {
+		HRESULT hr = pFactory5->CheckFeatureSupport(
+			DXGI_FEATURE_PRESENT_ALLOW_TEARING,
+			&bAllowTearing,
+			sizeof(bAllowTearing)
+		);
+		m_bAllowTearing = SUCCEEDED(hr) && bAllowTearing;
+	}
+
+	DXGI_SWAP_CHAIN_DESC1 dxgiSwapChainDesc{};
+	{
+		dxgiSwapChainDesc.Width = WinCore::g_dwClientWidth;
+		dxgiSwapChainDesc.Height = WinCore::g_dwClientHeight;
+		dxgiSwapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		dxgiSwapChainDesc.Stereo = FALSE;
+		dxgiSwapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		dxgiSwapChainDesc.BufferCount = g_unMaxPendingFrames;
+		dxgiSwapChainDesc.SampleDesc.Count = 1;
+		dxgiSwapChainDesc.SampleDesc.Quality = 0;
+		dxgiSwapChainDesc.Scaling = DXGI_SCALING_NONE;
+		dxgiSwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+		dxgiSwapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+		dxgiSwapChainDesc.Flags = m_bAllowTearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
+	}
+
+	DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc{};
 	fsSwapChainDesc.Windowed = TRUE;
 
 	ComPtr<IDXGISwapChain1> pSwapChain1;
@@ -821,14 +875,17 @@ void RenderManager::CreateSwapChain()
 		SHOW_ERROR("Failed to create SwapChain");
 	}
 
-	pSwapChain1->QueryInterface(IID_PPV_ARGS(m_pdxgiSwapChain.GetAddressOf()));
+	hr = pSwapChain1->QueryInterface(IID_PPV_ARGS(m_pdxgiSwapChain.GetAddressOf()));
 	if (FAILED(hr)) {
 		SHOW_ERROR("Failed to create SwapChain QueryInterface");
 	}
 
 	m_unBackBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
-	DXGI_FACTORY->MakeWindowAssociation(WinCore::g_hWnd, DXGI_MWA_NO_ALT_ENTER);
+	hr = pFactory->MakeWindowAssociation(WinCore::g_hWnd, DXGI_MWA_NO_ALT_ENTER);
+	if (FAILED(hr)) {
+		SHOW_ERROR("Failed to disable DXGI Alt+Enter");
+	}
 }
 
 void RenderManager::CreateRenderTarget()
@@ -865,13 +922,58 @@ void RenderManager::CreateDepthStencil()
 	);
 }
 
+void RenderManager::CreateResolutionDependentResources()
+{
+	m_GBuffers.Initialize();
+	m_PostProcessingResources.Initialize();
+
+	m_HDRRenderTargetIDs[0] = TEXTURE->LoadRenderTargetTexture(
+		"HDR0" + std::to_string(0),
+		WinCore::g_dwClientWidth,
+		WinCore::g_dwClientHeight,
+		DXGI_FORMAT_R16G16B16A16_FLOAT,
+		DXGI_FORMAT_R16G16B16A16_FLOAT
+	);
+
+	m_HDRRenderTargetIDs[1] = TEXTURE->LoadRenderTargetTexture(
+		"HDR1" + std::to_string(0),
+		WinCore::g_dwClientWidth,
+		WinCore::g_dwClientHeight,
+		DXGI_FORMAT_R16G16B16A16_FLOAT,
+		DXGI_FORMAT_R16G16B16A16_FLOAT
+	);
+
+	m_LDRRenderTargetIDs = TEXTURE->LoadRenderTargetTexture(
+		"LDR" + std::to_string(0),
+		WinCore::g_dwClientWidth,
+		WinCore::g_dwClientHeight,
+		m_dxgiRenderTargetFormat,
+		m_dxgiRenderTargetFormat
+	);
+}
+
+void RenderManager::ReleaseResolutionDependentResources()
+{
+	for (auto& backBuffer : m_BackBufferIDs)
+		backBuffer = {};
+
+	m_DepthStencilID = {};
+	m_GBuffers.Reset();
+	m_PostProcessingResources.Reset();
+
+	for (auto& hdrBuffer : m_HDRRenderTargetIDs)
+		hdrBuffer = {};
+
+	m_LDRRenderTargetIDs = {};
+}
+
 void RenderManager::Present()
 {
 	// 0 : V-Sync OFF
 	// 1 : V-Sync ON
 	uint32 unSyncInterval = D3DCore::g_unSyncInterval;
 	uint32 unPresentFlags = 0;
-	if (!unSyncInterval) {
+	if (!unSyncInterval && m_bAllowTearing) {
 		// if V-Sync is OFF
 		unPresentFlags |= DXGI_PRESENT_ALLOW_TEARING;
 	}
