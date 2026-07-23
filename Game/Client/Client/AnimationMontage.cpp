@@ -305,7 +305,7 @@ void PlayerAnimationMontage::BuildMontage()
 	{
 		MontageSection fireSection{};
 		fireSection.strName = "Pistol Fire";
-		fireSection.pAnimationToPlay = ANIMATION->Get("Pistol Idle");
+		fireSection.pAnimationToPlay = ANIMATION->Get("Pistol Firing");
 		fireSection.eEndRule = MONTAGE_SECTION_END_RULE::NEXT;
 		m_MontageSections.push_back(fireSection);
 	}

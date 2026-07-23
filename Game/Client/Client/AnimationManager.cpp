@@ -17,6 +17,7 @@ void AnimationManager::LoadGameAnimations()
 	LoadAndAdd("Standing Melee Attack Horizontal");
 	LoadAndAdd("Reloading");
 	LoadAndAdd("Pistol Reloading");
+	LoadAndAdd("Pistol Firing");
 	LoadAndAdd("Drawing Pistol");	// 무기 교체(꺼내기) 모션 — 권총
 	LoadAndAdd("Drawing Rifle");	// 무기 교체(꺼내기) 모션 — 주무기(라이플류)
 
