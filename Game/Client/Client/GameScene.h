@@ -141,6 +141,10 @@ private:
 	std::unordered_set<int> m_DeadPlayers;       // 죽어있는 리모트 (관전 후보 제외)
 	std::shared_ptr<TextBox> m_pSpectateText;    // 우상단 관전/부활 HUD
 
+	// 리모트 스폰 시각 — 접속 직후 도착하는 초기 무기 장착 브로드캐스트에
+	// 드로우 모션이 재생되지 않도록 유예 판정에 사용 (무기 자체는 항상 갱신)
+	std::unordered_map<int, float> m_RemoteSpawnTimes;
+
 	// ── 채팅 UI ──────────────────────────────────────────────────────────────
 	static constexpr int    CHAT_VISIBLE_LINES = 8;     // 화면에 표시할 히스토리 줄 수
 	static constexpr size_t CHAT_MAX_HISTORY   = 100;   // 보관할 누적 라인 수

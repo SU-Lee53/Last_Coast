@@ -482,12 +482,25 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		if (size < static_cast<int>(sizeof(S2C_PlayerWeapon))) return;
 		auto* p = reinterpret_cast<const S2C_PlayerWeapon*>(data);
 		m_PendingPlayerWeapons.push(WeaponChangeEvent{ p->playerId, p->weaponType });
+		{
+			// 방 스냅샷도 갱신 — 안 하면 게임씬 리모트 스폰이 입장 시점의 낡은 무기로
+			// 생성되고, 직후 초기 장착 브로드캐스트와 타입이 달라 불필요한 드로우 모션 재생
+			std::lock_guard<std::mutex> lk(m_RoomPlayersMutex);
+			if (auto it = m_RoomPlayers.find(p->playerId); it != m_RoomPlayers.end())
+				it->second.weaponType = p->weaponType;
+		}
 		break;
 	}
 	case S2C_PLAYER_CHARACTER: {
 		if (size < static_cast<int>(sizeof(S2C_PlayerCharacter))) return;
 		auto* p = reinterpret_cast<const S2C_PlayerCharacter*>(data);
 		m_PendingPlayerCharacters.push(CharacterChangeEvent{ p->playerId, p->characterType });
+		{
+			// 무기와 동일 — 스냅샷이 낡으면 게임씬 스폰 모델이 로비 선택과 어긋난다
+			std::lock_guard<std::mutex> lk(m_RoomPlayersMutex);
+			if (auto it = m_RoomPlayers.find(p->playerId); it != m_RoomPlayers.end())
+				it->second.characterType = p->characterType;
+		}
 		break;
 	}
 	case S2C_GAME_EVENT: {

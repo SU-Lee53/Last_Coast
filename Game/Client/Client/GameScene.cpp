@@ -381,6 +381,11 @@ void GameScene::Update()
 			if (m_pLoadWaitText) {
 				m_pLoadWaitText->SetVisible(false);
 			}
+			// 장벽 해제 직후 유예 갱신 — 느리게 로딩한 플레이어의 초기 무기 장착
+			// 브로드캐스트가 이제야 소비될 수 있어, 드로우 모션 억제 창을 다시 연다
+			const float fNow = NetworkManager::GetNetTimeSec();
+			for (auto& [id, fSpawnTime] : m_RemoteSpawnTimes)
+				fSpawnTime = fNow;
 		}
 	}
 
@@ -1786,6 +1791,7 @@ void GameScene::SyncSceneWithServer()
 			remotePlayer->SetPlayerModel(GameContext::g_strCharacterNames[ev.characterType]);
 		AddObject(remotePlayer);
 		m_RemotePlayers[ev.playerId] = remotePlayer;
+		m_RemoteSpawnTimes[ev.playerId] = NetworkManager::GetNetTimeSec();
 	}
 
 	for (auto id : NETWORK->ConsumePlayerLeaves()) {
@@ -1797,6 +1803,7 @@ void GameScene::SyncSceneWithServer()
 		// 서버가 슬롯 id를 재사용하므로 사망 기록도 함께 제거 — 안 하면 같은 id로
 		// 들어온 새 플레이어가 관전 후보에서 영구 제외된다.
 		m_DeadPlayers.erase(id);
+		m_RemoteSpawnTimes.erase(id);
 	}
 
 	for (auto& ev : NETWORK->ConsumePlayerTransforms()) {
@@ -1820,9 +1827,17 @@ void GameScene::SyncSceneWithServer()
 		if (it != m_RemotePlayers.end()) {
 			const auto eType = static_cast<WEAPON_TYPE>(ev.weaponType);
 			if (it->second->GetCurrentWeaponType() == eType)
-				continue; // 접속 직후 초기 장착 브로드캐스트 — 이미 같은 무기라 꺼내기 모션 생략
+				continue; // 이미 같은 무기 — 꺼내기 모션 생략
 			it->second->GiveWeapon(eType);
-			it->second->PlayWeaponDrawAction();	// 리모트도 꺼내기 모션 동기화
+
+			// 스폰 직후 유예 시간 내 도착한 이벤트는 게임 시작 초기 장착 동기화
+			// (로비 마지막 브로드캐스트가 무기2였으면 스냅샷과 어긋날 수 있음) —
+			// 무기만 갈아끼우고 꺼내기 모션은 생략
+			auto itSpawn = m_RemoteSpawnTimes.find(ev.playerId);
+			const bool bJustSpawned = itSpawn != m_RemoteSpawnTimes.end()
+				&& NetworkManager::GetNetTimeSec() - itSpawn->second < 1.f;
+			if (!bJustSpawned)
+				it->second->PlayWeaponDrawAction();	// 리모트도 꺼내기 모션 동기화
 		}
 	}
 
