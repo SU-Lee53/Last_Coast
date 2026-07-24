@@ -152,6 +152,19 @@ struct EnvironmentPreset {
 	float fGamma             = 2.2f;
 	float fGradingStrength   = 0.0f;
 	float fTemperature       = 0.0f;
+	float fTint              = 0.0f;
+	float fGradingContrast   = 1.0f;
+	float fGradingSaturation = 1.0f;
+	float fGradingDensity    = 0.0f;
+	Vector3 v3ShadowTint     { 1.0f, 1.0f, 1.0f };
+	float fShadowWeight      = 0.0f;
+	Vector3 v3MidtoneTint    { 1.0f, 1.0f, 1.0f };
+	float fMidtoneWeight     = 0.0f;
+	Vector3 v3HighlightTint  { 1.0f, 1.0f, 1.0f };
+	float fHighlightWeight   = 0.0f;
+	Vector3 v3ColorFilter    { 1.0f, 1.0f, 1.0f };
+	float fColorFilterStrength = 0.0f;
+	float fBlackLift         = 0.0f;
 	int   nEnableAutoExposure = 1;     // 즉시 적용(lerp 안 함). 0 = 수동 노출(룩 연출용)
 	bool  bAffectToneMapperMode = false;
 	int   nToneMapperMode    = 1;     // 0=AgX, 1=ACES, 2=UC2, 3=GT. 모드는 이산값이라 lerp 대신 전환 시작 시 적용.
@@ -159,11 +172,21 @@ struct EnvironmentPreset {
 	// 블룸
 	float fBloomThreshold    = 1.0f;
 	float fBloomIntensity    = 0.6f;
+	float fBloomRadius       = 1.0f;
 
 	// 스크린 FX
 	float fGrainStrength     = 0.015f;
+	float fGrainScale        = 1.0f;
 	float fVignetteStrength  = 0.25f;
 	float fVignetteRadius    = 0.75f;
+	float fVignetteSoftness  = 0.45f;
+
+	// 라이트 샤프트
+	bool  bEnableLightShaft    = true;
+	float fLightShaftIntensity = 0.65f;
+	float fLightShaftDensity   = 0.85f;
+	float fLightShaftWeight    = 0.08f;
+	float fLightShaftExposure  = 1.0f;
 
 	// 안개
 	Vector4 v4FogColor       { 0.62f, 0.68f, 0.72f, 1.0f };
@@ -180,6 +203,8 @@ struct EnvironmentPreset {
 	// 스카이박스 시간 (0~24 hour). bAffectTime=false 면 시간은 건드리지 않음.
 	bool  bAffectTime        = false;
 	float fTimeOfDayHour     = 12.0f;
+	float fMoonIntensity     = 1.2f;
+	float fSkyAmbientIntensity = 0.08f;
 
 	// true 이고 bAffectTime 일 때: 전환 동안 시네마틱 카메라가 태양을 바라봄(해질녘 연출).
 	// 연출 끝나면 원래 카메라로 복구. (플레이어 입력은 전환 동안 카메라에 미반영)

@@ -110,67 +110,168 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 		return p;
 	}();
 
-	// EP_NIGHT — 시간 밤으로 + 앰비언트 어둡게 + 차가운 안개.
+	// EP_NIGHT — 챕터 1. 새벽 2시의 일반적인 좀비 액션 룩.
 	static const EnvironmentPreset NIGHT = [] {
 		EnvironmentPreset p;
 		p.bAffectTime        = true;
-		p.fTimeOfDayHour     = 2.0f;    // 자정
+		p.fTimeOfDayHour     = 2.0f;
 		p.bAffectAmbient     = true;
-		p.v4GlobalAmbient    = Vector4{ 0.03f, 0.04f, 0.07f, 1.0f };
-		p.fPostSaturation    = 0.75f;
-		p.fGradingStrength   = 0.45f;
-		p.fTemperature       = -0.20f;
-		p.fGrainStrength     = 0.015;
-		p.v4FogColor         = Vector4{ 0.06f, 0.08f, 0.14f, 1.0f };
-		p.fFogStartDistance       = 200.f;
-		p.fFogCutOffDistance      = 9000.f;
-		p.fFogDistanceDensity     = 0.010f;
-		p.fFogDistancePower       = 1.15f;
-		p.fFogHeightDensity       = 0.030f;
-		p.fFogHeightFalloff       = 0.055f;
-		p.fFogBaseHeightOffset    = -80.f;
-		p.fFogHeightStartDistance = 0.f;
-		p.fFogMaxOpacity          = 0.01f;
+		p.v4GlobalAmbient    = Vector4{ 0.070f, 0.080f, 0.12f, 1.0f };
+		p.fExposure          = 1.18f;
+		p.fPostSaturation    = 0.92f;
+		p.fOutputScale       = 1.08f;
+		p.fGradingStrength   = 0.68f;
+		p.fTemperature       = -0.18f;
+		p.fGradingContrast   = 1.08f;
+		p.fGradingSaturation = 0.94f;
+		p.v3ShadowTint       = Vector3{ 0.76f, 0.88f, 1.14f };
+		p.fShadowWeight      = 0.32f;
+		p.v3MidtoneTint      = Vector3{ 0.92f, 0.97f, 1.08f };
+		p.fMidtoneWeight     = 0.18f;
+		p.v3HighlightTint    = Vector3{ 0.88f, 0.96f, 1.16f };
+		p.fHighlightWeight   = 0.18f;
+		p.v3ColorFilter      = Vector3{ 0.86f, 0.94f, 1.12f };
+		p.fColorFilterStrength = 0.18f;
+		p.nEnableAutoExposure = 0;
+		p.bAffectToneMapperMode = true;
+		p.nToneMapperMode    = static_cast<int>(TONE_MAPPING_MODE::ACES);
+		p.fBloomThreshold    = 1.00f;
+		p.fBloomIntensity    = 0.58f;
+		p.fBloomRadius       = 0.85f;
+		p.fGrainStrength     = 0.018f;
+		p.fGrainScale        = 1.15f;
+		p.fVignetteStrength  = 0.30f;
+		p.fVignetteRadius    = 0.80f;
+		p.fVignetteSoftness  = 0.48f;
+		p.fLightShaftIntensity = 0.20f;
+		p.fLightShaftDensity   = 0.70f;
+		p.fLightShaftWeight    = 0.05f;
+		p.fLightShaftExposure  = 0.75f;
+		p.v4FogColor              = Vector4{ 0.075f, 0.095f, 0.14f, 1.0f };
+		p.fFogStartDistance       = 1400.f;
+		p.fFogCutOffDistance      = 11000.f;
+		p.fFogDistanceDensity     = 0.0040f;
+		p.fFogDistancePower       = 1.35f;
+		p.fFogHeightDensity       = 0.006f;
+		p.fFogHeightFalloff       = 0.070f;
+		p.fFogBaseHeightOffset    = -120.f;
+		p.fFogHeightStartDistance = 800.f;
+		p.fFogMaxOpacity          = 0.15f;
+		p.fMoonIntensity          = 3.8f;
+		p.fSkyAmbientIntensity    = 0.32f;
 		return p;
 	}();
 
-	// EP_DAWN — 시간 새벽으로 + 따뜻한 톤.
+	// EP_DAWN — 챕터 2. 시야가 강하게 제한되는 음산한 사고 차량 구역.
 	static const EnvironmentPreset DAWN = [] {
 		EnvironmentPreset p;
 		p.bAffectTime        = true;
-		p.fTimeOfDayHour     = 4.0f;   // ~06시
+		p.fTimeOfDayHour     = 3.5f;
 		p.bAffectAmbient     = true;
-		p.v4GlobalAmbient    = Vector4{ 0.18f, 0.14f, 0.12f, 1.0f };
-		p.fExposure          = 1.1f;
-		p.fGradingStrength   = 0.25f;
-		p.fTemperature       = -0.18f;
-		p.fGrainStrength     = 0.03;
-		p.v4FogColor         = Vector4{ 0.7f, 0.7f, 0.9f, 1.0f };
-		p.fFogStartDistance       = 180.f;
-		p.fFogCutOffDistance      = 1000.f;
-		p.fFogDistanceDensity     = 0.0500f;
-		p.fFogDistancePower       = 1.0f;
-		p.fFogHeightDensity       = 0.033f;
-		p.fFogHeightFalloff       = 0.040f;
-		p.fFogBaseHeightOffset    = 0.f;
-		p.fFogHeightStartDistance = 0.f;
-		p.fFogMaxOpacity          = 0.3f;
+		p.v4GlobalAmbient    = Vector4{ 0.085f, 0.090f, 0.085f, 1.0f };
+		p.fExposure          = 0.90f;
+		p.fPostSaturation    = 0.78f;
+		p.fOutputScale       = 0.94f;
+		p.fGamma             = 2.25f;
+		p.fGradingStrength   = 0.84f;
+		p.fTemperature       = -0.07f;
+		p.fTint              = 0.01f;
+		p.fGradingContrast   = 0.97f;
+		p.fGradingSaturation = 0.78f;
+		p.fGradingDensity    = 0.025f;
+		p.v3ShadowTint       = Vector3{ 0.84f, 0.89f, 0.96f };
+		p.fShadowWeight      = 0.30f;
+		p.v3MidtoneTint      = Vector3{ 0.93f, 0.95f, 0.92f };
+		p.fMidtoneWeight     = 0.24f;
+		p.v3HighlightTint    = Vector3{ 1.03f, 1.00f, 0.90f };
+		p.fHighlightWeight   = 0.20f;
+		p.v3ColorFilter      = Vector3{ 0.92f, 0.93f, 0.87f };
+		p.fColorFilterStrength = 0.20f;
+		p.fBlackLift         = 0.018f;
+		p.nEnableAutoExposure = 0;
+		p.bAffectToneMapperMode = true;
+		p.nToneMapperMode    = static_cast<int>(TONE_MAPPING_MODE::ACES);
+		p.fBloomThreshold    = 0.92f;
+		p.fBloomIntensity    = 0.56f;
+		p.fBloomRadius       = 1.30f;
+		p.fGrainStrength     = 0.055f;
+		p.fGrainScale        = 2.20f;
+		p.fVignetteStrength  = 0.46f;
+		p.fVignetteRadius    = 0.68f;
+		p.fVignetteSoftness  = 0.48f;
+		p.fLightShaftIntensity = 0.08f;
+		p.fLightShaftDensity   = 0.45f;
+		p.fLightShaftWeight    = 0.025f;
+		p.fLightShaftExposure  = 0.50f;
+		p.v4FogColor              = Vector4{ 0.38f, 0.43f, 0.41f, 1.0f };
+		p.fFogStartDistance       = 650.f;
+		p.fFogCutOffDistance      = 3400.f;
+		p.fFogDistanceDensity     = 0.029f;
+		p.fFogDistancePower       = 0.85f;
+		p.fFogHeightDensity       = 0.0018f;
+		p.fFogHeightFalloff       = 0.010f;
+		p.fFogBaseHeightOffset    = 10.f;
+		p.fFogHeightStartDistance = 150.f;
+		p.fFogMaxOpacity          = 0.82f;
+		p.fMoonIntensity          = 2.6f;
+		p.fSkyAmbientIntensity    = 0.36f;
 		return p;
 	}();
 
-	// EP_SUNSET — 시간 저녁으로 + 따뜻한 안개 + 시네마틱 카메라가 지는 해를 바라봄.
+	// EP_SUNSET — 챕터 3. 해가 뜬 뒤 구조 헬기가 보이는 따뜻한 탈출 구역.
 	static const EnvironmentPreset SUNSET = [] {
 		EnvironmentPreset p;
 		p.bAffectTime        = true;
-		p.fTimeOfDayHour     = 6.5f;   // 18시 = 해가 정확히 지평선 (그 이상이면 땅 밑으로 꺼짐)
-		p.bWatchSun          = false;    // 전환 동안 카메라가 태양 추적
+		p.fTimeOfDayHour     = 6.5f;
+		p.bWatchSun          = false;
 		p.bAffectAmbient     = true;
-		p.v4GlobalAmbient    = Vector4{ 0.14f, 0.10f, 0.09f, 1.0f };
-		p.fExposure          = 1.05f;
-		p.fGradingStrength   = 0.24f;
-		p.fGrainStrength     = 0.008;
-		p.fTemperature       = 0.18f;
-		p.fFogMaxOpacity     = 0.0f;
+		p.v4GlobalAmbient    = Vector4{ 0.20f, 0.16f, 0.115f, 1.0f };
+		p.fExposure          = 1.18f;
+		p.fPostSaturation    = 1.08f;
+		p.fOutputScale       = 1.08f;
+		p.fGamma             = 2.20f;
+		p.fGradingStrength   = 0.82f;
+		p.fTemperature       = 0.20f;
+		p.fTint              = 0.025f;
+		p.fGradingContrast   = 1.05f;
+		p.fGradingSaturation = 1.10f;
+		p.fGradingDensity    = -0.025f;
+		p.v3ShadowTint       = Vector3{ 0.94f, 0.92f, 0.86f };
+		p.fShadowWeight      = 0.16f;
+		p.v3MidtoneTint      = Vector3{ 1.06f, 1.00f, 0.88f };
+		p.fMidtoneWeight     = 0.28f;
+		p.v3HighlightTint    = Vector3{ 1.12f, 1.02f, 0.82f };
+		p.fHighlightWeight   = 0.42f;
+		p.v3ColorFilter      = Vector3{ 1.08f, 1.00f, 0.86f };
+		p.fColorFilterStrength = 0.24f;
+		p.fBlackLift         = 0.012f;
+		p.nEnableAutoExposure = 0;
+		p.bAffectToneMapperMode = true;
+		p.nToneMapperMode    = static_cast<int>(TONE_MAPPING_MODE::ACES);
+		p.fBloomThreshold    = 0.72f;
+		p.fBloomIntensity    = 0.95f;
+		p.fBloomRadius       = 1.30f;
+		p.fGrainStrength     = 0.006f;
+		p.fGrainScale        = 0.90f;
+		p.fVignetteStrength  = 0.10f;
+		p.fVignetteRadius    = 0.98f;
+		p.fVignetteSoftness  = 0.62f;
+		p.fLightShaftIntensity = 0.50f;
+		p.fLightShaftDensity   = 0.75f;
+		p.fLightShaftWeight    = 0.05f;
+		p.fLightShaftExposure  = 0.80f;
+		p.v4FogColor              = Vector4{ 0.58f, 0.48f, 0.34f, 1.0f };
+		p.fFogStartDistance       = 2800.f;
+		p.fFogCutOffDistance      = 15000.f;
+		p.fFogDistanceDensity     = 0.0025f;
+		p.fFogDistancePower       = 1.65f;
+		p.fFogHeightDensity       = 0.003f;
+		p.fFogHeightFalloff       = 0.080f;
+		p.fFogBaseHeightOffset    = -160.f;
+		p.fFogHeightStartDistance = 1800.f;
+		p.fFogMaxOpacity          = 0.10f;
+		p.fMoonIntensity          = 3.1f;
+		p.fSkyAmbientIntensity    = 0.301f;
 		return p;
 	}();
 
@@ -204,16 +305,39 @@ namespace {
 		p.fGamma             = tone.fGamma;
 		p.fGradingStrength   = tone.fGradingStrength;
 		p.fTemperature       = grading.fTemperature;
+		p.fTint              = grading.fTint;
+		p.fGradingContrast   = grading.fContrast;
+		p.fGradingSaturation = grading.fSaturation;
+		p.fGradingDensity    = grading.fDensity;
+		p.v3ShadowTint       = grading.v3ShadowTint;
+		p.fShadowWeight      = grading.fShadowWeight;
+		p.v3MidtoneTint      = grading.v3MidtoneTint;
+		p.fMidtoneWeight     = grading.fMidtoneWeight;
+		p.v3HighlightTint    = grading.v3HighlightTint;
+		p.fHighlightWeight   = grading.fHighlightWeight;
+		p.v3ColorFilter      = grading.v3ColorFilter;
+		p.fColorFilterStrength = grading.fColorFilterStrength;
+		p.fBlackLift         = grading.fBlackLift;
 		p.nEnableAutoExposure = tone.nEnableAutoExposure;
 		p.bAffectToneMapperMode = true;
 		p.nToneMapperMode    = static_cast<int>(pScene->GetToneMappingVolume().GetCurrentToneMapper());
 
 		p.fBloomThreshold    = bloom.fThreshold;
 		p.fBloomIntensity    = bloom.fIntensity;
+		p.fBloomRadius       = bloom.fRadius;
 
 		p.fGrainStrength     = fx.fGrainStrength;
+		p.fGrainScale        = fx.fGrainScale;
 		p.fVignetteStrength  = fx.fVignetteStrength;
 		p.fVignetteRadius    = fx.fVignetteRadius;
+		p.fVignetteSoftness  = fx.fVignetteSoftness;
+
+		const auto& lightShaft = pScene->GetPostProcessingVolume().GetLightShaftParameters();
+		p.bEnableLightShaft    = lightShaft.bEnable;
+		p.fLightShaftIntensity = lightShaft.fIntensity;
+		p.fLightShaftDensity   = lightShaft.fDensity;
+		p.fLightShaftWeight    = lightShaft.fWeight;
+		p.fLightShaftExposure  = lightShaft.fExposure;
 
 		p.v4FogColor              = fog.v4FogColor;
 		p.fFogStartDistance       = fog.fFogStartDistance;
@@ -228,6 +352,8 @@ namespace {
 
 		p.bAffectTime        = true;
 		p.fTimeOfDayHour     = pScene->GetSkybox() ? pScene->GetSkybox()->GetDayNightBlend() * 24.0f : 12.0f;
+		p.fMoonIntensity     = pScene->GetSkybox() ? pScene->GetSkybox()->GetMoonIntensity() : 1.2f;
+		p.fSkyAmbientIntensity = pScene->GetSkybox() ? pScene->GetSkybox()->GetAmbientIntensity() : 0.08f;
 
 		p.bAffectAmbient     = true;
 		p.v4GlobalAmbient    = pScene->GetGlobalAmbient();
@@ -242,6 +368,7 @@ namespace {
 		auto& grading = toneMapping.GetGradingParameters();
 		auto& bloom = pScene->GetPostProcessingVolume().GetBloomParameters();
 		auto& fx    = pScene->GetPostProcessingVolume().GetScreenFXParameters();
+		auto& lightShaft = pScene->GetPostProcessingVolume().GetLightShaftParameters();
 		auto& fog   = pScene->GetPostProcessingVolume().GetFogParameters();
 
 		tone.fExposure          = std::lerp(a.fExposure,         b.fExposure,         t);
@@ -250,18 +377,37 @@ namespace {
 		tone.fGamma             = std::lerp(a.fGamma,            b.fGamma,            t);
 		tone.fGradingStrength   = std::lerp(a.fGradingStrength,  b.fGradingStrength,  t);
 
-		const float fTemperature = std::lerp(a.fTemperature, b.fTemperature, t);
-		if (std::abs(grading.fTemperature - fTemperature) > 0.0001f) {
-			grading.fTemperature = fTemperature;
-			toneMapping.SetDirtyFlag(LUT_DIRTY_FLAG::GRADING, true);
-		}
+		grading.fTemperature       = std::lerp(a.fTemperature,             b.fTemperature,             t);
+		grading.fTint              = std::lerp(a.fTint,                    b.fTint,                    t);
+		grading.fContrast          = std::lerp(a.fGradingContrast,         b.fGradingContrast,         t);
+		grading.fSaturation        = std::lerp(a.fGradingSaturation,       b.fGradingSaturation,       t);
+		grading.fDensity           = std::lerp(a.fGradingDensity,          b.fGradingDensity,          t);
+		grading.v3ShadowTint       = Vector3::Lerp(a.v3ShadowTint,         b.v3ShadowTint,             t);
+		grading.fShadowWeight      = std::lerp(a.fShadowWeight,            b.fShadowWeight,            t);
+		grading.v3MidtoneTint      = Vector3::Lerp(a.v3MidtoneTint,        b.v3MidtoneTint,            t);
+		grading.fMidtoneWeight     = std::lerp(a.fMidtoneWeight,           b.fMidtoneWeight,           t);
+		grading.v3HighlightTint    = Vector3::Lerp(a.v3HighlightTint,      b.v3HighlightTint,          t);
+		grading.fHighlightWeight   = std::lerp(a.fHighlightWeight,         b.fHighlightWeight,         t);
+		grading.v3ColorFilter      = Vector3::Lerp(a.v3ColorFilter,        b.v3ColorFilter,            t);
+		grading.fColorFilterStrength = std::lerp(a.fColorFilterStrength,   b.fColorFilterStrength,     t);
+		grading.fBlackLift         = std::lerp(a.fBlackLift,               b.fBlackLift,               t);
+		toneMapping.SetDirtyFlag(LUT_DIRTY_FLAG::GRADING, true);
 
 		bloom.fThreshold        = std::lerp(a.fBloomThreshold,   b.fBloomThreshold,   t);
 		bloom.fIntensity        = std::lerp(a.fBloomIntensity,   b.fBloomIntensity,   t);
+		bloom.fRadius           = std::lerp(a.fBloomRadius,      b.fBloomRadius,      t);
 
 		fx.fGrainStrength       = std::lerp(a.fGrainStrength,    b.fGrainStrength,    t);
+		fx.fGrainScale          = std::lerp(a.fGrainScale,       b.fGrainScale,       t);
 		fx.fVignetteStrength    = std::lerp(a.fVignetteStrength, b.fVignetteStrength, t);
 		fx.fVignetteRadius      = std::lerp(a.fVignetteRadius,   b.fVignetteRadius,   t);
+		fx.fVignetteSoftness    = std::lerp(a.fVignetteSoftness, b.fVignetteSoftness, t);
+
+		lightShaft.bEnable      = b.bEnableLightShaft;
+		lightShaft.fIntensity   = std::lerp(a.fLightShaftIntensity, b.fLightShaftIntensity, t);
+		lightShaft.fDensity     = std::lerp(a.fLightShaftDensity,   b.fLightShaftDensity,   t);
+		lightShaft.fWeight      = std::lerp(a.fLightShaftWeight,    b.fLightShaftWeight,    t);
+		lightShaft.fExposure    = std::lerp(a.fLightShaftExposure,  b.fLightShaftExposure,  t);
 
 		fog.v4FogColor              = Vector4::Lerp(a.v4FogColor, b.v4FogColor, t);
 		fog.fFogStartDistance       = std::lerp(a.fFogStartDistance,       b.fFogStartDistance,       t);
@@ -274,8 +420,12 @@ namespace {
 		fog.fFogHeightStartDistance = std::lerp(a.fFogHeightStartDistance, b.fFogHeightStartDistance, t);
 		fog.fFogMaxOpacity          = std::lerp(a.fFogMaxOpacity,          b.fFogMaxOpacity,          t);
 
-		if (b.bAffectTime && pScene->GetSkybox()) {
-			pScene->GetSkybox()->SetTimeOfDayHours(std::lerp(a.fTimeOfDayHour, b.fTimeOfDayHour, t));
+		if (pScene->GetSkybox()) {
+			if (b.bAffectTime) {
+				pScene->GetSkybox()->SetTimeOfDayHours(std::lerp(a.fTimeOfDayHour, b.fTimeOfDayHour, t));
+			}
+			pScene->GetSkybox()->SetMoonIntensity(std::lerp(a.fMoonIntensity, b.fMoonIntensity, t));
+			pScene->GetSkybox()->SetAmbientIntensity(std::lerp(a.fSkyAmbientIntensity, b.fSkyAmbientIntensity, t));
 		}
 		if (b.bAffectAmbient) {
 			pScene->SetGlobalAmbient(Vector4::Lerp(a.v4GlobalAmbient, b.v4GlobalAmbient, t));

@@ -27,9 +27,13 @@ public:
 
 	void SetDayNightBlend(float fTime) { m_fTimeOfDayHours = std::clamp(fTime, 0.0f, 1.0f) * 24.0f; }
 	void SetTimeOfDayHours(float fHours) { m_fTimeOfDayHours = NormalizeTimeOfDayHours(fHours); }
+	void SetMoonIntensity(float fIntensity) { m_fMoonIntensity = std::max(0.0f, fIntensity); }
+	void SetAmbientIntensity(float fIntensity) { m_fAmbientIntensity = std::max(0.0f, fIntensity); }
 
 	// 현재 시간(0~1, SetDayNightBlend 와 동일 스케일). 환경 프리셋 페이드 시작값 캡처용.
 	float GetDayNightBlend() const { return m_fTimeOfDayHours / 24.0f; }
+	float GetMoonIntensity() const { return m_fMoonIntensity; }
+	float GetAmbientIntensity() const { return m_fAmbientIntensity; }
 
 	// 하늘에서 태양 쪽을 가리키는 단위벡터(시간에 따라 갱신됨). 해질녘 카메라 연출용.
 	const Vector3& GetSunDirection() const { return m_v3SunDirection; }

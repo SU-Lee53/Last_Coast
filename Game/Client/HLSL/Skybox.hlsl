@@ -302,16 +302,14 @@ float3 ApplyCloudScattering(float3 cloudColor, float3 skyColor, float3 dir, floa
 
 float ComputeSkyFogFactor(float3 dir)
 {
-	float fHorizon = 1.0f - abs(dir.y);
-	fHorizon = saturate(fHorizon);
-	fHorizon = pow(fHorizon, 1.5f);
+	float fHorizon = 1.0f - smoothstep(0.12f, 0.60f, abs(dir.y));
 	
 	float fLower = saturate((-dir.y + 1.0f) * 0.5f);
 	fLower = pow(fLower, 1.25f);
 	
 	float fFogStrength = saturate(gfFogDistanceDensity * 100.f + gfFogHeightDensity * 10.f);
 	
-	float fFogFactor = fHorizon * 0.75f + fLower * 0.25f;
+	float fFogFactor = saturate(fHorizon + fLower * 0.20f);
 	fFogFactor *= lerp(0.35f, 1.0f, fFogStrength);
 	
 	return saturate(fFogFactor);
@@ -439,6 +437,7 @@ float4 PSCelestialDisk(VS_SKYBOX_OUTPUT input) : SV_Target
 	color += moonColor * moonGlow * moonVisible * 0.05f;
 	color += moonColor * moonCore * moonVisible;
 
-	color = ApplySkyFog(color, dir, 0.35f);
+	float fFogOpacity = ComputeSkyFogFactor(dir) * gfFogMaxOpacity * 0.35f;
+	color *= 1.0f - saturate(fFogOpacity);
 	return float4(color, 1.f);
 }

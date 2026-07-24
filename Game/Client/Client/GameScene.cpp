@@ -61,6 +61,7 @@ void GameScene::BuildObjects()
 
 	m_ToneMappingVolume.LoadFromFiles("Start");
 	m_PostProcessingVolume.LoadFromFiles("Start");
+	m_pEventSequence->AddEvent(std::make_shared<EnvironmentTransitionEvent>(GetEnvironmentPreset(EP_NIGHT), 0.f));
 }
 
 void GameScene::FinalizeBuild()

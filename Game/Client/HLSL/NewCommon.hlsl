@@ -713,7 +713,8 @@ float ComputeDistanceFogFactor(float3 worldPos)
 	float fViewDepth = ComputeViewDepth(worldPos);
 	float t = saturate((fViewDepth - gfFogStartDistance) / max(1e-4f, gfFogCutOffDistance - gfFogStartDistance));
 	t = t * t * (3.0f - 2.0f * t);
-	return t;
+	t = pow(t, max(gFogDistancePower, 1e-4f));
+	return 1.0f - exp(-max(gfFogDistanceDensity, 0.0f) * t * 100.0f);
 }
 
 float ComputeHeightFogFactor(float3 worldPos)

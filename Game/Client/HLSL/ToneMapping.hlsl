@@ -104,9 +104,6 @@ float4 PSToneMapping(VS_QUAD_OUTPUT input) : SV_Target0
 	finalColor *= gfOutputScale;
 	
 	// Apply ScreenFX(Grain, Vignette)
-	finalColor = ApplySaturation(finalColor, gfPostSaturation);
-	finalColor *= gfOutputScale;
-
 	float vignette = ComputeVignette(input.uv);
 	finalColor *= vignette;
 
