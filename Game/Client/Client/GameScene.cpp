@@ -191,7 +191,9 @@ void GameScene::Update()
 		m_bReturnToMenu = false;
 		m_bRestoreMouseLook = false;
 		SetPauseMenuOpen(false);
-		SCENE->ChangeScene<MenuScene>();
+		SCENE->PopScene();
+		SCENE->PushScene<LogInScene>();
+		SCENE->PushScene<MenuScene>();
 		return;
 	}
 	UpdateAmbience();
