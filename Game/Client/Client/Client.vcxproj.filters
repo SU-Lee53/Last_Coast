@@ -561,6 +561,9 @@
     <ClInclude Include="DeferredFogPass.h">
       <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
     </ClInclude>
+    <ClInclude Include="AtmosphericFogDetailPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
+    </ClInclude>
     <ClInclude Include="ToneMappingPass.h">
       <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
     </ClInclude>
@@ -1012,6 +1015,9 @@
     <ClCompile Include="DeferredFogPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
     </ClCompile>
+    <ClCompile Include="AtmosphericFogDetailPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
+    </ClCompile>
     <ClCompile Include="ToneMappingPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses\PostProcessing</Filter>
     </ClCompile>
@@ -1128,6 +1134,9 @@
     </FxCompile>
     <FxCompile Include="..\HLSL\AutoExposure.hlsl">
       <Filter>03.Engine\HLSL\Compute</Filter>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\AtmosphericFogDetail.hlsl">
+      <Filter>03.Engine\HLSL\Graphics</Filter>
     </FxCompile>
     <FxCompile Include="..\HLSL\LightShaft.hlsl">
       <Filter>03.Engine\HLSL\Graphics</Filter>

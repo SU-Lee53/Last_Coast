@@ -12,6 +12,7 @@
 #include "AutoExposurePass.h"
 #include "LightShaftPass.h"
 #include "DeferredFogPass.h"
+#include "AtmosphericFogDetailPass.h"
 #include "BoundingBoxDebugPass.h"
 #include "NavMeshDebugPass.h"
 #include "UIPass.h"
@@ -33,8 +34,8 @@ void RenderGraph::BuildGraph()
 	// HDR[0] : GBufferPass -> DefferedLightingPass
 	// DefferedLightingPass 를 지나면 HDR0 이 gtxtHDRResult(Root Param 4) 에 바인딩
 	// 
-	// HDR[1] : DefferedForPass -> TransparentForwardPass -> SkyboxPass
-	// SkyBoxPass 를 지나면 HDR1 이 gtxtHDRResult(Root Param 4) 에 바인딩
+	// HDR[1] : DefferedFogPass -> TransparentForwardPass -> SkyboxPass -> ParticlePass
+	// AtmosphericFogDetailPass 는 HDR0 에 결과를 쓴 뒤 HDR1 로 복사해 후속 패스 입력을 유지
 
 
 	std::shared_ptr<IRenderPass> pDirectionalCascadeShadowMapPass = std::make_shared<DirectionalCascadeShadowMapPass>();
@@ -73,6 +74,10 @@ void RenderGraph::BuildGraph()
 	pParticlePass->Initialize();
 	m_pAdjLists.push_back(pParticlePass);
 
+	std::shared_ptr<IRenderPass> pAtmosphericFogDetailPass = std::make_shared<AtmosphericFogDetailPass>();
+	pAtmosphericFogDetailPass->Initialize();
+	m_pAdjLists.push_back(pAtmosphericFogDetailPass);
+
 	std::shared_ptr<BloomPass> pBloomPass = std::make_shared<BloomPass>();
 	pBloomPass->Initialize();
 	m_pAdjLists.push_back(pBloomPass);
@@ -109,6 +114,7 @@ void RenderGraph::BuildGraph()
 		5. Forward Lighting pass
 		6. Skybox pass
 		7. Particle pass
+		8. Atmospheric Fog Detail pass
 		
 		+ 2026.05.16
 		+ Bloom
@@ -116,8 +122,8 @@ void RenderGraph::BuildGraph()
 		+ 2026.05.22
 		+ Auto Exposure luminance
 
-		8. Tone Mapping & Grading pass
-		9. UI pass
+		9. Tone Mapping & Grading pass
+		10. UI pass
 	*/
 
 	pDirectionalCascadeShadowMapPass->Connect(pGBufferPass);
@@ -128,7 +134,8 @@ void RenderGraph::BuildGraph()
 	pTransparentForwardPass->Connect(pSkyboxPass);
 	pSkyboxPass->Connect(pLightShaftPass);
 	pLightShaftPass->Connect(pParticlePass);
-	pParticlePass->Connect(pBloomPass);
+	pParticlePass->Connect(pAtmosphericFogDetailPass);
+	pAtmosphericFogDetailPass->Connect(pBloomPass);
 	pBloomPass->Connect(pAutoExposurePass);
 	pAutoExposurePass->Connect(pToneMappingPass);
 	pToneMappingPass->Connect(pBoundingBoxDebugPass);
@@ -198,6 +205,7 @@ void RenderGraph::ShowDebugInfo() const
 		"SkyboxPass",
 		"LightShaftPass",
 		"ParticlePass",
+		"AtmosphericFogDetailPass",
 		"BloomPass",
 		"AutoExposurePass",
 		"ToneMappingPass",

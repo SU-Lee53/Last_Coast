@@ -164,6 +164,7 @@
     <ClInclude Include="AnimationMontage.h" />
     <ClInclude Include="AnimationStateMachine.h" />
     <ClInclude Include="AutoExposurePass.h" />
+    <ClInclude Include="AtmosphericFogDetailPass.h" />
     <ClInclude Include="BloodEffect.h" />
     <ClInclude Include="BloomPass.h" />
     <ClInclude Include="BoundingBoxDebugPass.h" />
@@ -363,6 +364,7 @@
     <ClCompile Include="AnimationMontage.cpp" />
     <ClCompile Include="AnimationStateMachine.cpp" />
     <ClCompile Include="AutoExposurePass.cpp" />
+    <ClCompile Include="AtmosphericFogDetailPass.cpp" />
     <ClCompile Include="BloodEffect.cpp" />
     <ClCompile Include="BloomPass.cpp" />
     <ClCompile Include="BoundingBoxDebugPass.cpp" />
@@ -498,6 +500,10 @@
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="..\HLSL\AutoExposure.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\HLSL\AtmosphericFogDetail.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>

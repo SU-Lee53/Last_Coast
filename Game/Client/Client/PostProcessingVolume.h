@@ -54,7 +54,14 @@ struct FogParameters {
 	float fFogHeightStartDistance = 0.0f;
 
 	float fFogMaxOpacity = 0.0f;
-	Vector3 pad = Vector3(0.0f);
+	float fFogDetailStrength = 0.0f;
+	float fFogDetailNoiseScale = 0.0005f;
+	float fFogDetailNoiseSpeed = 0.02f;
+
+	float fFogDetailHeightRange = 300.0f;
+	float fFogDetailDistanceStart = 500.0f;
+	float fFogDetailDirectionalScattering = 0.0f;
+	float pad = 0.0f;
 };
 
 struct CB_BLOOM_DATA {
@@ -119,7 +126,14 @@ struct CB_FOG_DATA
 	float gfFogHeightStartDistance;
 
 	float gfFogMaxOpacity;
-	Vector3 pad;
+	float gfFogDetailStrength;
+	float gfFogDetailNoiseScale;
+	float gfFogDetailNoiseSpeed;
+
+	float gfFogDetailHeightRange;
+	float gfFogDetailDistanceStart;
+	float gfFogDetailDirectionalScattering;
+	float pad;
 };
 
 struct PostProcessingParameters {

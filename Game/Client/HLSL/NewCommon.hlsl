@@ -218,7 +218,14 @@ cbuffer cbFogData : register(b3, space0)
 	float gfFogHeightStartDistance;
 
 	float gfFogMaxOpacity;
-	float3 _pad0;
+	float gfFogDetailStrength;
+	float gfFogDetailNoiseScale;
+	float gfFogDetailNoiseSpeed;
+
+	float gfFogDetailHeightRange;
+	float gfFogDetailDistanceStart;
+	float gfFogDetailDirectionalScattering;
+	float _pad0;
 };
 
 cbuffer cbToneMappingData : register(b4, space0)

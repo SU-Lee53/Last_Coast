@@ -229,6 +229,7 @@ void ShaderManager::CompileShaders()
 	// PostProcess
 	//Compile("DefferedFogVS", L"HDRPostProcessing.hlsl", L"VSDefferedFog", SHADER_TYPE::VS);
 	Compile("DefferedFogPS", L"HDRPostProcessing.hlsl", L"PSDefferedFog", SHADER_TYPE::PS);
+	Compile("AtmosphericFogDetailPS", L"AtmosphericFogDetail.hlsl", L"PSAtmosphericFogDetail", SHADER_TYPE::PS);
 
 	Compile("SSAOPS", L"SSAO.hlsl", L"PSSSAO", SHADER_TYPE::PS);
 	Compile("SSAOBilateralBlurPS", L"SSAO.hlsl", L"PSSSAOBilateralBlur", SHADER_TYPE::PS);

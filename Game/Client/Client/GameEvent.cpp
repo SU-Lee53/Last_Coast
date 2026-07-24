@@ -157,6 +157,12 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 		p.fFogBaseHeightOffset    = -120.f;
 		p.fFogHeightStartDistance = 800.f;
 		p.fFogMaxOpacity          = 0.15f;
+		p.fFogDetailStrength      = 0.055f;
+		p.fFogDetailNoiseScale    = 0.00035f;
+		p.fFogDetailNoiseSpeed    = 0.012f;
+		p.fFogDetailHeightRange   = 420.f;
+		p.fFogDetailDistanceStart = 1800.f;
+		p.fFogDetailDirectionalScattering = 0.10f;
 		p.fMoonIntensity          = 3.8f;
 		p.fSkyAmbientIntensity    = 0.32f;
 		return p;
@@ -213,6 +219,12 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 		p.fFogBaseHeightOffset    = 10.f;
 		p.fFogHeightStartDistance = 150.f;
 		p.fFogMaxOpacity          = 0.82f;
+		p.fFogDetailStrength      = 0.34f;
+		p.fFogDetailNoiseScale    = 0.00050f;
+		p.fFogDetailNoiseSpeed    = 0.025f;
+		p.fFogDetailHeightRange   = 520.f;
+		p.fFogDetailDistanceStart = 350.f;
+		p.fFogDetailDirectionalScattering = 0.08f;
 		p.fMoonIntensity          = 2.6f;
 		p.fSkyAmbientIntensity    = 0.36f;
 		return p;
@@ -270,6 +282,12 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 		p.fFogBaseHeightOffset    = -160.f;
 		p.fFogHeightStartDistance = 1800.f;
 		p.fFogMaxOpacity          = 0.10f;
+		p.fFogDetailStrength      = 0.07f;
+		p.fFogDetailNoiseScale    = 0.00025f;
+		p.fFogDetailNoiseSpeed    = 0.010f;
+		p.fFogDetailHeightRange   = 650.f;
+		p.fFogDetailDistanceStart = 3000.f;
+		p.fFogDetailDirectionalScattering = 0.30f;
 		p.fMoonIntensity          = 3.1f;
 		p.fSkyAmbientIntensity    = 0.301f;
 		return p;
@@ -349,6 +367,12 @@ namespace {
 		p.fFogBaseHeightOffset    = fog.fFogBaseHeightOffset;
 		p.fFogHeightStartDistance = fog.fFogHeightStartDistance;
 		p.fFogMaxOpacity          = fog.fFogMaxOpacity;
+		p.fFogDetailStrength      = fog.fFogDetailStrength;
+		p.fFogDetailNoiseScale    = fog.fFogDetailNoiseScale;
+		p.fFogDetailNoiseSpeed    = fog.fFogDetailNoiseSpeed;
+		p.fFogDetailHeightRange   = fog.fFogDetailHeightRange;
+		p.fFogDetailDistanceStart = fog.fFogDetailDistanceStart;
+		p.fFogDetailDirectionalScattering = fog.fFogDetailDirectionalScattering;
 
 		p.bAffectTime        = true;
 		p.fTimeOfDayHour     = pScene->GetSkybox() ? pScene->GetSkybox()->GetDayNightBlend() * 24.0f : 12.0f;
@@ -419,6 +443,12 @@ namespace {
 		fog.fFogBaseHeightOffset    = std::lerp(a.fFogBaseHeightOffset,    b.fFogBaseHeightOffset,    t);
 		fog.fFogHeightStartDistance = std::lerp(a.fFogHeightStartDistance, b.fFogHeightStartDistance, t);
 		fog.fFogMaxOpacity          = std::lerp(a.fFogMaxOpacity,          b.fFogMaxOpacity,          t);
+		fog.fFogDetailStrength      = std::lerp(a.fFogDetailStrength,      b.fFogDetailStrength,      t);
+		fog.fFogDetailNoiseScale    = std::lerp(a.fFogDetailNoiseScale,    b.fFogDetailNoiseScale,    t);
+		fog.fFogDetailNoiseSpeed    = std::lerp(a.fFogDetailNoiseSpeed,    b.fFogDetailNoiseSpeed,    t);
+		fog.fFogDetailHeightRange   = std::lerp(a.fFogDetailHeightRange,   b.fFogDetailHeightRange,   t);
+		fog.fFogDetailDistanceStart = std::lerp(a.fFogDetailDistanceStart, b.fFogDetailDistanceStart, t);
+		fog.fFogDetailDirectionalScattering = std::lerp(a.fFogDetailDirectionalScattering, b.fFogDetailDirectionalScattering, t);
 
 		if (pScene->GetSkybox()) {
 			if (b.bAffectTime) {

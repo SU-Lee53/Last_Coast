@@ -199,6 +199,12 @@ struct EnvironmentPreset {
 	float   fFogBaseHeightOffset    = 0.0f;
 	float   fFogHeightStartDistance = 0.0f;
 	float   fFogMaxOpacity          = 0.0f;
+	float   fFogDetailStrength      = 0.0f;
+	float   fFogDetailNoiseScale    = 0.0005f;
+	float   fFogDetailNoiseSpeed    = 0.02f;
+	float   fFogDetailHeightRange   = 300.0f;
+	float   fFogDetailDistanceStart = 500.0f;
+	float   fFogDetailDirectionalScattering = 0.0f;
 
 	// 스카이박스 시간 (0~24 hour). bAffectTime=false 면 시간은 건드리지 않음.
 	bool  bAffectTime        = false;

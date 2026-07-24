@@ -72,6 +72,12 @@ CB_FOG_DATA PostProcessingVolume::GetFogCBData() const
 		.gfFogBaseHeight = fFogBaseHeight,
 		.gfFogHeightStartDistance = m_Parameters.Fog.fFogHeightStartDistance,
 		.gfFogMaxOpacity = m_Parameters.Fog.fFogMaxOpacity,
+		.gfFogDetailStrength = m_Parameters.Fog.fFogDetailStrength,
+		.gfFogDetailNoiseScale = m_Parameters.Fog.fFogDetailNoiseScale,
+		.gfFogDetailNoiseSpeed = m_Parameters.Fog.fFogDetailNoiseSpeed,
+		.gfFogDetailHeightRange = m_Parameters.Fog.fFogDetailHeightRange,
+		.gfFogDetailDistanceStart = m_Parameters.Fog.fFogDetailDistanceStart,
+		.gfFogDetailDirectionalScattering = m_Parameters.Fog.fFogDetailDirectionalScattering,
 	};
 }
 
@@ -98,8 +104,32 @@ bool PostProcessingVolume::LoadFromFiles(const std::string& strSaveName)
 		return false;
 	}
 
-	in >> m_Parameters;
-	return !!in;
+	in.seekg(0, std::ios::end);
+	const std::streamoff fileSize = in.tellg();
+	constexpr std::streamoff legacyFileSize = sizeof(PostProcessingParameters) - sizeof(float) * 4;
+	if (fileSize != sizeof(PostProcessingParameters) && fileSize != legacyFileSize) {
+		return false;
+	}
+
+	in.seekg(0, std::ios::beg);
+	PostProcessingParameters loadedParameters;
+	in.read(reinterpret_cast<char*>(&loadedParameters), static_cast<std::streamsize>(fileSize));
+	if (!in) {
+		return false;
+	}
+
+	if (fileSize == legacyFileSize) {
+		const FogParameters defaultFog;
+		loadedParameters.Fog.fFogDetailStrength = defaultFog.fFogDetailStrength;
+		loadedParameters.Fog.fFogDetailNoiseScale = defaultFog.fFogDetailNoiseScale;
+		loadedParameters.Fog.fFogDetailNoiseSpeed = defaultFog.fFogDetailNoiseSpeed;
+		loadedParameters.Fog.fFogDetailHeightRange = defaultFog.fFogDetailHeightRange;
+		loadedParameters.Fog.fFogDetailDistanceStart = defaultFog.fFogDetailDistanceStart;
+		loadedParameters.Fog.fFogDetailDirectionalScattering = defaultFog.fFogDetailDirectionalScattering;
+	}
+
+	m_Parameters = loadedParameters;
+	return true;
 }
 
 void PostProcessingVolume::ShowDebugOptions()
@@ -177,6 +207,14 @@ void PostProcessingVolume::ShowDebugOptions()
 		ImGui::DragFloat("Fog Height Start Distance", &m_Parameters.Fog.fFogHeightStartDistance, 0.1f, 0.0f, std::numeric_limits<float>::max());
 
 		ImGui::DragFloat("Fog Max Opacity", &m_Parameters.Fog.fFogMaxOpacity, 0.01f, 0.0f, 1.0f);
+
+		ImGui::SeparatorText("Atmospheric Fog Detail");
+		ImGui::DragFloat("Fog Detail Strength", &m_Parameters.Fog.fFogDetailStrength, 0.005f, 0.0f, 0.5f);
+		ImGui::DragFloat("Fog Detail Noise Scale", &m_Parameters.Fog.fFogDetailNoiseScale, 0.00001f, 0.00001f, 0.005f, "%.5f");
+		ImGui::DragFloat("Fog Detail Noise Speed", &m_Parameters.Fog.fFogDetailNoiseSpeed, 0.001f, 0.0f, 0.2f);
+		ImGui::DragFloat("Fog Detail Height Range", &m_Parameters.Fog.fFogDetailHeightRange, 1.0f, 1.0f, 2000.0f);
+		ImGui::DragFloat("Fog Detail Distance Start", &m_Parameters.Fog.fFogDetailDistanceStart, 1.0f, 0.0f, std::numeric_limits<float>::max());
+		ImGui::DragFloat("Fog Detail Directional Scattering", &m_Parameters.Fog.fFogDetailDirectionalScattering, 0.01f, 0.0f, 1.0f);
 	}
 
 	if (ImGui::Button("Reset Fog Parameters")) {
