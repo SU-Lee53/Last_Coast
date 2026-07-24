@@ -7,6 +7,7 @@
 #include "CrashFireEffect.h"
 #include "MuzzleFlashEffect.h"
 #include "ExplosionEffect.h"
+#include "GrenadeExplosionEffect.h"
 #include "ToneMappingVolume.h"
 #include "PostProcessingVolume.h"
 #include "NodeObject.h"
@@ -82,15 +83,26 @@ void BleedEvent::OnUpdateEvent(Scene* pScene)
 
 void ExplosionEvent::OnEnterEvent(Scene* pScene)
 {
-	// TODO: 전용 ExplosionEffect 제작 시 교체. 지금은 MuzzleFlash 임시 재활용.
+	// 헬기 추락과 동일한 폭발 연출 — 사운드는 ExplosionEffect::Play가 3D로 재생
 	ParticleEffectSpawnDesc desc;
 	desc.v3Position  = m_v3Pos;
 	desc.v3Direction = Vector3::Up;
 	desc.v3Normal    = Vector3::Up;
 	desc.mtxWorld    = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
-	PARTICLE->Spawn<MuzzleFlashEffect>(desc);
+	PARTICLE->Spawn<ExplosionEffect>(desc);
 
-	SOUND->PlayAt("Test3D", m_v3Pos);
+	m_bFinished = true; // 1회 재생 후 즉시 종료
+}
+
+void GrenadeExplosionEvent::OnEnterEvent(Scene* pScene)
+{
+	// 수류탄 전용 소형 폭발 — 사운드는 GrenadeExplosionEffect::Play가 3D로 재생
+	ParticleEffectSpawnDesc desc;
+	desc.v3Position  = m_v3Pos;
+	desc.v3Direction = Vector3::Up;
+	desc.v3Normal    = Vector3::Up;
+	desc.mtxWorld    = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
+	PARTICLE->Spawn<GrenadeExplosionEffect>(desc);
 
 	m_bFinished = true; // 1회 재생 후 즉시 종료
 }
@@ -581,15 +593,12 @@ void HelicopterCrashEvent::OnUpdateEvent(Scene* pScene)
 
 void HelicopterCrashEvent::SpawnExplosion(const Vector3& v3Pos)
 {
-	// TODO: 전용 ExplosionEffect 제작 시 교체 (지금은 MuzzleFlash 임시 재활용)
 	ParticleEffectSpawnDesc desc;
 	desc.v3Position  = v3Pos;
 	desc.v3Direction = Vector3::Up;
 	desc.v3Normal    = Vector3::Up;
 	desc.mtxWorld    = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
-	PARTICLE->Spawn<ExplosionEffect>(desc);
-
-	//SOUND->PlayAt("Test3D", v3Pos);
+	PARTICLE->Spawn<ExplosionEffect>(desc);	// 사운드 포함 (ExplosionEffect::Play가 3D 재생)
 }
 
 void HelicopterCrashEvent::Finish(Scene* pScene)

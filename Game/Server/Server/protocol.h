@@ -47,7 +47,14 @@ enum PACKET_TYPE {
 	S2C_PLAYER_DEATH,                             // 서버 → 클라이언트: 플레이어 사망 통지 (부활까지 남은 시간 포함)
 	S2C_PLAYER_RESPAWN,                           // 서버 → 클라이언트: 플레이어 부활 통지 (부활 위치 포함)
 	C2S_LOAD_COMPLETE,                            // 클라이언트 → 서버: 게임씬 로딩 완료 통지
-	S2C_GAME_BEGIN                                // 서버 → 클라이언트: 전원 로딩 완료 — 게임플레이 동시 시작
+	S2C_GAME_BEGIN,                               // 서버 → 클라이언트: 전원 로딩 완료 — 게임플레이 동시 시작
+	C2S_PLAYER_BANDAGE,                           // 클라이언트 → 서버: 붕대 상태 (시작/취소/완료)
+	S2C_PLAYER_BANDAGE,                           // 서버 → 클라이언트: 붕대 모션 브로드캐스트 (리모트 애니메이션)
+	S2C_PLAYER_HEAL,                              // 서버 → 클라이언트: 회복 확정 (서버 권위 HP)
+	C2S_PLAYER_GRENADE,                           // 클라이언트 → 서버: 수류탄 상태 (투척/와인드업/들기/내리기)
+	S2C_PLAYER_GRENADE,                           // 서버 → 클라이언트: 수류탄 모션/투척 브로드캐스트 (리모트 재현)
+	C2S_GRENADE_EXPLODE,                          // 클라이언트 → 서버: 수류탄 폭발 위치 통지 (던진 본인만)
+	S2C_GRENADE_HIT                               // 서버 → 클라이언트: 폭발 AoE 좀비 히트 (좀비 1마리당 1패킷)
 };
 
 // ── 게임 이벤트 ID (서버 트리거, 클라 효과 카탈로그) ──────────────────────────
@@ -447,6 +454,78 @@ struct C2S_PlayerEscape {
 struct S2C_GameEnd {
 	unsigned char size;
 	PACKET_TYPE   type;
+};
+
+// ── 붕대(회복 아이템) 패킷 ───────────────────────────────────────────────────
+// state: 0=캐스트 시작, 1=취소, 2=완료(회복 적용), 3=들기(총 내림), 4=내리기(총 복귀).
+// 서버는 모든 state를 그대로 브로드캐스트하고, 2(완료)만 회복을 적용·확정한다.
+// 캐스트 4초는 클라이언트가 진행. 3/4는 리모트 손 모션 동기화 전용 (targetPlayerId 무시).
+
+// 클라이언트 → 서버: 붕대 상태 통지
+struct C2S_PlayerBandage {
+	unsigned char size;
+	PACKET_TYPE   type;
+	unsigned char state;
+	int           targetPlayerId;   // 회복 대상 (자기 자신 포함)
+};
+
+// 서버 → 클라이언트: 붕대 모션 브로드캐스트 (리모트 플레이어 애니메이션용)
+struct S2C_PlayerBandage {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           playerId;         // 붕대 감는 플레이어
+	int           targetPlayerId;
+	unsigned char state;
+};
+
+// 서버 → 클라이언트: 회복 확정. 대상 클라이언트가 자기 HP를 fNewHP로 갱신.
+struct S2C_PlayerHeal {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           targetPlayerId;
+	int           healerPlayerId;
+	float         fNewHP;
+};
+
+// ── 수류탄(투척 아이템) 패킷 ─────────────────────────────────────────────────
+// state: 0=투척(x~vz 유효), 2=와인드업(좌클릭 꾹 — 뒤로 드는 모션), 3=들기(총 내림), 4=내리기(총 복귀).
+// 투사체 물리는 각 클라이언트가 동일 초기조건(위치+속도)으로 로컬 시뮬 (시각 전용).
+// 폭발 데미지는 던진 클라이언트가 C2S_GRENADE_EXPLODE 로 폭발 위치를 보내면
+// 서버가 AoE 판정 후 S2C_GRENADE_HIT 를 좀비 1마리당 1패킷 브로드캐스트한다.
+
+// 클라이언트 → 서버: 수류탄 상태 통지
+struct C2S_PlayerGrenade {
+	unsigned char size;
+	PACKET_TYPE   type;
+	unsigned char state;
+	float         x, y, z;      // 투척 시작 위치 (cm, state=0만 유효)
+	float         vx, vy, vz;   // 투척 초기 속도 (cm/s, state=0만 유효)
+};
+
+// 서버 → 클라이언트: 수류탄 모션/투척 브로드캐스트 (리모트 플레이어 재현용)
+struct S2C_PlayerGrenade {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           playerId;     // 수류탄 사용 플레이어
+	unsigned char state;
+	float         x, y, z;
+	float         vx, vy, vz;
+};
+
+// 클라이언트 → 서버: 수류탄 폭발 위치 (던진 본인 클라이언트만 전송 — 서버가 AoE 판정)
+struct C2S_GrenadeExplode {
+	unsigned char size;
+	PACKET_TYPE   type;
+	float         x, y, z;      // 폭발 위치 (cm)
+};
+
+// 서버 → 클라이언트: 폭발 AoE 좀비 히트 확정 (클라 좀비 HP/사망 반영)
+struct S2C_GrenadeHit {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           attackerPlayerId;
+	int           zombieId;
+	float         damage;
 };
 
 #pragma pack(pop) // Restore default packing

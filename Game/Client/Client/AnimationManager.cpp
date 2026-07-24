@@ -19,6 +19,7 @@ void AnimationManager::LoadGameAnimations()
 	LoadAndAdd("Pistol Reloading");
 	LoadAndAdd("Drawing Pistol");	// 무기 교체(꺼내기) 모션 — 권총
 	LoadAndAdd("Drawing Rifle");	// 무기 교체(꺼내기) 모션 — 주무기(라이플류)
+	LoadAndAdd("Throw");			// 수류탄 원본 클립 — 와인드업~던지기 (몽타주가 중간 일시정지로 홀드)
 
 	LoadAndAdd("Zombie Idle");
 	LoadAndAdd("Zombie Running");

@@ -8,6 +8,7 @@
 #include "Zombie.h"
 #include "WeaponObject.h"
 #include "CrashDebris.h"
+#include "GrenadeProjectile.h"
 #include "WaterGridObject.h"
 
 #include "Player.h"	// Includes GameObject
@@ -30,13 +31,14 @@ class Scene {
 	friend class SceneManager;
 
 	using WorldType = World<
-		NetworkOwnerThirdPersonPlayer, 
-		NetworkRemoteThirdPersonPlayer, 
-		StaticObject, WeaponObject, 
-		Zombie, 
-		WaterGridObject, 
+		NetworkOwnerThirdPersonPlayer,
+		NetworkRemoteThirdPersonPlayer,
+		StaticObject, WeaponObject,
+		Zombie,
+		WaterGridObject,
 		HelicopterObject,
-		CrashDebris>;
+		CrashDebris,
+		GrenadeProjectile>;
 
 public:
 	virtual void BuildObjects() = 0;

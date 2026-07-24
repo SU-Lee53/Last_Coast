@@ -103,6 +103,60 @@ void PacketHandlers::Reload(Session& self)
 	BroadcastAll([&](Session& cl) { cl.send_player_reload(self.m_id); });
 }
 
+void PacketHandlers::Bandage(Session& self, const C2S_PlayerBandage& pkt)
+{
+	if (self.m_bDead) return;
+
+	// 붕대 모션 상태를 전체 브로드캐스트 (본인 포함; 클라가 본인 필터)
+	BroadcastAll([&](Session& cl) { cl.send_player_bandage(self.m_id, pkt.targetPlayerId, pkt.state); });
+
+	if (pkt.state != 2) return;   // 완료(2)만 회복 적용
+
+	if (pkt.targetPlayerId < 0 || pkt.targetPlayerId >= MAX_PLAYERS) return;
+	Session& target = clients[pkt.targetPlayerId];
+	if (!target.m_is_connected || target.m_bDead) return;
+
+	// m_fHP는 게임 틱 스레드(좀비 공격)와 IOCP 스레드(여기)가 함께 쓴다 —
+	// 정렬된 float 단일 쓰기라 tearing 없음, 드문 동시 갱신 손실은 허용.
+	constexpr float BANDAGE_HEAL_AMOUNT = 50.f;
+	constexpr float BANDAGE_MAX_HP      = 100.f;
+	target.m_fHP = std::min(BANDAGE_MAX_HP, target.m_fHP + BANDAGE_HEAL_AMOUNT);
+
+	BroadcastAll([&](Session& cl) { cl.send_player_heal(pkt.targetPlayerId, self.m_id, target.m_fHP); });
+}
+
+void PacketHandlers::Grenade(Session& self, const C2S_PlayerGrenade& pkt)
+{
+	if (self.m_bDead) return;
+
+	// 수류탄 모션/투척 상태를 전체 브로드캐스트 (본인 포함; 클라가 본인 필터)
+	// state 0(투척)은 위치+속도가 담겨 있어 리모트 클라가 동일 초기조건으로 투사체를 시뮬한다.
+	BroadcastAll([&](Session& cl) { cl.send_player_grenade(self.m_id, pkt); });
+}
+
+void PacketHandlers::GrenadeExplode(Session& self, const C2S_GrenadeExplode& pkt)
+{
+	// 폭발 연출은 각 클라이언트가 로컬 시뮬 퓨즈로 재생 — 서버는 데미지 판정만.
+	// 반경 내 좀비에게 거리 선형 감쇠 데미지, 좀비 1마리당 S2C_GRENADE_HIT 1패킷 (밀리 히트와 동일 방식).
+	constexpr float GRENADE_RADIUS     = 700.f;   // AoE 반경 (cm) — 클라 EXPLODE_RADIUS와 일치
+	constexpr float GRENADE_DAMAGE_MAX = 150.f;   // 중심 데미지
+	constexpr float GRENADE_DAMAGE_MIN = 30.f;    // 반경 끝 데미지
+
+	const Vector3 v3Center{ pkt.x, pkt.y, pkt.z };
+	auto& zombies = m_World.GetZombies();
+	for (auto& [nZombieId, zombie] : zombies.GetZombies()) {
+		if (!zombie.bAlive || !zombie.pAgent) continue;
+
+		const float fDist = Vector3::Distance(zombie.pAgent->GetPosition(), v3Center);
+		if (fDist > GRENADE_RADIUS) continue;
+
+		const float fDamage = GRENADE_DAMAGE_MAX
+			+ (GRENADE_DAMAGE_MIN - GRENADE_DAMAGE_MAX) * (fDist / GRENADE_RADIUS);
+		zombies.ApplyDamageToZombie(nZombieId, fDamage);
+		BroadcastAll([&](Session& cl) { cl.send_grenade_hit(self.m_id, nZombieId, fDamage); });
+	}
+}
+
 void PacketHandlers::Weapon(Session& self, const C2S_PlayerWeapon& pkt)
 {
 	self.m_weaponType = pkt.weaponType;   // late-join 동기화용으로 저장

@@ -50,6 +50,12 @@ void AnimationMontage::Update()
 	m_fTotalPlaytime += fDeltaTime;
 	m_fSectionPlayTime += fDeltaTime;
 
+	// 일시정지 지점 도달 — 시간 고정(그 자세 유지). 이후 notify는 재개 전까지 안 나감.
+	if (m_fPauseTime >= 0.f && m_fSectionPlayTime >= m_fPauseTime) {
+		m_fSectionPlayTime = m_fPauseTime;
+		fPrevSectionTime = std::min(fPrevSectionTime, m_fPauseTime);
+	}
+
 	// Blend In / Out 처리
 	if (m_bBlendingOut) {
 		m_fBlendOutElapsed += DT;
@@ -136,6 +142,17 @@ void AnimationMontage::PlayMontage(const std::string& strSectionName)
 	m_nCurrentSection = it->second;
 	m_fTotalPlaytime = 0.f;
 	m_fSectionPlayTime = 0.f;
+	m_fPauseTime = -1.f;	// 새 재생 = 이전 일시정지 예약 해제
+	m_bFreezed = false;
+}
+
+void AnimationMontage::PauseAtRatio(float fRatio)
+{
+	if (m_nCurrentSection < 0) return;
+
+	const auto& section = m_MontageSections[m_nCurrentSection];
+	const float fDuration = section.fEndTime - section.fStartTime;
+	m_fPauseTime = std::clamp(fRatio, 0.f, 1.f) * fDuration;
 }
 
 void AnimationMontage::StopMontage()
@@ -358,6 +375,7 @@ void PlayerAnimationMontage::BuildMontage()
 
 		AddDrawSection("Pistol Draw", "Drawing Pistol");
 		AddDrawSection("Rifle Draw", "Drawing Rifle");
+		AddDrawSection("Bandage Draw", "Drawing Pistol");	// 붕대/수류탄 꺼내기 (뒷주머니 연출 — 권총 클립 재사용, 종료 notify → OnWeaponDrawEnd 잠금 해제)
 	}
 
 	// 2. Pistol Reload
@@ -376,6 +394,45 @@ void PlayerAnimationMontage::BuildMontage()
 			std::static_pointer_cast<IThirdPersonPlayer>(pObj)->OnReloadEnd();
 		};
 		m_Notifies.push_back(reloadEndNotify);
+	}
+
+	// 8. Bandage Wrap — 붕대 감기 (전용 클립 없어 Reloading 임시 재사용).
+	// 종료는 클립 길이가 아니라 IThirdPersonPlayer::Update의 4초 타이머(BANDAGE_CAST_SECONDS)가
+	// StopBandageAction → StopMontage 로 끊는다. 그래서 LOOP + notify 없음.
+	{
+		MontageSection bandageSection{};
+		bandageSection.strName = "Bandage Wrap";
+		bandageSection.pAnimationToPlay = ANIMATION->Get("Reloading");
+		bandageSection.eEndRule = MONTAGE_SECTION_END_RULE::LOOP;
+		m_MontageSections.push_back(bandageSection);
+	}
+
+	// 9. Grenade Throw — 원본 "Throw" 클립 하나로 와인드업+던지기.
+	// 와인드업: PlayMontage 후 PauseAtRatio(GRENADE_HOLD_RATIO)로 중간 일시정지(뒤로 든 자세 유지),
+	// 좌클릭 뗌: ResumeMontage로 이어서 재생 → 릴리즈 notify(투사체 스폰) → 종료 notify(잠금 해제).
+	{
+		MontageSection throwSection{};
+		throwSection.strName = "Grenade Throw";
+		throwSection.pAnimationToPlay = ANIMATION->Get("Throw");
+		throwSection.eEndRule = MONTAGE_SECTION_END_RULE::STOP;
+		m_MontageSections.push_back(throwSection);
+
+		// 손이 앞으로 나오는 시점에 투사체 스폰 — 홀드 지점(GRENADE_HOLD_RATIO) 이후여야 함
+		MontageNotify releaseNotify;
+		releaseNotify.nSectionIndex = m_MontageSections.size() - 1;
+		releaseNotify.fTime = ANIMATION->Get("Throw")->GetDuration() * IThirdPersonPlayer::GRENADE_RELEASE_RATIO;
+		releaseNotify.pCallback = [](std::shared_ptr<IGameObject> pObj) {
+			std::static_pointer_cast<IThirdPersonPlayer>(pObj)->OnGrenadeRelease();
+		};
+		m_Notifies.push_back(releaseNotify);
+
+		MontageNotify throwEndNotify;
+		throwEndNotify.nSectionIndex = m_MontageSections.size() - 1;
+		throwEndNotify.fTime = ANIMATION->Get("Throw")->GetDuration() - 0.1f;
+		throwEndNotify.pCallback = [](std::shared_ptr<IGameObject> pObj) {
+			std::static_pointer_cast<IThirdPersonPlayer>(pObj)->OnGrenadeThrowEnd();
+		};
+		m_Notifies.push_back(throwEndNotify);
 	}
 }
 

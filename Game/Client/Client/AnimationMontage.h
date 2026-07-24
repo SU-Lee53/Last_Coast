@@ -41,6 +41,12 @@ public:
 	// 외부 개입 Section 전환용
 	void JumpToSection(const std::string& strSectionName);
 
+	// 현재 섹션을 길이 비율(0~1) 지점에서 일시정지 — 그 프레임 자세로 유지.
+	// PlayMontage 직후 호출. 이후 notify는 재개 전까지 발화하지 않는다 (수류탄 와인드업 홀드용).
+	void PauseAtRatio(float fRatio);
+	void ResumeMontage() { m_fPauseTime = -1.f; }
+	bool IsPausedHold() const { return m_fPauseTime >= 0.f; }
+
 	const std::vector<AnimationKey>& GetOutputPose() const { return m_OutputPose; }
 	float GetBlendWeight() const { return m_fBlendWeight; }
 	bool IsFreezed() const { return m_bFreezed; }
@@ -60,6 +66,7 @@ protected:
 
 	int m_nCurrentSection = -1;		// 현재 Section
 	float m_fSectionPlayTime = 0.f;	// 현재 재생중인 Section 시간
+	float m_fPauseTime = -1.f;		// 섹션 로컬 일시정지 시점 (<0 = 없음). 도달 시 시간 고정
 
 	float m_fBlendInTime = 0.2f;
 	float m_fBlendOutTime = 0.2f;

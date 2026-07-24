@@ -364,6 +364,9 @@
     <ClInclude Include="NodeObject.h">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClInclude>
+    <ClInclude Include="GrenadeProjectile.h">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
+    </ClInclude>
     <ClInclude Include="StaticObject.h">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClInclude>
@@ -422,6 +425,9 @@
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
     <ClInclude Include="NavMeshDebugPass.h">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="GrenadeArcPass.h">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClInclude>
     <ClInclude Include="DirectionalCascadeShadowMapPass.h">
@@ -525,6 +531,9 @@
       <Filter>02.Game\Particle\Particles</Filter>
     </ClInclude>
     <ClInclude Include="ExplosionEffect.h">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="GrenadeExplosionEffect.h">
       <Filter>02.Game\Particle\Particles</Filter>
     </ClInclude>
     <ClInclude Include="CrashFireEffect.h">
@@ -824,6 +833,9 @@
     <ClCompile Include="NodeObject.cpp">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClCompile>
+    <ClCompile Include="GrenadeProjectile.cpp">
+      <Filter>02.Game\GameObject\GameObjects</Filter>
+    </ClCompile>
     <ClCompile Include="StaticObject.cpp">
       <Filter>02.Game\GameObject\GameObjects</Filter>
     </ClCompile>
@@ -870,6 +882,9 @@
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
     <ClCompile Include="NavMeshDebugPass.cpp">
+      <Filter>03.Engine\Rendering\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="GrenadeArcPass.cpp">
       <Filter>03.Engine\Rendering\RenderPasses</Filter>
     </ClCompile>
     <ClCompile Include="SkyboxPass.cpp">
@@ -985,6 +1000,9 @@
       <Filter>02.Game\Particle\Particles</Filter>
     </ClCompile>
     <ClCompile Include="ExplosionEffect.cpp">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="GrenadeExplosionEffect.cpp">
       <Filter>02.Game\Particle\Particles</Filter>
     </ClCompile>
     <ClCompile Include="CrashFireEffect.cpp">

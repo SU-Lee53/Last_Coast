@@ -138,6 +138,16 @@ private:
 	Vector3 m_v3Pos;
 };
 
+// 수류탄 폭발 연출 — 전용 소형 폭발(GrenadeExplosionEffect) 1회 재생 후 종료.
+class GrenadeExplosionEvent : public IOneShotEvent {
+public:
+	GrenadeExplosionEvent(const Vector3& v3Pos) : m_v3Pos{ v3Pos } {}
+	virtual void OnEnterEvent(Scene* pScene) override;
+
+private:
+	Vector3 m_v3Pos;
+};
+
 
 // ── 환경 프리셋 틀 ────────────────────────────────────────────────────────────
 // 한 이벤트로 화면 환경 전체(톤매핑 + 포스트FX + 안개 + 스카이박스 시간 + 글로벌 앰비언트)를

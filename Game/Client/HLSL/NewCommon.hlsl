@@ -380,6 +380,7 @@ struct UIRectData
 	float4 v4UVRect;
 	float4 v4TextColorOrTexIndex;	// Text -> float4 color / Sprite -> float4.x texIndex
 	int nTexIndex;
+	float fRadialProgress;	// 라디얼 게이지 비율 (0~1). 음수 = 비활성. C++ UIRectData와 레이아웃 일치 필수
 };
 
 struct ParticleDrawData

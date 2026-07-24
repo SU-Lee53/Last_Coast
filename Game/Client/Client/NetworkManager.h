@@ -133,6 +133,35 @@ struct PlayerRespawnEvent {
 	Vector3 pos;
 };
 
+// 붕대 모션 이벤트 (리모트 플레이어 애니메이션 시작/종료/들기/내리기)
+struct BandageEvent {
+	int           playerId;         // 붕대 감는 플레이어
+	int           targetPlayerId;
+	unsigned char state;            // 0=캐스트 시작, 1=취소, 2=완료, 3=들기, 4=내리기
+};
+
+// 회복 확정 이벤트 (서버 권위 — 대상 본인이면 HP 갱신)
+struct PlayerHealEvent {
+	int   targetPlayerId;
+	int   healerPlayerId;
+	float fNewHP;
+};
+
+// 수류탄 모션/투척 이벤트 (리모트 플레이어 재현)
+struct GrenadeEvent {
+	int           playerId;         // 수류탄 사용 플레이어
+	unsigned char state;            // 0=투척(pos/vel 유효), 2=와인드업, 3=들기, 4=내리기
+	Vector3       v3Pos;            // 투척 시작 위치 (cm)
+	Vector3       v3Vel;            // 투척 초기 속도 (cm/s)
+};
+
+// 폭발 AoE 좀비 히트 확정 (서버 권위 — 클라 좀비 HP/사망 반영)
+struct GrenadeHitEvent {
+	int   attackerPlayerId;
+	int   zombieId;
+	float damage;
+};
+
 // 서버 스크립트 게임 이벤트 (폭파/포스트FX 등). eventId = GameEventId.
 struct GameEventMsg {
 	int     eventId;
@@ -183,6 +212,17 @@ public:
 	void SendPlayerMelee(const Vector3& v3Origin, const Vector3& v3Direction);
 	std::vector<int>           ConsumePlayerMelees(); // 근접공격 모션 (attackerPlayerId)
 	std::vector<MeleeHitEvent> ConsumeMeleeHits();    // 좀비 히트
+
+	// ── 붕대 송수신 ────────────────────────────────────────────────────────────
+	void SendPlayerBandage(unsigned char state, int targetPlayerId); // state: 0=시작,1=취소,2=완료,3=들기,4=내리기
+	std::vector<BandageEvent>    ConsumePlayerBandages(); // 붕대 모션 (리모트 애니메이션)
+	std::vector<PlayerHealEvent> ConsumePlayerHeals();    // 회복 확정 (서버 권위 HP)
+
+	// ── 수류탄 송수신 ──────────────────────────────────────────────────────────
+	void SendPlayerGrenade(unsigned char state, const Vector3& pos, const Vector3& vel); // state: 0=투척,2=와인드업,3=들기,4=내리기
+	void SendGrenadeExplode(const Vector3& pos);          // 폭발 위치 통지 (던진 본인만 — 서버 AoE 판정)
+	std::vector<GrenadeEvent>    ConsumePlayerGrenades(); // 수류탄 모션/투척 (리모트 재현)
+	std::vector<GrenadeHitEvent> ConsumeGrenadeHits();    // 폭발 좀비 히트 확정 (서버 권위)
 
 	// ── 무기 교체 송수신 ────────────────────────────────────────────────────────
 	void SendPlayerWeapon(unsigned char weaponType);
@@ -328,6 +368,10 @@ private:
 	concurrency::concurrent_queue<ReadyStateEvent>               m_PendingReadyStates;
 	concurrency::concurrent_queue<PlayerDeathEvent>              m_PendingPlayerDeaths;
 	concurrency::concurrent_queue<PlayerRespawnEvent>            m_PendingPlayerRespawns;
+	concurrency::concurrent_queue<BandageEvent>                  m_PendingPlayerBandages;
+	concurrency::concurrent_queue<PlayerHealEvent>               m_PendingPlayerHeals;
+	concurrency::concurrent_queue<GrenadeEvent>                  m_PendingPlayerGrenades;
+	concurrency::concurrent_queue<GrenadeHitEvent>               m_PendingGrenadeHits;
 	std::atomic<bool>                                            m_bPendingGameStart{ false };
 	std::atomic<bool>                                            m_bPendingGameBegin{ false };
 

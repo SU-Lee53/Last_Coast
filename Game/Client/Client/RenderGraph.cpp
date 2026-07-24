@@ -14,6 +14,7 @@
 #include "DeferredFogPass.h"
 #include "BoundingBoxDebugPass.h"
 #include "NavMeshDebugPass.h"
+#include "GrenadeArcPass.h"
 #include "UIPass.h"
 
 void RenderGraph::BuildGraph()
@@ -93,6 +94,10 @@ void RenderGraph::BuildGraph()
 	pNavMeshDebugPass->Initialize();
 	m_pAdjLists.push_back(pNavMeshDebugPass);
 
+	std::shared_ptr<IRenderPass> pGrenadeArcPass = std::make_shared<GrenadeArcPass>();
+	pGrenadeArcPass->Initialize();
+	m_pAdjLists.push_back(pGrenadeArcPass);
+
 	std::shared_ptr<IRenderPass> pUIPass = std::make_shared<UIPass>();
 	pUIPass->Initialize();
 	m_pAdjLists.push_back(pUIPass);
@@ -133,7 +138,8 @@ void RenderGraph::BuildGraph()
 	pAutoExposurePass->Connect(pToneMappingPass);
 	pToneMappingPass->Connect(pBoundingBoxDebugPass);
 	pBoundingBoxDebugPass->Connect(pNavMeshDebugPass);
-	pNavMeshDebugPass->Connect(pUIPass);
+	pNavMeshDebugPass->Connect(pGrenadeArcPass);
+	pGrenadeArcPass->Connect(pUIPass);
 
 	m_unEntryNodeIndex = 0;
 	m_llPassTime.resize(m_pAdjLists.size(), 0);
@@ -203,6 +209,7 @@ void RenderGraph::ShowDebugInfo() const
 		"ToneMappingPass",
 		"BoundingBoxDebugPass",
 		"NavMeshDebugPass",
+		"GrenadeArcPass",
 		"pUIPass"
 	};
 

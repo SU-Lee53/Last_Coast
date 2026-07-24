@@ -93,6 +93,10 @@ public:
 	void send_game_end();
 	void send_player_death(int player_id, float respawn_seconds);
 	void send_player_respawn(int player_id, const Vector3& v3Pos);
+	void send_player_bandage(int player_id, int target_id, unsigned char state);
+	void send_player_heal(int target_id, int healer_id, float new_hp);
+	void send_player_grenade(int player_id, const C2S_PlayerGrenade& pkt);
+	void send_grenade_hit(int attacker_id, int zombie_id, float damage);
 
 public:
 	SOCKET		m_client;

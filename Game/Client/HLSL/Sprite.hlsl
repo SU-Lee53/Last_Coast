@@ -45,6 +45,19 @@ VS_UI_QUAD_OUTPUT VSUIRect(VS_QUAD_INPUT input, uint nInstanceID : SV_InstanceID
 
 float4 PSUISprite(VS_UI_QUAD_OUTPUT input) : SV_Target
 {
+	// 라디얼 게이지: fRadialProgress >= 0 이면 12시 기준 시계방향으로 해당 비율만 그린다 (쿨다운 스타일)
+	float fRadial = gUIData[input.nInstance].fRadialProgress;
+	if (fRadial >= 0.f)
+	{
+		static const float TWO_PI = 6.28318530718f;
+		float2 v2FromCenter = input.uv - float2(0.5f, 0.5f);
+		float fAngle = atan2(v2FromCenter.x, -v2FromCenter.y);	// 12시 = 0, 시계방향 증가
+		if (fAngle < 0.f)
+			fAngle += TWO_PI;
+		if (fAngle > fRadial * TWO_PI)
+			discard;
+	}
+
 	float4 sampledColor = gtxtTextures[gUIData[input.nInstance].nTexIndex].Sample(gSamplerState, input.uv);
 	return float4(sampledColor * gUIData[input.nInstance].v4TextColorOrTexIndex);
 }

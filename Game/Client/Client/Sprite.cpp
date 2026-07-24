@@ -28,6 +28,7 @@ UIRectData ImageBox::MakeSBData() const
 
 	data.v4Color = m_v4Color;
 	//data.v4TextColorOrTexIndex = m_v4TextColor;
+	data.fRadialProgress = m_fRadialProgress;
 
 	return data;
 }

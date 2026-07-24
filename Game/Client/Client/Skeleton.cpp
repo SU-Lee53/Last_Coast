@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "Skeleton.h"
 #include "WeaponObject.h"
+#include "NodeObject.h"
 
 WeaponSocket::WeaponSocket(std::shared_ptr<Skeleton> pOwner, int32 nBoneIndex)
 	: IAttachSocket{ pOwner, nBoneIndex } 
@@ -39,6 +40,7 @@ void WeaponSocket::Update()
 
 void WeaponSocket::Render()
 {
+	if (!m_bModelVisible) return;
 	m_pWeaponModel->Render();
 }
 
@@ -59,6 +61,61 @@ void WeaponSocket::SetWeaponObject(const std::shared_ptr<WeaponObject>& pWeapon,
 {
 	m_pWeaponModel = pWeapon;
 	m_eCurrentWeapon = eWeaponType;
+}
+
+void GrenadeHandSocket::Initialize()
+{
+	if (!m_pModel) {
+		// 래퍼 루트에 소켓 행렬을 쓰고, 모델은 자식으로 붙여 모델 루트에 구워진
+		// 변환(스케일/오프셋)을 보존한다 (WeaponObject → 모델 자식 구조와 동일).
+		m_pModel = std::make_shared<NodeObject>();
+		m_pModel->SetChild(MODEL->LoadOrGet("granade")->CopyObject<NodeObject>());
+		m_pModel->Initialize();
+	}
+}
+
+void GrenadeHandSocket::Update()
+{
+	if (!m_pModel || !m_bVisible) return;
+
+	m_pModel->Update();
+
+	auto pSkeleton = m_wpOwner.lock();
+
+	Matrix mtxAnimation = Matrix::Identity;
+	if (const auto& mtxModelLocals = pSkeleton->TryGetAnimationModelLocalTransforms()) {
+		mtxAnimation = (*mtxModelLocals)[m_nAttachedBoneIndex];
+		mtxAnimation = mtxAnimation * Matrix::CreateRotationY(XMConvertToRadians(-90.f));
+	}
+
+	auto pOwner = pSkeleton->GetOwner();
+	const auto& mtxOwnerWorld = pOwner->GetWorldMatrix();
+
+	const Matrix mtxOffset =
+		Matrix::CreateScale(m_fScale) *
+		Matrix::CreateFromYawPitchRoll(
+			XMConvertToRadians(m_v3OffsetRotation.y),
+			XMConvertToRadians(m_v3OffsetRotation.x),
+			XMConvertToRadians(m_v3OffsetRotation.z)) *
+		Matrix::CreateTranslation(m_v3OffsetPosition);
+
+	m_mtxTransform = mtxOffset * mtxAnimation * mtxOwnerWorld;
+	m_pModel->GetTransform()->SetWorldMatrix(m_mtxTransform);
+	m_pModel->PostUpdate();
+}
+
+void GrenadeHandSocket::Render()
+{
+	if (!m_bVisible || !m_pModel) return;
+	m_pModel->Render();
+}
+
+void GrenadeHandSocket::EditOffsetImGui()
+{
+	ImGui::SeparatorText("Grenade Hand Socket");
+	ImGui::DragFloat3("Grenade Offset Position", reinterpret_cast<float*>(&m_v3OffsetPosition), 0.1f);
+	ImGui::DragFloat3("Grenade Offset Rotation", reinterpret_cast<float*>(&m_v3OffsetRotation), 0.1f);
+	ImGui::DragFloat("Grenade Scale", &m_fScale, 0.01f, 0.01f, 10.f);
 }
 
 Skeleton::Skeleton(std::shared_ptr<IGameObject> pOwner)
@@ -156,6 +213,11 @@ void Skeleton::ShowControlImGui()
 	for (auto& pSocket : m_pAttached) {
 		ImGuiHelper::PrintMatrix("Transform Matrix", pSocket->m_mtxTransform);
 		ImGuiHelper::PrintTransformMatrix("Transform Matrix Decomposed", pSocket->m_mtxTransform);
+
+		if (auto p = std::dynamic_pointer_cast<GrenadeHandSocket>(pSocket)) {
+			p->EditOffsetImGui();
+			continue;
+		}
 
 		if (auto p = std::dynamic_pointer_cast<WeaponSocket>(pSocket)) {
 			if (auto& pModel = p->GetWeaponModel()) {

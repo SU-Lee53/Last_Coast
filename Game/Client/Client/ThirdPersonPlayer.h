@@ -34,6 +34,9 @@ private:
 		std::shared_ptr<TextBox>	pAmmo = nullptr;
 		std::shared_ptr<TextBox>	pWeaponName = nullptr;
 		std::shared_ptr<TextBox>	pReloadAlert = nullptr;
+		std::shared_ptr<ImageBox>	pBandageCastGauge = nullptr;	// 붕대 캐스트 라디얼 게이지 (화면 중앙, 남은 시간만큼 원형으로 줄어듦)
+		std::shared_ptr<TextBox>	pBandageCastText = nullptr;		// 게이지 아래 퍼센트 표시
+		std::shared_ptr<TextBox>	pBandageHelpText = nullptr;		// 붕대 들기 중 사용법 안내 (화면 하단 중앙)
 
 		// 무기 슬롯 UI — 슬롯별 아이콘 + 번호, 현재 슬롯 하이라이트
 		std::shared_ptr<ImageBox>	pSlotImages[3] = {};
@@ -76,6 +79,22 @@ public:
 	bool IsMouseOn() const { return m_bMouseInUse; }
 	bool ConsumeFire() { bool b = m_bFiredThisFrame; m_bFiredThisFrame = false; return b; }
 	bool ConsumeMelee() { bool b = m_bMeleeStartedThisFrame; m_bMeleeStartedThisFrame = false; return b; }
+	// 붕대 사용 요청 소비 (0=없음, 1=자기 회복, 2=타인 회복) — 씬이 대상 해석 후 StartBandageCast 호출
+	int  ConsumeBandageRequest() { int n = m_nBandageRequest; m_nBandageRequest = 0; return n; }
+	bool IsHoldingBandage() const { return m_bHoldingBandage; }
+	bool IsBandaging() const { return m_bInBandage; }
+	int  GetBandageCount() const { return m_nBandageCount; }
+	float GetBandageProgress() const { return m_bInBandage ? m_fBandageTimer / BANDAGE_CAST_SECONDS : 0.f; }	// 0~1
+	bool IsHoldingGrenade() const { return m_bHoldingGrenade; }
+	bool IsGrenadeWindup() const { return m_bGrenadeWindup; }
+	bool IsGrenadeThrowing() const { return m_bInGrenadeThrow; }
+	int  GetGrenadeCount() const { return m_nGrenadeCount; }
+
+	// "Throw" 원본 클립 기준 비율 — 몽타주 빌드/일시정지 공용 (클립 보고 튜닝)
+	static constexpr float GRENADE_HOLD_RATIO    = 0.25f;	// 뒤로 든 자세에서 일시정지하는 지점
+	static constexpr float GRENADE_RELEASE_RATIO = 0.45f;	// 투사체 릴리즈 notify (홀드 지점보다 커야 함)
+	// 릴리즈 notify가 세운 투척 요청 소비 — 씬이 투사체 스폰 + 전송 담당
+	bool ConsumeGrenadeRelease() { bool b = m_bGrenadeReleasePending; m_bGrenadeReleasePending = false; return b; }
 
 	void SetPlayerModel(const std::string& strModelKey);
 
@@ -102,6 +121,8 @@ public:
 	void OnMeleeEnd();
 	void OnReloadEnd();
 	void OnWeaponDrawEnd();		// "Weapon Draw" 몽타주 종료 notify — 교체 잠금 해제
+	void OnGrenadeRelease();	// "Grenade Throw" 릴리즈 notify — 투척 요청 플래그 (로컬만 씬이 소비)
+	void OnGrenadeThrowEnd();	// "Grenade Throw" 종료 notify — 잠금 해제, 개수 0이면 무기 복귀
 	void ShowHitMarker();
 
 public:
@@ -153,6 +174,17 @@ public:
 	void PlayFireAction();
 	void PlayMeleeStartAction();	// public: 리모트 플레이어 근접공격 모션 재생에도 사용
 	void PlayWeaponDrawAction();	// public: 리모트 플레이어 무기교체 모션 재생에도 사용
+	void PlayBandageStartAction();	// public: 리모트 플레이어 붕대 모션 재생에도 사용
+	void StopBandageAction();		// public: 리모트 붕대 모션 종료(취소/완료 패킷)에도 사용
+	void PlayBandageHoldAction();	// public: 리모트 붕대 들기 (총 내림 + 꺼내는 모션) — state 3
+	void PlayBandageUnholdAction();	// public: 리모트 붕대 내리기 (총 복귀 + 꺼내는 모션) — state 4
+	void PlayGrenadeEquipAction();		// public: 리모트 수류탄 들기 (총 내림) — state 3
+	void PlayGrenadeUnequipAction();	// public: 리모트 수류탄 내리기 (총 복귀) — state 4
+	void PlayGrenadeWindupAction();		// public: 리모트 와인드업 ("Grenade Hold" 몽타주) — state 2
+	void PlayGrenadeThrowAction();		// public: 리모트 던지기 ("Grenade Throw" 몽타주) — state 0
+	void StartBandageCast(int targetPlayerId);	// 로컬: 대상 확정 후 4초 캐스트 시작 (targetPlayerId=-1 → 오프라인 자기)
+	void CancelBandage();		// 캐스트 중단 (이동/사망/대상 이탈) — 온라인이면 취소 패킷 전송
+	int  GetBandageTargetId() const { return m_nBandageTargetId; }
 	void LeaveAim();				// public: 컷씬 진입 시 Scene::PushCinematic이 조준 해제에 사용 (멱등 — 비조준이면 no-op)
 
 	// 입력 처리가 차단된 프레임(컷씬/로딩 대기)에 호출 — 직전 프레임의 이동/달리기
@@ -164,6 +196,20 @@ protected:
 	// Player action
 	void EnterAim();
 	void PlayMeleeEndAction();
+
+	// 붕대 모드/캐스트 (4번 키 = 붕대 들기, 좌클릭=자기/우클릭=타인 회복)
+	void EnterBandageMode();			// 총 내림 + 붕대 꺼내는 모션 ("Bandage Draw")
+	void ExitBandageToSlot(int nSlot);	// 붕대 모드 해제 + 요청 슬롯 무기 꺼내는 모션. 비모드면 SelectWeaponSlot 위임. 캐스트 중 무시
+	void FinishBandage();		// 4초 완료 — 로컬: 소모+회복(오프라인)/서버 전송(온라인), 리모트: 모션 종료만
+
+	// 수류탄 모드 (5번 키 = 들기, 좌클릭 꾹 = 와인드업, 뗌 = 던지기)
+	void EnterGrenadeMode();			// 총 내림 + 꺼내는 모션 ("Bandage Draw" 재사용)
+	void ExitGrenadeToSlot(int nSlot);	// 수류탄 모드 해제 + 요청 슬롯 무기 복귀. 비모드면 SelectWeaponSlot 위임. 던지는 중 무시
+	void StartGrenadeWindup();			// 좌클릭 누름 — "Grenade Hold" 몽타주 (마지막 자세 유지)
+	void StartGrenadeThrow();			// 좌클릭 뗌 — "Grenade Throw" 몽타주, 릴리즈 notify가 투척 요청
+	void SetGrenadeHandVisible(bool bVisible);	// 오른손 수류탄 모델 표시/숨김 (첫 표시 때 소켓 생성)
+public:
+	std::shared_ptr<GrenadeHandSocket> GetGrenadeSocket() const { return m_pGrenadeSocket; }	// 오프셋 튜닝 ImGui용
 
 	void ApplyWeaponChanged(WEAPON_TYPE eWeaponType);
 	void ApplyHitReact(float damage);
@@ -219,6 +265,25 @@ protected:
 	bool m_bWasAimBeforeMelee = false;
 	bool m_bMeleeStartedThisFrame = false;	// 로컬 입력으로 근접공격 시작 → 씬이 소비
 
+	// ── 붕대 (소모품 슬롯 0번) ───────────────────────────────────────────────
+	static constexpr float BANDAGE_CAST_SECONDS = 4.f;
+	static constexpr float BANDAGE_HEAL_AMOUNT  = 50.f;
+	static constexpr int   BANDAGE_START_COUNT  = 3;
+	bool  m_bHoldingBandage  = false;	// 붕대 들기 모드 (조준/발사/근접/재장전 잠금)
+	bool  m_bInBandage       = false;	// 감기 캐스트 진행 중 (로컬+리모트 공용, Update가 타이머 진행)
+	float m_fBandageTimer    = 0.f;
+	int   m_nBandageTargetId = -1;		// 회복 대상 playerId (-1 = 오프라인 자기)
+	int   m_nBandageCount    = BANDAGE_START_COUNT;
+	int   m_nBandageRequest  = 0;		// 0=없음, 1=자기, 2=타인 — 씬이 소비
+
+	// ── 수류탄 (소모품 슬롯 1번) ─────────────────────────────────────────────
+	static constexpr int GRENADE_START_COUNT = 3;
+	bool m_bHoldingGrenade       = false;	// 수류탄 들기 모드 (조준/발사/근접/재장전 잠금)
+	bool m_bGrenadeWindup        = false;	// 좌클릭 꾹 — 뒤로 들고 있는 중
+	bool m_bInGrenadeThrow       = false;	// "Grenade Throw" 몽타주 재생 중 (모드 전환 잠금)
+	bool m_bGrenadeReleasePending = false;	// 릴리즈 notify → 씬이 소비해 투사체 스폰
+	int  m_nGrenadeCount         = GRENADE_START_COUNT;
+
 	// Collision
 	std::vector<BoundingOrientedBox> m_xmOBBCollided;
 
@@ -226,6 +291,7 @@ protected:
 	//std::shared_ptr<class Crosshair> m_pCrosshair = nullptr;
 	PlayerHUD m_PlayerHUD{};
 	std::shared_ptr<WeaponSocket> m_pWeaponSocket = nullptr;
+	std::shared_ptr<GrenadeHandSocket> m_pGrenadeSocket = nullptr;	// 손 수류탄 모델 (지연 생성)
 
 protected:
 	// Movement constants

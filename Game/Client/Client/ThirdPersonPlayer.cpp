@@ -131,6 +131,38 @@ void IThirdPersonPlayer::PlayerHUD::Initialize(const IThirdPersonPlayer & player
 		pReloadAlert->SetTextHeight(50);
 		pReloadAlert->SetVisible(false);
 		pUIBoard->InsertUI(pReloadAlert);
+
+		// 붕대 캐스트 라디얼 게이지 — 화면 정중앙, 남은 시간만큼 아이콘이 원형으로 줄어듦
+		pBandageCastGauge = std::make_shared<ImageBox>("../Resources/Textures/bandage.png");
+		pBandageCastGauge->SetLayer(0);
+		pBandageCastGauge->SetAnchor(Vector2{ 0.5, 0.5 });
+		pBandageCastGauge->SetPivot(Vector2{ 0.5, 0.5 });
+		pBandageCastGauge->SetPosition(Vector2{ 0, 0 });
+		pBandageCastGauge->SetSize(Vector2{ 80.f, 80.f });
+		pBandageCastGauge->SetVisible(false);
+		pUIBoard->InsertUI(pBandageCastGauge);
+
+		// 게이지 바로 아래 퍼센트 텍스트
+		pBandageCastText = std::make_shared<TextBox>(L"Noto Sans KR");
+		pBandageCastText->SetText(L"");
+		pBandageCastText->SetLayer(0);
+		pBandageCastText->SetAnchor(Vector2{ 0.5, 0.5 });
+		pBandageCastText->SetPivot(Vector2{ 0.5, 0.5 });
+		pBandageCastText->SetPosition(Vector2{ 0, 65 });
+		pBandageCastText->SetTextHeight(30);
+		pBandageCastText->SetVisible(false);
+		pUIBoard->InsertUI(pBandageCastText);
+
+		// 붕대 사용법 안내 — 화면 하단 중앙, 들기 모드 중에만 표시
+		pBandageHelpText = std::make_shared<TextBox>(L"Noto Sans KR");
+		pBandageHelpText->SetText(L"좌클릭 : 자기 회복   우클릭 : 근처 아군 회복");
+		pBandageHelpText->SetLayer(0);
+		pBandageHelpText->SetAnchor(Vector2{ 0.5, 1 });
+		pBandageHelpText->SetPivot(Vector2{ 0.5, 1 });
+		pBandageHelpText->SetPosition(Vector2{ 0, -150 });
+		pBandageHelpText->SetTextHeight(28);
+		pBandageHelpText->SetVisible(false);
+		pUIBoard->InsertUI(pBandageHelpText);
 	}
 }
 void IThirdPersonPlayer::PlayerHUD::Update(const IThirdPersonPlayer& player)
@@ -177,6 +209,54 @@ if (pAmmo) {
 			// 현재 슬롯만 밝게, 나머지 어둡게
 			pSlotImages[i]->SetColor(i == nCurSlot ? v4Selected : v4Dimmed);
 			if (pSlotLabels[i]) pSlotLabels[i]->SetColor(i == nCurSlot ? v4Selected : v4Dimmed);
+		}
+	}
+
+	// 붕대 캐스트 라디얼 게이지 + 퍼센트 (취소/완료 시 m_bInBandage=false → 자동 숨김)
+	if (pBandageCastGauge) {
+		const bool bCasting = player.IsBandaging();
+		if (bCasting) {
+			pBandageCastGauge->SetRadialProgress(1.f - player.GetBandageProgress());	// 남은 비율만큼 표시 → 점점 줄어듦
+		}
+		pBandageCastGauge->SetVisible(bCasting);
+
+		if (pBandageCastText) {
+			if (bCasting) {
+				const int nPercent = static_cast<int>(player.GetBandageProgress() * 100.f);
+				pBandageCastText->SetText(std::format(L"{}%", nPercent));
+			}
+			pBandageCastText->SetVisible(bCasting);
+		}
+
+		// 사용법 안내 — 들고 있는 동안만 (캐스트 중엔 게이지가 대신하므로 숨김)
+		// 붕대/수류탄 공용 텍스트 박스 — 어느 쪽을 들었는지에 따라 문구 교체
+		if (pBandageHelpText) {
+			if (player.IsHoldingGrenade()) {
+				pBandageHelpText->SetText(L"좌클릭 꾹 : 조준(궤도 표시)   놓으면 : 던지기");
+				pBandageHelpText->SetVisible(true);
+			}
+			else {
+				pBandageHelpText->SetText(L"좌클릭 : 자기 회복   우클릭 : 근처 아군 회복");
+				pBandageHelpText->SetVisible(player.IsHoldingBandage() && !bCasting);
+			}
+		}
+	}
+
+	// 소모품 슬롯 0번 = 붕대, 1번 = 프래그 수류탄 — 보유 개수 + 들기 모드 하이라이트
+	if (pItemCounts[0]) {
+		pItemCounts[0]->SetText(std::to_wstring(player.GetBandageCount()));
+	}
+	if (pItemCounts[1]) {
+		pItemCounts[1]->SetText(std::to_wstring(player.GetGrenadeCount()));
+	}
+	{
+		const Vector4 v4Selected{ 1.f, 1.f, 1.f, 1.f };
+		const Vector4 v4Dimmed{ 0.45f, 0.45f, 0.45f, 0.8f };
+		if (pItemImages[0]) {
+			pItemImages[0]->SetColor(player.IsHoldingBandage() ? v4Selected : v4Dimmed);
+		}
+		if (pItemImages[1]) {
+			pItemImages[1]->SetColor(player.IsHoldingGrenade() ? v4Selected : v4Dimmed);
 		}
 	}
 
@@ -277,6 +357,19 @@ void IThirdPersonPlayer::Update()
 	//	m_pCrosshair->Update();
 	//}
 
+	// 붕대 캐스트 진행 — 로컬은 완료 시 회복 적용/전송, 리모트는 같은 타이머로 모션 자체 종료
+	if (m_bInBandage) {
+		if (IsDead()) {
+			CancelBandage();
+		}
+		else {
+			m_fBandageTimer += DT;
+			if (m_fBandageTimer >= BANDAGE_CAST_SECONDS) {
+				FinishBandage();
+			}
+		}
+	}
+
 	m_PlayerHUD.Update(*this);
 
 	for (const auto& pChild : m_pChildren) {
@@ -329,7 +422,7 @@ void IThirdPersonPlayer::SelectWeaponSlot(int nSlot)
 {
 	if (nSlot < 0 || nSlot >= 3 || nSlot == m_nCurrentWeaponSlot) return;
 	if (!m_pSlotWeapons[nSlot]) return;			// 슬롯 미설정 (리모트 등)
-	if (m_bInMeleeAttack || m_bInWeaponSwap) return;
+	if (m_bInMeleeAttack || m_bInWeaponSwap || m_bInBandage) return;
 	if (auto pWeapon = GetCurrentWeaponObject(); pWeapon && pWeapon->IsInReloading()) return;
 
 	m_nCurrentWeaponSlot = nSlot;
@@ -385,7 +478,8 @@ void IThirdPersonPlayer::PostUpdate()
 		ApplyServerMovementXZ();
 	}
 
-	if (m_bAiming && m_pCamera) {
+	// 총 조준 또는 수류탄 와인드업(좌클릭 홀드) 중엔 캐릭터가 카메라 시선을 따라 회전
+	if ((m_bAiming || m_bGrenadeWindup) && m_pCamera) {
 		auto pThirdPersonCamera =
 			std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
 
@@ -734,30 +828,62 @@ void IThirdPersonPlayer::ProcessLocalActionInput()
 	auto pThirdPersonCamera = std::static_pointer_cast<ThirdPersonCamera>(m_pCamera);
 	auto pAnimationCtrl = static_pointer_cast<PlayerAnimationController>(GetComponent<AnimationController>());
 
+	// 붕대 캐스트 중 이동 입력 → 취소.
+	// ProcessLocalMovementInput 직후라 m_bMoved는 이번 프레임 키 입력만 반영
+	// (낙하로 인한 m_bMoved 갱신은 PostUpdate라 여기 안 섞임). 로컬 전용 경로.
+	if (m_bInBandage && m_bMoved) {
+		CancelBandage();
+	}
+
 	// Gun Handling
 	if (m_bMouseInUse) {
-		// Aim
-		if (INPUT->GetButtonDown(VK_RBUTTON)) {
-			EnterAim();
-		}
-
-		if (INPUT->GetButtonUp(VK_RBUTTON)) {
-			LeaveAim();
-		}
-
-		if ((INPUT->GetButtonDown(VK_LBUTTON) || INPUT->GetButtonPressed(VK_LBUTTON)) && m_bAiming) {
-			if (!m_bInMeleeAttack && !m_bInWeaponSwap) {
-				m_bFiredThisFrame = m_pWeaponSocket->TryFire();
-				if (m_bFiredThisFrame) {
-					PlayFireAction();
+		if (m_bHoldingBandage) {
+			// 붕대 모드: 좌클릭 = 자기 회복, 우클릭 = 근처 아군 회복 (조준/발사 대신)
+			// 대상 해석은 씬(GameScene::ProcessPlayerBandage)이 담당 — 여기선 요청 플래그만 세운다.
+			if (!m_bInBandage && !m_bInMeleeAttack && !m_bInWeaponSwap && m_nBandageCount > 0) {
+				if (INPUT->GetButtonDown(VK_LBUTTON)) {
+					m_nBandageRequest = 1;
+				}
+				else if (INPUT->GetButtonDown(VK_RBUTTON)) {
+					m_nBandageRequest = 2;
 				}
 			}
 		}
+		else if (m_bHoldingGrenade) {
+			// 수류탄 모드: 좌클릭 꾹 = 와인드업(뒤로 들기), 뗌 = 던지기
+			if (!m_bInGrenadeThrow && !m_bInMeleeAttack && !m_bInWeaponSwap && m_nGrenadeCount > 0) {
+				if (INPUT->GetButtonDown(VK_LBUTTON)) {
+					StartGrenadeWindup();
+				}
+				else if (INPUT->GetButtonUp(VK_LBUTTON) && m_bGrenadeWindup) {
+					StartGrenadeThrow();
+				}
+			}
+		}
+		else {
+			// Aim
+			if (INPUT->GetButtonDown(VK_RBUTTON)) {
+				EnterAim();
+			}
 
-		if (m_PlayerHUD.pCrosshair && m_pWeaponSocket && m_pWeaponSocket->GetWeaponModel()) {
-			if (!m_bFiredThisFrame) {
-				m_PlayerHUD.pCrosshair->RemoveRecoil(
-					m_pWeaponSocket->GetWeaponModel()->GetRecoilRecovery());
+			if (INPUT->GetButtonUp(VK_RBUTTON)) {
+				LeaveAim();
+			}
+
+			if ((INPUT->GetButtonDown(VK_LBUTTON) || INPUT->GetButtonPressed(VK_LBUTTON)) && m_bAiming) {
+				if (!m_bInMeleeAttack && !m_bInWeaponSwap) {
+					m_bFiredThisFrame = m_pWeaponSocket->TryFire();
+					if (m_bFiredThisFrame) {
+						PlayFireAction();
+					}
+				}
+			}
+
+			if (m_PlayerHUD.pCrosshair && m_pWeaponSocket && m_pWeaponSocket->GetWeaponModel()) {
+				if (!m_bFiredThisFrame) {
+					m_PlayerHUD.pCrosshair->RemoveRecoil(
+						m_pWeaponSocket->GetWeaponModel()->GetRecoilRecovery());
+				}
 			}
 		}
 
@@ -782,18 +908,34 @@ void IThirdPersonPlayer::ProcessLocalActionInput()
 		}
 	}
 
-	// 무기 슬롯 전환 — 1/2번 = 로비 선택 주무기, 3번 = 권총 고정
-	if (INPUT->GetButtonDown('1')) SelectWeaponSlot(0);
-	if (INPUT->GetButtonDown('2')) SelectWeaponSlot(1);
-	if (INPUT->GetButtonDown('3')) SelectWeaponSlot(2);
+	// 무기 슬롯 전환 — 1/2번 = 로비 선택 주무기, 3번 = 권총 고정.
+	// 붕대/수류탄 모드면 해제 + 무기 꺼내는 모션까지 (같은 슬롯 복귀 포함).
+	// Exit 함수는 자기 모드가 아니면 SelectWeaponSlot으로 위임하므로 수류탄 → 붕대 순서로 체인.
+	auto ExitItemToSlot = [this](int nSlot) {
+		if (m_bHoldingGrenade) ExitGrenadeToSlot(nSlot);
+		else                   ExitBandageToSlot(nSlot);
+	};
+	if (INPUT->GetButtonDown('1')) ExitItemToSlot(0);
+	if (INPUT->GetButtonDown('2')) ExitItemToSlot(1);
+	if (INPUT->GetButtonDown('3')) ExitItemToSlot(2);
+
+	// 붕대 들기 — 소모품 슬롯 0번
+	if (INPUT->GetButtonDown('4')) {
+		EnterBandageMode();
+	}
+
+	// 수류탄 들기 — 소모품 슬롯 1번
+	if (INPUT->GetButtonDown('5')) {
+		EnterGrenadeMode();
+	}
 
 	//  Melee attack
-	if (INPUT->GetButtonDown('V') && !m_bInMeleeAttack && !m_bInWeaponSwap) {
+	if (INPUT->GetButtonDown('V') && !m_bInMeleeAttack && !m_bInWeaponSwap && !m_bHoldingBandage && !m_bHoldingGrenade) {
 		PlayMeleeStartAction();
 	}
 
 	// Reloading
-	if (INPUT->GetButtonDown('R') && !m_bInWeaponSwap) {
+	if (INPUT->GetButtonDown('R') && !m_bInWeaponSwap && !m_bHoldingBandage && !m_bHoldingGrenade) {
 		PlayReloadStartAction();
 	}
 
@@ -886,7 +1028,7 @@ void IThirdPersonPlayer::ApplyServerMovementXZ()
 
 	pTransform->Move(v3Delta, 1.f);
 
-	if (m_bMoved && !m_bAiming) {
+	if (m_bMoved && !m_bAiming && !m_bGrenadeWindup) {	// 와인드업 중엔 카메라 추종 회전이 우선
 		float fYaw = std::atan2f(m_v3MoveDirection.x, m_v3MoveDirection.z);
 		pTransform->SetRotation(0.f, fYaw, 0.f);
 	}
@@ -1124,6 +1266,418 @@ void IThirdPersonPlayer::PlayReloadEndAction()
 	}
 	else {
 		pAnimationCtrl->GetMontage()->StopMontage();
+	}
+}
+
+void IThirdPersonPlayer::EnterBandageMode()
+{
+	if (m_bHoldingBandage || m_bInBandage || m_bInGrenadeThrow || m_bInMeleeAttack || m_bInWeaponSwap) return;
+	if (auto pWeapon = GetCurrentWeaponObject(); pWeapon && pWeapon->IsInReloading()) return;
+	if (m_nBandageCount <= 0) return;
+
+	// 수류탄 들기 중이면 내려놓고 바로 붕대로 — 총 꺼내기(ExitGrenadeToSlot) 없이 직행
+	if (m_bHoldingGrenade) {
+		m_bHoldingGrenade = false;
+		if (m_bGrenadeWindup && m_pCamera) {
+			// 와인드업 중 전환 — 줌 복귀
+			std::static_pointer_cast<ThirdPersonCamera>(m_pCamera)->LeaveAimMode();
+		}
+		m_bGrenadeWindup = false;
+		SetGrenadeHandVisible(false);
+		if (GetCamera()) {
+			NetworkManager::GetInstance()->SendPlayerGrenade(4, Vector3::Zero, Vector3::Zero);
+		}
+	}
+
+	LeaveAim();		// 멱등 — 비조준이면 no-op
+	m_bHoldingBandage = true;
+
+	// 붕대 들기 = 총을 내림 (장착/탄약 상태는 유지, 렌더만 끔)
+	if (m_pWeaponSocket) {
+		m_pWeaponSocket->SetModelVisible(false);
+	}
+
+	// 붕대 꺼내는 모션 — 무기 드로우와 같은 잠금(m_bInWeaponSwap) 공유, 종료 notify(OnWeaponDrawEnd)가 해제
+	m_bInWeaponSwap = true;
+	auto pAnimationCtrl =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>());
+	pAnimationCtrl->GetMontage()->PlayMontage("Bandage Draw");
+
+	// 리모트 들기 모션 동기화
+	if (GetCamera()) {
+		NetworkManager::GetInstance()->SendPlayerBandage(3, -1);
+	}
+}
+
+void IThirdPersonPlayer::ExitBandageToSlot(int nSlot)
+{
+	if (!m_bHoldingBandage) {
+		SelectWeaponSlot(nSlot);
+		return;
+	}
+
+	if (m_bInBandage || m_bInWeaponSwap) return;	// 캐스트/드로우 중 잠금 (몽타주/상태 보호)
+
+	m_bHoldingBandage = false;
+	if (m_pWeaponSocket) {
+		m_pWeaponSocket->SetModelVisible(true);
+	}
+
+	// 다른 슬롯이면 무기 교체까지, 같은 슬롯이면 그대로 — 어느 쪽이든 꺼내는 모션 재생
+	if (nSlot != m_nCurrentWeaponSlot && nSlot >= 0 && nSlot < 3 && m_pSlotWeapons[nSlot]) {
+		m_nCurrentWeaponSlot = nSlot;
+		GiveWeapon(m_eWeaponSlots[nSlot]);
+	}
+	PlayWeaponDrawAction();
+
+	// 리모트 내리기 모션 동기화 (무기 교체는 GiveWeapon이 이미 전송)
+	if (GetCamera()) {
+		NetworkManager::GetInstance()->SendPlayerBandage(4, -1);
+	}
+}
+
+void IThirdPersonPlayer::PlayBandageHoldAction()
+{
+	// 리모트 전용: 총 내림 + 붕대 꺼내는 모션 (로컬 EnterBandageMode와 동일한 손 연출)
+	if (m_bHoldingBandage || m_bInBandage || m_bInMeleeAttack) return;
+
+	m_bHoldingBandage = true;	// 캐스트 종료(StopBandageAction) 후에도 총 숨김 유지 기준
+
+	if (m_pWeaponSocket) {
+		m_pWeaponSocket->SetModelVisible(false);
+	}
+
+	m_bInWeaponSwap = true;
+	auto pAnimationCtrl =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>());
+	pAnimationCtrl->GetMontage()->PlayMontage("Bandage Draw");
+}
+
+void IThirdPersonPlayer::PlayBandageUnholdAction()
+{
+	if (!m_bHoldingBandage) return;
+
+	m_bHoldingBandage = false;
+	StopBandageAction();	// 캐스트 중이었다면 모션도 정리 (멱등)
+
+	if (m_pWeaponSocket) {
+		m_pWeaponSocket->SetModelVisible(true);
+	}
+
+	PlayWeaponDrawAction();	// 총 다시 꺼내는 모션
+}
+
+void IThirdPersonPlayer::PlayBandageStartAction()
+{
+	if (m_bInBandage || m_bInMeleeAttack || m_bInWeaponSwap) return;
+
+	m_bInBandage = true;
+	m_fBandageTimer = 0.f;
+
+	// 리모트: 감는 동안 총 내림 (로컬은 들기 모드에서 이미 숨김 — 멱등)
+	if (m_pWeaponSocket) {
+		m_pWeaponSocket->SetModelVisible(false);
+	}
+
+	auto pAnimationCtrl =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>());
+	pAnimationCtrl->GetMontage()->PlayMontage("Bandage Wrap");
+}
+
+void IThirdPersonPlayer::StopBandageAction()
+{
+	if (!m_bInBandage) return;
+
+	m_bInBandage = false;
+	m_fBandageTimer = 0.f;
+
+	// 들기 모드가 아니면(리모트/취소 후 무기 복귀) 총 다시 표시.
+	// 로컬 들기 모드 중엔 숨김 유지 — LeaveBandageMode에서 복원.
+	if (m_pWeaponSocket && !m_bHoldingBandage) {
+		m_pWeaponSocket->SetModelVisible(true);
+	}
+
+	auto pAnimationCtrl =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>());
+	pAnimationCtrl->GetMontage()->StopMontage();
+}
+
+void IThirdPersonPlayer::StartBandageCast(int targetPlayerId)
+{
+	if (m_bInBandage || m_bInMeleeAttack || m_bInWeaponSwap) return;
+
+	m_nBandageTargetId = targetPlayerId;
+	PlayBandageStartAction();
+
+	// 로컬 플레이어(카메라 보유)만 서버에 시작 알림 — 리모트 붕대 모션 동기화
+	if (GetCamera()) {
+		NetworkManager::GetInstance()->SendPlayerBandage(0, targetPlayerId);
+	}
+}
+
+void IThirdPersonPlayer::FinishBandage()
+{
+	const int nTargetId = m_nBandageTargetId;
+	StopBandageAction();
+	m_nBandageTargetId = -1;
+
+	// 리모트: 모션 종료만 (회복은 S2C_PLAYER_HEAL로 대상 클라가 반영)
+	if (!GetCamera()) return;
+
+	m_nBandageCount = std::max(0, m_nBandageCount - 1);
+
+	auto pNetwork = NetworkManager::GetInstance();
+	if (pNetwork->IsConnected() && !pNetwork->IsOffline()) {
+		pNetwork->SendPlayerBandage(2, nTargetId);	// 서버가 회복 적용 + S2C_PLAYER_HEAL 확정
+	}
+	else {
+		Heal(BANDAGE_HEAL_AMOUNT);	// 오프라인은 자기 자신만
+	}
+}
+
+void IThirdPersonPlayer::CancelBandage()
+{
+	if (!m_bInBandage) return;
+
+	const int nTargetId = m_nBandageTargetId;
+	StopBandageAction();
+	m_nBandageTargetId = -1;
+
+	if (GetCamera()) {
+		NetworkManager::GetInstance()->SendPlayerBandage(1, nTargetId);
+	}
+}
+
+void IThirdPersonPlayer::SetGrenadeHandVisible(bool bVisible)
+{
+	if (bVisible && !m_pGrenadeSocket) {
+		auto pSkeleton = GetComponent<Skeleton>();
+		if (!pSkeleton) return;
+		m_pGrenadeSocket = pSkeleton->CreateAttachSocket<GrenadeHandSocket>("RightHand"s);
+		if (m_pGrenadeSocket) {
+			m_pGrenadeSocket->Initialize();	// 런타임 생성 — Skeleton::Initialize 이후라 직접 초기화
+		}
+	}
+
+	if (m_pGrenadeSocket) {
+		m_pGrenadeSocket->SetVisible(bVisible);
+	}
+}
+
+void IThirdPersonPlayer::EnterGrenadeMode()
+{
+	if (m_bHoldingGrenade || m_bInBandage || m_bInMeleeAttack || m_bInWeaponSwap) return;
+	if (auto pWeapon = GetCurrentWeaponObject(); pWeapon && pWeapon->IsInReloading()) return;
+	if (m_nGrenadeCount <= 0) return;
+
+	// 붕대 들기 중이면 내려놓고 바로 수류탄으로 — 총 꺼내기(ExitBandageToSlot) 없이 직행
+	if (m_bHoldingBandage) {
+		m_bHoldingBandage = false;
+		if (GetCamera()) {
+			NetworkManager::GetInstance()->SendPlayerBandage(4, -1);
+		}
+	}
+
+	LeaveAim();		// 멱등 — 비조준이면 no-op
+	m_bHoldingGrenade = true;
+
+	// 수류탄 들기 = 총을 내림 (장착/탄약 상태는 유지, 렌더만 끔) + 손에 수류탄 표시
+	if (m_pWeaponSocket) {
+		m_pWeaponSocket->SetModelVisible(false);
+	}
+	SetGrenadeHandVisible(true);
+
+	// 꺼내는 모션 — 붕대와 동일하게 드로우 잠금(m_bInWeaponSwap) 공유, 종료 notify(OnWeaponDrawEnd)가 해제
+	m_bInWeaponSwap = true;
+	auto pAnimationCtrl =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>());
+	pAnimationCtrl->GetMontage()->PlayMontage("Bandage Draw");
+
+	// 리모트 들기 모션 동기화
+	if (GetCamera()) {
+		NetworkManager::GetInstance()->SendPlayerGrenade(3, Vector3::Zero, Vector3::Zero);
+	}
+}
+
+void IThirdPersonPlayer::ExitGrenadeToSlot(int nSlot)
+{
+	if (!m_bHoldingGrenade) {
+		SelectWeaponSlot(nSlot);
+		return;
+	}
+
+	if (m_bInGrenadeThrow || m_bInWeaponSwap) return;	// 던지기/드로우 중 잠금 (몽타주/상태 보호)
+
+	m_bHoldingGrenade = false;
+	if (m_bGrenadeWindup && m_pCamera) {
+		// 와인드업 중 슬롯 전환 — 줌 복귀
+		std::static_pointer_cast<ThirdPersonCamera>(m_pCamera)->LeaveAimMode();
+	}
+	m_bGrenadeWindup  = false;	// 와인드업 중이었다면 취소 (몽타주는 무기 드로우가 대체)
+	SetGrenadeHandVisible(false);
+	if (m_pWeaponSocket) {
+		m_pWeaponSocket->SetModelVisible(true);
+	}
+
+	// 다른 슬롯이면 무기 교체까지, 같은 슬롯이면 그대로 — 어느 쪽이든 꺼내는 모션 재생
+	if (nSlot != m_nCurrentWeaponSlot && nSlot >= 0 && nSlot < 3 && m_pSlotWeapons[nSlot]) {
+		m_nCurrentWeaponSlot = nSlot;
+		GiveWeapon(m_eWeaponSlots[nSlot]);
+	}
+	PlayWeaponDrawAction();
+
+	// 리모트 내리기 모션 동기화 (무기 교체는 GiveWeapon이 이미 전송)
+	if (GetCamera()) {
+		NetworkManager::GetInstance()->SendPlayerGrenade(4, Vector3::Zero, Vector3::Zero);
+	}
+}
+
+void IThirdPersonPlayer::StartGrenadeWindup()
+{
+	if (m_bGrenadeWindup || m_bInGrenadeThrow || m_bInMeleeAttack || m_bInWeaponSwap) return;
+
+	m_bGrenadeWindup = true;
+
+	// 총 조준처럼 카메라만 줌인 (m_bAiming은 무기 로직과 얽혀 있어 건드리지 않음)
+	if (m_pCamera) {
+		std::static_pointer_cast<ThirdPersonCamera>(m_pCamera)->EnterAimMode();
+	}
+
+	// 원본 Throw 클립 재생 → 뒤로 든 자세(HOLD_RATIO)에서 일시정지, 좌클릭 뗌까지 유지
+	const auto& pMontage =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>())->GetMontage();
+	pMontage->PlayMontage("Grenade Throw");
+	pMontage->PauseAtRatio(GRENADE_HOLD_RATIO);
+
+	if (GetCamera()) {
+		NetworkManager::GetInstance()->SendPlayerGrenade(2, Vector3::Zero, Vector3::Zero);
+	}
+}
+
+void IThirdPersonPlayer::StartGrenadeThrow()
+{
+	if (!m_bGrenadeWindup || m_bInGrenadeThrow) return;
+
+	m_bGrenadeWindup  = false;
+	m_bInGrenadeThrow = true;
+
+	// 와인드업 줌 복귀
+	if (m_pCamera) {
+		std::static_pointer_cast<ThirdPersonCamera>(m_pCamera)->LeaveAimMode();
+	}
+
+	// 일시정지 해제 — 홀드 지점부터 이어서 재생 (릴리즈/종료 notify 정상 발화)
+	const auto& pMontage =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>())->GetMontage();
+	if (pMontage->IsPausedHold()) {
+		pMontage->ResumeMontage();
+	}
+	else {
+		pMontage->PlayMontage("Grenade Throw");	// 홀드 몽타주가 끊긴 예외 상황 폴백
+	}
+
+	// 투척 패킷(state 0)은 릴리즈 notify 시점에 씬이 투사체 스폰과 함께 전송
+}
+
+void IThirdPersonPlayer::OnGrenadeRelease()
+{
+	// 손에서 투사체로 교체 — 리모트/로컬 공통
+	SetGrenadeHandVisible(false);
+
+	// 리모트 플레이어도 몽타주 notify가 불리지만, 투사체 스폰은 S2C 패킷(state 0)이
+	// 담당하므로 로컬(카메라 보유)만 요청 플래그를 세운다.
+	if (!GetCamera()) return;
+
+	m_bGrenadeReleasePending = true;
+	m_nGrenadeCount = std::max(0, m_nGrenadeCount - 1);
+}
+
+void IThirdPersonPlayer::OnGrenadeThrowEnd()
+{
+	m_bInGrenadeThrow = false;
+
+	// 로컬: 남은 수류탄 없으면 현재 슬롯 무기로 자동 복귀 (리모트는 state 4 패킷이 처리)
+	if (GetCamera() && m_bHoldingGrenade && m_nGrenadeCount <= 0) {
+		ExitGrenadeToSlot(m_nCurrentWeaponSlot);
+		return;
+	}
+
+	// 계속 들기 모드면 다음 투척용 수류탄을 다시 손에 표시
+	if (m_bHoldingGrenade) {
+		SetGrenadeHandVisible(true);
+	}
+}
+
+void IThirdPersonPlayer::PlayGrenadeEquipAction()
+{
+	// 리모트 전용: 총 내림 + 꺼내는 모션 (로컬 EnterGrenadeMode와 동일한 손 연출)
+	if (m_bHoldingGrenade || m_bInMeleeAttack) return;
+
+	m_bHoldingGrenade = true;
+
+	if (m_pWeaponSocket) {
+		m_pWeaponSocket->SetModelVisible(false);
+	}
+	SetGrenadeHandVisible(true);
+
+	m_bInWeaponSwap = true;
+	auto pAnimationCtrl =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>());
+	pAnimationCtrl->GetMontage()->PlayMontage("Bandage Draw");
+}
+
+void IThirdPersonPlayer::PlayGrenadeUnequipAction()
+{
+	if (!m_bHoldingGrenade) return;
+
+	m_bHoldingGrenade = false;
+	m_bGrenadeWindup  = false;
+	m_bInGrenadeThrow = false;
+	SetGrenadeHandVisible(false);
+
+	if (m_pWeaponSocket) {
+		m_pWeaponSocket->SetModelVisible(true);
+	}
+
+	PlayWeaponDrawAction();	// 총 다시 꺼내는 모션
+}
+
+void IThirdPersonPlayer::PlayGrenadeWindupAction()
+{
+	// 리모트 전용. 드로우 몽타주 진행 중이면 스킵 — 대체하면 OnWeaponDrawEnd notify가
+	// 누락돼 m_bInWeaponSwap이 안 풀린다 (붕대 리모트 모션과 동일한 규칙).
+	if (m_bInMeleeAttack || m_bInWeaponSwap) return;
+
+	m_bGrenadeWindup = true;
+	const auto& pMontage =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>())->GetMontage();
+	pMontage->PlayMontage("Grenade Throw");
+	pMontage->PauseAtRatio(GRENADE_HOLD_RATIO);
+}
+
+void IThirdPersonPlayer::PlayGrenadeThrowAction()
+{
+	if (m_bInMeleeAttack || m_bInWeaponSwap) return;
+
+	m_bGrenadeWindup  = false;
+	m_bInGrenadeThrow = true;
+	const auto& pMontage =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>())->GetMontage();
+	if (pMontage->IsPausedHold()) {
+		pMontage->ResumeMontage();	// 와인드업 홀드 중이면 이어서
+	}
+	else {
+		pMontage->PlayMontage("Grenade Throw");	// 와인드업 패킷을 못 받은 경우 처음부터
 	}
 }
 
@@ -1372,7 +1926,7 @@ void NetworkOwnerThirdPersonPlayer::SendLocalCommandToServer()
 	// 이동/조준 갱신은 30Hz로 스로틀. 매 프레임 전송하면 고프레임에서 4~16ms
 	// 간격의 소형 패킷이 되고, TCP 병합으로 리모트에 버스트로 몰려 도착해
 	// 도착시각 기반 스냅샷 보간이 요동친다(속도가 0↔정상 깜빡임 → 걷기 애니 미재생).
-	bool bMoveTick = (m_bMoved || m_bAiming) && (fNow - fLastSendTime >= 1.f / 30.f);
+	bool bMoveTick = (m_bMoved || m_bAiming || m_bGrenadeWindup) && (fNow - fLastSendTime >= 1.f / 30.f);
 
 	// 정지 중에도 100ms 킵얼라이브 전송 — 안 보내면 리모트가 정지를 모른다:
 	// 마지막 이동 스냅샷 속도로 외삽해 오버슈트하고, 걷기 애니가 제자리에서 고착됨

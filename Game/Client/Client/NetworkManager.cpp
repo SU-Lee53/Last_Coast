@@ -539,6 +539,33 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		m_PendingPlayerRespawns.push(PlayerRespawnEvent{ p->playerId, Vector3{ p->x, p->y, p->z } });
 		break;
 	}
+	case S2C_PLAYER_BANDAGE: {
+		if (size < static_cast<int>(sizeof(S2C_PlayerBandage))) return;
+		auto* p = reinterpret_cast<const S2C_PlayerBandage*>(data);
+		m_PendingPlayerBandages.push(BandageEvent{ p->playerId, p->targetPlayerId, p->state });
+		break;
+	}
+	case S2C_PLAYER_HEAL: {
+		if (size < static_cast<int>(sizeof(S2C_PlayerHeal))) return;
+		auto* p = reinterpret_cast<const S2C_PlayerHeal*>(data);
+		m_PendingPlayerHeals.push(PlayerHealEvent{ p->targetPlayerId, p->healerPlayerId, p->fNewHP });
+		break;
+	}
+	case S2C_PLAYER_GRENADE: {
+		if (size < static_cast<int>(sizeof(S2C_PlayerGrenade))) return;
+		auto* p = reinterpret_cast<const S2C_PlayerGrenade*>(data);
+		m_PendingPlayerGrenades.push(GrenadeEvent{
+			p->playerId, p->state,
+			Vector3{ p->x, p->y, p->z },
+			Vector3{ p->vx, p->vy, p->vz } });
+		break;
+	}
+	case S2C_GRENADE_HIT: {
+		if (size < static_cast<int>(sizeof(S2C_GrenadeHit))) return;
+		auto* p = reinterpret_cast<const S2C_GrenadeHit*>(data);
+		m_PendingGrenadeHits.push(GrenadeHitEvent{ p->attackerPlayerId, p->zombieId, p->damage });
+		break;
+	}
 	default:
 		break;
 	}
@@ -834,6 +861,78 @@ std::vector<MeleeHitEvent> NetworkManager::ConsumeMeleeHits()
 	std::vector<MeleeHitEvent> out;
 	MeleeHitEvent ev;
 	while (m_PendingMeleeHits.try_pop(ev))
+		out.push_back(ev);
+	return out;
+}
+
+void NetworkManager::SendPlayerBandage(unsigned char state, int targetPlayerId)
+{
+	if (!m_bConnected || m_bOfflineMode) return;
+
+	C2S_PlayerBandage p;
+	p.size           = sizeof(C2S_PlayerBandage);
+	p.type           = C2S_PLAYER_BANDAGE;
+	p.state          = state;
+	p.targetPlayerId = targetPlayerId;
+	SendPacket(&p, p.size);
+}
+
+std::vector<BandageEvent> NetworkManager::ConsumePlayerBandages()
+{
+	std::vector<BandageEvent> out;
+	BandageEvent ev;
+	while (m_PendingPlayerBandages.try_pop(ev))
+		out.push_back(ev);
+	return out;
+}
+
+std::vector<PlayerHealEvent> NetworkManager::ConsumePlayerHeals()
+{
+	std::vector<PlayerHealEvent> out;
+	PlayerHealEvent ev;
+	while (m_PendingPlayerHeals.try_pop(ev))
+		out.push_back(ev);
+	return out;
+}
+
+void NetworkManager::SendPlayerGrenade(unsigned char state, const Vector3& pos, const Vector3& vel)
+{
+	if (!m_bConnected || m_bOfflineMode) return;
+
+	C2S_PlayerGrenade p;
+	p.size  = sizeof(C2S_PlayerGrenade);
+	p.type  = C2S_PLAYER_GRENADE;
+	p.state = state;
+	p.x  = pos.x; p.y  = pos.y; p.z  = pos.z;
+	p.vx = vel.x; p.vy = vel.y; p.vz = vel.z;
+	SendPacket(&p, p.size);
+}
+
+void NetworkManager::SendGrenadeExplode(const Vector3& pos)
+{
+	if (!m_bConnected || m_bOfflineMode) return;
+
+	C2S_GrenadeExplode p;
+	p.size = sizeof(C2S_GrenadeExplode);
+	p.type = C2S_GRENADE_EXPLODE;
+	p.x = pos.x; p.y = pos.y; p.z = pos.z;
+	SendPacket(&p, p.size);
+}
+
+std::vector<GrenadeEvent> NetworkManager::ConsumePlayerGrenades()
+{
+	std::vector<GrenadeEvent> out;
+	GrenadeEvent ev;
+	while (m_PendingPlayerGrenades.try_pop(ev))
+		out.push_back(ev);
+	return out;
+}
+
+std::vector<GrenadeHitEvent> NetworkManager::ConsumeGrenadeHits()
+{
+	std::vector<GrenadeHitEvent> out;
+	GrenadeHitEvent ev;
+	while (m_PendingGrenadeHits.try_pop(ev))
 		out.push_back(ev);
 	return out;
 }

@@ -190,6 +190,7 @@
     <ClInclude Include="DynamicObject.h" />
     <ClInclude Include="EventSequence.h" />
     <ClInclude Include="ExplosionEffect.h" />
+    <ClInclude Include="GrenadeExplosionEffect.h" />
     <ClInclude Include="CrashFireEffect.h" />
     <ClInclude Include="FireEffect.h" />
     <ClInclude Include="GameEvent.h" />
@@ -242,6 +243,8 @@
     <ClInclude Include="ModelManager.h" />
     <ClInclude Include="NetworkManager.h" />
     <ClInclude Include="NetworkTestScene.h" />
+    <ClInclude Include="GrenadeArcPass.h" />
+    <ClInclude Include="GrenadeProjectile.h" />
     <ClInclude Include="NodeObject.h" />
     <ClInclude Include="Packets.h" />
     <ClInclude Include="pch.h" />
@@ -387,6 +390,7 @@
     <ClCompile Include="DynamicObject.cpp" />
     <ClCompile Include="EventSequence.cpp" />
     <ClCompile Include="ExplosionEffect.cpp" />
+    <ClCompile Include="GrenadeExplosionEffect.cpp" />
     <ClCompile Include="CrashFireEffect.cpp" />
     <ClCompile Include="FireEffect.cpp" />
     <ClCompile Include="GameEvent.cpp" />
@@ -436,6 +440,8 @@
     <ClCompile Include="ModelManager.cpp" />
     <ClCompile Include="NetworkManager.cpp" />
     <ClCompile Include="NetworkTestScene.cpp" />
+    <ClCompile Include="GrenadeArcPass.cpp" />
+    <ClCompile Include="GrenadeProjectile.cpp" />
     <ClCompile Include="NodeObject.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
