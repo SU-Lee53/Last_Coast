@@ -1369,7 +1369,7 @@ void IThirdPersonPlayer::PlayBandageUnholdAction()
 	PlayWeaponDrawAction();	// 총 다시 꺼내는 모션
 }
 
-void IThirdPersonPlayer::PlayBandageStartAction()
+void IThirdPersonPlayer::PlayBandageStartAction(bool bAllyTarget)
 {
 	if (m_bInBandage || m_bInMeleeAttack || m_bInWeaponSwap) return;
 
@@ -1384,7 +1384,7 @@ void IThirdPersonPlayer::PlayBandageStartAction()
 	auto pAnimationCtrl =
 		std::static_pointer_cast<PlayerAnimationController>(
 			GetComponent<AnimationController>());
-	pAnimationCtrl->GetMontage()->PlayMontage("Bandage Wrap");
+	pAnimationCtrl->GetMontage()->PlayMontage(bAllyTarget ? "Bandage Ally Wrap" : "Bandage Wrap");
 }
 
 void IThirdPersonPlayer::StopBandageAction()
@@ -1411,7 +1411,11 @@ void IThirdPersonPlayer::StartBandageCast(int targetPlayerId)
 	if (m_bInBandage || m_bInMeleeAttack || m_bInWeaponSwap) return;
 
 	m_nBandageTargetId = targetPlayerId;
-	PlayBandageStartAction();
+
+	// 자기(-1 = 오프라인 자기, 본인 id = 온라인 자기) / 아군(다른 id) 모션 구분
+	const bool bAllyTarget = targetPlayerId >= 0
+		&& targetPlayerId != NetworkManager::GetInstance()->GetPlayerID();
+	PlayBandageStartAction(bAllyTarget);
 
 	// 로컬 플레이어(카메라 보유)만 서버에 시작 알림 — 리모트 붕대 모션 동기화
 	if (GetCamera()) {

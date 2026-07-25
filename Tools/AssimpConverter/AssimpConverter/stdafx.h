@@ -1,12 +1,12 @@
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN             // °ÅÀÇ »ç¿ëµÇÁö ¾Ê´Â ³»¿ëÀ» Windows Çì´õ¿¡¼­ Á¦¿ÜÇÕ´Ï´Ù.
-// Windows Çì´õ ÆÄÀÏ
+#define WIN32_LEAN_AND_MEAN             // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Windows ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
+// Windows ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 #include <windows.h>
 #include <commctrl.h>	// Progress bar
 #include "resource.h"	// Progress bar
 #pragma comment(lib, "comctl32.lib")
-// C ·±Å¸ÀÓ Çì´õ ÆÄÀÏÀÔ´Ï´Ù.
+// C ï¿½ï¿½Å¸ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ô´Ï´ï¿½.
 #include <stdlib.h>
 #include <malloc.h>
 #include <memory.h>
@@ -16,6 +16,7 @@
 #undef max;
 
 // STL
+#include <cctype>
 #include <iostream>
 #include <fstream>
 #include <print>
@@ -207,12 +208,12 @@ inline int ParseFilePaths(wchar_t* pwstrBuffer, std::vector<std::wstring>& outws
 
 	if (*p == L'\0')
 	{
-		// ÆÄÀÏ 1°³
+		// ï¿½ï¿½ï¿½ï¿½ 1ï¿½ï¿½
 		outwstrFilePathes.push_back(directory);
 	}
 	else
 	{
-		// ¿©·¯ °³
+		// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
 		while (*p)
 		{
 			std::wstring filename = p;

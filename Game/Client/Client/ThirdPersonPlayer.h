@@ -174,7 +174,7 @@ public:
 	void PlayFireAction();
 	void PlayMeleeStartAction();	// public: 리모트 플레이어 근접공격 모션 재생에도 사용
 	void PlayWeaponDrawAction();	// public: 리모트 플레이어 무기교체 모션 재생에도 사용
-	void PlayBandageStartAction();	// public: 리모트 플레이어 붕대 모션 재생에도 사용
+	void PlayBandageStartAction(bool bAllyTarget = false);	// public: 리모트 플레이어 붕대 모션 재생에도 사용 (아군 대상이면 전용 모션)
 	void StopBandageAction();		// public: 리모트 붕대 모션 종료(취소/완료 패킷)에도 사용
 	void PlayBandageHoldAction();	// public: 리모트 붕대 들기 (총 내림 + 꺼내는 모션) — state 3
 	void PlayBandageUnholdAction();	// public: 리모트 붕대 내리기 (총 복귀 + 꺼내는 모션) — state 4

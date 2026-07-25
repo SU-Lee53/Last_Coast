@@ -1255,7 +1255,10 @@ void GameScene::ProcessBandageResults()
 
 		switch (ev.state)
 		{
-		case 0:  it->second->PlayBandageStartAction();  break;	// 캐스트 시작
+		case 0:	// 캐스트 시작 — 대상이 시전자 본인이 아니면 아군 회복 모션
+			it->second->PlayBandageStartAction(
+				ev.targetPlayerId >= 0 && ev.targetPlayerId != ev.playerId);
+			break;
 		case 3:  it->second->PlayBandageHoldAction();   break;	// 들기 (총 내림 + 꺼내는 모션)
 		case 4:  it->second->PlayBandageUnholdAction(); break;	// 내리기 (총 복귀 + 꺼내는 모션)
 		default: it->second->StopBandageAction();       break;	// 1=취소, 2=완료 → 모션 종료

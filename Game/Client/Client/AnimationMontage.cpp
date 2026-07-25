@@ -396,15 +396,21 @@ void PlayerAnimationMontage::BuildMontage()
 		m_Notifies.push_back(reloadEndNotify);
 	}
 
-	// 8. Bandage Wrap — 붕대 감기 (전용 클립 없어 Reloading 임시 재사용).
+	// 8. Bandage Wrap — 붕대 감기 전용 클립 (자기/아군 별도 모션).
 	// 종료는 클립 길이가 아니라 IThirdPersonPlayer::Update의 4초 타이머(BANDAGE_CAST_SECONDS)가
 	// StopBandageAction → StopMontage 로 끊는다. 그래서 LOOP + notify 없음.
 	{
 		MontageSection bandageSection{};
 		bandageSection.strName = "Bandage Wrap";
-		bandageSection.pAnimationToPlay = ANIMATION->Get("Reloading");
+		bandageSection.pAnimationToPlay = ANIMATION->Get("bandage-wrap-character");
 		bandageSection.eEndRule = MONTAGE_SECTION_END_RULE::LOOP;
 		m_MontageSections.push_back(bandageSection);
+
+		MontageSection allySection{};
+		allySection.strName = "Bandage Ally Wrap";
+		allySection.pAnimationToPlay = ANIMATION->Get("bandage-ally-wrap");
+		allySection.eEndRule = MONTAGE_SECTION_END_RULE::LOOP;
+		m_MontageSections.push_back(allySection);
 	}
 
 	// 9. Grenade Throw — 원본 "Throw" 클립 하나로 와인드업+던지기.

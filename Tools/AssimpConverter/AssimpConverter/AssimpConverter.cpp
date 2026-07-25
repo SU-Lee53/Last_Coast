@@ -245,6 +245,19 @@ std::string NormalizeBoneName(const std::string& name)
 	auto pos = name.find(':');
 	if (pos != std::string::npos)
 		return name.substr(pos + 1);
+
+	// glTF/GLB는 노드명에 ':'를 허용하지 않아 Mixamo 접두사가 "mixamorig5Hips"처럼
+	// 콜론 없이 붙어 나온다 — mixamorig(+숫자)(+'_') 접두사를 직접 벗겨낸다.
+	static const std::string strMixamoPrefix = "mixamorig";
+	if (name.rfind(strMixamoPrefix, 0) == 0) {
+		size_t nStart = strMixamoPrefix.size();
+		while (nStart < name.size() && std::isdigit(static_cast<unsigned char>(name[nStart])))
+			++nStart;
+		if (nStart < name.size() && name[nStart] == '_')
+			++nStart;
+		if (nStart < name.size())
+			return name.substr(nStart);
+	}
 	return name;
 }
 
