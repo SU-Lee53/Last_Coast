@@ -213,7 +213,8 @@ public:
 
 	void ApplyWeaponChanged(WEAPON_TYPE eWeaponType);
 	void ApplyHitReact(float damage);
-	void ApplyDead();
+	void ApplyDead();		// 사망 모션 재생 (FREEZE) + 진행 중 액션/잠금 정리 — 로컬/리모트 공용
+	void ApplyRespawn();	// 부활 — 사망 몽타주 해제, 상태머신 복귀
 
 protected:
 	// Ground solving

@@ -22,6 +22,7 @@ void AnimationManager::LoadGameAnimations()
 	LoadAndAdd("Throw");			// 수류탄 원본 클립 — 와인드업~던지기 (몽타주가 중간 일시정지로 홀드)
 	LoadAndAdd("bandage-wrap-character");	// 붕대 감기 전용 클립 (자기 회복)
 	LoadAndAdd("bandage-ally-wrap");		// 붕대 감기 전용 클립 (아군 회복)
+	LoadAndAdd("Player Die");				// 플레이어 사망 모션 (몽타주 FREEZE — 마지막 자세 유지)
 
 	LoadAndAdd("Zombie Idle");
 	LoadAndAdd("Zombie Running");

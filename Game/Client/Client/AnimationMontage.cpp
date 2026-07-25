@@ -141,7 +141,7 @@ void AnimationMontage::PlayMontage(const std::string& strSectionName)
 	m_fBlendOutElapsed = 0.f;
 	m_nCurrentSection = it->second;
 	m_fTotalPlaytime = 0.f;
-	m_fSectionPlayTime = 0.f;
+	m_fSectionPlayTime = m_MontageSections[m_nCurrentSection].fStartOffset;
 	m_fPauseTime = -1.f;	// 새 재생 = 이전 일시정지 예약 해제
 	m_bFreezed = false;
 }
@@ -439,6 +439,18 @@ void PlayerAnimationMontage::BuildMontage()
 			std::static_pointer_cast<IThirdPersonPlayer>(pObj)->OnGrenadeThrowEnd();
 		};
 		m_Notifies.push_back(throwEndNotify);
+	}
+
+	// 10. Player Death — 사망 모션. FREEZE로 마지막 프레임(쓰러진 자세) 유지,
+	// 부활 시 ApplyRespawn의 StopMontage가 해제해 상태머신으로 복귀.
+	{
+		MontageSection deathSection{};
+		deathSection.strName = "Player Death";
+		deathSection.pAnimationToPlay = ANIMATION->Get("Player Die");
+		deathSection.eEndRule = MONTAGE_SECTION_END_RULE::FREEZE;
+		deathSection.bFullBody = true;		// 하체까지 전신 재생 — 상체 마스크 블렌드로는 쓰러지는 모션 불가
+		deathSection.fStartOffset = 0.45f;	// 클립 앞 ~0.5초는 서있는 대기 자세 — 스킵해 즉시 쓰러짐
+		m_MontageSections.push_back(deathSection);
 	}
 }
 

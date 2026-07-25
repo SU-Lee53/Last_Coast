@@ -24,6 +24,8 @@ struct MontageSection {
 
 	MONTAGE_SECTION_END_RULE eEndRule = MONTAGE_SECTION_END_RULE::NEXT;
 	std::string strJumpTarget;
+	bool bFullBody = false;		// TRUE = 전신 재생 — LayeredBlend(Spine 상체 마스크) 우회 (사망 등)
+	float fStartOffset = 0.f;	// 섹션 진입 시 이 시점(초)부터 재생 — 클립 선행 대기 구간 스킵용
 };
 
 struct MontageNotify : AnimationNotify {
@@ -49,6 +51,10 @@ public:
 
 	const std::vector<AnimationKey>& GetOutputPose() const { return m_OutputPose; }
 	float GetBlendWeight() const { return m_fBlendWeight; }
+	// 현재(또는 블렌드아웃 중인) 섹션이 전신 재생인지 — 컨트롤러가 상하체 분리 블렌드 대신 전 본 lerp 사용
+	bool IsCurrentSectionFullBody() const {
+		return m_nCurrentSection >= 0 && m_MontageSections[m_nCurrentSection].bFullBody;
+	}
 	bool IsFreezed() const { return m_bFreezed; }
 	bool IsPlaying() const { return m_bPlaying; }
 

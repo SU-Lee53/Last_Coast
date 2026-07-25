@@ -733,10 +733,15 @@ void GameScene::UpdateDeathAndSpectate()
 		{
 			if (ev.playerId == NETWORK->GetPlayerID()) {
 				m_fRespawnRemain = ev.fRespawnSeconds;
+				if (auto pTP = std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer))
+					pTP->ApplyDead();	// 사망 모션 (관전 중 시체에 보임)
 				if (!m_bSpectating) EnterSpectateMode();
 			}
 			else {
 				m_DeadPlayers.insert(ev.playerId);
+				auto it = m_RemotePlayers.find(ev.playerId);
+				if (it != m_RemotePlayers.end() && it->second)
+					it->second->ApplyDead();			// 리모트 사망 모션
 				// 보고 있던 대상이 죽으면 다음 대상으로
 				if (m_bSpectating && m_nSpectateTargetId == ev.playerId)
 					CycleSpectateTarget();
@@ -750,6 +755,9 @@ void GameScene::UpdateDeathAndSpectate()
 			}
 			else {
 				m_DeadPlayers.erase(ev.playerId);
+				auto it = m_RemotePlayers.find(ev.playerId);
+				if (it != m_RemotePlayers.end() && it->second)
+					it->second->ApplyRespawn();			// 리모트 사망 몽타주 해제
 			}
 		}
 
@@ -761,6 +769,7 @@ void GameScene::UpdateDeathAndSpectate()
 		// 오프라인: 로컬 사망 감지 + 로컬 부활 타이머 (리모트가 없으므로 내 시체 시점 유지)
 		if (!m_bSpectating && m_pPlayer && m_pPlayer->IsDead()) {
 			m_fRespawnRemain = OFFLINE_RESPAWN_SECONDS;
+			std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)->ApplyDead();	// 사망 모션
 			EnterSpectateMode();
 		}
 		if (m_bSpectating) {
@@ -824,6 +833,7 @@ void GameScene::LeaveSpectateMode(const Vector3* respawnPos)
 
 	if (m_pPlayer) {
 		m_pPlayer->RestoreFullHP();
+		std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)->ApplyRespawn();	// 사망 몽타주(FREEZE) 해제
 		if (respawnPos)
 			m_pPlayer->GetTransform()->SetPosition(*respawnPos);
 		if (m_pPlayer->GetCamera())

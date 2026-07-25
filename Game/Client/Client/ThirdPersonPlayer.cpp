@@ -1731,7 +1731,37 @@ void IThirdPersonPlayer::ApplyHitReact(float damage)
 
 void IThirdPersonPlayer::ApplyDead()
 {
+	// 진행 중 액션 정리 — 사망 몽타주가 기존 몽타주를 끊으면 종료 notify가 누락되므로
+	// 잠금 플래그를 직접 해제한다 (부활 후 발사/교체가 영구히 잠기는 것 방지)
+	CancelBandage();
+	m_bHoldingBandage = false;
+	SetGrenadeHandVisible(false);
+	m_bHoldingGrenade = false;
+	m_bGrenadeWindup  = false;
+	m_bInGrenadeThrow = false;
+	m_bInMeleeAttack  = false;
+	m_bInWeaponSwap   = false;
+	m_bMoved   = false;
+	m_bRunning = false;
 
+	// 시체가 맨손이 되지 않게 총 표시 복원 (붕대/수류탄 모드 중 사망 대비)
+	if (m_pWeaponSocket) {
+		m_pWeaponSocket->SetModelVisible(true);
+	}
+
+	auto pAnimationCtrl =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>());
+	pAnimationCtrl->GetMontage()->PlayMontage("Player Death");
+}
+
+void IThirdPersonPlayer::ApplyRespawn()
+{
+	// FREEZE로 고정된 사망 몽타주 해제 → 블렌드아웃 후 상태머신(idle) 복귀
+	auto pAnimationCtrl =
+		std::static_pointer_cast<PlayerAnimationController>(
+			GetComponent<AnimationController>());
+	pAnimationCtrl->GetMontage()->StopMontage();
 }
 
 void IThirdPersonPlayer::ApplyGravity()
