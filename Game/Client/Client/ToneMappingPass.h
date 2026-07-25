@@ -37,6 +37,7 @@ private:
 
 private:
 	ComPtr<ID3D12PipelineState> m_pd3dPipelineState;
+	ComPtr<ID3D12PipelineState> m_pd3dScreenFXPipelineState;
 
 	ComPtr<ID3D12RootSignature> m_pd3dLUTRootSignature;
 	ComPtr<ID3D12PipelineState> m_pd3dLUTBakingPipelineState[2];	// 0 : Tone map LUT / 1 : Look LUT

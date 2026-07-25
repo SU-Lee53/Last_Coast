@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "PostProcessingVolume.h"
 
-CB_BLOOM_DATA PostProcessingVolume::GetBloomCBData(XMINT2 xmi2InputSize, XMINT2 xmi2OutputSize) const
+CB_BLOOM_DATA PostProcessingVolume::GetBloomCBData(XMINT2 xmi2InputSize, XMINT2 xmi2OutputSize, bool bApplyThreshold) const
 {
 	return CB_BLOOM_DATA{
 		.gBloomThreshold = m_Parameters.Bloom.fThreshold,
@@ -10,6 +10,7 @@ CB_BLOOM_DATA PostProcessingVolume::GetBloomCBData(XMINT2 xmi2InputSize, XMINT2 
 		.gBloomRadius = m_Parameters.Bloom.fRadius,
 		.gInputSize = xmi2InputSize,
 		.gOutputSize = xmi2OutputSize,
+		.gnApplyThreshold = bApplyThreshold ? 1 : 0,
 	};
 }
 
@@ -29,12 +30,27 @@ CB_SSAO_DATA PostProcessingVolume::GetSSAOCBData() const
 
 CB_SCREEN_FX_DATA PostProcessingVolume::GetScreenFXCBData() const
 {
+	float fDamagePulse = 0.f;
+	float fLowHealthFactor = 0.f;
+	if (const auto& pPlayer = CUR_SCENE->GetPlayer()) {
+		fDamagePulse = pPlayer->GetDamageEffectStrength();
+		const float fHealthRatio = pPlayer->GetHP() / std::max(pPlayer->GetMaxHP(), 1.f);
+		const float fThreshold = std::max(m_CinematicScreenFXParameters.fLowHealthThreshold, 0.01f);
+		fLowHealthFactor = std::clamp((fThreshold - fHealthRatio) / fThreshold, 0.f, 1.f) * m_CinematicScreenFXParameters.fLowHealthStrength;
+	}
+
 	return CB_SCREEN_FX_DATA{
 		.gGrainStrength = m_Parameters.ScreenFX.fGrainStrength ,
 		.gGrainScale = m_Parameters.ScreenFX.fGrainScale ,
 		.gVignetteStrength = m_Parameters.ScreenFX.fVignetteStrength ,
 		.gVignetteRadius = m_Parameters.ScreenFX.fVignetteRadius ,
 		.gfVignetteSoftness = m_Parameters.ScreenFX.fVignetteSoftness ,
+		.gfChromaticAberration = m_CinematicScreenFXParameters.fChromaticAberration,
+		.gfHalationStrength = m_CinematicScreenFXParameters.fHalationStrength,
+		.pad0 = 0.f,
+		.gfDamagePulse = fDamagePulse,
+		.gfLowHealthFactor = fLowHealthFactor,
+		.gfDamageVignetteStrength = m_CinematicScreenFXParameters.fDamageVignetteStrength,
 	};
 }
 
@@ -94,6 +110,7 @@ bool PostProcessingVolume::SaveParametersToBinary(const std::string& strSaveName
 	}
 
 	out << m_Parameters;
+	out.write(reinterpret_cast<const char*>(&m_CinematicScreenFXParameters), sizeof(CinematicScreenFXParameters));
 	return !!out;
 }
 
@@ -107,13 +124,16 @@ bool PostProcessingVolume::LoadFromFiles(const std::string& strSaveName)
 	in.seekg(0, std::ios::end);
 	const std::streamoff fileSize = in.tellg();
 	constexpr std::streamoff legacyFileSize = sizeof(PostProcessingParameters) - sizeof(float) * 4;
-	if (fileSize != sizeof(PostProcessingParameters) && fileSize != legacyFileSize) {
+	constexpr std::streamoff baseFileSize = sizeof(PostProcessingParameters);
+	constexpr std::streamoff extendedFileSize = sizeof(PostProcessingParameters) + sizeof(CinematicScreenFXParameters);
+	if (fileSize != legacyFileSize && fileSize != baseFileSize && fileSize != extendedFileSize) {
 		return false;
 	}
 
 	in.seekg(0, std::ios::beg);
 	PostProcessingParameters loadedParameters;
-	in.read(reinterpret_cast<char*>(&loadedParameters), static_cast<std::streamsize>(fileSize));
+	const std::streamsize parameterReadSize = static_cast<std::streamsize>(std::min(fileSize, baseFileSize));
+	in.read(reinterpret_cast<char*>(&loadedParameters), parameterReadSize);
 	if (!in) {
 		return false;
 	}
@@ -128,7 +148,16 @@ bool PostProcessingVolume::LoadFromFiles(const std::string& strSaveName)
 		loadedParameters.Fog.fFogDetailDirectionalScattering = defaultFog.fFogDetailDirectionalScattering;
 	}
 
+	CinematicScreenFXParameters loadedCinematicParameters;
+	if (fileSize == extendedFileSize) {
+		in.read(reinterpret_cast<char*>(&loadedCinematicParameters), sizeof(CinematicScreenFXParameters));
+		if (!in) {
+			return false;
+		}
+	}
+
 	m_Parameters = loadedParameters;
+	m_CinematicScreenFXParameters = loadedCinematicParameters;
 	return true;
 }
 
@@ -145,6 +174,7 @@ void PostProcessingVolume::ShowDebugOptions()
 
 	if (ImGui::Button("Reset All Post Processing Parameters")) {
 		m_Parameters = PostProcessingParameters{};
+		m_CinematicScreenFXParameters = CinematicScreenFXParameters{};
 	}
 
 	ImGui::SeparatorText("Bloom");
@@ -235,10 +265,24 @@ void PostProcessingVolume::ShowDebugOptions()
 			ImGui::DragFloat("Vignette Radius", &m_Parameters.ScreenFX.fVignetteRadius, 0.01f, 0.2f, 1.5f);
 			ImGui::DragFloat("Vignette Softness", &m_Parameters.ScreenFX.fVignetteSoftness, 0.01f, 0.01f, 1.5f);
 		}
+
+		ImGui::SeparatorText("Cinematic Lens");
+		{
+			ImGui::DragFloat("Chromatic Aberration (Pixels)", &m_CinematicScreenFXParameters.fChromaticAberration, 0.05f, 0.f, 15.f);
+			ImGui::DragFloat("Halation Strength", &m_CinematicScreenFXParameters.fHalationStrength, 0.01f, 0.f, 1.f);
+		}
+
+		ImGui::SeparatorText("Damage Feedback");
+		{
+			ImGui::DragFloat("Damage Vignette Strength", &m_CinematicScreenFXParameters.fDamageVignetteStrength, 0.01f, 0.f, 1.f);
+			ImGui::DragFloat("Low Health Threshold", &m_CinematicScreenFXParameters.fLowHealthThreshold, 0.01f, 0.05f, 1.f);
+			ImGui::DragFloat("Low Health Strength", &m_CinematicScreenFXParameters.fLowHealthStrength, 0.01f, 0.f, 1.f);
+		}
 	}
 
 	if (ImGui::Button("Reset Screen FX Parameters")) {
 		m_Parameters.ScreenFX = ScreenFXParameters{};
+		m_CinematicScreenFXParameters = CinematicScreenFXParameters{};
 	}
 
 }

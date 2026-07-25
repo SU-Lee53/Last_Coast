@@ -36,11 +36,11 @@ void BloomPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const 
 	// 1. Bloom Extract
 	{
 		pd3dCommandList->SetPipelineState(m_pd3dBrightExtractPipelineState.Get());
-		auto cpuHandle = outDescHandle.cpuHandle;
-		auto gpuHandle = outDescHandle.gpuHandle;
 
 		// Half
 		{
+			auto cpuHandle = outDescHandle.cpuHandle;
+			auto gpuHandle = outDescHandle.gpuHandle;
 			auto& pInput = pHDRResult;
 			auto& pOutput = pBloomHalfBuffers[0].GetResource();
 
@@ -56,7 +56,7 @@ void BloomPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const 
 			outDescHandle.gpuHandle.Offset(2, nDescriptorInc);
 
 			// Set bloom data
-			auto bloomData = volume.GetBloomCBData(XMINT2(unFullW, unFullH), XMINT2(unTargetWidths[1], unTargetHeights[1]));
+			auto bloomData = volume.GetBloomCBData(XMINT2(unFullW, unFullH), XMINT2(unTargetWidths[1], unTargetHeights[1]), true);
 			auto cBuffer = RENDER->AllocCBuffer<CB_BLOOM_DATA>();
 			cBuffer.WriteData(&bloomData);
 			pd3dCommandList->SetComputeRootConstantBufferView(rootParamBloomData, cBuffer.GPUAddress);
@@ -70,6 +70,8 @@ void BloomPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const 
 
 		// Quater
 		{
+			auto cpuHandle = outDescHandle.cpuHandle;
+			auto gpuHandle = outDescHandle.gpuHandle;
 			auto& pInput = pBloomHalfBuffers[0].GetResource();
 			auto& pOutput = pBloomQuaterBuffers[0].GetResource();
 
@@ -99,6 +101,8 @@ void BloomPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const 
 
 		// Eighth
 		{
+			auto cpuHandle = outDescHandle.cpuHandle;
+			auto gpuHandle = outDescHandle.gpuHandle;
 			auto& pInput = pBloomQuaterBuffers[0].GetResource();
 			auto& pOutput = pBloomEighthBuffers[0].GetResource();
 

@@ -205,6 +205,7 @@ void ShaderManager::CompileShaders()
 	
 	//Compile("ToneMappingVS", L"ToneMapping.hlsl", L"VSToneMapping", SHADER_TYPE::VS);
 	Compile("ToneMappingPS", L"ToneMapping.hlsl", L"PSToneMapping", SHADER_TYPE::PS);
+	Compile("CinematicScreenFXPS", L"ToneMapping.hlsl", L"PSCinematicScreenFX", SHADER_TYPE::PS);
 	
 	Compile("SkyboxVS", L"Skybox.hlsl", L"VSSkybox", SHADER_TYPE::VS);
 	Compile("SkyboxPS", L"Skybox.hlsl", L"PSSkybox", SHADER_TYPE::PS);

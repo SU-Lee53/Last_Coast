@@ -92,6 +92,26 @@ void ToneMappingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 	pd3dCommandList->SetPipelineState(m_pd3dPipelineState.Get());
 	pd3dCommandList->SetGraphicsRootSignature(RenderManager::g_pd3dGlobalRootSignature.Get());
 
+	constexpr auto rootParamHDRResult = std::to_underlying(ROOT_PARAMETER::HDR_RESULT);
+	const auto pHDRResult = RENDER->GetHDRBuffer(1).GetResource();
+	pHDRResult->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+	DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, pHDRResult->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamHDRResult, outDescHandle.gpuHandle);
+	outDescHandle.cpuHandle.Offset(1, nDescriptorInc);
+	outDescHandle.gpuHandle.Offset(1, nDescriptorInc);
+
+	constexpr auto rootParamBloomResult = std::to_underlying(ROOT_PARAMETER::BLOOM_RESULT);
+	const auto pBloomHalf = RENDER->GetPostProcessingResources().BloomHalfBuffer[0].GetResource();
+	const auto pBloomQuater = RENDER->GetPostProcessingResources().BloomQuaterBuffer[0].GetResource();
+	const auto pBloomEighth = RENDER->GetPostProcessingResources().BloomEighthBuffer[0].GetResource();
+	auto bloomHandle = outDescHandle.cpuHandle;
+	DEVICE->CopyDescriptorsSimple(1, bloomHandle, pBloomHalf->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	DEVICE->CopyDescriptorsSimple(1, bloomHandle.Offset(1, nDescriptorInc), pBloomQuater->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	DEVICE->CopyDescriptorsSimple(1, bloomHandle.Offset(1, nDescriptorInc), pBloomEighth->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamBloomResult, outDescHandle.gpuHandle);
+	outDescHandle.cpuHandle.Offset(3, nDescriptorInc);
+	outDescHandle.gpuHandle.Offset(3, nDescriptorInc);
+
 	constexpr auto rootParamLightShaftResult = std::to_underlying(ROOT_PARAMETER::LIGHT_SHAFT_RESULT);
 	const auto pLightShaft = RENDER->GetPostProcessingResources().LightShaftBuffer.GetResource();
 	DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, pLightShaft->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -129,7 +149,9 @@ void ToneMappingPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandL
 
 #endif
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = RENDER->GetCurrentBackBufferHandle();
+	const auto pLDRResult = std::static_pointer_cast<RenderTargetTexture>(RENDER->GetLDRBuffer().GetResource());
+	pLDRResult->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = pLDRResult->GetRTVHandle();
 	pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, nullptr);
 }
 
@@ -143,6 +165,22 @@ void ToneMappingPass::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, 
 
 void ToneMappingPass::OnPostRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, OUT RenderPassOutput& output, OUT DescriptorHandle& outDescHandle)
 {
+	const auto pLDRResult = RENDER->GetLDRBuffer().GetResource();
+	pLDRResult->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+
+	const auto nDescriptorInc = D3DCore::GetDescriptorIncrementSize(DESCRIPTOR_TYPE::CBV);
+	constexpr auto rootParamHDRResult = std::to_underlying(ROOT_PARAMETER::HDR_RESULT);
+	DEVICE->CopyDescriptorsSimple(1, outDescHandle.cpuHandle, pLDRResult->GetSRVHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamHDRResult, outDescHandle.gpuHandle);
+	outDescHandle.cpuHandle.Offset(1, nDescriptorInc);
+	outDescHandle.gpuHandle.Offset(1, nDescriptorInc);
+
+	const auto pBackBuffer = RENDER->GetCurrentBackBuffer().GetResource();
+	pBackBuffer->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = RENDER->GetCurrentBackBufferHandle();
+	pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, nullptr);
+	pd3dCommandList->SetPipelineState(m_pd3dScreenFXPipelineState.Get());
+	RENDER->GetQuadMesh()->Render(pd3dCommandList, 1);
 }
 
 void ToneMappingPass::ShowDebugInfo()
@@ -184,6 +222,12 @@ void ToneMappingPass::CreatePipelineState()
 	}
 
 	HRESULT hr = DEVICE->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dPipelineState.GetAddressOf()));
+	if (FAILED(hr)) {
+		__debugbreak();
+	}
+
+	d3dPipelineDesc.PS = SHADER->GetShaderByteCode("CinematicScreenFXPS");
+	hr = DEVICE->CreateGraphicsPipelineState(&d3dPipelineDesc, IID_PPV_ARGS(m_pd3dScreenFXPipelineState.GetAddressOf()));
 	if (FAILED(hr)) {
 		__debugbreak();
 	}

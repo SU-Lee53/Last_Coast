@@ -253,7 +253,14 @@ cbuffer cbScreenFXData : register(b5, space0)
 	float gfVignetteRadius;
 
 	float gfVignetteSoftness;
-	float3 _pad3;
+	float gfChromaticAberration;
+	float gfHalationStrength;
+	float _padScreenFX0;
+
+	float gfDamagePulse;
+	float gfLowHealthFactor;
+	float gfDamageVignetteStrength;
+	float _pad3;
 };
 
 cbuffer cbSSAOData : register(b6, space0)

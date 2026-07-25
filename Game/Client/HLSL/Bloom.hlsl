@@ -45,7 +45,10 @@ void CSBrightExtractDownsample(uint3 nDispatchThreadID : SV_DispatchThreadID)
 	color += gInputTexture.Load(int3(ClampPixel(baseInput + int2(1, 1), gBloomInputSize), 0)).rgb;
 	color *= 0.25f;
 	
-	color = ApplyBloomThreshold(color);
+	if (gnBloomApplyThreshold != 0)
+	{
+		color = ApplyBloomThreshold(color);
+	}
 	
 	gOutputTexture[pixel] = float4(color, 1.f);
 }

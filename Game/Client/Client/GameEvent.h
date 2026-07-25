@@ -180,6 +180,8 @@ struct EnvironmentPreset {
 	float fVignetteStrength  = 0.25f;
 	float fVignetteRadius    = 0.75f;
 	float fVignetteSoftness  = 0.45f;
+	float fChromaticAberration = 0.0f;
+	float fHalationStrength    = 0.0f;
 
 	// 라이트 샤프트
 	bool  bEnableLightShaft    = true;

@@ -29,6 +29,15 @@ struct ScreenFXParameters {
 	float fVignetteSoftness = 0.45f;
 };
 
+struct CinematicScreenFXParameters {
+	float fChromaticAberration = 0.0f;
+	float fHalationStrength = 0.0f;
+	float pad = 0.0f;
+	float fDamageVignetteStrength = 0.55f;
+	float fLowHealthThreshold = 0.35f;
+	float fLowHealthStrength = 0.45f;
+};
+
 struct LightShaftParameters {
 	bool bEnable = true;
 	float fIntensity = 0.65f;
@@ -72,6 +81,9 @@ struct CB_BLOOM_DATA {
 
 	XMINT2 gInputSize;
 	XMINT2 gOutputSize;
+
+	int gnApplyThreshold;
+	Vector3 pad;
 };
 
 struct CB_SSAO_DATA {
@@ -93,7 +105,14 @@ struct CB_SCREEN_FX_DATA {
 	float gVignetteRadius;
 
 	float gfVignetteSoftness;
-	Vector2 pad;
+	float gfChromaticAberration;
+	float gfHalationStrength;
+	float pad0;
+
+	float gfDamagePulse;
+	float gfLowHealthFactor;
+	float gfDamageVignetteStrength;
+	float pad;
 };
 
 struct CB_LIGHT_SHAFT_DATA {
@@ -162,7 +181,7 @@ public:
 	bool SaveParametersToBinary(const std::string& strSaveName) const;
 	bool LoadFromFiles(const std::string& strSaveName);
 
-	CB_BLOOM_DATA GetBloomCBData(XMINT2 xmi2InputSize, XMINT2 xmi2OutputSize) const;
+	CB_BLOOM_DATA GetBloomCBData(XMINT2 xmi2InputSize, XMINT2 xmi2OutputSize, bool bApplyThreshold = false) const;
 	CB_SSAO_DATA GetSSAOCBData() const;
 	CB_SCREEN_FX_DATA GetScreenFXCBData() const;
 	CB_LIGHT_SHAFT_DATA GetLightShaftCBData(const Vector2& v2LightScreenPosition) const;
@@ -171,6 +190,7 @@ public:
 	const BloomParameters& GetBloomParameters() const { return m_Parameters.Bloom; }
 	const SSAOParameters& GetSSAOParameters() const { return m_Parameters.SSAO; }
 	const ScreenFXParameters& GetScreenFXParameters() const { return m_Parameters.ScreenFX; }
+	const CinematicScreenFXParameters& GetCinematicScreenFXParameters() const { return m_CinematicScreenFXParameters; }
 	const LightShaftParameters& GetLightShaftParameters() const { return m_Parameters.LightShaft; }
 	const FogParameters& GetFogParameters() const { return m_Parameters.Fog; }
 
@@ -178,11 +198,13 @@ public:
 	BloomParameters& GetBloomParameters() { return m_Parameters.Bloom; }
 	SSAOParameters& GetSSAOParameters() { return m_Parameters.SSAO; }
 	ScreenFXParameters& GetScreenFXParameters() { return m_Parameters.ScreenFX; }
+	CinematicScreenFXParameters& GetCinematicScreenFXParameters() { return m_CinematicScreenFXParameters; }
 	LightShaftParameters& GetLightShaftParameters() { return m_Parameters.LightShaft; }
 	FogParameters& GetFogParameters() { return m_Parameters.Fog; }
 
 private:
 	PostProcessingParameters m_Parameters;
+	CinematicScreenFXParameters m_CinematicScreenFXParameters;
 
 	std::string m_strSaveName;
 

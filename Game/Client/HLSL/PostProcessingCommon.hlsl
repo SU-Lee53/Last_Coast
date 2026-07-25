@@ -29,6 +29,9 @@ cbuffer cbBloomData : register(b0, space1)
 
 	int2 gBloomInputSize;
 	int2 gBloomOutputSize;
+
+	int gnBloomApplyThreshold;
+	float3 _padBloom;
 }
 
 cbuffer cbAutoExposureData : register(b1, space1)
