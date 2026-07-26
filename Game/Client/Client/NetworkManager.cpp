@@ -30,13 +30,9 @@ void NetworkManager::Initialize()
 
 void NetworkManager::ConnectToServer()
 {
-	ImGui::Begin("NetworkManager::ConnectToServer()");
 	{
-		const char* cstrConnectionStatus = m_bConnected ? "Connected" : "Not connected yet";
-		ImGui::Text(cstrConnectionStatus);
-		ImGui::InputText("Server IP", m_cstrServerIP, IM_ARRAYSIZE(m_cstrServerIP));
-
-		if (ImGui::Button("Try Connect")) {
+		if (m_bConnectRequested) {
+			m_bConnectRequested = false;
 			sockaddr_in serveraddr;
 			memset(&serveraddr, 0, sizeof(serveraddr));
 			serveraddr.sin_family = AF_INET;
@@ -68,17 +64,6 @@ void NetworkManager::ConnectToServer()
 				g_hNetworkThread = CreateThread(NULL, 0, ProcessNetwork, this, 0, NULL);
 			}
 		}
-		ImGui::Text(m_strErrorLog.c_str());
-
-		if (ImGui::Button("Offline Mode")) {
-			m_bConnected = true;
-			m_bGameBegin = true;
-		}
-
-		if (m_bConnected) {
-			ImGui::Text("Wait for game start...");
-		}
-
 		if (m_connectState == ConnectState::Connecting)
 		{
 			fd_set writeSet;
@@ -116,24 +101,22 @@ void NetworkManager::ConnectToServer()
 				}
 			}
 		}
-
-		switch (m_connectState)
-		{
-		case ConnectState::None:
-			ImGui::Text("Not connected");
-			break;
-		case ConnectState::Connecting:
-			ImGui::Text("Connecting...");
-			break;
-		case ConnectState::Connected:
-			ImGui::Text("Connected");
-			break;
-		case ConnectState::Failed:
-			ImGui::Text("Failed");
-			break;
-		}
 	}
-	ImGui::End();
+}
+
+void NetworkManager::RequestConnect(const std::string& strServerIP)
+{
+	if (m_connectState == ConnectState::Connecting || m_bConnected)
+		return;
+
+	strncpy_s(m_cstrServerIP, strServerIP.c_str(), _TRUNCATE);
+	m_bConnectRequested = true;
+	m_strErrorLog.clear();
+}
+
+ConnectState NetworkManager::GetConnectState() const
+{
+	return m_connectState;
 }
 
 void NetworkManager::Disconnect()

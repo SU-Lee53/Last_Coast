@@ -288,6 +288,12 @@ void InputTextBox::SetPlaceholder(const std::wstring& wstrPlaceholder)
 	RefreshDisplayText();
 }
 
+void InputTextBox::SetCommittedText(const std::wstring& wstrText)
+{
+	m_wstrCommittedText = wstrText.substr(0, m_maxLength);
+	RefreshDisplayText();
+}
+
 void InputTextBox::SetPasswordMode(bool bEnable)
 {
 	m_bPasswordMode = bEnable;

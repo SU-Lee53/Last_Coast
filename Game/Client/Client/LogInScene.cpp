@@ -18,26 +18,41 @@ void LogInScene::BuildObjects()
 	m_pUIBoard = std::make_unique<UIBoard>();
 
 	// IP input
-	// 연결만 ImGui로?
-	/*{
+	{
 		std::shared_ptr<TextBox> pTitle = std::make_shared<TextBox>(L"Noto Sans KR");
 		pTitle->SetText(L"Server IP : ");
-		pTitle->SetLayer(0);
+		pTitle->SetLayer(1);
 		pTitle->SetAnchor(Vector2{ 0.5, 0.0 });
-		pTitle->SetPivot(Vector2{ 0.5,0.0 });
-		pTitle->SetPosition(Vector2{ 0,400 });
-		pTitle->SetTextHeight(30);
+		pTitle->SetPivot(Vector2{ 1.0,0.0 });
+		pTitle->SetPosition(Vector2{ -100,400 });
+		pTitle->SetTextHeight(50);
 		m_pUIBoard->InsertUI(pTitle);
 
-		std::shared_ptr<InputTextBox> pInputIP = std::make_shared<InputTextBox>(L"Noto Sans KR");
-		pInputIP->SetPlaceholder(L"Input Here");
-		pInputIP->SetLayer(0);
-		pInputIP->SetAnchor(Vector2{ 0.5, 0.0 });
-		pInputIP->SetPivot(Vector2{ 0.5,0.0 });
-		pInputIP->SetPosition(Vector2{ 0,450 });
-		pInputIP->SetTextHeight(50);
-		m_pUIBoard->InsertUI(pInputIP);
-	}*/
+		m_pServerIPInputBox = std::make_shared<InputTextBox>(L"Noto Sans KR");
+		m_pServerIPInputBox->SetCommittedText(L"127.0.0.1");
+		m_pServerIPInputBox->SetLayer(1);
+		m_pServerIPInputBox->SetAnchor(Vector2{ 0.5, 0.0 });
+		m_pServerIPInputBox->SetPivot(Vector2{ 0.0,0.0 });
+		m_pServerIPInputBox->SetPosition(Vector2{ -50,400 });
+		m_pServerIPInputBox->SetTextHeight(50);
+		m_pUIBoard->InsertUI(m_pServerIPInputBox);
+
+		std::shared_ptr<TextButton> pConnectButton = std::make_shared<TextButton>(L"Noto Sans KR");
+		pConnectButton->SetText(L"Connect");
+		pConnectButton->SetLayer(1);
+		pConnectButton->SetAnchor(Vector2{ 0.5, 0.0 });
+		pConnectButton->SetPivot(Vector2{ 0.0,0.0 });
+		pConnectButton->SetPosition(Vector2{ 180,400 });
+		pConnectButton->SetTextHeight(40);
+		pConnectButton->SetButtonCallback(
+			[this](IUIComponent*) {
+				m_strServerIPInput = ::WStringToString(m_pServerIPInputBox->GetCommittedText());
+				m_bConnectionResultHandled = false;
+				NETWORK->RequestConnect(m_strServerIPInput);
+			}
+		);
+		m_pUIBoard->InsertUI(pConnectButton);
+	}
 
 	// Title
 	{
@@ -57,7 +72,7 @@ void LogInScene::BuildObjects()
 		pTitle->SetLayer(1);
 		pTitle->SetAnchor(Vector2{ 0.5, 0.0 });
 		pTitle->SetPivot(Vector2{ 1.0,0.0 });
-		pTitle->SetPosition(Vector2{ -100,400 });
+		pTitle->SetPosition(Vector2{ -100,500 });
 		pTitle->SetTextHeight(50);
 		m_pUIBoard->InsertUI(pTitle);
 
@@ -66,7 +81,7 @@ void LogInScene::BuildObjects()
 		m_pIDInputBox->SetLayer(1);
 		m_pIDInputBox->SetAnchor(Vector2{ 0.5, 0.0 });
 		m_pIDInputBox->SetPivot(Vector2{ 0.0,0.0 });
-		m_pIDInputBox->SetPosition(Vector2{ -50,400 });
+		m_pIDInputBox->SetPosition(Vector2{ -50,500 });
 		m_pIDInputBox->SetTextHeight(50);
 		m_pUIBoard->InsertUI(m_pIDInputBox);
 	}
@@ -78,7 +93,7 @@ void LogInScene::BuildObjects()
 		pTitle->SetLayer(1);
 		pTitle->SetAnchor(Vector2{ 0.5, 0.0 });
 		pTitle->SetPivot(Vector2{ 1.0,0.0 });
-		pTitle->SetPosition(Vector2{ -100,450 });
+		pTitle->SetPosition(Vector2{ -100,550 });
 		pTitle->SetTextHeight(50);
 		m_pUIBoard->InsertUI(pTitle);
 
@@ -87,7 +102,7 @@ void LogInScene::BuildObjects()
 		m_pPWInputBox->SetLayer(1);
 		m_pPWInputBox->SetAnchor(Vector2{ 0.5, 0.0 });
 		m_pPWInputBox->SetPivot(Vector2{ 0.0,0.0 });
-		m_pPWInputBox->SetPosition(Vector2{ -50,450 });
+		m_pPWInputBox->SetPosition(Vector2{ -50,550 });
 		m_pPWInputBox->SetTextHeight(50);
 		m_pPWInputBox->SetPasswordMode(true);
 		m_pUIBoard->InsertUI(m_pPWInputBox);
@@ -101,7 +116,7 @@ void LogInScene::BuildObjects()
 		pRegisterButton->SetColor(Vector3{ 0.8, 0.8, 0.8 });
 		pRegisterButton->SetAnchor(Vector2{ 0.5, 0.0 });
 		pRegisterButton->SetPivot(Vector2{ 1.0,0.0 });	// Pivot to right
-		pRegisterButton->SetPosition(Vector2{ -50,550 });
+		pRegisterButton->SetPosition(Vector2{ -50,620 });
 		pRegisterButton->SetTextHeight(50);
 
 		pRegisterButton->SetBeginHoverCallback(
@@ -134,7 +149,7 @@ void LogInScene::BuildObjects()
 		pLogInButton->SetColor(Vector3{ 0.8, 0.8, 0.8 });
 		pLogInButton->SetAnchor(Vector2{ 0.5, 0.0 });
 		pLogInButton->SetPivot(Vector2{ 0.0,0.0 });	// pivot to left
-		pLogInButton->SetPosition(Vector2{ 50,550 });
+		pLogInButton->SetPosition(Vector2{ 50,620 });
 		pLogInButton->SetTextHeight(50);
 
 
@@ -170,7 +185,7 @@ void LogInScene::BuildObjects()
 		m_pResultText->SetLayer(1);
 		m_pResultText->SetAnchor(Vector2{ 0.5, 0.0 });
 		m_pResultText->SetPivot(Vector2{ 0.5,0.0 });	// pivot to left
-		m_pResultText->SetPosition(Vector2{ 0,650 });
+		m_pResultText->SetPosition(Vector2{ 0,690 });
 		m_pResultText->SetTextHeight(30);
 		m_pUIBoard->InsertUI(m_pResultText);
 	}
@@ -178,7 +193,7 @@ void LogInScene::BuildObjects()
 	// Enter game button
 	{
 		std::shared_ptr<TextButton> pPlayButton = std::make_shared<TextButton>(L"Noto Sans KR");
-		pPlayButton->SetText(L"Enter");
+		pPlayButton->SetText(L"Enter Offline");
 		pPlayButton->SetLayer(1);
 		pPlayButton->SetAnchor(Vector2{ 0.5, 0.0 });
 		pPlayButton->SetPivot(Vector2{ 0.5,0.0 });
@@ -230,6 +245,23 @@ void LogInScene::Update()
 {
 	NETWORK->ConnectToServer();
 
+	if (!m_bConnectionResultHandled) {
+		switch (NETWORK->GetConnectState())
+		{
+		case ConnectState::Connecting:
+			m_pResultText->SetText(L"Connecting...");
+			break;
+		case ConnectState::Connected:
+			m_pResultText->SetText(L"Connected!");
+			m_bConnectionResultHandled = true;
+			break;
+		case ConnectState::Failed:
+			m_pResultText->SetText(::StringToWString(NETWORK->GetErrorLog()));
+			m_bConnectionResultHandled = true;
+			break;
+		}
+	}
+
 	if (NETWORK->m_nLoginState == 1) {
 		m_pResultText->SetText(L"Login Success!");
 		NETWORK->m_nLoginState = 0;
@@ -259,26 +291,30 @@ void LogInScene::Update()
 
 bool LogInScene::TryLogIn()
 {
-	m_pResultText->SetText(L"Try Login");
 	// 로그인 시도
 	// 성공하면 TRUE, 실패하면 FALSE 를 리턴
 	// ID, 비번은 m_strIDInput, m_strPasswordInput 에 보관됩니다.
 	if (NETWORK->IsConnected() && !NETWORK->IsOffline()) {
+		m_pResultText->SetText(L"Try Login");
 		NETWORK->SendLogin(m_strIDInput, m_strPasswordInput);
+		return true;
 	}
 
-	return true;
+	m_pResultText->SetText(L"Connect to server first.");
+	return false;
 }
 
 bool LogInScene::TryRegister()
 {
-	m_pResultText->SetText(L"Try Register");
 	// 회원가입 시도
 	// 성공하면 TRUE, 실패하면 FALSE 를 리턴
 	// ID, 비번은 m_strIDInput, m_strPasswordInput 에 보관됩니다.
 	if (NETWORK->IsConnected() && !NETWORK->IsOffline()) {
+		m_pResultText->SetText(L"Try Register");
 		NETWORK->SendRegister(m_strIDInput, m_strPasswordInput);
+		return true;
 	}
 
-	return true;
+	m_pResultText->SetText(L"Connect to server first.");
+	return false;
 }

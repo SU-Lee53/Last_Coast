@@ -16,6 +16,7 @@ void NetworkTestScene::BuildObjects()
 
 void NetworkTestScene::OnEnterScene()
 {
+	NETWORK->RequestConnect("127.0.0.1");
 }
 
 void NetworkTestScene::OnLeaveScene()

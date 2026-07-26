@@ -29,7 +29,7 @@ public:
 	static HANDLE g_NewFrameEvent;
 
 	bool m_bShowDebugMenu = true;
-	bool m_bDraw = true;
+	bool m_bDraw = false;
 	MANAGER_DEBUG m_eManagerDebug = MANAGER_DEBUG::NONE;
 };
 

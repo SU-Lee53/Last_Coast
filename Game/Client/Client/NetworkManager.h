@@ -150,6 +150,7 @@ class NetworkManager {
 public:
 	void					Initialize();
 	void					ConnectToServer();
+	void					RequestConnect(const std::string& strServerIP);
 	void					Disconnect();
 
 public:
@@ -280,6 +281,7 @@ public:
 	bool					IsConnected() const { return m_bConnected; }
 	bool					IsGameStarted() const { return m_bGameBegin; }
 	bool					IsOffline() const { return m_bOfflineMode; }
+	ConnectState			GetConnectState() const;
 
 	int						GetPlayerID() const { return m_nPlayerID; }
 
@@ -298,6 +300,7 @@ private:
 	char					m_RecvBuf[BUF_SIZE * 4];   // 패킷 재조립 버퍼
 	int						m_nRecvPending = 0;        // m_RecvBuf에 누적된 유효 바이트 수
 	char					m_cstrServerIP[16] = "127.0.0.1";
+	bool					m_bConnectRequested = false;
 	volatile bool			m_bConnected = false;
 	std::string				m_strErrorLog;
 	int						m_nPlayerID = -1;

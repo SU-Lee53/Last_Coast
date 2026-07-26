@@ -99,6 +99,7 @@ public:
 
 	virtual void SetFocused(bool bFocused) override;
 	void SetPlaceholder(const std::wstring& wstrPlaceholder);
+	void SetCommittedText(const std::wstring& wstrText);
 	void SetPasswordMode(bool bEnable);
 	virtual void OnChar(wchar_t ch) override;
 
