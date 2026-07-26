@@ -1,0 +1,60 @@
+Helicopter sound resource records
+Created: 2026-07-25
+
+Every external source below is marked CC0 on its linked OpenGameArt page.
+The sources were edited, mixed, pitch-shifted, equalized, and converted to mono WAV files.
+No attribution is required by CC0, but the records are retained for provenance.
+
+Helicopter SFX by WuxiaScrub
+Used file: heli.ogg
+Page: https://opengameart.org/content/helicopter-sfx
+License: CC0 1.0
+Use: Stable rotor body extracted for the stationary rotor bed.
+
+Helicopter Sounds by aquinn
+Used file: helicopter.mp3
+Page: https://opengameart.org/content/helicopter-sounds
+License: CC0 1.0
+Use: Rotor and engine body layers.
+
+Propeller (Cartoon) Loop by Mish7913
+Used file: propeller_cartoon_loop.wav
+Page: https://opengameart.org/content/propeller-cartoon-loop
+License: CC0 1.0
+Use: Low-level rotor blade and failing-rotor layers.
+
+Mechanical Explosion by Spring Spring
+Used file: mechanical_explosion.wav
+Page: https://opengameart.org/content/mechanical-explosion
+License: CC0 1.0
+Use: Main crash impact and mechanical debris.
+
+Muffled Distant Explosion by NenadSimic
+Used file: NenadSimic - Muffled Distant Explosion.wav
+Page: https://opengameart.org/content/muffled-distant-explosion
+License: CC0 1.0
+Use: Low-frequency crash body and decay tail.
+
+Chunky Explosion by Joth
+Used file: Chunky Explosion.mp3
+Page: https://opengameart.org/content/chunky-explosion
+License: CC0 1.0
+Use: Crash impact body and long tail.
+
+100 CC0 SFX by rubberduck
+Used files: metal_04.ogg, metal_07.ogg, metal_09.ogg, metal_12.ogg, slam_03.ogg
+Page: https://opengameart.org/content/100-cc0-sfx
+License: CC0 1.0
+Use: Landing gear contact, failing-airframe rattles, and post-impact debris.
+
+Created resources
+helicopter_crash.wav: 10 seconds. Constant-level flight and mechanical failure leading up to impact. The impact portion is separated so the event can trigger it at the exact collision time.
+helicopter_explosion.wav: 4.1 seconds. Mechanical crash impact and debris tail separated from helicopter_crash.wav for independent 3D playback.
+helicopter_landing.wav: 10-second constant-level rotor load/RPM transition and touchdown cue.
+helicopter_takeoff.wav: 8-second constant-level rotor load/RPM transition.
+helicopter_idle_loop.wav: 6-second seamless stationary rotor loop for the landed waiting period.
+
+No travel-distance volume envelope is baked into the resources. Runtime FMOD 3D positioning and attenuation handle distance and direction.
+The crash-flight, landing, takeoff, and idle rotor tracks use a 3x mastering gain with a -0.5 dBFS soft peak limiter. The separately triggered explosion track is unchanged.
+Output format: 44.1 kHz, 16-bit PCM, mono WAV. Mono was selected for positional 3D playback.
+CC0 legal information: https://creativecommons.org/publicdomain/zero/1.0/
