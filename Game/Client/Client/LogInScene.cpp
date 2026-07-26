@@ -5,6 +5,7 @@
 #include "TextBox.h"
 #include "MenuScene.h"
 #include "Sprite.h"
+#include "RoomListScene.h"
 
 void LogInScene::BuildObjects()
 {
@@ -250,7 +251,7 @@ void LogInScene::Update()
 
 	if (m_bProceed) {
 		m_bProceed = false;
-		SCENE->PushScene<MenuScene>();
+		SCENE->ChangeScene<RoomListScene>();
 		return;
 	}
 

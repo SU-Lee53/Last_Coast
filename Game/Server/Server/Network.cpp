@@ -32,6 +32,7 @@ namespace
 
 bool Network::Init(short port)
 {
+	init_rooms();
 	WSADATA WSAData;
 	WSAStartup(MAKEWORD(2, 2), &WSAData);
 
@@ -64,6 +65,7 @@ void Network::Shutdown()
 
 void Network::Disconnect(int id)
 {
+	if (id < 0 || id >= MAX_PLAYERS) return;
 	Session& cl = clients[id];
 
 	if (!cl.m_is_connected) return;
@@ -80,20 +82,19 @@ void Network::Disconnect(int id)
 		room->remove_player(id);
 		cl.m_room = nullptr;
 
-		// 방장이 나갔으면 remove_player 가 새 방장을 지정 → 남은 인원에게 통지
-		for (int other_id : room->players) {
-			if (other_id == -1) continue;
-			clients[other_id].send_host_change(room->host_id);
+		if (room->player_count > 0) {
+			for (int other_id : room->players) {
+				if (other_id == -1) continue;
+				clients[other_id].send_host_change(room->host_id);
+			}
+			WORLD->GetHandlers().TryBeginGame(room);
 		}
 
-		// 로딩 대기 중 이탈 — 남은 인원이 전부 로딩 완료 상태면 그대로 시작
-		// (안 하면 이탈자의 로딩 완료를 영원히 기다리며 전원이 멈춰 있는다)
-		WORLD->GetHandlers().TryBeginGame(room);
+		closesocket(cl.m_client);
+		cl.m_client = INVALID_SOCKET;
+		cl.m_is_connected = false;
+		cl.m_bReady = false;
 	}
-
-	closesocket(cl.m_client);
-	cl.m_client = INVALID_SOCKET;
-	cl.m_is_connected = false;
 }
 
 void Network::HandleAccept(EXP_OVER& over)
@@ -141,15 +142,17 @@ void Network::WorkerLoop()
 		BOOL ret = GetQueuedCompletionStatus(m_iocp, &num_bytes, &long_key, &over, INFINITE);
 		int key = static_cast<int>(long_key);
 		if (FALSE == ret) {
-			// 클라이언트 강제 종료(RST) 등으로 pending I/O가 실패한 경우 —
-			// 세션을 정리하고 송신 오버랩드는 풀에 반납해 누수 방지.
-			error_display(L"GQCS Error", WSAGetLastError());
+			int err = WSAGetLastError();
+			// 일반적인 클라이언트 소켓 강제 종료/끊김 에러코드는 콘솔 에러 도배 방지
+			if (err != ERROR_NETNAME_DELETED && err != WSAECONNRESET && err != ERROR_OPERATION_ABORTED && err != WSAECONNABORTED && err != 0) {
+				error_display(L"GQCS Error", err);
+			}
 			if (over != nullptr) {
 				EXP_OVER* failed = reinterpret_cast<EXP_OVER*>(over);
-				if (failed->m_iotype == IO_RECV)
-					Disconnect(key);
-				else if (failed->m_iotype == IO_SEND)
+				if (failed->m_iotype == IO_SEND) {
 					ReleaseSendOver(failed);
+				}
+				Disconnect(key);
 			}
 			continue;
 		}

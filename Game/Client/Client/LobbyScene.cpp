@@ -4,6 +4,7 @@
 #include "TextBox.h"
 #include "Skybox.h"
 #include "GameScene.h"
+#include "RoomListScene.h"
 
 void LobbyScene::BuildObjects()
 {

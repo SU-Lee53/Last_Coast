@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "pch.h"
 #include "Room.h"
 #include "protocol.h"
@@ -93,6 +93,9 @@ public:
 	void send_game_end();
 	void send_player_death(int player_id, float respawn_seconds);
 	void send_player_respawn(int player_id, const Vector3& v3Pos);
+	void send_create_room_result(bool success, int roomId, const std::string& roomName, const std::string& msg);
+	void send_join_room_result(bool success, int roomId, const std::string& roomName, const std::string& msg);
+	void send_leave_room_result(bool success);
 
 public:
 	SOCKET		m_client;

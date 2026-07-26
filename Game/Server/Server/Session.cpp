@@ -120,6 +120,18 @@ bool Session::process_packet(unsigned char* p)
 	case C2S_LOAD_COMPLETE:
 		handlers.LoadComplete(*this);
 		break;
+	case C2S_ROOM_LIST_REQ:
+		handlers.RoomListReq(*this);
+		break;
+	case C2S_CREATE_ROOM:
+		handlers.CreateRoom(*this, *reinterpret_cast<C2S_CreateRoom*>(p));
+		break;
+	case C2S_JOIN_ROOM:
+		handlers.JoinRoom(*this, *reinterpret_cast<C2S_JoinRoom*>(p));
+		break;
+	case C2S_LEAVE_ROOM:
+		handlers.LeaveRoom(*this);
+		break;
 	default:
 		std::cout << "Unknown packet type received from player[" << m_id << "].\n";
 		return false;
@@ -371,4 +383,31 @@ void Session::send_player_respawn(int player_id, const Vector3& v3Pos)
 	p.y = v3Pos.y;
 	p.z = v3Pos.z;
 	send_packet(S2C_PLAYER_RESPAWN, p);
+}
+
+void Session::send_create_room_result(bool success, int roomId, const std::string& roomName, const std::string& msg)
+{
+	S2C_CreateRoomResult p;
+	p.success = success;
+	p.roomId = roomId;
+	strncpy_s(p.roomName, roomName.c_str(), sizeof(p.roomName));
+	strncpy_s(p.message, msg.c_str(), sizeof(p.message));
+	send_packet(S2C_CREATE_ROOM_RESULT, p);
+}
+
+void Session::send_join_room_result(bool success, int roomId, const std::string& roomName, const std::string& msg)
+{
+	S2C_JoinRoomResult p;
+	p.success = success;
+	p.roomId = roomId;
+	strncpy_s(p.roomName, roomName.c_str(), sizeof(p.roomName));
+	strncpy_s(p.message, msg.c_str(), sizeof(p.message));
+	send_packet(S2C_JOIN_ROOM_RESULT, p);
+}
+
+void Session::send_leave_room_result(bool success)
+{
+	S2C_LeaveRoomResult p;
+	p.success = success;
+	send_packet(S2C_LEAVE_ROOM_RESULT, p);
 }

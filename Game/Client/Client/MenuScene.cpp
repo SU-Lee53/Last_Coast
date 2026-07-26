@@ -5,6 +5,7 @@
 #include "TextBox.h"
 #include "LobbyScene.h"
 #include "Sprite.h"
+#include "RoomListScene.h"
 
 void MenuScene::BuildObjects()
 {
@@ -108,9 +109,8 @@ void MenuScene::ProcessInput()
 void MenuScene::Update()
 {
 	if (m_bProceed) {
-		// Proceed to LobbyScene
 		m_bProceed = false;
-		SCENE->PushScene<LobbyScene>();	// Test
+		SCENE->PushScene<RoomListScene>();
 		return;
 	}
 

@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "NetworkManager.h"
 #include "Packets.h"
 #include "TextBox.h"
@@ -173,6 +173,69 @@ void NetworkManager::SendRegister(const std::string& id, const std::string& pw)
 
 	SendPacket(&packet, packet.size);
 }
+void NetworkManager::SendRoomListReq()
+{
+	if (m_hClientSocket == INVALID_SOCKET || !m_bConnected)
+		return;
+
+	C2S_RoomListReq packet;
+	packet.size = sizeof(C2S_RoomListReq);
+	packet.type = C2S_ROOM_LIST_REQ;
+	SendPacket(&packet, packet.size);
+}
+
+void NetworkManager::SendCreateRoom(const std::string& roomName)
+{
+	if (m_hClientSocket == INVALID_SOCKET || !m_bConnected)
+		return;
+
+	m_nCreateRoomState = 0;
+	C2S_CreateRoom packet;
+	packet.size = sizeof(C2S_CreateRoom);
+	packet.type = C2S_CREATE_ROOM;
+	strncpy_s(packet.roomName, roomName.c_str(), sizeof(packet.roomName));
+	SendPacket(&packet, packet.size);
+}
+
+void NetworkManager::SendJoinRoom(int roomId)
+{
+	if (m_hClientSocket == INVALID_SOCKET || !m_bConnected)
+		return;
+
+	m_nJoinRoomState = 0;
+	C2S_JoinRoom packet;
+	packet.size = sizeof(C2S_JoinRoom);
+	packet.type = C2S_JOIN_ROOM;
+	packet.roomId = roomId;
+	SendPacket(&packet, packet.size);
+}
+
+void NetworkManager::SendLeaveRoom()
+{
+	if (m_hClientSocket == INVALID_SOCKET || !m_bConnected)
+		return;
+
+	m_nLeaveRoomState = 0;
+	C2S_LeaveRoom packet;
+	packet.size = sizeof(C2S_LeaveRoom);
+	packet.type = C2S_LEAVE_ROOM;
+	SendPacket(&packet, packet.size);
+
+	{
+		std::lock_guard<std::mutex> lk(m_RoomPlayersMutex);
+		m_RoomPlayers.clear();
+	}
+	m_PendingPlayerJoins.empty();
+	m_PendingPlayerLeaves.empty();
+	m_nJoinedRoomId = -1;
+	m_strJoinedRoomName = "";
+}
+
+std::vector<RoomInfo> NetworkManager::GetRoomList()
+{
+	std::lock_guard<std::mutex> lock(m_RoomListMutex);
+	return m_vRoomList;
+}
 
 void NetworkManager::SendData()
 {
@@ -249,7 +312,7 @@ void NetworkManager::send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED o
 void NetworkManager::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED over, DWORD flags)
 {
 	NetworkManager* N = NetworkManager::GetInstance();
-	
+
 	if (num_bytes == 0 || err != 0) {
 		N->Disconnect();
 		return;
@@ -305,10 +368,62 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		auto* p = reinterpret_cast<const S2C_LoginResult*>(data);
 		if (p->success) {
 			m_nLoginState = 1;
-			m_bGameBegin = true;
-		} else {
+		}
+		else {
 			m_nLoginState = -1;
 		}
+		break;
+	}
+	case S2C_ROOM_LIST_RES:
+	{
+		if (size < static_cast<int>(offsetof(S2C_RoomListRes, rooms))) return;
+		auto* p = reinterpret_cast<const S2C_RoomListRes*>(data);
+		std::lock_guard<std::mutex> lock(m_RoomListMutex);
+		m_vRoomList.clear();
+		for (int i = 0; i < p->roomCount && i < MAX_ROOM_LIST_ITEMS; ++i) {
+			m_vRoomList.push_back(p->rooms[i]);
+		}
+
+		m_bRoomListChanged = true;
+		break;
+	}
+	case S2C_CREATE_ROOM_RESULT:
+	{
+		if (size < static_cast<int>(sizeof(S2C_CreateRoomResult))) return;
+		auto* p = reinterpret_cast<const S2C_CreateRoomResult*>(data);
+		if (p->success) {
+			m_nCreateRoomState = 1;
+			m_nJoinedRoomId = p->roomId;
+			m_strJoinedRoomName = p->roomName;
+		}
+		else {
+			m_nCreateRoomState = -1;
+			m_strRoomErrMsg = p->message;
+		}
+		break;
+	}
+	case S2C_JOIN_ROOM_RESULT:
+	{
+		if (size < static_cast<int>(sizeof(S2C_JoinRoomResult))) return;
+		auto* p = reinterpret_cast<const S2C_JoinRoomResult*>(data);
+		if (p->success) {
+			m_nJoinRoomState = 1;
+			m_nJoinedRoomId = p->roomId;
+			m_strJoinedRoomName = p->roomName;
+		}
+		else {
+			m_nJoinRoomState = -1;
+			m_strRoomErrMsg = p->message;
+		}
+		break;
+	}
+	case S2C_LEAVE_ROOM_RESULT:
+	{
+		if (size < static_cast<int>(sizeof(S2C_LeaveRoomResult))) return;
+		auto* p = reinterpret_cast<const S2C_LeaveRoomResult*>(data);
+		m_nLeaveRoomState = p->success ? 1 : -1;
+		m_nJoinedRoomId = -1;
+		m_strJoinedRoomName = "";
 		break;
 	}
 	case S2C_REGISTER_RESULT:
@@ -317,7 +432,8 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		auto* p = reinterpret_cast<const S2C_RegisterResult*>(data);
 		if (p->success) {
 			m_nRegisterState = 1;
-		} else {
+		}
+		else {
 			m_nRegisterState = -1;
 		}
 		break;
@@ -333,7 +449,7 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	{
 		if (size < static_cast<int>(sizeof(S2C_AddPlayer))) return;
 		auto* p = reinterpret_cast<const S2C_AddPlayer*>(data);
-		
+
 		char nameBuf[MAX_NAME_LEN];
 		memcpy_s(nameBuf, sizeof(nameBuf), p->username, MAX_NAME_LEN);
 		nameBuf[MAX_NAME_LEN - 1] = '\0';
@@ -379,14 +495,14 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		if (size < static_cast<int>(sizeof(S2C_ZombieState))) return;
 		auto* p = reinterpret_cast<const S2C_ZombieState*>(data);
 		ZombieServerState state;
-		state.x             = p->x;
-		state.z             = p->z;
-		state.yaw           = p->yaw;
-		state.waypointX     = p->waypointX;
-		state.waypointZ     = p->waypointZ;
+		state.x = p->x;
+		state.z = p->z;
+		state.yaw = p->yaw;
+		state.waypointX = p->waypointX;
+		state.waypointZ = p->waypointZ;
 		state.behaviorState = p->behaviorState;
-		state.receivedTime  = GetNetTimeSec();
-		state.valid         = true;
+		state.receivedTime = GetNetTimeSec();
+		state.valid = true;
 		m_ZombieStates[p->zombieId] = state;
 		break;
 	}
@@ -401,14 +517,14 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		{
 			const ZombieStateEntry& e = p->entries[i];
 			ZombieServerState state;
-			state.x             = e.x;
-			state.z             = e.z;
-			state.yaw           = e.yaw;
-			state.waypointX     = e.waypointX;
-			state.waypointZ     = e.waypointZ;
+			state.x = e.x;
+			state.z = e.z;
+			state.yaw = e.yaw;
+			state.waypointX = e.waypointX;
+			state.waypointZ = e.waypointZ;
 			state.behaviorState = e.behaviorState;
-			state.receivedTime  = dRecv;
-			state.valid         = true;
+			state.receivedTime = dRecv;
+			state.valid = true;
 			m_ZombieStates[e.zombieId] = state;
 		}
 		break;
@@ -426,13 +542,13 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		auto* p = reinterpret_cast<const S2C_ShootResult*>(data);
 		ShootResultEvent ev;
 		ev.shooterPlayerId = p->shooterPlayerId;
-		ev.bHit            = p->bHit;
-		ev.v3HitPoint      = Vector3{ p->hitX, p->hitY, p->hitZ };
-		ev.v3HitNormal     = Vector3{ p->hitNormalX, p->hitNormalY, p->hitNormalZ };
-		ev.hitZombieId     = p->hitZombieId;
-		ev.damage          = p->damage;
-		ev.v3MuzzlePos     = Vector3{ p->muzzleX, p->muzzleY, p->muzzleZ };
-		ev.v3ShootDir      = Vector3{ p->shootDirX, p->shootDirY, p->shootDirZ };
+		ev.bHit = p->bHit;
+		ev.v3HitPoint = Vector3{ p->hitX, p->hitY, p->hitZ };
+		ev.v3HitNormal = Vector3{ p->hitNormalX, p->hitNormalY, p->hitNormalZ };
+		ev.hitZombieId = p->hitZombieId;
+		ev.damage = p->damage;
+		ev.v3MuzzlePos = Vector3{ p->muzzleX, p->muzzleY, p->muzzleZ };
+		ev.v3ShootDir = Vector3{ p->shootDirX, p->shootDirY, p->shootDirZ };
 		m_PendingShootResults.push(ev);
 		break;
 	}
@@ -460,9 +576,9 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		auto* p = reinterpret_cast<const S2C_MeleeHit*>(data);
 		MeleeHitEvent ev;
 		ev.attackerPlayerId = p->attackerPlayerId;
-		ev.zombieId         = p->zombieId;
-		ev.damage           = p->damage;
-		ev.v3HitPoint       = Vector3{ p->hitX, p->hitY, p->hitZ };
+		ev.zombieId = p->zombieId;
+		ev.damage = p->damage;
+		ev.v3HitPoint = Vector3{ p->hitX, p->hitY, p->hitZ };
 		m_PendingMeleeHits.push(ev);
 		break;
 	}
@@ -474,7 +590,7 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		char name[MAX_NAME_LEN]; memcpy_s(name, sizeof(name), p->username, MAX_NAME_LEN); name[MAX_NAME_LEN - 1] = '\0';
 		char msg[MAX_CHAT_LEN];  memcpy_s(msg, sizeof(msg), p->message, MAX_CHAT_LEN);   msg[MAX_CHAT_LEN - 1] = '\0';
 		ev.username = name;
-		ev.message  = msg;
+		ev.message = msg;
 		m_PendingChatMessages.push(ev);
 		break;
 	}
@@ -551,7 +667,7 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 void NetworkManager::SetLocalPlayerInfo(const Vector3& pos, float yaw)
 {
 	m_v3LocalPlayerPos = pos;
-	m_fLocalPlayerYaw  = yaw;
+	m_fLocalPlayerYaw = yaw;
 }
 
 void NetworkManager::TrySendPlayerPosition()
@@ -616,18 +732,18 @@ void NetworkManager::SendPlayerShoot(const Vector3& v3Origin, const Vector3& v3D
 	if (!m_bConnected || m_bOfflineMode) return;
 
 	C2S_PlayerShoot p;
-	p.size    = sizeof(C2S_PlayerShoot);
-	p.type    = C2S_PLAYER_SHOOT;
+	p.size = sizeof(C2S_PlayerShoot);
+	p.type = C2S_PLAYER_SHOOT;
 	p.originX = v3Origin.x;
 	p.originY = v3Origin.y;
 	p.originZ = v3Origin.z;
-	p.dirX    = v3Direction.x;
-	p.dirY    = v3Direction.y;
-	p.dirZ    = v3Direction.z;
+	p.dirX = v3Direction.x;
+	p.dirY = v3Direction.y;
+	p.dirZ = v3Direction.z;
 	p.muzzleX = v3MuzzlePos.x;
 	p.muzzleY = v3MuzzlePos.y;
 	p.muzzleZ = v3MuzzlePos.z;
-	p.damage  = damage;
+	p.damage = damage;
 	SendPacket(&p, p.size);
 }
 
@@ -759,8 +875,8 @@ void NetworkManager::SendReady(bool bReady)
 	if (!m_bConnected || m_bOfflineMode) return;
 
 	C2S_Ready p;
-	p.size   = sizeof(C2S_Ready);
-	p.type   = C2S_READY;
+	p.size = sizeof(C2S_Ready);
+	p.type = C2S_READY;
 	p.bReady = bReady;
 	SendPacket(&p, p.size);
 }
@@ -809,14 +925,14 @@ void NetworkManager::SendPlayerMelee(const Vector3& v3Origin, const Vector3& v3D
 	if (!m_bConnected || m_bOfflineMode) return;
 
 	C2S_PlayerMelee p;
-	p.size    = sizeof(C2S_PlayerMelee);
-	p.type    = C2S_PLAYER_MELEE;
+	p.size = sizeof(C2S_PlayerMelee);
+	p.type = C2S_PLAYER_MELEE;
 	p.originX = v3Origin.x;
 	p.originY = v3Origin.y;
 	p.originZ = v3Origin.z;
-	p.dirX    = v3Direction.x;
-	p.dirY    = v3Direction.y;
-	p.dirZ    = v3Direction.z;
+	p.dirX = v3Direction.x;
+	p.dirY = v3Direction.y;
+	p.dirZ = v3Direction.z;
 	SendPacket(&p, p.size);
 }
 
@@ -936,7 +1052,7 @@ void NetworkManager::UpdateInterpolation()
 			if (s0.time <= fRenderTime && fRenderTime <= s1.time)
 			{
 				float fSpan = s1.time - s0.time;
-				float t     = (fSpan > 0.f) ? (fRenderTime - s0.time) / fSpan : 1.f;
+				float t = (fSpan > 0.f) ? (fRenderTime - s0.time) / fSpan : 1.f;
 				state.interpolatedPos = Vector3::Lerp(s0.pos, s1.pos, t);
 				bFound = true;
 				break;
@@ -961,7 +1077,7 @@ void NetworkManager::UpdateInterpolation()
 				float fSpan = s1.time - s0.time;
 				if (fSpan > 0.f)
 				{
-					Vector3 v3Vel  = (s1.pos - s0.pos) * (1.f / fSpan);
+					Vector3 v3Vel = (s1.pos - s0.pos) * (1.f / fSpan);
 					float   fExtrap = min(fRenderTime - s1.time, 0.5f);
 					state.interpolatedPos = s1.pos + v3Vel * fExtrap;
 				}
@@ -982,7 +1098,7 @@ bool NetworkManager::GetInterpolatedPosition(int playerId, Vector3& outPos) cons
 {
 	std::lock_guard<std::mutex> lock(m_Mutex);
 	auto it = m_RemotePlayers.find(playerId);
-	if (it == m_RemotePlayers.end() || !it->second.active) 
+	if (it == m_RemotePlayers.end() || !it->second.active)
 		return false;
 	outPos = it->second.interpolatedPos;
 	return true;

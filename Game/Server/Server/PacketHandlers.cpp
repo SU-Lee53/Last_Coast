@@ -28,38 +28,134 @@ void PacketHandlers::Login(Session& self, const C2S_Login& pkt)
 	}
 
 	strncpy_s(self.m_username, pkt.username, MAX_NAME_LEN);
-
-	// 방 할당
-	Room* room = find_empty_room();
-	if (room == nullptr) {
-		SendLoginFail(self, "No Room Available");
-		return;
-	}
-
-	room->add_player(self.m_id);
-	self.m_room = room;
+	self.m_room = nullptr;
 
 	self.send_login_success();
 	self.send_avatar_info();
+}
+void PacketHandlers::RoomListReq(Session& self)
+{
+	S2C_RoomListRes res;
+	res.type = S2C_ROOM_LIST_RES;
+	res.roomCount = 0;
+
+	for (int i = 0; i < MAX_ROOMS; ++i) {
+		if (rooms[i].is_active && rooms[i].player_count > 0) {
+			if (res.roomCount >= MAX_ROOM_LIST_ITEMS) break;
+			RoomInfo& info = res.rooms[res.roomCount++];
+			info.roomId = rooms[i].room_id;
+			strncpy_s(info.roomName, rooms[i].room_name, MAX_NAME_LEN);
+			info.playerCount = rooms[i].player_count;
+			info.maxPlayers = MAX_ROOM_PLAYERS;
+			info.bInGame = rooms[i].is_in_game;
+		}
+	}
+	const int nBytes = static_cast<int>(offsetof(S2C_RoomListRes, rooms)) + res.roomCount * sizeof(RoomInfo);
+	res.size = static_cast<unsigned char>(nBytes);
+	self.do_send(nBytes, reinterpret_cast<char*>(&res));
+}
+
+void PacketHandlers::CreateRoom(Session& self, const C2S_CreateRoom& pkt)
+{
+	if (self.m_room != nullptr) {
+		self.send_create_room_result(false, -1, "", "Already in a room");
+		return;
+	}
+	Room* room = find_empty_room();
+	if (room == nullptr) {
+		self.send_create_room_result(false, -1, "", "No Server Room Slot Available");
+		return;
+	}
+	std::string roomName(pkt.roomName);
+	if (roomName.empty()) {
+		roomName = "Room " + std::to_string(room->room_id + 1);
+	}
+
+	room->reset();
+	room->is_active = true;
+	room->is_in_game = false;
+	strncpy_s(room->room_name, roomName.c_str(), MAX_NAME_LEN);
+	room->add_player(self.m_id);
+	self.m_room = room;
+
+	self.send_create_room_result(true, room->room_id, room->room_name, "Room Created");
+	self.send_host_change(room->host_id);
+	for (auto& [nZombieId, zombie] : m_World.GetZombies().GetZombies()) {
+		if (!zombie.bAlive || !zombie.pAgent) continue;
+		self.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
+	}
+}
+void PacketHandlers::JoinRoom(Session& self, const C2S_JoinRoom& pkt)
+{
+	if (self.m_room != nullptr) {
+		self.send_join_room_result(false, -1, "", "Already in a room");
+		return;
+	}
+
+	if (pkt.roomId < 0 || pkt.roomId >= MAX_ROOMS) {
+		self.send_join_room_result(false, -1, "", "Invalid Room ID");
+		return;
+	}
+	Room& room = rooms[pkt.roomId];
+	if (!room.is_active || room.player_count <= 0) {
+		self.send_join_room_result(false, -1, "", "Room Does Not Exist");
+		return;
+	}
+
+	if (room.is_full()) {
+		self.send_join_room_result(false, -1, "", "Room is Full");
+		return;
+	}
+
+	if (!room.add_player(self.m_id)) {
+		self.send_join_room_result(false, -1, "", "Failed to Join Room");
+		return;
+	}
+	self.m_room = &room;
+
+	self.send_join_room_result(true, room.room_id, room.room_name, "Joined Room");
 
 	// 방에 있는 다른 플레이어들에게 접속 알림 + 기존 인원 목록 수신
-	for (int other_id : room->players) {
+	for (int other_id : room.players) {
 		if (other_id == -1 || other_id == self.m_id) continue;
 		clients[other_id].send_add_player(self.m_id);
 		self.send_add_player(other_id);
 	}
 
-	// 방장(호스트) ID를 방 전체에 통지 (신규 입장자 포함)
-	for (int other_id : room->players) {
+	for (int other_id : room.players) {
 		if (other_id == -1) continue;
-		clients[other_id].send_host_change(room->host_id);
+		clients[other_id].send_host_change(room.host_id);
 	}
 
-	// 이미 스폰된 좀비 목록을 신규 클라이언트에게 전송
 	for (auto& [nZombieId, zombie] : m_World.GetZombies().GetZombies()) {
 		if (!zombie.bAlive || !zombie.pAgent) continue;
 		self.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
 	}
+}
+
+void PacketHandlers::LeaveRoom(Session& self)
+{
+	if (self.m_room != nullptr) {
+		Room* room = self.m_room;
+
+		for (int other_id : room->players) {
+			if (other_id == -1 || other_id == self.m_id) continue;
+			clients[other_id].send_remove_player(self.m_id);
+		}
+
+		room->remove_player(self.m_id);
+		self.m_room = nullptr;
+		if (room->player_count > 0) {
+			for (int other_id : room->players) {
+				if (other_id == -1) continue;
+				clients[other_id].send_host_change(room->host_id);
+			}
+			TryBeginGame(room);
+		}
+	}
+
+	self.m_bReady = false;
+	self.send_leave_room_result(true);
 }
 
 void PacketHandlers::Register(Session& self, const C2S_Register& pkt)
@@ -71,7 +167,8 @@ void PacketHandlers::Register(Session& self, const C2S_Register& pkt)
 	if (DB->Register(id, pw)) {
 		res.success = true;
 		strncpy_s(res.message, "Register Successful", sizeof(res.message));
-	} else {
+	}
+	else {
 		res.success = false;
 		strncpy_s(res.message, "Register Failed (ID Exists?)", sizeof(res.message));
 	}
@@ -176,6 +273,7 @@ void PacketHandlers::GameStart(Session& self)
 			clients[other_id].m_bLoadComplete = false;
 		}
 		m_World.SetAwaitingLoads(true);
+		self.m_room->is_in_game = true;
 
 		for (int other_id : self.m_room->players) {
 			if (other_id == -1) continue;
