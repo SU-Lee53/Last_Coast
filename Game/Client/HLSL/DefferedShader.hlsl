@@ -323,6 +323,10 @@ float4 PSDefferedLighting(VS_QUAD_OUTPUT input) : SV_Target0
 	float2 uv = input.position.xy / float2(gnScreenSize);
 
 	GBufferData g = LoadGBuffer(pixelPos);
+	if (g.depth >= 0.999999f)
+	{
+		return float4(0.f, 0.f, 0.f, 1.f);
+	}
 
 	float3 worldPos = ReconstructWorldPos(uv, g.depth);
 	float3 viewDir = normalize(gCamera.v3CameraPosition - worldPos);
@@ -331,31 +335,31 @@ float4 PSDefferedLighting(VS_QUAD_OUTPUT input) : SV_Target0
 	float specularPower = lerp(4.f, 192.f, gloss * gloss);
 	float specularIntensity = g.specular * lerp(0.05f, 1.0f, gloss * gloss);
 
-	float fShadow = ComputeCascadeShadow(worldPos);
-
 	float3 directLighting = 0.0f;
+	float fShadow = 1.0f;
+	int bShadowComputed = 0;
 
     [loop]
 	for (int i = 0; i < gSceneGlobal.nNumLights; ++i)
 	{
 		LightData lightData = gLightData[i];
-		if (lightData.bEnable == 0)
-		{
-			continue;
-		}
-
 		switch (lightData.nType)
 		{
 			case POINT_LIGHT:
-				directLighting += PointLight(worldPos, g.normalW, viewDir, g.albedo, specularPower, specularIntensity, i);
+				directLighting += PointLight(worldPos, g.normalW, viewDir, g.albedo, specularPower, specularIntensity, lightData);
 				break;
 
 			case SPOT_LIGHT:
-				directLighting += SpotLight(worldPos, g.normalW, viewDir, g.albedo, specularPower, specularIntensity, i);
+				directLighting += SpotLight(worldPos, g.normalW, viewDir, g.albedo, specularPower, specularIntensity, lightData);
 				break;
 
 			case DIRECTIONAL_LIGHT:
-				directLighting += DirectionalLight(worldPos, g.normalW, viewDir, g.albedo, specularPower, specularIntensity, i) * fShadow;
+				if (bShadowComputed == 0)
+				{
+					fShadow = ComputeCascadeShadow(worldPos);
+					bShadowComputed = 1;
+				}
+				directLighting += DirectionalLight(worldPos, g.normalW, viewDir, g.albedo, specularPower, specularIntensity, lightData) * fShadow;
 				break;
 		}
 	}

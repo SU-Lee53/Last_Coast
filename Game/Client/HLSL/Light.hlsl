@@ -19,7 +19,7 @@ float ComputeSpotFactor(float3 lightDir, float theta, float phi, float falloff, 
     // Ldir = surface → light 방향 (정규화)
 	float3 lightToSurface = -Ldir; // light → surface
 
-	float cosAngle = dot(lightToSurface, normalize(lightDir));
+	float cosAngle = dot(lightToSurface, lightDir);
 
     // Inner~Outer 사이 보간
 	float spot =
@@ -37,17 +37,21 @@ float3 DiffuseLambert(float3 normal, float3 lightDir, float3 albedo, float3 radi
 
 float3 SpecularBlinn(float3 normal, float3 lightDir, float3 viewDir, float specularPower, float specularIntensity, float3 radiance)
 {
+	[branch]
+	if (dot(normal, lightDir) <= 0.f)
+	{
+		return float3(0.f, 0.f, 0.f);
+	}
+
 	float3 H = normalize(lightDir + viewDir);
 	float NDotH = saturate(dot(normal, H));
 	float specular = pow(NDotH, specularPower) * specularIntensity;
 	return radiance * specular;
 }
 
-float3 DirectionalLight(float3 worldPos, float3 normal, float3 viewDir, float3 albedo, float specularPower, float specularIntensity, int nLightIndex)
+float3 DirectionalLight(float3 worldPos, float3 normal, float3 viewDir, float3 albedo, float specularPower, float specularIntensity, LightData lightData)
 {
-	LightData lightData = gLightData[nLightIndex];
-	
-	float3 lightDir = -normalize(lightData.vDirection);
+	float3 lightDir = -lightData.vDirection;
 	//float3 lightDir = -normalize(worldPos - lightData.vPosition);
 	float3 radiance = lightData.vColor * lightData.fIntensity;
 
@@ -57,17 +61,17 @@ float3 DirectionalLight(float3 worldPos, float3 normal, float3 viewDir, float3 a
 	return diffuse + specular;
 }
 
-float3 PointLight(float3 worldPos, float3 normal, float3 viewDir, float3 albedo, float specularPower, float specularIntensity, int nLightIndex)
+float3 PointLight(float3 worldPos, float3 normal, float3 viewDir, float3 albedo, float specularPower, float specularIntensity, LightData lightData)
 {
-	LightData lightData = gLightData[nLightIndex];
-	
 	float3 toLight = lightData.vPosition - worldPos;
-	float distance = length(toLight);
-	if (distance > lightData.fRange)
+	float distanceSq = dot(toLight, toLight);
+	[branch]
+	if (distanceSq >= lightData.fRange * lightData.fRange)
 	{
 		return float3(0.f, 0.f, 0.f);
 	}
 	
+	float distance = sqrt(distanceSq);
 	float3 lightDir = toLight / max(distance, FLT_EPSILON);
 	float attenuation = ComputeAttenuation(lightData.vAttenuation, lightData.fRange, distance);
 	
@@ -79,17 +83,17 @@ float3 PointLight(float3 worldPos, float3 normal, float3 viewDir, float3 albedo,
 	return diffuse + specular;
 }
 
-float3 SpotLight(float3 worldPos, float3 normal, float3 viewDir, float3 albedo, float specularPower, float specularIntensity, int nLightIndex)
+float3 SpotLight(float3 worldPos, float3 normal, float3 viewDir, float3 albedo, float specularPower, float specularIntensity, LightData lightData)
 {
-	LightData lightData = gLightData[nLightIndex];
-	
 	float3 toLight = lightData.vPosition - worldPos;
-	float distance = length(toLight);
-	if (distance > lightData.fRange)
+	float distanceSq = dot(toLight, toLight);
+	[branch]
+	if (distanceSq >= lightData.fRange * lightData.fRange)
 	{
 		return float3(0.f, 0.f, 0.f);
 	}
 	
+	float distance = sqrt(distanceSq);
 	float3 lightDir = toLight / max(distance, FLT_EPSILON);
 	
 	float attenuation = ComputeAttenuation(lightData.vAttenuation, lightData.fRange, distance);

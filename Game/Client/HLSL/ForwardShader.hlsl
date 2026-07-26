@@ -77,6 +77,7 @@ float4 PSForwardLighting(VS_STANDARD_OUTPUT input) : SV_Target0
 	
 	float3 albedoColor = cAlbedo.rgb;
 	float alpha = cAlbedo.a;
+	clip(alpha - FLT_EPSILON);
 	
 	// Materials
 	MaterialData m = gMaterialDatas[gnMaterialIndex];
@@ -88,30 +89,30 @@ float4 PSForwardLighting(VS_STANDARD_OUTPUT input) : SV_Target0
 	float3 viewDir = normalize(gCamera.v3CameraPosition - input.positionW);
 	float3 normalW = (gnTextureIndex.y != -1) ? ComputeNormal(input.normalW, input.tangentW, input.uv) : input.normalW;
 	
-	float fShadow = ComputeCascadeShadow(input.positionW);
-	
 	float3 finalColor = 0;
-	[unroll(MAX_LIGHTS)]
+	float fShadow = 1.0f;
+	int bShadowComputed = 0;
+	[loop]
 	for (int i = 0; i < gSceneGlobal.nNumLights; ++i)
 	{
 		LightData lightData = gLightData[i];
-		if (lightData.bEnable == 0)
-		{
-			continue;
-		}
-		
 		switch (lightData.nType)
 		{
 			case POINT_LIGHT:
-				finalColor += PointLight(input.positionW, normalW, viewDir, albedoColor, fSpecularPower, fSpecularIntensity, i);
+				finalColor += PointLight(input.positionW, normalW, viewDir, albedoColor, fSpecularPower, fSpecularIntensity, lightData);
 				break;
 		
 			case SPOT_LIGHT:
-				finalColor += SpotLight(input.positionW, normalW, viewDir, albedoColor, fSpecularPower, fSpecularIntensity, i);
+				finalColor += SpotLight(input.positionW, normalW, viewDir, albedoColor, fSpecularPower, fSpecularIntensity, lightData);
 				break;
 			
 			case DIRECTIONAL_LIGHT:
-				finalColor += DirectionalLight(input.positionW, normalW, viewDir, albedoColor, fSpecularPower, fSpecularIntensity, i) * fShadow;
+				if (bShadowComputed == 0)
+				{
+					fShadow = ComputeCascadeShadow(input.positionW);
+					bShadowComputed = 1;
+				}
+				finalColor += DirectionalLight(input.positionW, normalW, viewDir, albedoColor, fSpecularPower, fSpecularIntensity, lightData) * fShadow;
 				break;
 		}
 	}

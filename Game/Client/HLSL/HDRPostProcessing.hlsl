@@ -10,6 +10,10 @@ float4 PSDefferedFog(VS_QUAD_OUTPUT input) : SV_Target0
 	
 	float3 sceneColor = gtxtHDRResult.Load(int3(pixelPos, 0)).rgb;
 	float fDepth = gtxtGBufferDepth.Load(int3(pixelPos, 0)).r;
+	if (fDepth >= 0.999999f)
+	{
+		return float4(sceneColor, 1.0f);
+	}
 	
 	float3 worldPos = ReconstructWorldPos(uv, fDepth);
 	float3 finalColor = ApplyFog(sceneColor, worldPos);
