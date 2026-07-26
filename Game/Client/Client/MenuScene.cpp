@@ -4,6 +4,7 @@
 #include "GameScene.h"
 #include "TextBox.h"
 #include "LobbyScene.h"
+#include "Sprite.h"
 
 void MenuScene::BuildObjects()
 {
@@ -17,13 +18,12 @@ void MenuScene::BuildObjects()
 
 	// Title
 	{
-		std::shared_ptr<TextBox> pTitle = std::make_shared<TextBox>(L"Noto Sans KR");
-		pTitle->SetText(L"LAST COAST");
+		std::shared_ptr<ImageBox> pTitle = std::make_shared<ImageBox>("../Resources/Textures/logo.png");
 		pTitle->SetLayer(0);
 		pTitle->SetAnchor(Vector2{ 0.5, 0.0 });
 		pTitle->SetPivot(Vector2{ 0.5,0.0 });
 		pTitle->SetPosition(Vector2{ 0,200 });
-		pTitle->SetTextHeight(120);
+		pTitle->SetSize(Vector2{ 600,200 });
 		m_pUIBoard->InsertUI(pTitle);
 	}
 
