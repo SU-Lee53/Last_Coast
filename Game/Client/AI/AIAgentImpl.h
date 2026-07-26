@@ -35,6 +35,7 @@ namespace AIDLL
                                            bool bVisible, bool bHeard) override;
         virtual void Think(int nTargetEntityId, float deltaTime, float fTargetDist = FLT_MAX) override;
         virtual bool ConsumeAttackHit() override;
+        virtual void SetDistraction(const Vector3& position, float duration) override;
 
         // ── 내부 초기화 (AIManagerImpl 에서만 호출) ──────────────────────────
         // NavMesh 설정 (구체 타입 사용)
@@ -55,6 +56,10 @@ namespace AIDLL
         void           CancelPath();  // 경로 즉시 취소 (Alert/Attack 등 이동 중단 시 호출)
         virtual void   SetDirectPath(const Vector3& target) override; // A* 없이 단일 직선 경로 설정 (서버 위치 추종 / Chase LOS용)
         void           SetAttackHitPending(bool b)          { m_bAttackHitPending = b; }
+
+        // 디코이 유인 상태 (GoalZombieThink/GoalDistracted에서 접근)
+        bool    HasDistraction()    const { return m_fDistractionTimer > 0.f; }
+        Vector3 GetDistractionPos() const { return m_v3DistractionPos; }
 
         // ── Flocking (AIManagerImpl에서만 호출) ─────────────────────────────
         void    SetFlockForce(const Vector3& force) { m_v3FlockForce = force; }
@@ -80,6 +85,10 @@ namespace AIDLL
 
         // 공격 히트 이벤트 (GoalAttack이 쿨다운 완료 시 set, ConsumeAttackHit으로 소비)
         bool m_bAttackHitPending = false;
+
+        // 디코이 유인 — 타이머 > 0 동안 GoalZombieThink가 GoalDistracted를 강제 유지
+        Vector3 m_v3DistractionPos  = Vector3::Zero;
+        float   m_fDistractionTimer = 0.f;
 
         // Think() 스태거링 — 시간 기반 인터벌, 프레임레이트 무관하게 일정 주기 유지
         float m_fAccumulatedDeltaTime   = 0.f; // dt 누적 타이머 겸 뇌 실행 시 전달할 경과 시간

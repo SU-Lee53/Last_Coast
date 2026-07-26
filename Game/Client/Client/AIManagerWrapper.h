@@ -28,4 +28,7 @@ public:
 	// 경보 전파
 	void SpreadAlert(const Vector3& SourcePos, int EntityId,
 	                 const Vector3& TargetPos, float Radius);
+
+	// 디코이 어그로 전파 — 반경 내 좀비를 Duration 초 동안 SourcePos로 강제 유인
+	void SpreadDistraction(const Vector3& SourcePos, float Radius, float Duration);
 };

@@ -56,7 +56,7 @@ private:
 	// 폭발한 수류탄 처리 — 연출 + 데미지(던진 쪽만) + 월드 제거
 	void UpdateGrenades();
 	// 투사체 생성 + 월드/추적 목록 등록 (bLocallyOwned = 폭발 데미지 판정 주체)
-	void SpawnGrenade(const Vector3& position, const Vector3& velocity, bool bLocallyOwned);
+	void SpawnGrenade(const Vector3& position, const Vector3& velocity, bool bLocallyOwned, bool bDecoy);
 	// 투척 초기조건 계산 (투척/궤도 예측 공용) — 가슴 높이 + 카메라 시선
 	bool ComputeGrenadeThrowParams(Vector3& outOrigin, Vector3& outVelocity) const;
 	// 수류탄 모드 + 우클릭 유지 → 예측 궤도 라인 갱신 (GrenadeArcPass)

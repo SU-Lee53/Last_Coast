@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "GoalZombieThink.h"
+#include "GoalDistracted.h"
 #include "GoalIdle.h"
 #include "GoalWander.h"
 #include "GoalAlert.h"
@@ -34,6 +35,17 @@ namespace AIDLL
     Goal::Status GoalZombieThink::Process()
     {
         ActivateIfInactive();
+
+        // 디코이 유인 중 → Arbitrate 무시하고 유인 지점으로 강제 이동 (추격/공격 어그로 강탈)
+        if (auto pOwner = m_pOwner.lock(); pOwner && pOwner->HasDistraction())
+        {
+            if (notPresent(GoalType::Distracted))
+            {
+                SwitchToGoal(GoalType::Distracted, pOwner);
+                pOwner->SetBehaviorState(AIBehaviorState::Investigating);
+            }
+            return ProcessSubgoals();
+        }
 
         bool bSubGoalsEmpty = m_SubGoals.empty();
         GoalType curType = bSubGoalsEmpty ? m_LastSwitchedType : m_SubGoals.front()->GetType();
@@ -203,6 +215,9 @@ namespace AIDLL
             break;
         case GoalType::Attack:
             AddSubgoal(std::make_unique<GoalAttack>(pOwner, m_nTargetId));
+            break;
+        case GoalType::Distracted:
+            AddSubgoal(std::make_unique<GoalDistracted>(pOwner));
             break;
         default:
             break;

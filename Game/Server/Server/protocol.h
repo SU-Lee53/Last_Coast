@@ -495,11 +495,14 @@ struct S2C_PlayerHeal {
 // 폭발 데미지는 던진 클라이언트가 C2S_GRENADE_EXPLODE 로 폭발 위치를 보내면
 // 서버가 AoE 판정 후 S2C_GRENADE_HIT 를 좀비 1마리당 1패킷 브로드캐스트한다.
 
+// grenadeType: 0=프래그(폭발 데미지), 1=디코이(반경 내 좀비 어그로 유인 — 데미지 없음)
+
 // 클라이언트 → 서버: 수류탄 상태 통지
 struct C2S_PlayerGrenade {
 	unsigned char size;
 	PACKET_TYPE   type;
 	unsigned char state;
+	unsigned char grenadeType;  // 0=프래그, 1=디코이
 	float         x, y, z;      // 투척 시작 위치 (cm, state=0만 유효)
 	float         vx, vy, vz;   // 투척 초기 속도 (cm/s, state=0만 유효)
 };
@@ -510,14 +513,17 @@ struct S2C_PlayerGrenade {
 	PACKET_TYPE   type;
 	int           playerId;     // 수류탄 사용 플레이어
 	unsigned char state;
+	unsigned char grenadeType;  // 0=프래그, 1=디코이
 	float         x, y, z;
 	float         vx, vy, vz;
 };
 
 // 클라이언트 → 서버: 수류탄 폭발 위치 (던진 본인 클라이언트만 전송 — 서버가 AoE 판정)
+// 디코이(grenadeType=1)면 데미지 대신 반경 내 좀비를 폭발 지점으로 유인한다.
 struct C2S_GrenadeExplode {
 	unsigned char size;
 	PACKET_TYPE   type;
+	unsigned char grenadeType;  // 0=프래그, 1=디코이
 	float         x, y, z;      // 폭발 위치 (cm)
 };
 

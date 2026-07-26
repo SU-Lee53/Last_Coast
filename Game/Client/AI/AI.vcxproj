@@ -170,6 +170,7 @@ xcopy /Y "$(OutDir)$(TargetName)$(TargetExt)" "$(ProjectDir)..\..\Server\Executa
     <ClInclude Include="GoalWander.h" />
     <ClInclude Include="GoalAlert.h" />
     <ClInclude Include="GoalInvestigate.h" />
+    <ClInclude Include="GoalDistracted.h" />
     <ClInclude Include="GoalChase.h" />
     <ClInclude Include="GoalAttack.h" />
     <ClInclude Include="GoalZombieThink.h" />
@@ -203,6 +204,7 @@ xcopy /Y "$(OutDir)$(TargetName)$(TargetExt)" "$(ProjectDir)..\..\Server\Executa
     <ClCompile Include="GoalWander.cpp" />
     <ClCompile Include="GoalAlert.cpp" />
     <ClCompile Include="GoalInvestigate.cpp" />
+    <ClCompile Include="GoalDistracted.cpp" />
     <ClCompile Include="GoalChase.cpp" />
     <ClCompile Include="GoalAttack.cpp" />
     <ClCompile Include="GoalZombieThink.cpp" />

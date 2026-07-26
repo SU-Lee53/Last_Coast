@@ -405,8 +405,9 @@ void Session::send_player_heal(int target_id, int healer_id, float new_hp)
 void Session::send_player_grenade(int player_id, const C2S_PlayerGrenade& pkt)
 {
 	S2C_PlayerGrenade p;
-	p.playerId = player_id;
-	p.state    = pkt.state;
+	p.playerId    = player_id;
+	p.state       = pkt.state;
+	p.grenadeType = pkt.grenadeType;
 	p.x  = pkt.x;  p.y  = pkt.y;  p.z  = pkt.z;
 	p.vx = pkt.vx; p.vy = pkt.vy; p.vz = pkt.vz;
 	send_packet(S2C_PLAYER_GRENADE, p);

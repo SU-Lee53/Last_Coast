@@ -94,6 +94,9 @@
     <ClInclude Include="GoalInvestigate.h">
       <Filter>03.Goal</Filter>
     </ClInclude>
+    <ClInclude Include="GoalDistracted.h">
+      <Filter>03.Goal</Filter>
+    </ClInclude>
     <ClInclude Include="GoalChase.h">
       <Filter>03.Goal</Filter>
     </ClInclude>
@@ -169,6 +172,9 @@
       <Filter>03.Goal</Filter>
     </ClCompile>
     <ClCompile Include="GoalInvestigate.cpp">
+      <Filter>03.Goal</Filter>
+    </ClCompile>
+    <ClCompile Include="GoalDistracted.cpp">
       <Filter>03.Goal</Filter>
     </ClCompile>
     <ClCompile Include="GoalChase.cpp">

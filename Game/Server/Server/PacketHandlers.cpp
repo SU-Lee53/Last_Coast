@@ -142,8 +142,19 @@ void PacketHandlers::GrenadeExplode(Session& self, const C2S_GrenadeExplode& pkt
 	constexpr float GRENADE_DAMAGE_MAX = 150.f;   // 중심 데미지
 	constexpr float GRENADE_DAMAGE_MIN = 30.f;    // 반경 끝 데미지
 
+	// 디코이 유인 파라미터 — 클라 GrenadeProjectile::DECOY_* 와 일치
+	constexpr float DECOY_AGGRO_RADIUS   = 3000.f;  // 유인 반경 (cm)
+	constexpr float DECOY_AGGRO_DURATION = 20.f;    // 유인 지속 시간 (초)
+
 	const Vector3 v3Center{ pkt.x, pkt.y, pkt.z };
 	auto& zombies = m_World.GetZombies();
+
+	// 디코이: 데미지 없음 — 반경 내 모든 좀비를 폭발 지점으로 강제 유인
+	if (pkt.grenadeType == 1) {
+		if (auto pAI = zombies.GetAIManager())
+			pAI->SpreadDistraction(v3Center, DECOY_AGGRO_RADIUS, DECOY_AGGRO_DURATION);
+		return;
+	}
 	for (auto& [nZombieId, zombie] : zombies.GetZombies()) {
 		if (!zombie.bAlive || !zombie.pAgent) continue;
 

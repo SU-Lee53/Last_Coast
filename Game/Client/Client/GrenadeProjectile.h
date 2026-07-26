@@ -18,6 +18,10 @@ public:
 	bool IsExploded() const { return m_bExploded; }
 	Vector3 GetPosition() const;
 
+	// 디코이 수류탄 — 데미지 없음, 폭발 시 반경 내 좀비 어그로 유인 (씬이 IsDecoy로 분기)
+	void SetDecoy(bool bDecoy) { m_bDecoy = bDecoy; }
+	bool IsDecoy() const { return m_bDecoy; }
+
 	// 디버그: 물리/퓨즈 없이 제자리 표시 (모델 확인용)
 	void SetDebugStatic(bool bStatic) { m_bDebugStatic = bStatic; }
 
@@ -26,6 +30,10 @@ public:
 	static constexpr float EXPLODE_RADIUS = 700.f;   // AoE 반경 (cm) — 서버 GRENADE_RADIUS와 일치
 	static constexpr float DAMAGE_MAX     = 150.f;   // 중심 데미지 (오프라인 판정용)
 	static constexpr float DAMAGE_MIN     = 30.f;    // 반경 끝 데미지
+
+	// 디코이 유인 파라미터 — 서버 PacketHandlers DECOY_* 와 일치
+	static constexpr float DECOY_AGGRO_RADIUS   = 3000.f;  // 유인 반경 (cm)
+	static constexpr float DECOY_AGGRO_DURATION = 20.f;    // 유인 지속 시간 (초)
 
 private:
 	// 중력 적분 + 정적 충돌(캡슐-삼각형/구-OBB) + 지형 폴백 한 스텝
@@ -37,6 +45,7 @@ private:
 	bool    m_bExploded     = false;
 	bool    m_bLocallyOwned = false;
 	bool    m_bDebugStatic  = false;
+	bool    m_bDecoy        = false;
 
 	static constexpr float GRAVITY     = -980.f;  // cm/s^2
 	static constexpr float RESTITUTION = 0.45f;   // 바닥 반발 계수

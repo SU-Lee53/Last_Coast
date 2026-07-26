@@ -1324,11 +1324,12 @@ void GameScene::ProcessPlayerGrenade()
 		return;
 	}
 
-	SpawnGrenade(v3Origin, v3Velocity, true);
+	const bool bDecoy = pPlayer->IsDecoySelected();
+	SpawnGrenade(v3Origin, v3Velocity, true, bDecoy);
 
 	// 온라인: 리모트 클라가 동일 초기조건으로 투사체를 시뮬하도록 투척 전송
 	if (NETWORK->IsConnected() && !NETWORK->IsOffline())
-		NETWORK->SendPlayerGrenade(0, v3Origin, v3Velocity);
+		NETWORK->SendPlayerGrenade(0, v3Origin, v3Velocity, bDecoy ? 1 : 0);
 }
 
 void GameScene::UpdateGrenadeArcPreview()
@@ -1450,11 +1451,12 @@ void GameScene::UpdateGrenadeArcPreview()
 	GrenadeArcPass::SetArcVertices(std::move(v3Segments));	// 빈 벡터 = 숨김
 }
 
-void GameScene::SpawnGrenade(const Vector3& position, const Vector3& velocity, bool bLocallyOwned)
+void GameScene::SpawnGrenade(const Vector3& position, const Vector3& velocity, bool bLocallyOwned, bool bDecoy)
 {
 	auto pGrenade = std::make_shared<GrenadeProjectile>();
 	pGrenade->Initialize();
 	pGrenade->SetLocallyOwned(bLocallyOwned);
+	pGrenade->SetDecoy(bDecoy);
 	pGrenade->Launch(position, velocity);
 
 	AddObject(pGrenade);
@@ -1476,7 +1478,7 @@ void GameScene::ProcessGrenadeResults()
 		{
 		case 0:	// 투척 — 던지기 모션 + 동일 초기조건 투사체 (시각 전용, 데미지 판정 없음)
 			it->second->PlayGrenadeThrowAction();
-			SpawnGrenade(ev.v3Pos, ev.v3Vel, false);
+			SpawnGrenade(ev.v3Pos, ev.v3Vel, false, ev.grenadeType == 1);
 			break;
 		case 2:  it->second->PlayGrenadeWindupAction();  break;	// 와인드업 (뒤로 들기)
 		case 3:  it->second->PlayGrenadeEquipAction();   break;	// 들기 (총 내림)
@@ -1515,12 +1517,22 @@ void GameScene::UpdateGrenades()
 		if (m_pEventSequence)
 			m_pEventSequence->AddEvent(std::make_shared<GrenadeExplosionEvent>(v3Pos));
 
-		// 데미지 판정은 던진 쪽만 — 리모트 시뮬 투사체는 연출 전용
+		// 판정은 던진 쪽만 — 리모트 시뮬 투사체는 연출 전용
 		if (pGrenade->IsLocallyOwned())
 		{
-			if (bOnline)
+			if (pGrenade->IsDecoy())
 			{
-				NETWORK->SendGrenadeExplode(v3Pos);	// 서버 AoE 판정 → S2C_GRENADE_HIT
+				// 디코이: 데미지 없음 — 반경 내 좀비를 폭발 지점으로 10초간 유인
+				if (bOnline)
+					NETWORK->SendGrenadeExplode(v3Pos, 1);	// 서버가 SpreadDistraction 수행
+				else
+					AI->SpreadDistraction(v3Pos,
+						GrenadeProjectile::DECOY_AGGRO_RADIUS,
+						GrenadeProjectile::DECOY_AGGRO_DURATION);
+			}
+			else if (bOnline)
+			{
+				NETWORK->SendGrenadeExplode(v3Pos, 0);	// 서버 AoE 판정 → S2C_GRENADE_HIT
 			}
 			else
 			{

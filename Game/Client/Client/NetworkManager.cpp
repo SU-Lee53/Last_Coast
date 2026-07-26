@@ -568,7 +568,7 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		if (size < static_cast<int>(sizeof(S2C_PlayerGrenade))) return;
 		auto* p = reinterpret_cast<const S2C_PlayerGrenade*>(data);
 		m_PendingPlayerGrenades.push(GrenadeEvent{
-			p->playerId, p->state,
+			p->playerId, p->state, p->grenadeType,
 			Vector3{ p->x, p->y, p->z },
 			Vector3{ p->vx, p->vy, p->vz } });
 		break;
@@ -908,26 +908,29 @@ std::vector<PlayerHealEvent> NetworkManager::ConsumePlayerHeals()
 	return out;
 }
 
-void NetworkManager::SendPlayerGrenade(unsigned char state, const Vector3& pos, const Vector3& vel)
+void NetworkManager::SendPlayerGrenade(unsigned char state, const Vector3& pos, const Vector3& vel,
+                                       unsigned char grenadeType)
 {
 	if (!m_bConnected || m_bOfflineMode) return;
 
 	C2S_PlayerGrenade p;
-	p.size  = sizeof(C2S_PlayerGrenade);
-	p.type  = C2S_PLAYER_GRENADE;
-	p.state = state;
+	p.size        = sizeof(C2S_PlayerGrenade);
+	p.type        = C2S_PLAYER_GRENADE;
+	p.state       = state;
+	p.grenadeType = grenadeType;
 	p.x  = pos.x; p.y  = pos.y; p.z  = pos.z;
 	p.vx = vel.x; p.vy = vel.y; p.vz = vel.z;
 	SendPacket(&p, p.size);
 }
 
-void NetworkManager::SendGrenadeExplode(const Vector3& pos)
+void NetworkManager::SendGrenadeExplode(const Vector3& pos, unsigned char grenadeType)
 {
 	if (!m_bConnected || m_bOfflineMode) return;
 
 	C2S_GrenadeExplode p;
-	p.size = sizeof(C2S_GrenadeExplode);
-	p.type = C2S_GRENADE_EXPLODE;
+	p.size        = sizeof(C2S_GrenadeExplode);
+	p.type        = C2S_GRENADE_EXPLODE;
+	p.grenadeType = grenadeType;
 	p.x = pos.x; p.y = pos.y; p.z = pos.z;
 	SendPacket(&p, p.size);
 }

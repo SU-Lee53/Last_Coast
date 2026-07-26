@@ -153,6 +153,7 @@ struct PlayerHealEvent {
 struct GrenadeEvent {
 	int           playerId;         // 수류탄 사용 플레이어
 	unsigned char state;            // 0=투척(pos/vel 유효), 2=와인드업, 3=들기, 4=내리기
+	unsigned char grenadeType;      // 0=프래그, 1=디코이
 	Vector3       v3Pos;            // 투척 시작 위치 (cm)
 	Vector3       v3Vel;            // 투척 초기 속도 (cm/s)
 };
@@ -221,8 +222,9 @@ public:
 	std::vector<PlayerHealEvent> ConsumePlayerHeals();    // 회복 확정 (서버 권위 HP)
 
 	// ── 수류탄 송수신 ──────────────────────────────────────────────────────────
-	void SendPlayerGrenade(unsigned char state, const Vector3& pos, const Vector3& vel); // state: 0=투척,2=와인드업,3=들기,4=내리기
-	void SendGrenadeExplode(const Vector3& pos);          // 폭발 위치 통지 (던진 본인만 — 서버 AoE 판정)
+	void SendPlayerGrenade(unsigned char state, const Vector3& pos, const Vector3& vel,
+	                       unsigned char grenadeType = 0); // state: 0=투척,2=와인드업,3=들기,4=내리기 / grenadeType: 0=프래그,1=디코이
+	void SendGrenadeExplode(const Vector3& pos, unsigned char grenadeType = 0); // 폭발 위치 통지 (던진 본인만 — 서버 AoE/유인 판정)
 	std::vector<GrenadeEvent>    ConsumePlayerGrenades(); // 수류탄 모션/투척 (리모트 재현)
 	std::vector<GrenadeHitEvent> ConsumeGrenadeHits();    // 폭발 좀비 히트 확정 (서버 권위)
 

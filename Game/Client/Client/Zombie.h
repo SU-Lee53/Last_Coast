@@ -83,9 +83,9 @@ private:
 	const float m_fFriction     = 10.f;
 	const float m_fGravity      = -9.8_cm * 10;
 
-	// 감지 범위
-	static constexpr float m_fSightRange      = 3000.0f; // 30m — FOV/LOS 없이 이 반경 내면 인지
-	static constexpr float m_fHearingRange    = 0.0f;    // 3.5m (현재 비활성)
+	// 감지 범위 — 서버 ZombieManager와 동일 조건 (온/오프라인 일치)
+	static constexpr float m_fSightRange      = 10000000.f; // cm — 서버와 동일: 사실상 무한, FOV/LOS 없이 반경 내면 인지
+	static constexpr float m_fHearingRange    = 0.0f;       // 서버와 동일 (비활성)
 
 	// FOV (시야각)
 	static constexpr float m_fFOVHalfAngleDeg = 60.0f;   // 전방 ±60° → 총 120°

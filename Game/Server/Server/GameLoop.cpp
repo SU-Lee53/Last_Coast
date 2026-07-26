@@ -22,6 +22,9 @@ namespace
 	constexpr float PLAYER_MAX_HP          = 100.f;
 	constexpr float ZOMBIE_ATTACK_DAMAGE   = 10.f;
 	constexpr float PLAYER_RESPAWN_SECONDS = 10.f; // 사망 → 부활 대기 시간
+
+	// 체크포인트를 하나도 안 지났을 때의 부활 위치 (cm) — 맵 시작 지점 고정
+	const Vector3 DEFAULT_RESPAWN_POS{ 10281.199179f, -3536.692724f, 18949.001705f };
 }
 
 void GameLoop::Run()
@@ -220,12 +223,8 @@ void GameLoop::Run()
 			cl.m_fHP = PLAYER_MAX_HP;
 			cl.m_fRespawnTimer = 0.f;
 
-			// 부활 위치 = 마지막 발동 체크포인트, 하나도 없으면 게임 시작 스폰 위치
-			Vector3 v3Respawn;
-			{
-				std::lock_guard<std::mutex> lg(cl.m_state_lock);
-				v3Respawn = cl.m_v3SpawnPos;
-			}
+			// 부활 위치 = 마지막 발동 체크포인트, 하나도 없으면 고정 기본 스폰 위치
+			Vector3 v3Respawn = DEFAULT_RESPAWN_POS;
 			if (const Vector3* pCpPos = WORLD->GetCheckpoints().GetLastFiredPos())
 				v3Respawn = *pCpPos;
 			BroadcastAll([&](Session& other) {

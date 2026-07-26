@@ -69,3 +69,9 @@ void AIManagerWrapper::SpreadAlert(const Vector3& SourcePos, int EntityId,
 	if (m_pAIManager)
 		m_pAIManager->SpreadAlert(SourcePos, EntityId, TargetPos, Radius);
 }
+
+void AIManagerWrapper::SpreadDistraction(const Vector3& SourcePos, float Radius, float Duration)
+{
+	if (m_pAIManager)
+		m_pAIManager->SpreadDistraction(SourcePos, Radius, Duration);
+}

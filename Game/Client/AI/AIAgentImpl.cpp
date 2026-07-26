@@ -309,6 +309,10 @@ namespace AIDLL
         // 감지되지 않은 엔티티의 기억 감퇴 — 감쇠 정확도를 위해 매 프레임 실행
         m_SensoryMemory.Update(deltaTime);
 
+        // 디코이 유인 타이머 감쇠 — LOD로 뇌 실행이 건너뛰어도 시간은 정확히 흐름
+        if (m_fDistractionTimer > 0.f)
+            m_fDistractionTimer = std::max(0.f, m_fDistractionTimer - deltaTime);
+
         // 브레인 초기화 (첫 호출 시)
         if (!m_pBrain)
         {
@@ -338,6 +342,15 @@ namespace AIDLL
     // ─────────────────────────────────────────────────────────────────────────
     // ConsumeAttackHit : GoalAttack이 발행한 히트 이벤트를 소비 (1회성)
     // ─────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // SetDistraction : 디코이 유인 설정 — duration 초 동안 position 으로 강제 이동
+    // ─────────────────────────────────────────────────────────────────────────
+    void AIAgentImpl::SetDistraction(const Vector3& position, float duration)
+    {
+        m_v3DistractionPos  = position;
+        m_fDistractionTimer = duration;
+    }
+
     bool AIAgentImpl::ConsumeAttackHit()
     {
         if (m_bAttackHitPending)

@@ -89,6 +89,8 @@ public:
 	bool IsGrenadeWindup() const { return m_bGrenadeWindup; }
 	bool IsGrenadeThrowing() const { return m_bInGrenadeThrow; }
 	int  GetGrenadeCount() const { return m_nGrenadeCount; }
+	int  GetDecoyCount() const { return m_nDecoyCount; }
+	bool IsDecoySelected() const { return m_bDecoySelected; }	// 현재 든 수류탄이 디코이인지
 
 	// "Throw" 원본 클립 기준 비율 — 몽타주 빌드/일시정지 공용 (클립 보고 튜닝)
 	static constexpr float GRENADE_HOLD_RATIO    = 0.25f;	// 뒤로 든 자세에서 일시정지하는 지점
@@ -203,7 +205,7 @@ protected:
 	void FinishBandage();		// 4초 완료 — 로컬: 소모+회복(오프라인)/서버 전송(온라인), 리모트: 모션 종료만
 
 	// 수류탄 모드 (5번 키 = 들기, 좌클릭 꾹 = 와인드업, 뗌 = 던지기)
-	void EnterGrenadeMode();			// 총 내림 + 꺼내는 모션 ("Bandage Draw" 재사용)
+	void EnterGrenadeMode(bool bDecoy = false);	// 총 내림 + 꺼내는 모션 ("Bandage Draw" 재사용). bDecoy=디코이 수류탄 선택
 	void ExitGrenadeToSlot(int nSlot);	// 수류탄 모드 해제 + 요청 슬롯 무기 복귀. 비모드면 SelectWeaponSlot 위임. 던지는 중 무시
 	void StartGrenadeWindup();			// 좌클릭 누름 — "Grenade Hold" 몽타주 (마지막 자세 유지)
 	void StartGrenadeThrow();			// 좌클릭 뗌 — "Grenade Throw" 몽타주, 릴리즈 notify가 투척 요청
@@ -280,11 +282,14 @@ protected:
 
 	// ── 수류탄 (소모품 슬롯 1번) ─────────────────────────────────────────────
 	static constexpr int GRENADE_START_COUNT = 3;
+	static constexpr int DECOY_START_COUNT   = 3;
 	bool m_bHoldingGrenade       = false;	// 수류탄 들기 모드 (조준/발사/근접/재장전 잠금)
 	bool m_bGrenadeWindup        = false;	// 좌클릭 꾹 — 뒤로 들고 있는 중
 	bool m_bInGrenadeThrow       = false;	// "Grenade Throw" 몽타주 재생 중 (모드 전환 잠금)
 	bool m_bGrenadeReleasePending = false;	// 릴리즈 notify → 씬이 소비해 투사체 스폰
 	int  m_nGrenadeCount         = GRENADE_START_COUNT;
+	int  m_nDecoyCount           = DECOY_START_COUNT;
+	bool m_bDecoySelected        = false;	// 들기 모드에서 선택된 수류탄 종류 (false=프래그, true=디코이)
 
 	// Collision
 	std::vector<BoundingOrientedBox> m_xmOBBCollided;

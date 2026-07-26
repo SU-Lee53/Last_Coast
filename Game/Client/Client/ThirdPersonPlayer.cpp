@@ -232,7 +232,9 @@ if (pAmmo) {
 		// 붕대/수류탄 공용 텍스트 박스 — 어느 쪽을 들었는지에 따라 문구 교체
 		if (pBandageHelpText) {
 			if (player.IsHoldingGrenade()) {
-				pBandageHelpText->SetText(L"좌클릭 꾹 : 조준(궤도 표시)   놓으면 : 던지기");
+				pBandageHelpText->SetText(player.IsDecoySelected()
+					? L"좌클릭 꾹 : 조준(궤도 표시)   놓으면 : 던지기  [디코이 - 좀비 유인]"
+					: L"좌클릭 꾹 : 조준(궤도 표시)   놓으면 : 던지기");
 				pBandageHelpText->SetVisible(true);
 			}
 			else {
@@ -242,12 +244,15 @@ if (pAmmo) {
 		}
 	}
 
-	// 소모품 슬롯 0번 = 붕대, 1번 = 프래그 수류탄 — 보유 개수 + 들기 모드 하이라이트
+	// 소모품 슬롯 0번 = 붕대, 1번 = 프래그 수류탄, 2번 = 디코이 수류탄 — 보유 개수 + 들기 모드 하이라이트
 	if (pItemCounts[0]) {
 		pItemCounts[0]->SetText(std::to_wstring(player.GetBandageCount()));
 	}
 	if (pItemCounts[1]) {
 		pItemCounts[1]->SetText(std::to_wstring(player.GetGrenadeCount()));
+	}
+	if (pItemCounts[2]) {
+		pItemCounts[2]->SetText(std::to_wstring(player.GetDecoyCount()));
 	}
 	{
 		const Vector4 v4Selected{ 1.f, 1.f, 1.f, 1.f };
@@ -256,7 +261,10 @@ if (pAmmo) {
 			pItemImages[0]->SetColor(player.IsHoldingBandage() ? v4Selected : v4Dimmed);
 		}
 		if (pItemImages[1]) {
-			pItemImages[1]->SetColor(player.IsHoldingGrenade() ? v4Selected : v4Dimmed);
+			pItemImages[1]->SetColor(player.IsHoldingGrenade() && !player.IsDecoySelected() ? v4Selected : v4Dimmed);
+		}
+		if (pItemImages[2]) {
+			pItemImages[2]->SetColor(player.IsHoldingGrenade() && player.IsDecoySelected() ? v4Selected : v4Dimmed);
 		}
 	}
 
@@ -851,7 +859,8 @@ void IThirdPersonPlayer::ProcessLocalActionInput()
 		}
 		else if (m_bHoldingGrenade) {
 			// 수류탄 모드: 좌클릭 꾹 = 와인드업(뒤로 들기), 뗌 = 던지기
-			if (!m_bInGrenadeThrow && !m_bInMeleeAttack && !m_bInWeaponSwap && m_nGrenadeCount > 0) {
+			if (!m_bInGrenadeThrow && !m_bInMeleeAttack && !m_bInWeaponSwap
+				&& (m_bDecoySelected ? m_nDecoyCount : m_nGrenadeCount) > 0) {
 				if (INPUT->GetButtonDown(VK_LBUTTON)) {
 					StartGrenadeWindup();
 				}
@@ -924,9 +933,12 @@ void IThirdPersonPlayer::ProcessLocalActionInput()
 		EnterBandageMode();
 	}
 
-	// 수류탄 들기 — 소모품 슬롯 1번
+	// 수류탄 들기 — 소모품 슬롯 1번(프래그) / 2번(디코이)
 	if (INPUT->GetButtonDown('5')) {
-		EnterGrenadeMode();
+		EnterGrenadeMode(false);
+	}
+	if (INPUT->GetButtonDown('6')) {
+		EnterGrenadeMode(true);
 	}
 
 	//  Melee attack
@@ -1501,11 +1513,21 @@ void IThirdPersonPlayer::SetBandageHandVisible(bool bVisible)
 	}
 }
 
-void IThirdPersonPlayer::EnterGrenadeMode()
+void IThirdPersonPlayer::EnterGrenadeMode(bool bDecoy)
 {
-	if (m_bHoldingGrenade || m_bInBandage || m_bInMeleeAttack || m_bInWeaponSwap) return;
+	// 이미 들기 모드면 종류 전환만 — 와인드업/던지기 중엔 잠금 (모션·투사체 종류 불일치 방지)
+	if (m_bHoldingGrenade) {
+		if (m_bDecoySelected == bDecoy) return;
+		if (m_bGrenadeWindup || m_bInGrenadeThrow || m_bInWeaponSwap) return;
+		if ((bDecoy ? m_nDecoyCount : m_nGrenadeCount) <= 0) return;
+		m_bDecoySelected = bDecoy;
+		return;
+	}
+
+	if (m_bInBandage || m_bInMeleeAttack || m_bInWeaponSwap) return;
 	if (auto pWeapon = GetCurrentWeaponObject(); pWeapon && pWeapon->IsInReloading()) return;
-	if (m_nGrenadeCount <= 0) return;
+	if ((bDecoy ? m_nDecoyCount : m_nGrenadeCount) <= 0) return;
+	m_bDecoySelected = bDecoy;
 
 	// 붕대 들기 중이면 내려놓고 바로 수류탄으로 — 총 꺼내기(ExitBandageToSlot) 없이 직행
 	if (m_bHoldingBandage) {
@@ -1630,15 +1652,19 @@ void IThirdPersonPlayer::OnGrenadeRelease()
 	if (!GetCamera()) return;
 
 	m_bGrenadeReleasePending = true;
-	m_nGrenadeCount = std::max(0, m_nGrenadeCount - 1);
+	if (m_bDecoySelected)
+		m_nDecoyCount = std::max(0, m_nDecoyCount - 1);
+	else
+		m_nGrenadeCount = std::max(0, m_nGrenadeCount - 1);
 }
 
 void IThirdPersonPlayer::OnGrenadeThrowEnd()
 {
 	m_bInGrenadeThrow = false;
 
-	// 로컬: 남은 수류탄 없으면 현재 슬롯 무기로 자동 복귀 (리모트는 state 4 패킷이 처리)
-	if (GetCamera() && m_bHoldingGrenade && m_nGrenadeCount <= 0) {
+	// 로컬: 든 종류의 수류탄이 다 떨어지면 현재 슬롯 무기로 자동 복귀 (리모트는 state 4 패킷이 처리)
+	if (GetCamera() && m_bHoldingGrenade
+		&& (m_bDecoySelected ? m_nDecoyCount : m_nGrenadeCount) <= 0) {
 		ExitGrenadeToSlot(m_nCurrentWeaponSlot);
 		return;
 	}
