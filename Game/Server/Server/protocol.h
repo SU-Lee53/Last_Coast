@@ -240,6 +240,7 @@ struct S2C_SpawnZombie {
 	PACKET_TYPE   type;
 	int           zombieId;
 	float         x, y, z; // 스폰 위치 (cm)
+	unsigned char zombieType; // 0=일반, 1=빠른 좀비 (서버 스폰 시 확률 롤)
 };
 
 struct S2C_DespawnZombie {
@@ -266,6 +267,7 @@ struct S2C_ZombieAttack {
 	int           zombieId;
 	int           targetPlayerId;
 	float         damage;
+	unsigned char animIndex; // 공격 모션 인덱스 (0="Zombie Attack", 1="Zombie Attack1") — 서버가 롤, 데미지 패킷에선 무의미
 };
 
 // ── 좀비 상태 배치 전송 ──────────────────────────────────────────────────────

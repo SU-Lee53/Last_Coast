@@ -11,6 +11,7 @@ void ZombieAnimationStateMachine::InitializeStateGraph()
 {
 	std::shared_ptr<AnimationState> pIdle = std::make_shared<AnimationState>();
 	std::shared_ptr<AnimationState> pWalk = std::make_shared<AnimationState>();
+	std::shared_ptr<AnimationState> pRun  = std::make_shared<AnimationState>();
 
 	pIdle->strName = "Idle";
 	pIdle->pAnimationToPlay = ANIMATION->Get("Zombie Idle");
@@ -22,13 +23,23 @@ void ZombieAnimationStateMachine::InitializeStateGraph()
 	pWalk->eAnimationPlayType = ANIMATION_PLAY_LOOP;
 	pWalk->fnStateTransitionCallback = WalkCallback;
 
+	pRun->strName = "Run";
+	pRun->pAnimationToPlay = ANIMATION->Get("Zombie Speed Running");
+	pRun->eAnimationPlayType = ANIMATION_PLAY_LOOP;
+	pRun->fnStateTransitionCallback = RunCallback;
+
 	pIdle->Connect(pWalk, 0.2);
+	pIdle->Connect(pRun, 0.2);
 	pWalk->Connect(pIdle, 0.2);
+	pWalk->Connect(pRun, 0.2);	// 풀 재사용으로 일반→빠른 전환 대비
+	pRun->Connect(pIdle, 0.2);
+	pRun->Connect(pWalk, 0.2);
 
 	m_pCurrentState = pIdle;
 
 	m_pStates.push_back(pIdle);
 	m_pStates.push_back(pWalk);
+	m_pStates.push_back(pRun);
 }
 
 bool ZombieAnimationStateMachine::IdleCallback(std::shared_ptr<IGameObject> pObj)
@@ -40,7 +51,15 @@ bool ZombieAnimationStateMachine::IdleCallback(std::shared_ptr<IGameObject> pObj
 bool ZombieAnimationStateMachine::WalkCallback(std::shared_ptr<IGameObject> pObj)
 {
 	auto pZombie = std::static_pointer_cast<Zombie>(pObj);
-	return pZombie->GetMoveSpeedSqXZ() >= std::numeric_limits<float>::epsilon();
+	return !pZombie->IsFast()
+		&& pZombie->GetMoveSpeedSqXZ() >= std::numeric_limits<float>::epsilon();
+}
+
+bool ZombieAnimationStateMachine::RunCallback(std::shared_ptr<IGameObject> pObj)
+{
+	auto pZombie = std::static_pointer_cast<Zombie>(pObj);
+	return pZombie->IsFast()
+		&& pZombie->GetMoveSpeedSqXZ() >= std::numeric_limits<float>::epsilon();
 }
 
 // ──────────────────────────────────────────────────────────────────────────

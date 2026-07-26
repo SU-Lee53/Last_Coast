@@ -58,7 +58,7 @@ void PacketHandlers::Login(Session& self, const C2S_Login& pkt)
 	// 이미 스폰된 좀비 목록을 신규 클라이언트에게 전송
 	for (auto& [nZombieId, zombie] : m_World.GetZombies().GetZombies()) {
 		if (!zombie.bAlive || !zombie.pAgent) continue;
-		self.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
+		self.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition(), zombie.bFast);
 	}
 }
 

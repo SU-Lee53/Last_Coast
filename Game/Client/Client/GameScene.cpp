@@ -68,8 +68,8 @@ void GameScene::FinalizeBuild()
 {
 	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
 	m_pPlayer->Initialize();
-	//m_pPlayer->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
-	m_pPlayer->GetTransform()->SetPosition(29000, -3536.692724, 25000);
+	m_pPlayer->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
+	//m_pPlayer->GetTransform()->SetPosition(29000, -3536.692724, 25000);
 	if (auto pThirdPerson = static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 		const auto& data = GCTX->GetGameData();
 		pThirdPerson->SetPlayerModel(GameContext::g_strCharacterNames[data.m_nCurModelIndex]);
@@ -1576,6 +1576,7 @@ void GameScene::SpawnZombie()
 	if (!pZombie) return; // 풀 고갈
 
 	pZombie->Initialize();
+	pZombie->SetFast(RandomGenerator::GenerateRandomIntInRange(0, 99) < Zombie::FAST_ZOMBIE_PERCENT);
 	AddObject(pZombie);
 
 	pZombie->SetPosition(AI->GetNavMesh()->GetRandomPoint());
@@ -1610,6 +1611,7 @@ void GameScene::UpdateOfflineSpawner()
 
 	pZombie->Initialize();
 	pZombie->SetServerId(-1);       // 로컬(오프라인) 좀비
+	pZombie->SetFast(RandomGenerator::GenerateRandomIntInRange(0, 99) < Zombie::FAST_ZOMBIE_PERCENT);
 	pZombie->SetPosition(v3Spawn);
 	pZombie->SetTarget(m_pPlayer);
 
@@ -1638,6 +1640,7 @@ void GameScene::ProcessNetworkZombies()
 		pZombie->Initialize();
 
 		pZombie->SetServerId(ev.zombieId);
+		pZombie->SetFast(ev.bFast);		// 서버가 롤한 타입 (빠른 좀비 애니 전환용)
 		pZombie->SetPosition(ev.pos);
 		pZombie->SetTarget(m_pPlayer);
 
@@ -1686,7 +1689,7 @@ void GameScene::ProcessNetworkZombies()
 			{
 				auto pAC = it->second->GetComponent<ZombieAnimationController>();
 				if (pAC && pAC->GetMontage())
-					pAC->GetMontage()->PlayMontage("Zombie Attack");
+					pAC->GetMontage()->PlayMontage(ev.animIndex == 1 ? "Zombie Attack1" : "Zombie Attack");
 			}
 		}
 		else

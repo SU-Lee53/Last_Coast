@@ -208,6 +208,7 @@ protected:
 	void StartGrenadeWindup();			// 좌클릭 누름 — "Grenade Hold" 몽타주 (마지막 자세 유지)
 	void StartGrenadeThrow();			// 좌클릭 뗌 — "Grenade Throw" 몽타주, 릴리즈 notify가 투척 요청
 	void SetGrenadeHandVisible(bool bVisible);	// 오른손 수류탄 모델 표시/숨김 (첫 표시 때 소켓 생성)
+	void SetBandageHandVisible(bool bVisible);	// 오른손 붕대 모델 표시/숨김 (첫 표시 때 소켓 생성)
 public:
 	std::shared_ptr<GrenadeHandSocket> GetGrenadeSocket() const { return m_pGrenadeSocket; }	// 오프셋 튜닝 ImGui용
 
@@ -293,6 +294,7 @@ protected:
 	PlayerHUD m_PlayerHUD{};
 	std::shared_ptr<WeaponSocket> m_pWeaponSocket = nullptr;
 	std::shared_ptr<GrenadeHandSocket> m_pGrenadeSocket = nullptr;	// 손 수류탄 모델 (지연 생성)
+	std::shared_ptr<BandageHandSocket> m_pBandageSocket = nullptr;	// 손 붕대 모델 (지연 생성)
 
 protected:
 	// Movement constants

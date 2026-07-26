@@ -67,8 +67,9 @@ public:
 	bool IsVisible() const { return m_bVisible; }
 
 	void EditOffsetImGui();	// 손 안 위치/자세/크기 실시간 튜닝 (Skeleton ImGui 패널에서 호출)
+	virtual const char* SocketLabel() const { return "Grenade Hand Socket"; }	// ImGui 표시명 (파생 소켓이 덮어씀)
 
-private:
+protected:
 	bool m_bVisible = false;
 
 	// 손 안 위치/자세 조정용 (도, cm) — 인게임 튜닝으로 확정한 값
@@ -77,6 +78,20 @@ private:
 	float   m_fScale = 1.f;
 
 	std::shared_ptr<IGameObject> m_pModel = nullptr;
+};
+
+// 손 붕대 모델 소켓 — 붕대 들기(4번) 동안만 표시.
+// 부착/오프셋/렌더 로직은 수류탄 소켓 그대로, 모델만 bandage.bin
+class BandageHandSocket : public GrenadeHandSocket {
+public:
+	BandageHandSocket(std::shared_ptr<Skeleton> pOwner, int32 nBoneIndex)
+		: GrenadeHandSocket{ pOwner, nBoneIndex } {
+		m_v3OffsetPosition = Vector3{ 7.7f, 3.5f, 2.0f };	// 인게임 ImGui 튜닝으로 확정한 값
+	}
+	virtual ~BandageHandSocket() {}
+
+	virtual void Initialize() override;
+	virtual const char* SocketLabel() const override { return "Bandage Hand Socket"; }
 };
 
 

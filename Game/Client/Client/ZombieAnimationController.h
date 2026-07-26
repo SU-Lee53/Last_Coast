@@ -3,8 +3,9 @@
 
 // ──────────────────────────────────────────────────────────────────────────
 // ZombieAnimationStateMachine
-//  Idle ↔ Walk (0.2s transition)
-//  Transition condition: Zombie::GetMoveSpeedSqXZ()
+//  Idle ↔ Walk / Run (0.2s transition)
+//  Transition condition: Zombie::GetMoveSpeedSqXZ() + IsFast()
+//  Run = 빠른 좀비(30%) 전용 "Zombie Speed Running" 클립
 // ──────────────────────────────────────────────────────────────────────────
 class ZombieAnimationStateMachine : public AnimationStateMachine {
 public:
@@ -12,6 +13,7 @@ public:
 
 	static bool IdleCallback(std::shared_ptr<IGameObject> pObj);
 	static bool WalkCallback(std::shared_ptr<IGameObject> pObj);
+	static bool RunCallback(std::shared_ptr<IGameObject> pObj);
 };
 
 // ──────────────────────────────────────────────────────────────────────────

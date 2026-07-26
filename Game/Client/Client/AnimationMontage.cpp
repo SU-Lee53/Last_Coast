@@ -449,7 +449,9 @@ void PlayerAnimationMontage::BuildMontage()
 		deathSection.pAnimationToPlay = ANIMATION->Get("Player Die");
 		deathSection.eEndRule = MONTAGE_SECTION_END_RULE::FREEZE;
 		deathSection.bFullBody = true;		// 하체까지 전신 재생 — 상체 마스크 블렌드로는 쓰러지는 모션 불가
-		deathSection.fStartOffset = 0.45f;	// 클립 앞 ~0.5초는 서있는 대기 자세 — 스킵해 즉시 쓰러짐
+		// 힙 본 실측: 0~0.5초 완전 정지, 0.5~1.0초 미세 기울기(화면상 서있음), 1.0초부터 본격 낙하.
+		// 1.0초로 점프해 즉시 쓰러짐 — 블렌드인 0.2초가 자세 스냅을 가려준다.
+		deathSection.fStartOffset = 1.0f;
 		m_MontageSections.push_back(deathSection);
 	}
 }
@@ -527,4 +529,26 @@ void ZombieAnimationMontage::BuildMontage()
 		std::static_pointer_cast<Zombie>(pObj)->TriggerAttackHit();
 	};
 	m_Notifies.push_back(hitNotify);
+
+	// 공격 모션 2번 — 공격 시 랜덤 선택 (서버 animIndex / 오프라인 로컬 롤).
+	// 사망 섹션(인덱스 1) notify를 안 건드리게 맨 뒤에 추가.
+	// 사운드/히트 notify 시점은 기본 공격과 동일 (클립 2.63초 내라 유효 — 타격감 안 맞으면 여기서 조정)
+	{
+		MontageSection attack1Section{};
+		attack1Section.strName = "Zombie Attack1";
+		attack1Section.pAnimationToPlay = ANIMATION->Get("Zombie Attack1");
+		attack1Section.eEndRule = MONTAGE_SECTION_END_RULE::STOP;
+		m_MontageSections.push_back(attack1Section);
+		const int nAttack1Index = static_cast<int>(m_MontageSections.size()) - 1;
+
+		MontageNotify attack1SoundNotify = attackSoundNotify;	// 같은 랜덤 사운드 콜백 재사용
+		attack1SoundNotify.nSectionIndex = nAttack1Index;
+		attack1SoundNotify.fTime = 0.85f;
+		m_Notifies.push_back(attack1SoundNotify);
+
+		MontageNotify attack1HitNotify = hitNotify;
+		attack1HitNotify.nSectionIndex = nAttack1Index;
+		attack1HitNotify.fTime = 1.0f;	// 서버 m_fAttackDamageNotifyDelays[1]과 동일
+		m_Notifies.push_back(attack1HitNotify);
+	}
 }

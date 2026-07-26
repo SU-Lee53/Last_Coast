@@ -73,11 +73,11 @@ public:
 	void		send_remove_player(int player_id);
 	bool		process_packet(unsigned char* p);
 
-	void send_spawn_zombie(int nZombieId, const Vector3& v3Pos);
+	void send_spawn_zombie(int nZombieId, const Vector3& v3Pos, bool bFast);
 	void send_despawn_zombie(int nZombieId);
 	void send_zombie_state(int nZombieId, float x, float z, float yaw, float waypointX, float waypointZ, ZombieBehaviorState state);
 	void send_zombie_state_batch(const ZombieStateEntry* entries, int count);
-	void send_zombie_attack(int nZombieId, int nTargetPlayerId, float fDamage);
+	void send_zombie_attack(int nZombieId, int nTargetPlayerId, float fDamage, int nAnimIndex = 0);
 	void send_player_reload(int player_id);
 	void send_player_melee(int attacker_id);
 	void send_melee_hit(int attacker_id, int zombie_id, float damage, const Vector3& v3Hit);

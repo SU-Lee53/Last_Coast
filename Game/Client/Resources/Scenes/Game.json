@@ -23797,15 +23797,6 @@
 			}
 		},
 		{
-			"ActorName": "StaticMeshActor_3051",
-			"ComponentName": "StaticMeshComponent0",
-			"MeshName": "Sport_Car_39",
-			"Transform":
-			{
-				"WorldMatrix": [ -0.09801717590084702, 0, -0.99518472316873041, 0, 0, 1, 0, 0, 0.99518472316873041, 0, -0.09801717590084702, 0, 31510, -3570, 22370, 1 ]
-			}
-		},
-		{
 			"ActorName": "StaticMeshActor_3055",
 			"ComponentName": "StaticMeshComponent0",
 			"MeshName": "N_Muscle_Car_10",
@@ -23929,15 +23920,6 @@
 			"Transform":
 			{
 				"WorldMatrix": [ -0.98917650656134026, 0, 0.14673049739949204, 0, 0, 1, 0, 0, -0.14673049739949204, 0, -0.98917650656134026, 0, 34860, -3590, 26050, 1 ]
-			}
-		},
-		{
-			"ActorName": "StaticMeshActor_3406",
-			"ComponentName": "StaticMeshComponent0",
-			"MeshName": "Monster_Truck_15",
-			"Transform":
-			{
-				"WorldMatrix": [ 0.14673049171974872, 0, 0.9891765074038511, 0, 0, 1, 0, 0, -0.9891765074038511, 0, 0.14673049171974872, 0, 38670, -3570, 21340, 1 ]
 			}
 		},
 		{
@@ -24172,6 +24154,33 @@
 			"Transform":
 			{
 				"WorldMatrix": [ -0.99383771649385788, 0, 0.11084490639752105, 0, 0, 1, 0, 0, -0.11084490639752105, 0, -0.99383771649385788, 0, 28055.604363999999, -3531.0382140000002, 24515.478223999999, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2756",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Sport_Car_39",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.098017175068060958, 0, -0.99518472325075269, 0, 0, 1, 0, 0, 0.99518472325075269, 0, -0.098017175068060958, 0, 39060, -3570, 21330, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2758",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Sport_Car_39",
+			"Transform":
+			{
+				"WorldMatrix": [ -0.098017175068060958, 0, -0.99518472325075269, 0, 0, 1, 0, 0, 0.99518472325075269, 0, -0.098017175068060958, 0, 36980, -3570, 22370, 1 ]
+			}
+		},
+		{
+			"ActorName": "StaticMeshActor_2760",
+			"ComponentName": "StaticMeshComponent0",
+			"MeshName": "Monster_Truck_15",
+			"Transform":
+			{
+				"WorldMatrix": [ 0.098017196675854734, 0, 0.99518472112256984, 0, 0, 1, 0, 0, -0.99518472112256984, 0, 0.098017196675854734, 0, 31180, -3566.7239295410182, 22390, 1 ]
 			}
 		},
 		{
@@ -29968,15 +29977,6 @@
 			"Transform":
 			{
 				"WorldMatrix": [ -0.95248616830446209, 0, -0.30458184316975168, 0, 0, 1, 0, 0, 0.30458184316975168, 0, -0.95248616830446209, 0, 12968.725359670898, -3463.9631062252679, 22137.509278130277, 1 ]
-			}
-		},
-		{
-			"ActorName": "BP_ThirdPersonCharacter_C_0",
-			"ComponentName": "CameraProxyMeshComponent_0",
-			"MeshName": "MatineeCam_SM",
-			"Transform":
-			{
-				"WorldMatrix": [ 0.3669068883299198, 0, -0.93025767145240779, 0, 0, 1, 0, 0, 0.93025767145240779, 0, 0.3669068883299198, 0, 9548.6098748167678, -3460.4929759517195, 20623.639429101546, 1 ]
 			}
 		}
 	],

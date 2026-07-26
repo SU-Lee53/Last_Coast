@@ -1087,7 +1087,11 @@ void IThirdPersonPlayer::EnterAim()
 	// 교체(Weapon Draw) 몽타주 재생 중엔 aim idle 재생을 보류 —
 	// 여기서 끊으면 종료 notify가 누락되어 m_bInWeaponSwap 이 영구히 true 로 남는다.
 	// OnWeaponDrawEnd 가 m_bAiming 을 보고 aim idle로 복귀시킨다.
-	if (GetCurrentWeaponObject()->IsInReloading() == false && !m_bInWeaponSwap) {
+	// 전신(사망) 몽타주 재생 중엔 aim idle로 덮지 않는다 — 리모트는 transform 패킷의
+	// bAiming으로 매번 EnterAim이 불려 시체가 조준 자세로 벌떡 일어나는 문제 방지.
+	auto* pMontage = pAnimationCtrl->GetMontage().get();
+	const bool bFullBodyMontage = pMontage->IsPlaying() && pMontage->IsCurrentSectionFullBody();
+	if (GetCurrentWeaponObject()->IsInReloading() == false && !m_bInWeaponSwap && !bFullBodyMontage) {
 		if (m_pWeaponSocket->GetCurrentWeaponType() != WEAPON_TYPE::PISTOL) {
 			pAnimationCtrl->GetMontage()->PlayMontage("Rifle Aiming Idle");
 		}
@@ -1127,8 +1131,13 @@ void IThirdPersonPlayer::LeaveAim()
 	// TODO:
 	// 현재 StopMontage()는 조준 idle뿐 아니라 fire/melee montage도 끊을 수 있음.
 	// 서버 이벤트 기반 애니메이션이 들어오면 Aim montage만 멈추는 방식으로 분리 필요.
-	if (!GetCurrentWeaponObject()->IsInReloading() && !m_bInMeleeAttack && !m_bInWeaponSwap) {
-		pAnimationCtrl->GetMontage()->StopMontage();
+	// 전신(사망) 몽타주는 여기서 끊지 않는다 — 조준 중 사망 시 다음 프레임
+	// ProcessInput의 IsDead→LeaveAim이 사망 몽타주를 블렌드아웃시켜
+	// 시체가 서있는 채 멈춰 보이는 문제의 원인이었음.
+	auto* pMontage = pAnimationCtrl->GetMontage().get();
+	const bool bFullBodyMontage = pMontage->IsPlaying() && pMontage->IsCurrentSectionFullBody();
+	if (!GetCurrentWeaponObject()->IsInReloading() && !m_bInMeleeAttack && !m_bInWeaponSwap && !bFullBodyMontage) {
+		pMontage->StopMontage();
 	}
 
 	if (m_PlayerHUD.pCrosshair) {
@@ -1292,10 +1301,11 @@ void IThirdPersonPlayer::EnterBandageMode()
 	LeaveAim();		// 멱등 — 비조준이면 no-op
 	m_bHoldingBandage = true;
 
-	// 붕대 들기 = 총을 내림 (장착/탄약 상태는 유지, 렌더만 끔)
+	// 붕대 들기 = 총을 내림 (장착/탄약 상태는 유지, 렌더만 끔) + 손에 붕대 표시
 	if (m_pWeaponSocket) {
 		m_pWeaponSocket->SetModelVisible(false);
 	}
+	SetBandageHandVisible(true);
 
 	// 붕대 꺼내는 모션 — 무기 드로우와 같은 잠금(m_bInWeaponSwap) 공유, 종료 notify(OnWeaponDrawEnd)가 해제
 	m_bInWeaponSwap = true;
@@ -1320,6 +1330,7 @@ void IThirdPersonPlayer::ExitBandageToSlot(int nSlot)
 	if (m_bInBandage || m_bInWeaponSwap) return;	// 캐스트/드로우 중 잠금 (몽타주/상태 보호)
 
 	m_bHoldingBandage = false;
+	SetBandageHandVisible(false);
 	if (m_pWeaponSocket) {
 		m_pWeaponSocket->SetModelVisible(true);
 	}
@@ -1347,6 +1358,7 @@ void IThirdPersonPlayer::PlayBandageHoldAction()
 	if (m_pWeaponSocket) {
 		m_pWeaponSocket->SetModelVisible(false);
 	}
+	SetBandageHandVisible(true);
 
 	m_bInWeaponSwap = true;
 	auto pAnimationCtrl =
@@ -1360,6 +1372,7 @@ void IThirdPersonPlayer::PlayBandageUnholdAction()
 	if (!m_bHoldingBandage) return;
 
 	m_bHoldingBandage = false;
+	SetBandageHandVisible(false);
 	StopBandageAction();	// 캐스트 중이었다면 모션도 정리 (멱등)
 
 	if (m_pWeaponSocket) {
@@ -1472,6 +1485,22 @@ void IThirdPersonPlayer::SetGrenadeHandVisible(bool bVisible)
 	}
 }
 
+void IThirdPersonPlayer::SetBandageHandVisible(bool bVisible)
+{
+	if (bVisible && !m_pBandageSocket) {
+		auto pSkeleton = GetComponent<Skeleton>();
+		if (!pSkeleton) return;
+		m_pBandageSocket = pSkeleton->CreateAttachSocket<BandageHandSocket>("RightHand"s);
+		if (m_pBandageSocket) {
+			m_pBandageSocket->Initialize();	// 런타임 생성 — Skeleton::Initialize 이후라 직접 초기화
+		}
+	}
+
+	if (m_pBandageSocket) {
+		m_pBandageSocket->SetVisible(bVisible);
+	}
+}
+
 void IThirdPersonPlayer::EnterGrenadeMode()
 {
 	if (m_bHoldingGrenade || m_bInBandage || m_bInMeleeAttack || m_bInWeaponSwap) return;
@@ -1481,6 +1510,7 @@ void IThirdPersonPlayer::EnterGrenadeMode()
 	// 붕대 들기 중이면 내려놓고 바로 수류탄으로 — 총 꺼내기(ExitBandageToSlot) 없이 직행
 	if (m_bHoldingBandage) {
 		m_bHoldingBandage = false;
+		SetBandageHandVisible(false);
 		if (GetCamera()) {
 			NetworkManager::GetInstance()->SendPlayerBandage(4, -1);
 		}
@@ -1735,6 +1765,7 @@ void IThirdPersonPlayer::ApplyDead()
 	// 잠금 플래그를 직접 해제한다 (부활 후 발사/교체가 영구히 잠기는 것 방지)
 	CancelBandage();
 	m_bHoldingBandage = false;
+	SetBandageHandVisible(false);
 	SetGrenadeHandVisible(false);
 	m_bHoldingGrenade = false;
 	m_bGrenadeWindup  = false;
@@ -1743,6 +1774,10 @@ void IThirdPersonPlayer::ApplyDead()
 	m_bInWeaponSwap   = false;
 	m_bMoved   = false;
 	m_bRunning = false;
+
+	// 조준 상태 정리 — 사망 몽타주 시작 전에 해제해야 다음 프레임 ProcessInput의
+	// IsDead→LeaveAim 경로가 아예 안 탄다 (카메라 줌아웃/크로스헤어 off 포함)
+	LeaveAim();
 
 	// 시체가 맨손이 되지 않게 총 표시 복원 (붕대/수류탄 모드 중 사망 대비)
 	if (m_pWeaponSocket) {

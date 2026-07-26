@@ -74,6 +74,16 @@ void GrenadeHandSocket::Initialize()
 	}
 }
 
+void BandageHandSocket::Initialize()
+{
+	if (!m_pModel) {
+		// 수류탄 소켓과 동일한 래퍼 구조 — 모델 루트에 구워진 변환 보존
+		m_pModel = std::make_shared<NodeObject>();
+		m_pModel->SetChild(MODEL->LoadOrGet("bandage")->CopyObject<NodeObject>());
+		m_pModel->Initialize();
+	}
+}
+
 void GrenadeHandSocket::Update()
 {
 	if (!m_pModel || !m_bVisible) return;
@@ -112,10 +122,13 @@ void GrenadeHandSocket::Render()
 
 void GrenadeHandSocket::EditOffsetImGui()
 {
-	ImGui::SeparatorText("Grenade Hand Socket");
-	ImGui::DragFloat3("Grenade Offset Position", reinterpret_cast<float*>(&m_v3OffsetPosition), 0.1f);
-	ImGui::DragFloat3("Grenade Offset Rotation", reinterpret_cast<float*>(&m_v3OffsetRotation), 0.1f);
-	ImGui::DragFloat("Grenade Scale", &m_fScale, 0.01f, 0.01f, 10.f);
+	// PushID — 수류탄/붕대 소켓이 동시에 있어도 위젯 ID가 안 겹치게
+	ImGui::PushID(this);
+	ImGui::SeparatorText(SocketLabel());
+	ImGui::DragFloat3("Offset Position", reinterpret_cast<float*>(&m_v3OffsetPosition), 0.1f);
+	ImGui::DragFloat3("Offset Rotation", reinterpret_cast<float*>(&m_v3OffsetRotation), 0.1f);
+	ImGui::DragFloat("Scale", &m_fScale, 0.01f, 0.01f, 10.f);
+	ImGui::PopID();
 }
 
 Skeleton::Skeleton(std::shared_ptr<IGameObject> pOwner)

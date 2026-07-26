@@ -73,7 +73,7 @@ void GameLoop::Run()
 				int nZombieId = zombies.SpawnZombie(zombies.GetRandomSpawnPoint());
 				auto& zombie = zombies.GetZombies()[nZombieId];
 				BroadcastAll([&](Session& cl) {
-					cl.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
+					cl.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition(), zombie.bFast);
 					});
 			}
 			std::cout << "[Server] 게임 시작 — 초기 좀비 " << zombies.GetZombies().size() << "마리 일괄 스폰\n";
@@ -99,8 +99,8 @@ void GameLoop::Run()
 		if (!bZombieFrozen)
 		{
 			// ── AI Tick ──────────────────────────────────────────────────────────
-			std::vector<std::pair<int, int>> attacks;     // 데미지 발동 (Notify 딜레이 후)
-			std::vector<std::pair<int, int>> attackAnims; // 공격 모션 시작 (즉시)
+			std::vector<std::pair<int, int>> attacks;                    // 데미지 발동 (Notify 딜레이 후)
+			std::vector<ZombieManager::AttackAnimEvent> attackAnims;    // 공격 모션 시작 (즉시, 랜덤 인덱스 포함)
 			zombies.Tick(fActualDT, playerSnapshots, attacks, attackAnims);
 
 			// 좀비 상태 전송 — 보낼 좀비를 한 번에 모아 배치 패킷으로 전송 (WSASend/할당 횟수 대폭 감소).
@@ -168,16 +168,16 @@ void GameLoop::Run()
 					int nZombieId = zombies.SpawnZombie(zombies.GetSpawnPointNear(playerPosVec));
 					auto& zombie = zombies.GetZombies()[nZombieId];
 					BroadcastAll([&](Session& cl) {
-						cl.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
+						cl.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition(), zombie.bFast);
 						});
 				}
 			}
 
 			// 공격 모션 시작 (즉시 — 몽타주 재생용, 데미지 0)
-			for (auto& [nZombieId, nTargetId] : attackAnims)
+			for (auto& ev : attackAnims)
 			{
 				BroadcastAll([&](Session& cl) {
-					cl.send_zombie_attack(nZombieId, nTargetId, 0.f);
+					cl.send_zombie_attack(ev.nZombieId, ev.nTargetId, 0.f, ev.nAnimIndex);
 					});
 			}
 

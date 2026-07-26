@@ -85,6 +85,7 @@ struct ZombieServerState {
 struct SpawnEvent {
 	int     zombieId;
 	Vector3 pos;
+	bool    bFast = false;	// 빠른 좀비 (S2C_SpawnZombie::zombieType == 1)
 };
 
 // 좀비 공격 히트 이벤트
@@ -92,6 +93,7 @@ struct AttackEvent {
 	int   zombieId;
 	int   targetPlayerId;
 	float damage;
+	int   animIndex = 0;	// 공격 모션 인덱스 (0="Zombie Attack", 1="Zombie Attack1")
 };
 
 // 사격 결과 이벤트

@@ -26,7 +26,9 @@ void AnimationManager::LoadGameAnimations()
 
 	LoadAndAdd("Zombie Idle");
 	LoadAndAdd("Zombie Running");
+	LoadAndAdd("Zombie Speed Running");	// 빠른 좀비(30%) 전용 달리기
 	LoadAndAdd("Zombie Attack");
+	LoadAndAdd("Zombie Attack1");	// 공격 모션 2번 — 공격 시 랜덤 재생
 	LoadAndAdd("Zombie Death");
 
 	LoadAndAdd("Gunship_Anim"); // 헬기 추락 컷씬 로터 회전 (HelicopterAnimationController)

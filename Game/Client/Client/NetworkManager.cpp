@@ -361,7 +361,7 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	{
 		if (size < static_cast<int>(sizeof(S2C_SpawnZombie))) return;
 		auto* p = reinterpret_cast<const S2C_SpawnZombie*>(data);
-		m_PendingSpawns.push(SpawnEvent{ p->zombieId, Vector3(p->x, p->y, p->z) });
+		m_PendingSpawns.push(SpawnEvent{ p->zombieId, Vector3(p->x, p->y, p->z), p->zombieType == 1 });
 		break;
 	}
 	case S2C_DESPAWN_ZOMBIE:
@@ -417,7 +417,7 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 	{
 		if (size < static_cast<int>(sizeof(S2C_ZombieAttack))) return;
 		auto* p = reinterpret_cast<const S2C_ZombieAttack*>(data);
-		m_PendingAttacks.push(AttackEvent{ p->zombieId, p->targetPlayerId, p->damage });
+		m_PendingAttacks.push(AttackEvent{ p->zombieId, p->targetPlayerId, p->damage, p->animIndex });
 		break;
 	}
 	case S2C_SHOOT_RESULT:

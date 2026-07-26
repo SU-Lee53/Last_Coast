@@ -254,13 +254,14 @@ void Session::send_chat(int sender_id, const std::string& username, const std::s
 	send_packet(S2C_CHAT, packet);
 }
 
-void Session::send_spawn_zombie(int nZombieId, const Vector3& v3Pos)
+void Session::send_spawn_zombie(int nZombieId, const Vector3& v3Pos, bool bFast)
 {
 	S2C_SpawnZombie p;
 	p.zombieId = nZombieId;
 	p.x = v3Pos.x;
 	p.y = v3Pos.y;
 	p.z = v3Pos.z;
+	p.zombieType = bFast ? 1 : 0;
 	send_packet(S2C_SPAWN_ZOMBIE, p);
 }
 
@@ -301,12 +302,13 @@ void Session::send_zombie_state_batch(const ZombieStateEntry* entries, int count
 	do_send(nBytes, reinterpret_cast<char*>(&p));
 }
 
-void Session::send_zombie_attack(int nZombieId, int nTargetPlayerId, float fDamage)
+void Session::send_zombie_attack(int nZombieId, int nTargetPlayerId, float fDamage, int nAnimIndex)
 {
 	S2C_ZombieAttack p;
 	p.zombieId = nZombieId;
 	p.targetPlayerId = nTargetPlayerId;
 	p.damage = fDamage;
+	p.animIndex = static_cast<unsigned char>(nAnimIndex);
 	send_packet(S2C_ZOMBIE_ATTACK, p);
 }
 

@@ -29,6 +29,14 @@ public:
 	const PathDebugInfo& GetPathDebugInfo() const { return m_pAIAgent->GetPathDebugInfo(); }
 	float GetMoveSpeedSqXZ() const { return m_fMoveSpeedSqXZ; }
 
+	// 빠른 좀비 (스폰 시 30% 롤 — 오프라인은 로컬 롤, 온라인은 스폰 패킷 zombieType)
+	bool IsFast() const { return m_bFast; }
+	void SetFast(bool bFast);
+	// 이동 속도/확률 — 서버 ZombieManager.h 상수와 동일하게 유지
+	static constexpr float ZOMBIE_MOVE_SPEED      = 220.f; // cm/s
+	static constexpr float FAST_ZOMBIE_MOVE_SPEED = 450.f; // cm/s
+	static constexpr int   FAST_ZOMBIE_PERCENT    = 30;    // 스폰 롤 (%)
+
 	void TakeDamage(float fAmount) { m_fHP = std::max(0.f, m_fHP - fAmount); }
 	float GetHP() const { return m_fHP; }
 	bool IsDead() const { return m_fHP <= 0.f; }
@@ -91,6 +99,8 @@ private:
 	static constexpr float m_fIdleSoundIntervalMax = 8.f;
 	static constexpr float m_fIdleSoundPlayChance = 0.3f;
 	float m_fIdleSoundTimer = 0.f;
+
+	bool m_bFast = false;
 
 	bool m_bWasVisible = false;  // 이전 프레임 시야 여부 (경보 전파 rising edge 감지용)
 	float m_fMoveSpeedSqXZ = 0.f;
