@@ -9,6 +9,7 @@ ConnectState m_connectState = ConnectState::None;
 NetworkManager::~NetworkManager()
 {
 	Disconnect();
+	WSACleanup();	// WSAStartup(Initialize) 1회에 대응 — 앱 종료 시 단 한 번만
 }
 
 void NetworkManager::Initialize()
@@ -33,6 +34,17 @@ void NetworkManager::ConnectToServer()
 	{
 		if (m_bConnectRequested) {
 			m_bConnectRequested = false;
+
+			// 로그아웃(Disconnect)이 소켓을 닫으므로 재접속 시 새로 생성
+			if (m_hClientSocket == INVALID_SOCKET) {
+				m_hClientSocket = WSASocket(AF_INET, SOCK_STREAM, 0, 0, 0, WSA_FLAG_OVERLAPPED);
+				if (m_hClientSocket == INVALID_SOCKET) {
+					m_connectState = ConnectState::Failed;
+					m_strErrorLog = err_display("WSASocket()");
+					return;
+				}
+			}
+
 			sockaddr_in serveraddr;
 			memset(&serveraddr, 0, sizeof(serveraddr));
 			serveraddr.sin_family = AF_INET;
@@ -119,12 +131,28 @@ ConnectState NetworkManager::GetConnectState() const
 	return m_connectState;
 }
 
+// 소켓/스레드 정리는 이 함수(메인 스레드)만 수행한다.
+// 네트워크 스레드(recv_callback/ProcessNetwork)는 m_bConnected 플래그만 내리고
+// 스스로 종료할 뿐 절대 여기로 들어오지 않는다 — 과거 양쪽에서 중복 호출되며
+// CloseHandle/closesocket 이중 해제로 크래시하던 구조를 단일 소유로 정리.
+// 멱등: 이미 정리된 상태에서 다시 불려도(로그아웃 후 소멸자 등) 아무것도 안 한다.
 void NetworkManager::Disconnect()
 {
 	m_bConnected = false;
-	CloseHandle(g_hNetworkThread);
-	closesocket(m_hClientSocket);
-	WSACleanup();
+	m_connectState = ConnectState::None;
+
+	if (m_hClientSocket != INVALID_SOCKET) {
+		closesocket(m_hClientSocket);	// 걸려 있던 비동기 수신이 에러로 완료 → 스레드 루프 탈출 촉진
+		m_hClientSocket = INVALID_SOCKET;
+	}
+
+	if (g_hNetworkThread) {
+		WaitForSingleObject(g_hNetworkThread, 1000);	// 스레드가 SleepEx 루프를 빠져나올 때까지 대기 (최대 1초)
+		CloseHandle(g_hNetworkThread);
+		g_hNetworkThread = nullptr;
+	}
+
+	m_nRecvPending = 0;	// 재접속 시 이전 세션의 반쪽 패킷 잔여물 제거
 }
 
 void NetworkManager::SendLogin(const std::string& id, const std::string& pw)
@@ -297,7 +325,10 @@ void NetworkManager::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED o
 	NetworkManager* N = NetworkManager::GetInstance();
 
 	if (num_bytes == 0 || err != 0) {
-		N->Disconnect();
+		// 연결 종료/오류 — 플래그만 내리고 ProcessNetwork 루프가 자연 종료되게 둔다.
+		// 소켓/스레드 핸들 정리는 메인 스레드 Disconnect() 단독 (이중 해제 크래시 방지)
+		N->m_bConnected = false;
+		m_connectState = ConnectState::None;
 		return;
 	}
 	//// 다시 수신 대기 (핑퐁 제거, 계속해서 Recv만 돌림)
@@ -1209,9 +1240,8 @@ DWORD WINAPI NetworkManager::ProcessNetwork(LPVOID arg)
 	self->ReceiveData();
 
 	while (self->m_bConnected)
-		SleepEx(100, true);
+		SleepEx(100, true);	// alertable — recv_callback APC가 이 안에서 실행됨
 
-	self->Disconnect();
-
+	// 정리는 메인 스레드 Disconnect()가 담당 — 여기서 핸들을 건드리면 이중 해제
 	return 0;
 }
