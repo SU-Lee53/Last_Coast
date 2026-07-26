@@ -82,9 +82,10 @@ void PacketHandlers::CreateRoom(Session& self, const C2S_CreateRoom& pkt)
 	self.send_host_change(room->host_id);
 	for (auto& [nZombieId, zombie] : m_World.GetZombies().GetZombies()) {
 		if (!zombie.bAlive || !zombie.pAgent) continue;
-		self.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
+		self.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition(), zombie.bFast);
 	}
 }
+
 void PacketHandlers::JoinRoom(Session& self, const C2S_JoinRoom& pkt)
 {
 	if (self.m_room != nullptr) {
