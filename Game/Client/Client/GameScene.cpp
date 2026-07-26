@@ -162,6 +162,11 @@ void GameScene::PostProcessInput()
 
 void GameScene::OnLeaveScene()
 {
+	if (m_bEndCreditsPlaying || m_bEndCreditsFinished) {
+		SOUND->StopCategory(SoundCategory::SFX);
+		SOUND->SetCategoryMute(SoundCategory::SFX, false);
+	}
+
 	SOUND->Stop(m_pAmbienceChannel);
 	SOUND->Stop(m_pPreviousAmbienceChannel);
 	m_pAmbienceChannel = nullptr;
@@ -425,6 +430,8 @@ void GameScene::BeginEndCredits()
 	m_bEndCreditsPlaying = true;
 	m_bEndCreditsFinished = false;
 	m_fEndCreditsElapsed = 0.0f;
+	SOUND->StopCategory(SoundCategory::SFX);
+	SOUND->SetCategoryMute(SoundCategory::SFX, true);
 
 	if (m_pUIBoard) {
 		m_pUIBoard->ClearFocus();
@@ -452,10 +459,10 @@ void GameScene::BuildEndCreditsUI()
 		L"Client / Server contents",
 		L"- 민정원",
 		L"",
-		L"Server",
+		L"Server framework",
 		L"- 최명준",
 		L"",
-		L"Asset optimize / Map design",
+		L"Special thanks to",
 		L"- 이동연",
 		L"",
 	};

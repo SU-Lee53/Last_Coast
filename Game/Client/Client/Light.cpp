@@ -34,12 +34,17 @@ void PointLight::ShowControllImGui()
 
 LightData SpotLight::MakeCBData()
 {
+	Vector3 v3Direction = m_v3Direction;
+	if (v3Direction.LengthSquared() > 1e-6f) {
+		v3Direction.Normalize();
+	}
+
 	return LightData{
 		.v3Color = m_v3Color,
 		.fIntensity = m_fIntensity,
 		.v3Position = m_v3Position,
 		.fFalloff = m_fFalloff,
-		.v3Direction = m_v3Direction,
+		.v3Direction = v3Direction,
 		.fTheta = m_fTheta,
 		.v3Attenuation = Vector3{m_fAttenuation0, m_fAttenuation1, m_fAttenuation2},
 		.fPhi = m_fPhi,
@@ -80,11 +85,16 @@ void SpotLight::ShowControllImGui()
 
 LightData DirectionalLight::MakeCBData()
 {
+	Vector3 v3Direction = m_v3Direction;
+	if (v3Direction.LengthSquared() > 1e-6f) {
+		v3Direction.Normalize();
+	}
+
 	return LightData {
 		.v3Color = m_v3Color,
 		.fIntensity = m_fIntensity,
 		.v3Position = m_v3Position,
-		.v3Direction = m_v3Direction,
+		.v3Direction = v3Direction,
 		.bEnable = (m_bEnable) ? 1u : 0u,
 		.nType = std::to_underlying(LIGHT_TYPE::DIRECTIONAL_LIGHT),
 	};

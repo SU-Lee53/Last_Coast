@@ -4,7 +4,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Sound
 
-Sound::Sound(const std::string& strPath, bool bLoop, bool b3D, SoundCategory eCategory)
+Sound::Sound(const std::string& strPath, bool bLoop, bool b3D, SoundCategory eCategory, float fMinDistance, float fMaxDistance)
 	: m_bLoop(bLoop)
 	, m_b3D(b3D)
 	, m_eCategory(eCategory)
@@ -15,7 +15,7 @@ Sound::Sound(const std::string& strPath, bool bLoop, bool b3D, SoundCategory eCa
 	FMOD_System_CreateSound(SoundManager::m_gpSoundSystem, strPath.c_str(), eFlag, 0, &m_pSound);
 
 	if (m_pSound && b3D) {
-		FMOD_Sound_Set3DMinMaxDistance(m_pSound, SOUND_3D_MIN_DISTANCE, SOUND_3D_MAX_DISTANCE);
+		FMOD_Sound_Set3DMinMaxDistance(m_pSound, fMinDistance, fMaxDistance);
 	}
 }
 

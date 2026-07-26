@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "GameEvent.h"
 #include "EventSequence.h"
 #include "Skybox.h"
@@ -677,6 +677,9 @@ void HelicopterCrashEvent::OnEnterEvent(Scene* pScene)
 	// (모델 로드/방향보정/로터 애니는 HelicopterObject::Initialize/Update가 담당)
 	m_pHeli = std::make_shared<HelicopterObject>();
 	m_pHeli->Initialize();
+	m_pHeli->GetTransform()->SetPosition(m_v3HeliStart);
+	m_pHeli->GetTransform()->Update();
+	m_pHeli->PlaySound(m_bLandMode ? "helicopter_landing" : "helicopter_crash");
 	// 컷씬 중 World 정지(bFrozen)라 위치/로터는 OnUpdateEvent에서 직접 갱신한다.
 	pScene->AddObject(m_pHeli);
 }
@@ -757,6 +760,7 @@ void HelicopterCrashEvent::OnUpdateEvent(Scene* pScene)
 		if (m_bLandMode) {
 			m_v3ExtractionPos = v3HeliPos;
 			m_bLanded = true;
+			m_pHeli->PlaySound("helicopter_idle");
 		}
 		else {
 			SpawnExplosion(m_v3HeliEnd);
@@ -781,7 +785,7 @@ void HelicopterCrashEvent::SpawnExplosion(const Vector3& v3Pos)
 	desc.mtxWorld    = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
 	PARTICLE->Spawn<ExplosionEffect>(desc);
 
-	//SOUND->PlayAt("Test3D", v3Pos);
+	SOUND->PlayAt("helicopter_explosion", v3Pos);
 }
 
 void HelicopterCrashEvent::Finish(Scene* pScene)
@@ -805,6 +809,7 @@ void HelicopterDepartEvent::OnEnterEvent(Scene* pScene)
 	if (!pScene || !m_pHeli || m_v3PathPoints.size() < 2) { m_bFinished = true; return; }
 
 	m_fTimeElapsed = 0.f;
+	m_pHeli->PlaySound("helicopter_takeoff");
 
 	pScene->PushCinematic();          // 입력/월드 정지
 	m_bCinematicPushed = true;
@@ -995,9 +1000,10 @@ void CinematicCameraEvent::OnLeaveEvent(Scene* pScene)
 
 void CrashSiteFireEvent::OnUpdateEvent(Scene* pScene)
 {
-	// FireEvent(차량 화재)와 동일한 리스폰 주기 — 이펙트 수명 절반 시점에 겹쳐 재소환해 불이 끊기지 않게.
+	// 이펙트 종료 직전에만 겹쳐 재소환해 불의 연속성은 유지하고 중복 파티클은 줄인다.
 	constexpr float FIRE_EFFECT_ESTIMATED_DURATION = 5.4f;
-	constexpr float FIRE_EFFECT_RESPAWN_TIME = FIRE_EFFECT_ESTIMATED_DURATION * 0.5f;
+	constexpr float FIRE_EFFECT_RESPAWN_LEAD_TIME = 1.6f;
+	constexpr float FIRE_EFFECT_RESPAWN_TIME = FIRE_EFFECT_ESTIMATED_DURATION - FIRE_EFFECT_RESPAWN_LEAD_TIME;
 
 	m_fElapsed += DT;
 
@@ -1034,7 +1040,7 @@ void FireEvent::Initialize(Scene* pScene)
 void FireEvent::OnUpdateEvent(Scene* pScene)
 {
 	constexpr float FIRE_EFFECT_ESTIMATED_DURATION = 5.4f;
-	constexpr float FIRE_EFFECT_RESPAWN_LEAD_TIME = FIRE_EFFECT_ESTIMATED_DURATION / 2;
+	constexpr float FIRE_EFFECT_RESPAWN_LEAD_TIME = 1.6f;
 	constexpr float FIRE_EFFECT_RESPAWN_TIME = FIRE_EFFECT_ESTIMATED_DURATION - FIRE_EFFECT_RESPAWN_LEAD_TIME;
 
 	for (size_t i = 0; i < m_v3FirePos.size(); ++i) {

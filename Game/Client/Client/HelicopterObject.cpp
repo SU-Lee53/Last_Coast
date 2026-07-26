@@ -1,6 +1,11 @@
 ﻿#include "pch.h"
 #include "HelicopterObject.h"
 
+HelicopterObject::~HelicopterObject()
+{
+	SOUND->Stop(m_pSoundChannel);
+}
+
 void HelicopterObject::Initialize()
 {
 	if (!GetComponent<Transform>()) {
@@ -42,4 +47,23 @@ void HelicopterObject::Update()
 		auto& pTransform = m_pMainRotorFrame->GetTransform();
 		pTransform->Rotate(Vector3{ 0.0f, 10.f * DT, 0.0f });
 	}
+}
+
+void HelicopterObject::PostUpdate()
+{
+	DynamicObject::PostUpdate();
+	if (m_pSoundChannel) {
+		if (SOUND->IsPlaying(m_pSoundChannel)) {
+			SOUND->SetChannelPosition(m_pSoundChannel, GetTransform()->GetPosition());
+		}
+		else {
+			m_pSoundChannel = nullptr;
+		}
+	}
+}
+
+void HelicopterObject::PlaySound(const std::string& strSoundName)
+{
+	SOUND->Stop(m_pSoundChannel);
+	m_pSoundChannel = SOUND->PlayAt(strSoundName, GetTransform()->GetPosition());
 }

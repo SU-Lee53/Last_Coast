@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "GameContext.h"
 #include "WeaponObject.h"
 #include "M4Weapon.h"
@@ -127,6 +127,11 @@ void GameContext::LoadGameSounds()
 
 	// Impact
 	SOUND->AddSound("explosion", strSoundPath + "Explosive.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("helicopter_crash", strSoundPath + "Helicopter/helicopter_crash.wav", false, true, SoundCategory::SFX, 100_m, 500_m);
+	SOUND->AddSound("helicopter_explosion", strSoundPath + "Helicopter/helicopter_explosion.wav", false, true, SoundCategory::SFX, 150_m, 500_m);
+	SOUND->AddSound("helicopter_landing", strSoundPath + "Helicopter/helicopter_landing.wav", false, true, SoundCategory::SFX, 100_m, 500_m);
+	SOUND->AddSound("helicopter_takeoff", strSoundPath + "Helicopter/helicopter_takeoff.wav", false, true, SoundCategory::SFX, 100_m, 500_m);
+	SOUND->AddSound("helicopter_idle", strSoundPath + "Helicopter/helicopter_idle_loop.wav", true, true, SoundCategory::SFX, 100_m, 500_m);
 
 	SOUND->AddSound("ambience_night", strSoundPath + "Ambience/Malibu_Night_Loop.wav", true, false, SoundCategory::BGM);
 	SOUND->AddSound("ambience_foggy_dawn", strSoundPath + "Ambience/Malibu_FoggyDawn_Loop.wav", true, false, SoundCategory::BGM);

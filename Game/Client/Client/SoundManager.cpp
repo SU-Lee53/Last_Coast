@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "SoundManager.h"
 #include "Sound.h"
 
@@ -85,13 +85,13 @@ void SoundManager::LoadSounds()
 	AddSound("Test3D", "../Resources/Sounds/Test.wav", false, true, SoundCategory::SFX);
 }
 
-void SoundManager::AddSound(const std::string& strName, const std::string& strPath, bool bLoop, bool b3D, SoundCategory eCategory)
+void SoundManager::AddSound(const std::string& strName, const std::string& strPath, bool bLoop, bool b3D, SoundCategory eCategory, float fMinDistance, float fMaxDistance)
 {
 	if (m_pSoundMap.contains(strName)) {
 		return;
 	}
 
-	m_pSoundMap.insert({ strName, std::make_shared<Sound>(strPath, bLoop, b3D, eCategory) });
+	m_pSoundMap.insert({ strName, std::make_shared<Sound>(strPath, bLoop, b3D, eCategory, fMinDistance, fMaxDistance) });
 }
 
 FMOD_CHANNEL* SoundManager::PlayInternal(const std::string& strName, bool b3D, const Vector3& v3Position)
@@ -181,6 +181,15 @@ void SoundManager::SetChannelVolume(FMOD_CHANNEL* pChannel, float fVolume) const
 	}
 }
 
+void SoundManager::SetChannelPosition(FMOD_CHANNEL* pChannel, const Vector3& v3Position) const
+{
+	if (pChannel) {
+		FMOD_VECTOR v3FmodPosition = ToFmod(v3Position);
+		FMOD_VECTOR v3FmodVelocity{};
+		FMOD_Channel_Set3DAttributes(pChannel, &v3FmodPosition, &v3FmodVelocity);
+	}
+}
+
 bool SoundManager::IsPlaying(FMOD_CHANNEL* pChannel) const
 {
 	if (!pChannel) {
@@ -193,6 +202,20 @@ bool SoundManager::IsPlaying(FMOD_CHANNEL* pChannel) const
 	}
 
 	return bPlaying != 0;
+}
+
+void SoundManager::StopCategory(SoundCategory eCategory) const
+{
+	if (FMOD_CHANNELGROUP* pGroup = GetGroup(eCategory)) {
+		FMOD_ChannelGroup_Stop(pGroup);
+	}
+}
+
+void SoundManager::SetCategoryMute(SoundCategory eCategory, bool bMute) const
+{
+	if (FMOD_CHANNELGROUP* pGroup = GetGroup(eCategory)) {
+		FMOD_ChannelGroup_SetMute(pGroup, bMute);
+	}
 }
 
 void SoundManager::SetCategoryVolume(SoundCategory eCategory, float fVolume)

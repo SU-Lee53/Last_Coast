@@ -4,7 +4,7 @@ class Sound {
 	friend class SoundManager;
 
 public:
-	Sound(const std::string& strPath, bool bLoop, bool b3D, SoundCategory eCategory);
+	Sound(const std::string& strPath, bool bLoop, bool b3D, SoundCategory eCategory, float fMinDistance, float fMaxDistance);
 	~Sound();
 
 private:

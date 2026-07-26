@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #define SOUND_MAX 1.0f
 #define SOUND_MIN 0.0f
@@ -30,7 +30,7 @@ public:
 	void LoadSounds();
 
 public:
-	void AddSound(const std::string& strName, const std::string& strPath, bool bLoop = false, bool b3D = false, SoundCategory eCategory = SoundCategory::SFX);
+	void AddSound(const std::string& strName, const std::string& strPath, bool bLoop = false, bool b3D = false, SoundCategory eCategory = SoundCategory::SFX, float fMinDistance = SOUND_3D_MIN_DISTANCE, float fMaxDistance = SOUND_3D_MAX_DISTANCE);
 
 
 	FMOD_CHANNEL* Play(const std::string& strName);
@@ -45,8 +45,11 @@ public:
 	void Resume(FMOD_CHANNEL* pChannel) const;
 	void Stop(FMOD_CHANNEL* pChannel) const;
 	void SetChannelVolume(FMOD_CHANNEL* pChannel, float fVolume) const;
+	void SetChannelPosition(FMOD_CHANNEL* pChannel, const Vector3& v3Position) const;
 	bool IsPlaying(FMOD_CHANNEL* pChannel) const;
 
+	void StopCategory(SoundCategory eCategory) const;
+	void SetCategoryMute(SoundCategory eCategory, bool bMute) const;
 	void SetCategoryVolume(SoundCategory eCategory, float fVolume);
 	float GetCategoryVolume(SoundCategory eCategory) const;
 	void CategoryVolumeUp(SoundCategory eCategory);
