@@ -24,6 +24,10 @@ public:
 	void GameStart(Session& self);
 	void LoadComplete(Session& self);
 	void Escape(Session& self);
+	void RoomListReq(Session& self);
+	void CreateRoom(Session& self, const C2S_CreateRoom& pkt);
+	void JoinRoom(Session& self, const C2S_JoinRoom& pkt);
+	void LeaveRoom(Session& self);
 
 	// 로딩 대기 중 전원 로딩 완료 여부 판정 — 완료 시 S2C_GAME_BEGIN 브로드캐스트 + 게임 시작.
 	// LoadComplete 수신 시와, 로딩 중 플레이어 이탈(Network::Disconnect) 시 호출.

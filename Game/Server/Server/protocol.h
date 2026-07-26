@@ -47,7 +47,15 @@ enum PACKET_TYPE {
 	S2C_PLAYER_DEATH,                             // 서버 → 클라이언트: 플레이어 사망 통지 (부활까지 남은 시간 포함)
 	S2C_PLAYER_RESPAWN,                           // 서버 → 클라이언트: 플레이어 부활 통지 (부활 위치 포함)
 	C2S_LOAD_COMPLETE,                            // 클라이언트 → 서버: 게임씬 로딩 완료 통지
-	S2C_GAME_BEGIN                                // 서버 → 클라이언트: 전원 로딩 완료 — 게임플레이 동시 시작
+	S2C_GAME_BEGIN,                               // 서버 → 클라이언트: 전원 로딩 완료 — 게임플레이 동시 시작
+	C2S_ROOM_LIST_REQ,                            // 클라이언트 → 서버: 방 목록 요청
+	S2C_ROOM_LIST_RES,                            // 서버 → 클라이언트: 방 목록 응답
+	C2S_CREATE_ROOM,                              // 클라이언트 → 서버: 방 생성 요청 (방 제목 포함)
+	S2C_CREATE_ROOM_RESULT,                       // 서버 → 클라이언트: 방 생성 결과
+	C2S_JOIN_ROOM,                                // 클라이언트 → 서버: 방 참여 요청 (방 ID)
+	S2C_JOIN_ROOM_RESULT,                         // 서버 → 클라이언트: 방 참여 결과
+	C2S_LEAVE_ROOM,                               // 클라이언트 → 서버: 방 퇴장 요청
+	S2C_LEAVE_ROOM_RESULT                         // 서버 → 클라이언트: 방 퇴장 결과
 };
 
 // ── 게임 이벤트 ID (서버 트리거, 클라 효과 카탈로그) ──────────────────────────
@@ -126,6 +134,69 @@ struct S2C_RegisterResult {
 	PACKET_TYPE   type;
 	bool success;
 	char message[50];
+};
+
+struct RoomInfo {
+	int  roomId;
+	char roomName[MAX_NAME_LEN];
+	int  playerCount;
+	int  maxPlayers;
+	bool bInGame;
+};
+
+struct C2S_RoomListReq {
+	unsigned char size;
+	PACKET_TYPE   type;
+};
+
+constexpr int MAX_ROOM_LIST_ITEMS = 20;
+
+struct S2C_RoomListRes {
+	unsigned char size;
+	PACKET_TYPE   type;
+	unsigned char roomCount;
+	RoomInfo      rooms[MAX_ROOM_LIST_ITEMS];
+};
+
+struct C2S_CreateRoom {
+	unsigned char size;
+	PACKET_TYPE   type;
+	char          roomName[MAX_NAME_LEN];
+};
+
+struct S2C_CreateRoomResult {
+	unsigned char size;
+	PACKET_TYPE   type;
+	bool          success;
+	int           roomId;
+	char          roomName[MAX_NAME_LEN];
+	char          message[50];
+};
+
+struct C2S_JoinRoom {
+	unsigned char size;
+	PACKET_TYPE   type;
+	int           roomId;
+};
+
+struct S2C_JoinRoomResult {
+	unsigned char size;
+	PACKET_TYPE   type;
+	bool          success;
+	int           roomId;
+	char          roomName[MAX_NAME_LEN];
+	char          message[50];
+};
+
+struct C2S_LeaveRoom {
+	unsigned char size;
+	PACKET_TYPE   type;
+};
+
+struct S2C_LeaveRoomResult {
+	unsigned char size;
+	PACKET_TYPE   type;
+	bool          success;
 };
 
 struct S2C_AvatarInfo {

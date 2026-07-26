@@ -215,6 +215,7 @@
     <ClInclude Include="ParticleTypes.h" />
     <ClInclude Include="PostProcessingVolume.h" />
     <ClInclude Include="RayTraceUtils.h" />
+    <ClInclude Include="RoomListScene.h" />
     <ClInclude Include="RWStructuredBuffer.h" />
     <ClInclude Include="Sound.h" />
     <ClInclude Include="SpatialTraits.h" />
@@ -410,6 +411,7 @@
     <ClCompile Include="ParticleRenderBatch.cpp" />
     <ClCompile Include="ParticleTextureCache.cpp" />
     <ClCompile Include="PostProcessingVolume.cpp" />
+    <ClCompile Include="RoomListScene.cpp" />
     <ClCompile Include="RWStructuredBuffer.cpp" />
     <ClCompile Include="Sound.cpp" />
     <ClCompile Include="SpatialWorld.cpp" />

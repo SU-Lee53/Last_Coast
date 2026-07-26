@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #define SERVERPORT 9000
 #include "ServerCore/Session.h"
 
@@ -239,13 +239,28 @@ public:
 	// 앱 시작 기준 단조 시간(초) — 네트워크 스레드/게임 스레드 양쪽에서 사용
 	static float			GetNetTimeSec();
 
+	bool	ConsumeRoomListChanged() { return m_bRoomListChanged.exchange(false); }
+
 public:
 	void					SendLogin(const std::string& id, const std::string& pw);
 	void					SendRegister(const std::string& id, const std::string& pw);
+	void                    SendRoomListReq();
+	void                    SendCreateRoom(const std::string& roomName);
+	void                    SendJoinRoom(int roomId);
+	void                    SendLeaveRoom();
 
+
+	std::vector<RoomInfo>   GetRoomList();
 	// ── 결과 상태 확인용 ───────────────────────────────────────────────────────
 	int						m_nLoginState = 0; // 0: None, 1: Success, -1: Failed
 	int						m_nRegisterState = 0; // 0: None, 1: Success, -1: Failed
+	int                     m_nCreateRoomState = 0; // 0: None, 1: Success, -1: Failed
+	int                     m_nJoinRoomState = 0;   // 0: None, 1: Success, -1: Failed
+	int                     m_nLeaveRoomState = 0;  // 0: None, 1: Success, -1: Failed
+	std::string             m_strRoomErrMsg;
+	std::string             m_strJoinedRoomName;
+	int                     m_nJoinedRoomId = -1;
+	std::atomic_bool		m_bRoomListChanged = false;
 
 private:
 	void					SendData();
@@ -272,7 +287,7 @@ public:
 	int						GetHostId() const { return m_nHostId.load(); }
 	bool					IsHost() const { return m_nPlayerID >= 0 && m_nHostId.load() == m_nPlayerID; }
 
-	const std::string&		GetErrorLog() { return m_strErrorLog; }
+	const std::string& GetErrorLog() { return m_strErrorLog; }
 
 private:
 	WSAOVERLAPPED			m_over = {};
@@ -301,11 +316,12 @@ private:
 	bool					m_bGameBegin = false;
 	bool					m_bOfflineMode = true;
 
+
 	// ── 플레이어 위치 전송 ────────────────────────────────────────────────────
 	Vector3					m_v3LocalPlayerPos = {};
-	float					m_fLocalPlayerYaw  = 0.f;
+	float					m_fLocalPlayerYaw = 0.f;
 	float					m_fLastPosSendTime = 0.f;
-	static constexpr float	POS_SEND_INTERVAL  = 1.f / 20.f; // 20Hz
+	static constexpr float	POS_SEND_INTERVAL = 1.f / 20.f; // 20Hz
 
 	// ── 좀비 이벤트 큐 (lock-free concurrent 자료구조) ───────────────────────
 	concurrency::concurrent_unordered_map<int, ZombieServerState> m_ZombieStates;
@@ -330,6 +346,8 @@ private:
 	concurrency::concurrent_queue<PlayerRespawnEvent>            m_PendingPlayerRespawns;
 	std::atomic<bool>                                            m_bPendingGameStart{ false };
 	std::atomic<bool>                                            m_bPendingGameBegin{ false };
+	std::vector<RoomInfo>                                        m_vRoomList;
+	mutable std::mutex                                           m_RoomListMutex;
 
 	// 탈출 시퀀스 상태 (서버가 주기적으로 보냄 = 최신값만 유지) + 종료 신호
 	std::atomic<int>                                            m_nEscapePhase{ -1 };   // -1=없음, 0=서바이벌, 1=탈출가능
