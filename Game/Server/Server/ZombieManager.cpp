@@ -5,11 +5,14 @@
 #define JSON_HAS_RANGES 0
 #include <Includes/nlohmann_json/json.hpp>
 
-bool ZombieManager::LoadAttackAnimDuration(const std::string& strAnimBinPath)
+bool ZombieManager::LoadAttackAnimDuration(int nAnimIndex, const std::string& strAnimBinPath)
 {
+	if (nAnimIndex < 0 || nAnimIndex >= ZOMBIE_ATTACK_ANIM_COUNT)
+		return false;
+
 	std::ifstream in(strAnimBinPath, std::ios::binary);
 	if (!in) {
-		//std::cout << "[ZombieManager] Attack anim not found: " << strAnimBinPath << "\n";
+		std::cout << "[ZombieManager] Attack anim not found: " << strAnimBinPath << "\n";
 		return false;
 	}
 
@@ -22,11 +25,7 @@ bool ZombieManager::LoadAttackAnimDuration(const std::string& strAnimBinPath)
 		return false;
 
 	float fDuration = j["Animations"][0]["Duration"].get<float>();
-	m_fAttackAnimDuration = fDuration + m_fBlendOutTime;
-
-	//std::cout << "[ZombieManager] Attack anim duration=" << fDuration
-	//          << "s + blendOut=" << m_fBlendOutTime
-	//          << "s = " << m_fAttackAnimDuration << "s\n";
+	m_fAttackAnimDurations[nAnimIndex] = fDuration + m_fBlendOutTime;
 	return true;
 }
 
@@ -67,7 +66,10 @@ int ZombieManager::SpawnZombie(Vector3 SpawnPos)
 		return -1;
 
 	pAgent->SetPosition(v3SpawnPos);
-	pAgent->SetMoveSpeed(220.f); // 클라이언트와 동일 (2.2m/s)
+
+	// 30% 확률 빠른 좀비 — 속도 상향, 클라는 스폰 패킷 zombieType으로 전용 달리기 애니 재생
+	const bool bFast = (rand() % 100) < FAST_ZOMBIE_PERCENT;
+	pAgent->SetMoveSpeed(bFast ? FAST_ZOMBIE_MOVE_SPEED : ZOMBIE_MOVE_SPEED); // 클라이언트와 동일
 
 	int nId = m_nNextId++;
 	ServerZombie& zombie  = m_Zombies[nId];
@@ -75,6 +77,7 @@ int ZombieManager::SpawnZombie(Vector3 SpawnPos)
 	zombie.pAgent         = pAgent;
 	zombie.fHP            = 100.f;
 	zombie.bAlive         = true;
+	zombie.bFast          = bFast;
 	zombie.v3PrevPos      = v3SpawnPos;
 	zombie.fYaw           = 0.f;
 
@@ -162,7 +165,7 @@ void ZombieManager::DespawnZombie(int nId)
 void ZombieManager::Tick(float fDeltaTime,
                          const std::unordered_map<int, Vector3>& playerPositions,
                          std::vector<std::pair<int,int>>& outAttacks,
-                         std::vector<std::pair<int,int>>& outAttackAnims)
+                         std::vector<AttackAnimEvent>& outAttackAnims)
 {
 	if (!m_pAIManager) return;
 
@@ -268,10 +271,15 @@ void ZombieManager::Tick(float fDeltaTime,
 			}
 
 			if (zombie.pAgent->ConsumeAttackHit() && nTargetId >= 0) {
-				zombie.fAttackTimer = m_fAttackAnimDuration;
-				zombie.fAttackDamageDelay = m_fAttackDamageNotifyDelay;
+				// 공격 모션 랜덤 롤 — 로드 실패한 클립(길이 0)이면 기본 모션 폴백
+				int nAnimIndex = rand() % ZOMBIE_ATTACK_ANIM_COUNT;
+				if (m_fAttackAnimDurations[nAnimIndex] <= 0.f)
+					nAnimIndex = 0;
+
+				zombie.fAttackTimer = m_fAttackAnimDurations[nAnimIndex];
+				zombie.fAttackDamageDelay = m_fAttackDamageNotifyDelays[nAnimIndex];
 				zombie.nAttackTargetId = nTargetId;
-				outAttackAnims.emplace_back(nId, nTargetId); // 즉시 몽타주 시작
+				outAttackAnims.push_back({ nId, nTargetId, nAnimIndex }); // 즉시 몽타주 시작
 			}
 		}
 

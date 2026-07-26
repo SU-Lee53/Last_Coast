@@ -21,8 +21,11 @@ bool GameWorld::Initialize(const std::string& navMeshPath, const std::string& sp
 		m_ZombieManager.LoadSpawnPoints(spawnPointPath);
 	}
 
-	// ── 공격 애니메이션 길이 로드 ────────────────────────────────────────────
-	m_ZombieManager.LoadAttackAnimDuration(attackAnimPath);
+	// ── 공격 애니메이션 길이 로드 (2종 — 인덱스 1은 "<이름>1.bin" 규칙: Zombie Attack1.bin) ──
+	m_ZombieManager.LoadAttackAnimDuration(0, attackAnimPath);
+	std::string attackAnim1Path = attackAnimPath;
+	attackAnim1Path.insert(attackAnim1Path.size() - 4, "1"); // ".bin" 앞에 "1" 삽입
+	m_ZombieManager.LoadAttackAnimDuration(1, attackAnim1Path);
 
 	// ── 정적 OBB 공간 분할 초기화 (사격 차폐 판정용) ────────────────────────
 	if (!m_SpatialGrid.LoadFromSceneFile(sceneJsonPath, modelDirectory))

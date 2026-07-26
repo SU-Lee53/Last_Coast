@@ -6,6 +6,8 @@ struct UIRectData
 	Vector4 v4UVRect;
 	Vector4 v4Color;
 	int32	nTexIndex;
+	// 라디얼 게이지 비율 (0~1). 음수 = 비활성(전체 표시). HLSL UIRectData와 레이아웃 일치 필수.
+	float	fRadialProgress = -1.f;
 };
 
 interface IUIComponent abstract {

@@ -7,6 +7,7 @@ struct ServerZombie
 	std::shared_ptr<IAIAgent>   pAgent;
 	float                       fHP         = 100.f;
 	bool                        bAlive      = true;
+	bool                        bFast       = false; // 빠른 좀비 (스폰 시 30% 롤 — 속도/애니 구분)
 
 	// 마지막으로 계산된 yaw (라디안) — AIAgent 이동 방향에서 추출
 	float                       fYaw        = 0.f;
@@ -45,7 +46,7 @@ public:
 	bool Initialize(const std::string& strNavMeshPath);
 
 	// 애니메이션 .bin 파일에서 공격 애니메이션 길이를 읽음
-	bool LoadAttackAnimDuration(const std::string& strAnimBinPath);
+	bool LoadAttackAnimDuration(int nAnimIndex, const std::string& strAnimBinPath);
 
 	// 좀비를 스폰. NavMesh 위 임의 위치에 배치. 반환값: 새 좀비 ID (-1 = 실패)
 	int  SpawnZombie(Vector3 SpawnPos);
@@ -67,15 +68,21 @@ public:
 	// 특정 ID 좀비를 디스폰
 	void DespawnZombie(int nId);
 
+	// 공격 모션 시작 이벤트 — 어떤 공격 애니를 재생할지 인덱스 포함 (클라 몽타주 동기화)
+	struct AttackAnimEvent {
+		int nZombieId;
+		int nTargetId;
+		int nAnimIndex; // 0="Zombie Attack", 1="Zombie Attack1"
+	};
+
 	// 매 틱 호출 — AIManager 업데이트 + 각 좀비 Think
 	// playerPositions: playerId → 월드 위치 (cm)
-	// outAttacks: 이번 틱에 공격 히트가 발생한 (zombieId, targetPlayerId) 목록
-	// outAttacks: 데미지 발동 (Notify 딜레이 후)
+	// outAttacks: 데미지 발동 (Notify 딜레이 후) (zombieId, targetPlayerId)
 	// outAttackAnims: 공격 모션 시작 (즉시, 몽타주 재생용)
 	void Tick(float fDeltaTime,
 	          const std::unordered_map<int, Vector3>& playerPositions,
 	          std::vector<std::pair<int,int>>& outAttacks,
-	          std::vector<std::pair<int,int>>& outAttackAnims);
+	          std::vector<AttackAnimEvent>& outAttackAnims);
 
 	// 좀비 목록 읽기 전용 접근 (틱 스레드에서 snapshot 용)
 	const std::unordered_map<int, ServerZombie>& GetZombies() const { return m_Zombies; }
@@ -117,9 +124,16 @@ private:
 	static constexpr float m_fZombieCapsuleHalfHeight = 70.f;   // 반높이 (cm)
 	static constexpr float m_fZombieCapsuleYOffset    = 90.f;   // NavMesh 바닥 → 캡슐 중심 Y 오프셋 (cm)
 	static constexpr float m_fDeadCleanupDelay        = 3.f;    // 사망 후 서버 제거까지 대기 (초)
-	static constexpr float m_fAttackDamageNotifyDelay = 1.2f;  // 공격 모션 시작 → 데미지 Notify 타이밍 (초)
+	static constexpr int   ZOMBIE_ATTACK_ANIM_COUNT   = 2;     // 공격 모션 종류 수 — 클라 몽타주 섹션과 일치
+	// 공격 모션 시작 → 데미지 Notify 타이밍 (초) — 모션별. 클라 몽타주 히트 notify와 동일하게 유지
+	static constexpr float m_fAttackDamageNotifyDelays[ZOMBIE_ATTACK_ANIM_COUNT] = { 1.2f, 1.0f };
 	static constexpr float m_fBlendOutTime            = 0.2f;  // 몽타주 BlendOut 시간
-	float                  m_fAttackAnimDuration      = 0.0f;  // 런타임에 애니메이션 파일에서 읽음
+	float                  m_fAttackAnimDurations[ZOMBIE_ATTACK_ANIM_COUNT] = {};  // 런타임에 애니메이션 파일에서 읽음
 	static constexpr float m_fTargetLockDuration      = 10.f;  // 타겟 고정 시간 (초)
+
+	// 빠른 좀비 — 클라이언트 Zombie.cpp 상수와 동일하게 유지
+	static constexpr int   FAST_ZOMBIE_PERCENT    = 30;    // 스폰 시 빠른 좀비 확률 (%)
+	static constexpr float ZOMBIE_MOVE_SPEED      = 220.f; // 일반 좀비 (cm/s)
+	static constexpr float FAST_ZOMBIE_MOVE_SPEED = 450.f; // 빠른 좀비 (cm/s)
 
 };

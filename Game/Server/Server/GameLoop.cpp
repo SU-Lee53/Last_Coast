@@ -22,6 +22,9 @@ namespace
 	constexpr float PLAYER_MAX_HP          = 100.f;
 	constexpr float ZOMBIE_ATTACK_DAMAGE   = 10.f;
 	constexpr float PLAYER_RESPAWN_SECONDS = 10.f; // 사망 → 부활 대기 시간
+
+	// 체크포인트를 하나도 안 지났을 때의 부활 위치 (cm) — 맵 시작 지점 고정
+	const Vector3 DEFAULT_RESPAWN_POS{ 10281.199179f, -3536.692724f, 18949.001705f };
 }
 
 void GameLoop::Run()
@@ -73,7 +76,7 @@ void GameLoop::Run()
 				int nZombieId = zombies.SpawnZombie(zombies.GetRandomSpawnPoint());
 				auto& zombie = zombies.GetZombies()[nZombieId];
 				BroadcastAll([&](Session& cl) {
-					cl.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
+					cl.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition(), zombie.bFast);
 					});
 			}
 			std::cout << "[Server] 게임 시작 — 초기 좀비 " << zombies.GetZombies().size() << "마리 일괄 스폰\n";
@@ -99,8 +102,8 @@ void GameLoop::Run()
 		if (!bZombieFrozen)
 		{
 			// ── AI Tick ──────────────────────────────────────────────────────────
-			std::vector<std::pair<int, int>> attacks;     // 데미지 발동 (Notify 딜레이 후)
-			std::vector<std::pair<int, int>> attackAnims; // 공격 모션 시작 (즉시)
+			std::vector<std::pair<int, int>> attacks;                    // 데미지 발동 (Notify 딜레이 후)
+			std::vector<ZombieManager::AttackAnimEvent> attackAnims;    // 공격 모션 시작 (즉시, 랜덤 인덱스 포함)
 			zombies.Tick(fActualDT, playerSnapshots, attacks, attackAnims);
 
 			// 좀비 상태 전송 — 보낼 좀비를 한 번에 모아 배치 패킷으로 전송 (WSASend/할당 횟수 대폭 감소).
@@ -168,16 +171,16 @@ void GameLoop::Run()
 					int nZombieId = zombies.SpawnZombie(zombies.GetSpawnPointNear(playerPosVec));
 					auto& zombie = zombies.GetZombies()[nZombieId];
 					BroadcastAll([&](Session& cl) {
-						cl.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition());
+						cl.send_spawn_zombie(nZombieId, zombie.pAgent->GetPosition(), zombie.bFast);
 						});
 				}
 			}
 
 			// 공격 모션 시작 (즉시 — 몽타주 재생용, 데미지 0)
-			for (auto& [nZombieId, nTargetId] : attackAnims)
+			for (auto& ev : attackAnims)
 			{
 				BroadcastAll([&](Session& cl) {
-					cl.send_zombie_attack(nZombieId, nTargetId, 0.f);
+					cl.send_zombie_attack(ev.nZombieId, ev.nTargetId, 0.f, ev.nAnimIndex);
 					});
 			}
 
@@ -220,12 +223,8 @@ void GameLoop::Run()
 			cl.m_fHP = PLAYER_MAX_HP;
 			cl.m_fRespawnTimer = 0.f;
 
-			// 부활 위치 = 마지막 발동 체크포인트, 하나도 없으면 게임 시작 스폰 위치
-			Vector3 v3Respawn;
-			{
-				std::lock_guard<std::mutex> lg(cl.m_state_lock);
-				v3Respawn = cl.m_v3SpawnPos;
-			}
+			// 부활 위치 = 마지막 발동 체크포인트, 하나도 없으면 고정 기본 스폰 위치
+			Vector3 v3Respawn = DEFAULT_RESPAWN_POS;
 			if (const Vector3* pCpPos = WORLD->GetCheckpoints().GetLastFiredPos())
 				v3Respawn = *pCpPos;
 			BroadcastAll([&](Session& other) {

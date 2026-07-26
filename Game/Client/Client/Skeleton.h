@@ -37,14 +37,61 @@ public:
 
 	WEAPON_TYPE GetCurrentWeaponType() const { return m_eCurrentWeapon; }
 
+	// 무기 모델 표시 여부 — 붕대 들기처럼 빈손이어야 할 때 렌더만 끈다 (장착/탄약 상태는 유지)
+	void SetModelVisible(bool bVisible) { m_bModelVisible = bVisible; }
+
 private:
 	WEAPON_TYPE m_eCurrentWeapon;
+	bool m_bModelVisible = true;
 
 	Vector3 m_v3OffsetPosition = Vector3::Zero;
 	Vector3 m_v3OffsetRotation = Vector3(180.f, -90.f, -90.f);
 
 	std::shared_ptr<WeaponObject> m_pWeaponModel = nullptr;
 
+};
+
+// 오른손 수류탄 모델 소켓 — 수류탄 들기/와인드업 동안만 표시.
+// WeaponSocket과 동일한 본 부착 변환, 모델은 granade.bin NodeObject.
+class GrenadeHandSocket : public IAttachSocket {
+public:
+	GrenadeHandSocket(std::shared_ptr<Skeleton> pOwner, int32 nBoneIndex)
+		: IAttachSocket{ pOwner, nBoneIndex } {}
+	virtual ~GrenadeHandSocket() {}
+
+	virtual void Initialize() override;
+	virtual void Update() override;
+	virtual void Render() override;
+
+	void SetVisible(bool bVisible) { m_bVisible = bVisible; }
+	bool IsVisible() const { return m_bVisible; }
+
+	void EditOffsetImGui();	// 손 안 위치/자세/크기 실시간 튜닝 (Skeleton ImGui 패널에서 호출)
+	virtual const char* SocketLabel() const { return "Grenade Hand Socket"; }	// ImGui 표시명 (파생 소켓이 덮어씀)
+
+protected:
+	bool m_bVisible = false;
+
+	// 손 안 위치/자세 조정용 (도, cm) — 인게임 튜닝으로 확정한 값
+	Vector3 m_v3OffsetPosition = Vector3{ 5.f, 10.f, 0.f };
+	Vector3 m_v3OffsetRotation = Vector3::Zero;
+	float   m_fScale = 1.f;
+
+	std::shared_ptr<IGameObject> m_pModel = nullptr;
+};
+
+// 손 붕대 모델 소켓 — 붕대 들기(4번) 동안만 표시.
+// 부착/오프셋/렌더 로직은 수류탄 소켓 그대로, 모델만 bandage.bin
+class BandageHandSocket : public GrenadeHandSocket {
+public:
+	BandageHandSocket(std::shared_ptr<Skeleton> pOwner, int32 nBoneIndex)
+		: GrenadeHandSocket{ pOwner, nBoneIndex } {
+		m_v3OffsetPosition = Vector3{ 7.7f, 3.5f, 2.0f };	// 인게임 ImGui 튜닝으로 확정한 값
+	}
+	virtual ~BandageHandSocket() {}
+
+	virtual void Initialize() override;
+	virtual const char* SocketLabel() const override { return "Bandage Hand Socket"; }
 };
 
 

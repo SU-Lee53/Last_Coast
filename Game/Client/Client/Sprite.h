@@ -5,6 +5,8 @@ interface IImageSprite abstract{
 public:
 	IImageSprite(const std::string & strTexturePath);
 
+	void SetTexture(const std::string& strTexturePath);
+
 protected:
 	TextureRef<Texture> m_TextureHandle{};
 
@@ -19,7 +21,13 @@ public:
 	virtual const TextureRef<Texture>& GetTextureRef() const override { return m_TextureHandle; }
 	virtual UIRectData MakeSBData() const override;
 
+	// 라디얼 게이지 (0~1 = 12시부터 시계방향 표시 비율, 음수 = 비활성)
+	void SetRadialProgress(float fProgress) { m_fRadialProgress = fProgress; }
+
 	virtual void ShowControllImGui() override;
+
+protected:
+	float m_fRadialProgress = -1.f;
 };
 
 class ImageButton : public IUIButtonComponent, public IImageSprite {

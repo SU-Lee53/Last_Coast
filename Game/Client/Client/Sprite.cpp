@@ -6,6 +6,11 @@ IImageSprite::IImageSprite(const std::string& strTexturePath)
 	m_TextureHandle = TEXTURE->LoadTexture(strTexturePath);
 }
 
+void IImageSprite::SetTexture(const std::string& strTexturePath)
+{
+	m_TextureHandle = TEXTURE->LoadTexture(strTexturePath);
+}
+
 UIRectData ImageBox::MakeSBData() const
 {
 	RECT screenRect = GetScreenRect();
@@ -23,6 +28,7 @@ UIRectData ImageBox::MakeSBData() const
 
 	data.v4Color = m_v4Color;
 	//data.v4TextColorOrTexIndex = m_v4TextColor;
+	data.fRadialProgress = m_fRadialProgress;
 
 	return data;
 }

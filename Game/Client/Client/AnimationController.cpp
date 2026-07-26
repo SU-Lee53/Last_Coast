@@ -121,7 +121,17 @@ void PlayerAnimationController::ComputeAnimation()
 	const std::vector<AnimationKey>& basePose = m_pStateMachine->GetOutputPose();
 	float fMontageBlendWeight = m_pAnimationMontage->GetBlendWeight();
 	
-	if (fMontageBlendWeight > 0.f) {
+	if (fMontageBlendWeight > 0.f && m_pAnimationMontage->IsCurrentSectionFullBody()) {
+		// 전신 몽타주(사망 등) — 상하체 분리 블렌드 우회, 전 본 로컬 lerp.
+		// 조준 허리 회전(Spine modify)도 생략 — 쓰러진 자세에 카메라 피치가 섞이면 안 됨
+		const std::vector<AnimationKey>& blendPose = m_pAnimationMontage->GetOutputPose();
+		m_mtxCachedLocalBoneTransforms.resize(ownerBones.size());
+		for (int i = 0; i < basePose.size(); ++i) {
+			m_mtxCachedLocalBoneTransforms[i] =
+				AnimationKey::Lerp(basePose[i], blendPose[i], fMontageBlendWeight).CreateSRT();
+		}
+	}
+	else if (fMontageBlendWeight > 0.f) {
 		const std::vector<AnimationKey>& blendPose = m_pAnimationMontage->GetOutputPose();
 		m_pBlendMachine->Blend(ownerBones, basePose, blendPose, m_mtxCachedLocalBoneTransforms, fMontageBlendWeight);
 

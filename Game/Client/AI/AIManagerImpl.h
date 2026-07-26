@@ -44,6 +44,7 @@ namespace AIDLL
         virtual void UpdateAll(float deltaTime)    override;
         virtual void SpreadAlert(const Vector3& SourcePos, int EntityId,
                                  const Vector3& TargetPos, float Radius) override;
+        virtual void SpreadDistraction(const Vector3& SourcePos, float Radius, float Duration) override;
 
     private:
         void UpdateFlocking(float deltaTime);

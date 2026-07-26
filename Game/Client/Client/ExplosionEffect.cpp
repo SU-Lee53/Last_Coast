@@ -10,7 +10,7 @@ void ExplosionEffect::Initialize()
 	CreateDustEmitter();
 
 	if (!m_pSound) {
-		SOUND->GetSound("explosion");
+		m_pSound = SOUND->GetSound("explosion");
 	}
 }
 
@@ -168,5 +168,5 @@ void ExplosionEffect::CreateDustEmitter()
 void ExplosionEffect::Play(const ParticleEffectSpawnDesc& desc)
 {
 	IParticleEffect::Play(desc);
-	SOUND->Play(m_pSound);
+	SOUND->PlayAt(m_pSound, desc.v3Position);	// "explosion"은 3D 등록 — 폭발 지점에서 재생
 }

@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "GameScene.h"
+#include "GrenadeArcPass.h"
 #include "DebugPlayer.h"
 #include "ThirdPersonPlayer.h"
 #include "TerrainObject.h"
@@ -182,6 +183,7 @@ void GameScene::OnLeaveScene()
 		SetPauseMenuOpen(false);
 	}
 	ClearEndCreditsUI();
+	GrenadeArcPass::SetArcVertices({});	// 예측 궤도 잔상 제거
 }
 
 void GameScene::ProcessInput()
@@ -285,6 +287,11 @@ void GameScene::Update()
 			if (m_pLoadWaitText) {
 				m_pLoadWaitText->SetVisible(false);
 			}
+			// 장벽 해제 직후 유예 갱신 — 느리게 로딩한 플레이어의 초기 무기 장착
+			// 브로드캐스트가 이제야 소비될 수 있어, 드로우 모션 억제 창을 다시 연다
+			const float fNow = NetworkManager::GetNetTimeSec();
+			for (auto& [id, fSpawnTime] : m_RemoteSpawnTimes)
+				fSpawnTime = fNow;
 		}
 	}
 
@@ -292,8 +299,14 @@ void GameScene::Update()
 	SyncSceneWithServer();
 	ProcessNetworkZombies();
 	ProcessPlayerMelee();
+	ProcessPlayerBandage();
+	ProcessPlayerGrenade();
+	UpdateGrenadeArcPreview();
 	ProcessShootResults();
 	ProcessMeleeResults();
+	ProcessBandageResults();
+	ProcessGrenadeResults();
+	UpdateGrenades();
 	ProcessServerGameEvents();
 	UpdateDeathAndSpectate();
 	UpdateEscapeSequence();
@@ -673,6 +686,8 @@ void GameScene::UpdateDeathAndSpectate()
 		{
 			if (ev.playerId == NETWORK->GetPlayerID()) {
 				m_fRespawnRemain = ev.fRespawnSeconds;
+				if (auto pTP = std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer))
+					pTP->ApplyDead();	// 사망 모션 (관전 중 시체에 보임)
 				if (!m_bSpectating) EnterSpectateMode();
 			}
 			else {
@@ -683,6 +698,9 @@ void GameScene::UpdateDeathAndSpectate()
 				if (nameTagIt != m_RemotePlayerNameTags.end())
 					nameTagIt->second->SetEnabled(false);
 
+				auto it = m_RemotePlayers.find(ev.playerId);
+				if (it != m_RemotePlayers.end() && it->second)
+					it->second->ApplyDead();			// 리모트 사망 모션
 				// 보고 있던 대상이 죽으면 다음 대상으로
 				if (m_bSpectating && m_nSpectateTargetId == ev.playerId)
 					CycleSpectateTarget();
@@ -701,6 +719,9 @@ void GameScene::UpdateDeathAndSpectate()
 				auto nameTagIt = m_RemotePlayerNameTags.find(ev.playerId);
 				if (nameTagIt != m_RemotePlayerNameTags.end())
 					nameTagIt->second->SetEnabled(true);
+				auto it = m_RemotePlayers.find(ev.playerId);
+				if (it != m_RemotePlayers.end() && it->second)
+					it->second->ApplyRespawn();			// 리모트 사망 몽타주 해제
 			}
 		}
 
@@ -712,6 +733,7 @@ void GameScene::UpdateDeathAndSpectate()
 		// 오프라인: 로컬 사망 감지 + 로컬 부활 타이머 (리모트가 없으므로 내 시체 시점 유지)
 		if (!m_bSpectating && m_pPlayer && m_pPlayer->IsDead()) {
 			m_fRespawnRemain = OFFLINE_RESPAWN_SECONDS;
+			std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)->ApplyDead();	// 사망 모션
 			EnterSpectateMode();
 		}
 		if (m_bSpectating) {
@@ -780,6 +802,7 @@ void GameScene::LeaveSpectateMode(const Vector3* respawnPos)
 
 	if (m_pPlayer) {
 		m_pPlayer->RestoreFullHP();
+		std::static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)->ApplyRespawn();	// 사망 몽타주(FREEZE) 해제
 		if (respawnPos)
 			m_pPlayer->GetTransform()->SetPosition(*respawnPos);
 		if (m_pPlayer->GetCamera())
@@ -1128,6 +1151,395 @@ void GameScene::ProcessMeleeResults()
 	}
 }
 
+void GameScene::ProcessPlayerBandage()
+{
+	auto pPlayer = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer);
+	if (!pPlayer)
+		return;
+
+	// 타인 회복 캐스트 중 대상 감시 — 이탈(멀어짐)/사망/퇴장 시 취소
+	if (pPlayer->IsBandaging())
+	{
+		const int nTargetId = pPlayer->GetBandageTargetId();
+		if (nTargetId >= 0 && nTargetId != NETWORK->GetPlayerID())
+		{
+			auto it = m_RemotePlayers.find(nTargetId);
+			bool bBreak = (it == m_RemotePlayers.end()) || m_DeadPlayers.count(nTargetId);
+			if (!bBreak)
+			{
+				const float fDistSq = Vector3::DistanceSquared(
+					pPlayer->GetTransform()->GetPosition(),
+					it->second->GetTransform()->GetPosition());
+				bBreak = fDistSq > BANDAGE_BREAK_RANGE * BANDAGE_BREAK_RANGE;
+			}
+			if (bBreak)
+				pPlayer->CancelBandage();
+		}
+	}
+
+	const int nRequest = pPlayer->ConsumeBandageRequest();
+	if (nRequest == 0)
+		return;
+
+	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
+
+	// 1 = 자기 회복 (좌클릭)
+	if (nRequest == 1)
+	{
+		if (pPlayer->GetHP() >= pPlayer->GetMaxHP())
+			return;	// 풀피면 낭비 방지
+		pPlayer->StartBandageCast(bOnline ? NETWORK->GetPlayerID() : -1);
+		return;
+	}
+
+	// 2 = 타인 회복 (우클릭) — 반경 내 + 전방 ±60° 이내 가장 가까운 살아있는 리모트 (온라인 전용)
+	if (!bOnline)
+		return;
+
+	Vector3 v3Forward = Vector3::Zero;
+	if (auto pCamera = std::dynamic_pointer_cast<ThirdPersonCamera>(pPlayer->GetCamera()))
+		v3Forward = pCamera->GetForwardXZ();
+	if (v3Forward.LengthSquared() > 1e-6f)
+		v3Forward.Normalize();
+
+	const Vector3 v3MyPos = pPlayer->GetTransform()->GetPosition();
+	int nBestId = -1;
+	float fBestDistSq = BANDAGE_TARGET_RANGE * BANDAGE_TARGET_RANGE;
+	for (const auto& [nId, pRemote] : m_RemotePlayers)
+	{
+		if (!pRemote || m_DeadPlayers.count(nId))
+			continue;
+
+		Vector3 v3To = pRemote->GetTransform()->GetPosition() - v3MyPos;
+		v3To.y = 0.f;
+		const float fDistSq = v3To.LengthSquared();
+		if (fDistSq >= fBestDistSq)
+			continue;
+
+		// 시야각 체크 — 바라보고 있는 아군만. 겹칠 정도로 붙어있으면(방향 무의미) 통과
+		if (fDistSq > 1.f && v3Forward.LengthSquared() > 1e-6f)
+		{
+			Vector3 v3Dir = v3To / std::sqrt(fDistSq);
+			if (v3Forward.Dot(v3Dir) < BANDAGE_TARGET_FOV_COS)
+				continue;
+		}
+
+		fBestDistSq = fDistSq;
+		nBestId = nId;
+	}
+
+	if (nBestId >= 0)
+		pPlayer->StartBandageCast(nBestId);
+}
+
+void GameScene::ProcessBandageResults()
+{
+	if (!NETWORK->IsConnected() || NETWORK->IsOffline()) return;
+
+	// ── 리모트 플레이어 붕대 모션 (캐스트 시작/종료 + 들기/내리기) ──────────
+	for (auto& ev : NETWORK->ConsumePlayerBandages())
+	{
+		if (ev.playerId == NETWORK->GetPlayerID()) continue; // 본인은 입력으로 이미 재생
+		auto it = m_RemotePlayers.find(ev.playerId);
+		if (it == m_RemotePlayers.end()) continue;
+
+		switch (ev.state)
+		{
+		case 0:	// 캐스트 시작 — 대상이 시전자 본인이 아니면 아군 회복 모션
+			it->second->PlayBandageStartAction(
+				ev.targetPlayerId >= 0 && ev.targetPlayerId != ev.playerId);
+			break;
+		case 3:  it->second->PlayBandageHoldAction();   break;	// 들기 (총 내림 + 꺼내는 모션)
+		case 4:  it->second->PlayBandageUnholdAction(); break;	// 내리기 (총 복귀 + 꺼내는 모션)
+		default: it->second->StopBandageAction();       break;	// 1=취소, 2=완료 → 모션 종료
+		}
+	}
+
+	// ── 회복 확정 — 대상이 본인이면 서버 권위 HP 반영 ───────────────────────
+	for (auto& ev : NETWORK->ConsumePlayerHeals())
+	{
+		if (ev.targetPlayerId == NETWORK->GetPlayerID() && m_pPlayer)
+			m_pPlayer->SetHP(ev.fNewHP);
+	}
+}
+
+bool GameScene::ComputeGrenadeThrowParams(Vector3& outOrigin, Vector3& outVelocity) const
+{
+	auto pPlayer = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer);
+	if (!pPlayer)
+		return false;
+
+	// 투척 시작점 — 캡슐 중심 + 머리 위 보정 (궤도 라인이 몸에서 시작하면 어색)
+	Vector3 v3Origin = pPlayer->GetTransform()->GetPosition();
+	if (auto pSelfCollider = pPlayer->GetComponent<PlayerCollider>())
+		v3Origin = pSelfCollider->GetCapsuleWorld().v3Center;
+	v3Origin.y += 100.f;
+
+	// 조준 방향 = 카메라 시선
+	Vector3 v3Dir = Vector3{ 0.f, 0.f, 1.f };
+	if (auto pCamera = std::dynamic_pointer_cast<ThirdPersonCamera>(pPlayer->GetCamera()))
+		v3Dir = pCamera->GetLook();
+	if (v3Dir.LengthSquared() > 1e-6f)
+		v3Dir.Normalize();
+
+	outOrigin   = v3Origin + v3Dir * 50.f;	// 몸통과 겹침 방지
+	outVelocity = v3Dir * GRENADE_THROW_SPEED + Vector3{ 0.f, GRENADE_THROW_UPWARD, 0.f };
+	return true;
+}
+
+void GameScene::ProcessPlayerGrenade()
+{
+	auto pPlayer = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer);
+	if (!pPlayer || !pPlayer->ConsumeGrenadeRelease())
+		return;
+
+	// 와인드업 중 조준(궤도)한 초기조건 우선 — 표시한 궤도 그대로 날아가게 한다
+	Vector3 v3Origin, v3Velocity;
+	if (m_bAimedThrowValid) {
+		v3Origin   = m_v3AimedThrowOrigin;
+		v3Velocity = m_v3AimedThrowVel;
+		m_bAimedThrowValid = false;
+	}
+	else if (!ComputeGrenadeThrowParams(v3Origin, v3Velocity)) {
+		return;
+	}
+
+	const bool bDecoy = pPlayer->IsDecoySelected();
+	SpawnGrenade(v3Origin, v3Velocity, true, bDecoy);
+
+	// 온라인: 리모트 클라가 동일 초기조건으로 투사체를 시뮬하도록 투척 전송
+	if (NETWORK->IsConnected() && !NETWORK->IsOffline())
+		NETWORK->SendPlayerGrenade(0, v3Origin, v3Velocity, bDecoy ? 1 : 0);
+}
+
+void GameScene::UpdateGrenadeArcPreview()
+{
+	std::vector<Vector3> v3Segments;
+
+	auto pPlayer = std::dynamic_pointer_cast<IThirdPersonPlayer>(m_pPlayer);
+	const bool bShow = pPlayer
+		&& pPlayer->IsHoldingGrenade()
+		&& pPlayer->IsGrenadeWindup()	// 좌클릭 꾹(와인드업) 동안만 궤도 표시
+		&& !pPlayer->IsGrenadeThrowing()
+		&& !IsCinematicActive();
+
+	if (bShow)
+	{
+		Vector3 v3Origin, v3Velocity;
+		if (ComputeGrenadeThrowParams(v3Origin, v3Velocity))
+		{
+			// 릴리즈 시 이 초기조건 그대로 투척 (ProcessPlayerGrenade가 소비)
+			m_v3AimedThrowOrigin = v3Origin;
+			m_v3AimedThrowVel    = v3Velocity;
+			m_bAimedThrowValid   = true;
+
+			// 단순 포물선 — 충돌/바운스 계산 없이 중력만 적분한 대략적 궤적.
+			// 던진 사람 발 높이 아래(평지 가정) 또는 지형에 닿으면 종료.
+			constexpr float GRAVITY_Y   = -980.f;		// GrenadeProjectile::GRAVITY와 동일
+			constexpr float STEP        = 1.f / 30.f;
+			constexpr float MAX_SECONDS = 2.5f;
+			const float fStopY = v3Origin.y - 230.f;	// 머리 위 시작점 → 발 높이 근사
+
+			std::vector<Vector3> v3Points;
+			Vector3 v3P = v3Origin;
+			Vector3 v3V = v3Velocity;
+			v3Points.push_back(v3P);
+			for (float fT = 0.f; fT < MAX_SECONDS; fT += STEP) {
+				v3V.y += GRAVITY_Y * STEP;
+				v3P   += v3V * STEP;
+				v3Points.push_back(v3P);
+
+				if (v3P.y <= fStopY) break;
+				if (QueryTerrainHit(v3P).bGrounded) break;
+			}
+
+			// ── 배그식 점선 리본 — 카메라를 향하는 대시 쿼드 (1px 라인은 시선 방향에서 안 보임) ──
+			constexpr float DASH_LEN = 30.f;	// 대시 길이 (cm)
+			constexpr float GAP_LEN  = 20.f;	// 간격 (cm)
+			constexpr float HALF_W   = 3.f;		// 리본 반폭 (cm)
+
+			const Vector3 v3CamPos = m_pMainCamera ? m_pMainCamera->GetPosition() : v3Origin;
+
+			auto EmitQuad = [&](const Vector3& a, const Vector3& b) {
+				Vector3 v3Dir = b - a;
+				if (v3Dir.LengthSquared() < 1e-4f) return;
+				v3Dir.Normalize();
+
+				Vector3 v3ToCam = v3CamPos - (a + b) * 0.5f;
+				Vector3 v3Side = v3Dir.Cross(v3ToCam);
+				if (v3Side.LengthSquared() < 1e-4f) v3Side = Vector3::Up;
+				v3Side.Normalize();
+				v3Side *= HALF_W;
+
+				v3Segments.push_back(a - v3Side); v3Segments.push_back(a + v3Side); v3Segments.push_back(b + v3Side);
+				v3Segments.push_back(a - v3Side); v3Segments.push_back(b + v3Side); v3Segments.push_back(b - v3Side);
+			};
+
+			// 경로 호 길이 기준으로 대시/간격 반복 배치
+			float fPattern = 0.f;
+			for (size_t i = 0; i + 1 < v3Points.size(); ++i) {
+				const Vector3 a = v3Points[i];
+				const Vector3 b = v3Points[i + 1];
+				const float fSegLen = Vector3::Distance(a, b);
+				if (fSegLen < 1e-3f) continue;
+				const Vector3 v3SegDir = (b - a) / fSegLen;
+
+				float t = 0.f;
+				while (t < fSegLen) {
+					constexpr float CYCLE = DASH_LEN + GAP_LEN;
+					const float fInCycle = std::fmod(fPattern, CYCLE);
+					if (fInCycle < DASH_LEN) {
+						const float fDraw = std::min(DASH_LEN - fInCycle, fSegLen - t);
+						EmitQuad(a + v3SegDir * t, a + v3SegDir * (t + fDraw));
+						t += fDraw; fPattern += fDraw;
+					}
+					else {
+						const float fSkip = std::min(CYCLE - fInCycle, fSegLen - t);
+						t += fSkip; fPattern += fSkip;
+					}
+				}
+			}
+
+			// ── 착탄(정지) 지점 원형 마커 — 지면 평면 링 ──────────────────────
+			if (!v3Points.empty()) {
+				constexpr float RING_R    = 40.f;	// 링 반지름 (cm)
+				constexpr float RING_W    = 5.f;	// 링 두께 (cm)
+				constexpr int   RING_SEGS = 24;
+
+				const Vector3 v3End = v3Points.back();
+				const float fY = v3End.y + 3.f;		// z-fighting 방지
+				for (int i = 0; i < RING_SEGS; ++i) {
+					const float a0 = XM_2PI * i / RING_SEGS;
+					const float a1 = XM_2PI * (i + 1) / RING_SEGS;
+					const Vector3 o0{ v3End.x + cosf(a0) * RING_R, fY, v3End.z + sinf(a0) * RING_R };
+					const Vector3 o1{ v3End.x + cosf(a1) * RING_R, fY, v3End.z + sinf(a1) * RING_R };
+					const Vector3 i0{ v3End.x + cosf(a0) * (RING_R - RING_W), fY, v3End.z + sinf(a0) * (RING_R - RING_W) };
+					const Vector3 i1{ v3End.x + cosf(a1) * (RING_R - RING_W), fY, v3End.z + sinf(a1) * (RING_R - RING_W) };
+
+					v3Segments.push_back(i0); v3Segments.push_back(o0); v3Segments.push_back(o1);
+					v3Segments.push_back(i0); v3Segments.push_back(o1); v3Segments.push_back(i1);
+				}
+			}
+		}
+	}
+
+	// 모드 이탈(던지는 중 제외) 시 조준값 무효화 — 다음 투척에 낡은 방향 사용 방지
+	if (pPlayer && !pPlayer->IsHoldingGrenade() && !pPlayer->IsGrenadeThrowing()) {
+		m_bAimedThrowValid = false;
+	}
+
+	GrenadeArcPass::SetArcVertices(std::move(v3Segments));	// 빈 벡터 = 숨김
+}
+
+void GameScene::SpawnGrenade(const Vector3& position, const Vector3& velocity, bool bLocallyOwned, bool bDecoy)
+{
+	auto pGrenade = std::make_shared<GrenadeProjectile>();
+	pGrenade->Initialize();
+	pGrenade->SetLocallyOwned(bLocallyOwned);
+	pGrenade->SetDecoy(bDecoy);
+	pGrenade->Launch(position, velocity);
+
+	AddObject(pGrenade);
+	m_ActiveGrenades.push_back(pGrenade);
+}
+
+void GameScene::ProcessGrenadeResults()
+{
+	if (!NETWORK->IsConnected() || NETWORK->IsOffline()) return;
+
+	// ── 리모트 수류탄 모션/투척 재현 ─────────────────────────────────────────
+	for (auto& ev : NETWORK->ConsumePlayerGrenades())
+	{
+		if (ev.playerId == NETWORK->GetPlayerID()) continue; // 본인은 입력으로 이미 재생
+		auto it = m_RemotePlayers.find(ev.playerId);
+		if (it == m_RemotePlayers.end()) continue;
+
+		switch (ev.state)
+		{
+		case 0:	// 투척 — 던지기 모션 + 동일 초기조건 투사체 (시각 전용, 데미지 판정 없음)
+			it->second->PlayGrenadeThrowAction();
+			SpawnGrenade(ev.v3Pos, ev.v3Vel, false, ev.grenadeType == 1);
+			break;
+		case 2:  it->second->PlayGrenadeWindupAction();  break;	// 와인드업 (뒤로 들기)
+		case 3:  it->second->PlayGrenadeEquipAction();   break;	// 들기 (총 내림)
+		case 4:  it->second->PlayGrenadeUnequipAction(); break;	// 내리기 (총 복귀)
+		default: break;
+		}
+	}
+
+	// ── 폭발 좀비 히트 확정 (서버 권위) — 클라 좀비 HP/사망 반영 ─────────────
+	for (auto& ev : NETWORK->ConsumeGrenadeHits())
+	{
+		auto it = m_ServerZombies.find(ev.zombieId);
+		if (it != m_ServerZombies.end() && it->second)
+			it->second->TakeDamage(ev.damage);
+	}
+}
+
+void GameScene::UpdateGrenades()
+{
+	if (m_ActiveGrenades.empty()) return;
+
+	const bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
+
+	for (auto it = m_ActiveGrenades.begin(); it != m_ActiveGrenades.end(); )
+	{
+		auto& pGrenade = *it;
+		if (!pGrenade || !pGrenade->IsExploded())
+		{
+			++it;
+			continue;
+		}
+
+		const Vector3 v3Pos = pGrenade->GetPosition();
+
+		// 폭발 연출 — 수류탄 전용 소형 폭발 (각 클라이언트 로컬 퓨즈로 재생)
+		if (m_pEventSequence)
+			m_pEventSequence->AddEvent(std::make_shared<GrenadeExplosionEvent>(v3Pos));
+
+		// 판정은 던진 쪽만 — 리모트 시뮬 투사체는 연출 전용
+		if (pGrenade->IsLocallyOwned())
+		{
+			if (pGrenade->IsDecoy())
+			{
+				// 디코이: 데미지 없음 — 반경 내 좀비를 폭발 지점으로 10초간 유인
+				if (bOnline)
+					NETWORK->SendGrenadeExplode(v3Pos, 1);	// 서버가 SpreadDistraction 수행
+				else
+					AI->SpreadDistraction(v3Pos,
+						GrenadeProjectile::DECOY_AGGRO_RADIUS,
+						GrenadeProjectile::DECOY_AGGRO_DURATION);
+			}
+			else if (bOnline)
+			{
+				NETWORK->SendGrenadeExplode(v3Pos, 0);	// 서버 AoE 판정 → S2C_GRENADE_HIT
+			}
+			else
+			{
+				// 오프라인: 반경 내 좀비에게 거리 선형 감쇠 데미지
+				for (const auto& pZombie : m_World.GetObjects<Zombie>())
+				{
+					if (!pZombie || !pZombie->IsPoolActive())
+						continue;
+
+					const float fDist = Vector3::Distance(
+						pZombie->GetTransform()->GetPosition(), v3Pos);
+					if (fDist > GrenadeProjectile::EXPLODE_RADIUS)
+						continue;
+
+					const float fDamage = GrenadeProjectile::DAMAGE_MAX
+						+ (GrenadeProjectile::DAMAGE_MIN - GrenadeProjectile::DAMAGE_MAX)
+						* (fDist / GrenadeProjectile::EXPLODE_RADIUS);
+					pZombie->TakeDamage(fDamage);
+				}
+			}
+		}
+
+		RemoveObject(pGrenade);
+		it = m_ActiveGrenades.erase(it);
+	}
+}
+
 void GameScene::RemoveDeadZombies()
 {
 	m_World.RemoveIfAlive<Zombie>([&](const std::shared_ptr<IGameObject>& obj) {
@@ -1156,6 +1568,7 @@ void GameScene::SpawnZombie()
 	if (!pZombie) return; // 풀 고갈
 
 	pZombie->Initialize();
+	pZombie->SetFast(RandomGenerator::GenerateRandomIntInRange(0, 99) < Zombie::FAST_ZOMBIE_PERCENT);
 	AddObject(pZombie);
 
 	pZombie->SetPosition(AI->GetNavMesh()->GetRandomPoint());
@@ -1190,6 +1603,7 @@ void GameScene::UpdateOfflineSpawner()
 
 	pZombie->Initialize();
 	pZombie->SetServerId(-1);       // 로컬(오프라인) 좀비
+	pZombie->SetFast(RandomGenerator::GenerateRandomIntInRange(0, 99) < Zombie::FAST_ZOMBIE_PERCENT);
 	pZombie->SetPosition(v3Spawn);
 	pZombie->SetTarget(m_pPlayer);
 
@@ -1218,6 +1632,7 @@ void GameScene::ProcessNetworkZombies()
 		pZombie->Initialize();
 
 		pZombie->SetServerId(ev.zombieId);
+		pZombie->SetFast(ev.bFast);		// 서버가 롤한 타입 (빠른 좀비 애니 전환용)
 		pZombie->SetPosition(ev.pos);
 		pZombie->SetTarget(m_pPlayer);
 
@@ -1266,7 +1681,7 @@ void GameScene::ProcessNetworkZombies()
 			{
 				auto pAC = it->second->GetComponent<ZombieAnimationController>();
 				if (pAC && pAC->GetMontage())
-					pAC->GetMontage()->PlayMontage("Zombie Attack");
+					pAC->GetMontage()->PlayMontage(ev.animIndex == 1 ? "Zombie Attack1" : "Zombie Attack");
 			}
 		}
 		else
@@ -1396,7 +1811,9 @@ void GameScene::SyncSceneWithServer()
 		pNameTag->SetMaxDistance(50_m);
 		pNameTag->SetDistanceScale(5_m, 50_m, 1.2f, 0.6f);
 		m_pUIBoard->InsertUI(pNameTag);
+		
 		m_RemotePlayerNameTags[ev.playerId] = pNameTag;
+		m_RemoteSpawnTimes[ev.playerId] = NetworkManager::GetNetTimeSec();
 	}
 
 	for (auto id : NETWORK->ConsumePlayerLeaves()) {
@@ -1415,6 +1832,7 @@ void GameScene::SyncSceneWithServer()
 		// 서버가 슬롯 id를 재사용하므로 사망 기록도 함께 제거 — 안 하면 같은 id로
 		// 들어온 새 플레이어가 관전 후보에서 영구 제외된다.
 		m_DeadPlayers.erase(id);
+		m_RemoteSpawnTimes.erase(id);
 	}
 
 	for (auto& ev : NETWORK->ConsumePlayerTransforms()) {
@@ -1436,8 +1854,19 @@ void GameScene::SyncSceneWithServer()
 			continue; // 본인은 입력으로 이미 교체
 		auto it = m_RemotePlayers.find(ev.playerId);
 		if (it != m_RemotePlayers.end()) {
-			it->second->GiveWeapon(static_cast<WEAPON_TYPE>(ev.weaponType));
-			it->second->PlayWeaponDrawAction();	// 리모트도 꺼내기 모션 동기화
+			const auto eType = static_cast<WEAPON_TYPE>(ev.weaponType);
+			if (it->second->GetCurrentWeaponType() == eType)
+				continue; // 이미 같은 무기 — 꺼내기 모션 생략
+			it->second->GiveWeapon(eType);
+
+			// 스폰 직후 유예 시간 내 도착한 이벤트는 게임 시작 초기 장착 동기화
+			// (로비 마지막 브로드캐스트가 무기2였으면 스냅샷과 어긋날 수 있음) —
+			// 무기만 갈아끼우고 꺼내기 모션은 생략
+			auto itSpawn = m_RemoteSpawnTimes.find(ev.playerId);
+			const bool bJustSpawned = itSpawn != m_RemoteSpawnTimes.end()
+				&& NetworkManager::GetNetTimeSec() - itSpawn->second < 1.f;
+			if (!bJustSpawned)
+				it->second->PlayWeaponDrawAction();	// 리모트도 꺼내기 모션 동기화
 		}
 	}
 

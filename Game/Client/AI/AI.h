@@ -112,6 +112,9 @@ namespace AIDLL
 
 		// 공격 히트 이벤트 소비 (GoalAttack 쿨다운 완료 시 true, 한 번만 반환)
 		virtual bool ConsumeAttackHit() = 0;
+
+		// 디코이 어그로: duration 초 동안 position 으로 강제 이동/주시 (추격·공격보다 우선)
+		virtual void SetDistraction(const Vector3& position, float duration) = 0;
 	};
 
 	// ========================================
@@ -134,6 +137,10 @@ namespace AIDLL
 		//           nEntityId 의 위치(v3TargetPos)를 청각 자극으로 전달
 		virtual void SpreadAlert(const Vector3& SourcePos, int EntityId,
 		                         const Vector3& TargetPos, float Radius) = 0;
+
+		// 디코이 어그로 전파: SourcePos 기준 Radius 안의 모든 에이전트를
+		//                    Duration 초 동안 SourcePos 로 강제 유인 (SetDistraction 일괄 호출)
+		virtual void SpreadDistraction(const Vector3& SourcePos, float Radius, float Duration) = 0;
 	};
 
 	// ========================================

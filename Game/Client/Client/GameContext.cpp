@@ -218,6 +218,14 @@ void GameContext::LoadHelicopterModel()
 	m_pHelicopterModel = MODEL->LoadOrGet("Gunship")->CopyObject<NodeObject>();
 }
 
+std::string GameContext::GetWeaponIconPath(WEAPON_TYPE eWeaponType)
+{
+	std::string strName = g_strWeaponNames[std::to_underlying(eWeaponType)];
+	std::transform(strName.begin(), strName.end(), strName.begin(),
+		[](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+	return std::format("../Resources/Textures/{}.png", strName);
+}
+
 std::shared_ptr<WeaponObject> GameContext::GetWeaponCopy(WEAPON_TYPE eWeaponType)
 {
 	const auto& pModel = m_pWeaponModels[std::to_underlying(eWeaponType)];

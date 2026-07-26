@@ -18,8 +18,9 @@ void Zombie::Initialize()
 {
 
 	m_pAIAgent = AI->CreateAgent();  // shared_ptr 직접 할당
+	m_bFast = false;	// 풀 재사용 대비 — 스폰 코드가 Initialize 후 SetFast로 다시 롤/적용
 	if (m_pAIAgent)
-		m_pAIAgent->SetMoveSpeed(220.0f);   // 1.1 m/s (플레이어 걷기 140 cm/s보다 약간 느림)
+		m_pAIAgent->SetMoveSpeed(ZOMBIE_MOVE_SPEED);
 
 	if (!m_bInitialized) {
 
@@ -52,6 +53,14 @@ void Zombie::Initialize()
 		AddComponent<PlayerCollider>();
 		GetComponent<PlayerCollider>()->Initialize();
 	}
+}
+
+void Zombie::SetFast(bool bFast)
+{
+	m_bFast = bFast;
+	// 오프라인 로컬 AI용 속도. 온라인은 서버가 이동 주관이라 무해 (로컬 Think 스킵)
+	if (m_pAIAgent)
+		m_pAIAgent->SetMoveSpeed(bFast ? FAST_ZOMBIE_MOVE_SPEED : ZOMBIE_MOVE_SPEED);
 }
 
 void Zombie::ProcessInput()
@@ -236,8 +245,11 @@ void Zombie::PostUpdate()
 			m_pAIAgent->Think(0, DT, fDist);
 
 			if (m_pAIAgent->ConsumeAttackHit()) {
-				if (pAC && pAC->GetMontage())
-					pAC->GetMontage()->PlayMontage("Zombie Attack");
+				if (pAC && pAC->GetMontage()) {
+					// 오프라인: 공격 모션 랜덤 롤 (온라인은 서버 animIndex가 결정)
+					const bool bAlt = RandomGenerator::GenerateRandomIntInRange(0, 1) == 1;
+					pAC->GetMontage()->PlayMontage(bAlt ? "Zombie Attack1" : "Zombie Attack");
+				}
 			}
 		}
 
@@ -683,6 +695,12 @@ void Zombie::ApplyServerState(float serverX, float serverZ, float serverYaw,
 
 void Zombie::TriggerAttackHit()
 {
+	// 온라인: 데미지는 서버 S2C_ZombieAttack(damage>0) 패킷이 전담 — 여기서 또 넣으면
+	// 이중 차감으로 클라 HP가 서버보다 먼저 0이 되고, 입력만 잠긴 채 서버 사망
+	// 판정(S2C_PLAYER_DEATH)이 올 때까지 수 초간 서서 멈춰 보인다.
+	if (NETWORK->IsConnected() && !NETWORK->IsOffline())
+		return;
+
 	auto pTarget = m_wpTarget.lock();
 	if (!pTarget || pTarget->IsDead())
 		return;

@@ -17,6 +17,9 @@ public:
 	void Register(Session& self, const C2S_Register& pkt);
 	void Transform(Session& self, const C2S_Transform& pkt);
 	void Reload(Session& self);
+	void Bandage(Session& self, const C2S_PlayerBandage& pkt);
+	void Grenade(Session& self, const C2S_PlayerGrenade& pkt);
+	void GrenadeExplode(Session& self, const C2S_GrenadeExplode& pkt);
 	void Weapon(Session& self, const C2S_PlayerWeapon& pkt);
 	void Character(Session& self, const C2S_PlayerCharacter& pkt);
 	void Chat(Session& self, const C2S_Chat& pkt);

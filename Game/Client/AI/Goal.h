@@ -13,7 +13,8 @@ namespace AIDLL
         Alert,
         Investigate,
         Chase,
-        Attack
+        Attack,
+        Distracted
     };
 
     class Goal

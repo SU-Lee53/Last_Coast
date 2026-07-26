@@ -109,6 +109,23 @@ namespace AIDLL
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // SpreadDistraction : 디코이 어그로 전파 — 반경 내 모든 에이전트를
+    //                     Duration 초 동안 SourcePos 로 강제 유인한다.
+    //                     (추격/공격 중인 에이전트도 예외 없이 끌려온다)
+    // ─────────────────────────────────────────────────────────────────────────
+    void AIManagerImpl::SpreadDistraction(const Vector3& SourcePos, float Radius, float Duration)
+    {
+        for (auto& pAgent : m_Agents)
+        {
+            const float fDist = Vector3::Distance(pAgent->GetPosition(), SourcePos);
+            if (fDist > Radius)
+                continue;
+
+            pAgent->SetDistraction(SourcePos, Duration);
+        }
+    }
+
 
     // ─────────────────────────────────────────────────────────────────────────
     // FlockGrid::Build  : 활성 에이전트 AABB 기반으로 격자를 동적 빌드

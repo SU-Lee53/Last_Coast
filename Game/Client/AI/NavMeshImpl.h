@@ -82,7 +82,9 @@ namespace AIDLL
 	constexpr float QUANT_SCALE = 1000.0f; // 1mm 정밀도
 
 	// T-junction 엣지 매칭 허용치 (타일 경계에서 엣지 분할이 달라 끝점이 안 맞는 경우)
-	constexpr float EDGE_MATCH_DIST  = 10.0f; // cm — 두 엣지 간 최대 수직 거리
+	// Recast 타일경계 양자화 오차는 최대 2×CellSize(19cm)=38cm까지 관측됨 → 40cm.
+	// AgentRadius(80cm) 덕에 벽 반대편 폴리곤과는 최소 160cm 떨어져 있어 오결합 없음.
+	constexpr float EDGE_MATCH_DIST  = 40.0f; // cm — 두 엣지 간 최대 수직 거리
 	constexpr float EDGE_MIN_OVERLAP = 20.0f; // cm — 인접 판정 최소 겹침 길이
 
 	class NavMeshImpl : public INavMesh

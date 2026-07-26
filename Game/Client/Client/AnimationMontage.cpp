@@ -50,6 +50,12 @@ void AnimationMontage::Update()
 	m_fTotalPlaytime += fDeltaTime;
 	m_fSectionPlayTime += fDeltaTime;
 
+	// 일시정지 지점 도달 — 시간 고정(그 자세 유지). 이후 notify는 재개 전까지 안 나감.
+	if (m_fPauseTime >= 0.f && m_fSectionPlayTime >= m_fPauseTime) {
+		m_fSectionPlayTime = m_fPauseTime;
+		fPrevSectionTime = std::min(fPrevSectionTime, m_fPauseTime);
+	}
+
 	// Blend In / Out 처리
 	if (m_bBlendingOut) {
 		m_fBlendOutElapsed += DT;
@@ -135,7 +141,18 @@ void AnimationMontage::PlayMontage(const std::string& strSectionName)
 	m_fBlendOutElapsed = 0.f;
 	m_nCurrentSection = it->second;
 	m_fTotalPlaytime = 0.f;
-	m_fSectionPlayTime = 0.f;
+	m_fSectionPlayTime = m_MontageSections[m_nCurrentSection].fStartOffset;
+	m_fPauseTime = -1.f;	// 새 재생 = 이전 일시정지 예약 해제
+	m_bFreezed = false;
+}
+
+void AnimationMontage::PauseAtRatio(float fRatio)
+{
+	if (m_nCurrentSection < 0) return;
+
+	const auto& section = m_MontageSections[m_nCurrentSection];
+	const float fDuration = section.fEndTime - section.fStartTime;
+	m_fPauseTime = std::clamp(fRatio, 0.f, 1.f) * fDuration;
 }
 
 void AnimationMontage::StopMontage()
@@ -358,6 +375,7 @@ void PlayerAnimationMontage::BuildMontage()
 
 		AddDrawSection("Pistol Draw", "Drawing Pistol");
 		AddDrawSection("Rifle Draw", "Drawing Rifle");
+		AddDrawSection("Bandage Draw", "Drawing Pistol");	// 붕대/수류탄 꺼내기 (뒷주머니 연출 — 권총 클립 재사용, 종료 notify → OnWeaponDrawEnd 잠금 해제)
 	}
 
 	// 2. Pistol Reload
@@ -376,6 +394,65 @@ void PlayerAnimationMontage::BuildMontage()
 			std::static_pointer_cast<IThirdPersonPlayer>(pObj)->OnReloadEnd();
 		};
 		m_Notifies.push_back(reloadEndNotify);
+	}
+
+	// 8. Bandage Wrap — 붕대 감기 전용 클립 (자기/아군 별도 모션).
+	// 종료는 클립 길이가 아니라 IThirdPersonPlayer::Update의 4초 타이머(BANDAGE_CAST_SECONDS)가
+	// StopBandageAction → StopMontage 로 끊는다. 그래서 LOOP + notify 없음.
+	{
+		MontageSection bandageSection{};
+		bandageSection.strName = "Bandage Wrap";
+		bandageSection.pAnimationToPlay = ANIMATION->Get("bandage-wrap-character");
+		bandageSection.eEndRule = MONTAGE_SECTION_END_RULE::LOOP;
+		m_MontageSections.push_back(bandageSection);
+
+		MontageSection allySection{};
+		allySection.strName = "Bandage Ally Wrap";
+		allySection.pAnimationToPlay = ANIMATION->Get("bandage-ally-wrap");
+		allySection.eEndRule = MONTAGE_SECTION_END_RULE::LOOP;
+		m_MontageSections.push_back(allySection);
+	}
+
+	// 9. Grenade Throw — 원본 "Throw" 클립 하나로 와인드업+던지기.
+	// 와인드업: PlayMontage 후 PauseAtRatio(GRENADE_HOLD_RATIO)로 중간 일시정지(뒤로 든 자세 유지),
+	// 좌클릭 뗌: ResumeMontage로 이어서 재생 → 릴리즈 notify(투사체 스폰) → 종료 notify(잠금 해제).
+	{
+		MontageSection throwSection{};
+		throwSection.strName = "Grenade Throw";
+		throwSection.pAnimationToPlay = ANIMATION->Get("Throw");
+		throwSection.eEndRule = MONTAGE_SECTION_END_RULE::STOP;
+		m_MontageSections.push_back(throwSection);
+
+		// 손이 앞으로 나오는 시점에 투사체 스폰 — 홀드 지점(GRENADE_HOLD_RATIO) 이후여야 함
+		MontageNotify releaseNotify;
+		releaseNotify.nSectionIndex = m_MontageSections.size() - 1;
+		releaseNotify.fTime = ANIMATION->Get("Throw")->GetDuration() * IThirdPersonPlayer::GRENADE_RELEASE_RATIO;
+		releaseNotify.pCallback = [](std::shared_ptr<IGameObject> pObj) {
+			std::static_pointer_cast<IThirdPersonPlayer>(pObj)->OnGrenadeRelease();
+		};
+		m_Notifies.push_back(releaseNotify);
+
+		MontageNotify throwEndNotify;
+		throwEndNotify.nSectionIndex = m_MontageSections.size() - 1;
+		throwEndNotify.fTime = ANIMATION->Get("Throw")->GetDuration() - 0.1f;
+		throwEndNotify.pCallback = [](std::shared_ptr<IGameObject> pObj) {
+			std::static_pointer_cast<IThirdPersonPlayer>(pObj)->OnGrenadeThrowEnd();
+		};
+		m_Notifies.push_back(throwEndNotify);
+	}
+
+	// 10. Player Death — 사망 모션. FREEZE로 마지막 프레임(쓰러진 자세) 유지,
+	// 부활 시 ApplyRespawn의 StopMontage가 해제해 상태머신으로 복귀.
+	{
+		MontageSection deathSection{};
+		deathSection.strName = "Player Death";
+		deathSection.pAnimationToPlay = ANIMATION->Get("Player Die");
+		deathSection.eEndRule = MONTAGE_SECTION_END_RULE::FREEZE;
+		deathSection.bFullBody = true;		// 하체까지 전신 재생 — 상체 마스크 블렌드로는 쓰러지는 모션 불가
+		// 힙 본 실측: 0~0.5초 완전 정지, 0.5~1.0초 미세 기울기(화면상 서있음), 1.0초부터 본격 낙하.
+		// 1.0초로 점프해 즉시 쓰러짐 — 블렌드인 0.2초가 자세 스냅을 가려준다.
+		deathSection.fStartOffset = 1.0f;
+		m_MontageSections.push_back(deathSection);
 	}
 }
 
@@ -452,4 +529,26 @@ void ZombieAnimationMontage::BuildMontage()
 		std::static_pointer_cast<Zombie>(pObj)->TriggerAttackHit();
 	};
 	m_Notifies.push_back(hitNotify);
+
+	// 공격 모션 2번 — 공격 시 랜덤 선택 (서버 animIndex / 오프라인 로컬 롤).
+	// 사망 섹션(인덱스 1) notify를 안 건드리게 맨 뒤에 추가.
+	// 사운드/히트 notify 시점은 기본 공격과 동일 (클립 2.63초 내라 유효 — 타격감 안 맞으면 여기서 조정)
+	{
+		MontageSection attack1Section{};
+		attack1Section.strName = "Zombie Attack1";
+		attack1Section.pAnimationToPlay = ANIMATION->Get("Zombie Attack1");
+		attack1Section.eEndRule = MONTAGE_SECTION_END_RULE::STOP;
+		m_MontageSections.push_back(attack1Section);
+		const int nAttack1Index = static_cast<int>(m_MontageSections.size()) - 1;
+
+		MontageNotify attack1SoundNotify = attackSoundNotify;	// 같은 랜덤 사운드 콜백 재사용
+		attack1SoundNotify.nSectionIndex = nAttack1Index;
+		attack1SoundNotify.fTime = 0.85f;
+		m_Notifies.push_back(attack1SoundNotify);
+
+		MontageNotify attack1HitNotify = hitNotify;
+		attack1HitNotify.nSectionIndex = nAttack1Index;
+		attack1HitNotify.fTime = 1.0f;	// 서버 m_fAttackDamageNotifyDelays[1]과 동일
+		m_Notifies.push_back(attack1HitNotify);
+	}
 }

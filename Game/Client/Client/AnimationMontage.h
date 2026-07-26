@@ -24,6 +24,8 @@ struct MontageSection {
 
 	MONTAGE_SECTION_END_RULE eEndRule = MONTAGE_SECTION_END_RULE::NEXT;
 	std::string strJumpTarget;
+	bool bFullBody = false;		// TRUE = 전신 재생 — LayeredBlend(Spine 상체 마스크) 우회 (사망 등)
+	float fStartOffset = 0.f;	// 섹션 진입 시 이 시점(초)부터 재생 — 클립 선행 대기 구간 스킵용
 };
 
 struct MontageNotify : AnimationNotify {
@@ -41,8 +43,18 @@ public:
 	// 외부 개입 Section 전환용
 	void JumpToSection(const std::string& strSectionName);
 
+	// 현재 섹션을 길이 비율(0~1) 지점에서 일시정지 — 그 프레임 자세로 유지.
+	// PlayMontage 직후 호출. 이후 notify는 재개 전까지 발화하지 않는다 (수류탄 와인드업 홀드용).
+	void PauseAtRatio(float fRatio);
+	void ResumeMontage() { m_fPauseTime = -1.f; }
+	bool IsPausedHold() const { return m_fPauseTime >= 0.f; }
+
 	const std::vector<AnimationKey>& GetOutputPose() const { return m_OutputPose; }
 	float GetBlendWeight() const { return m_fBlendWeight; }
+	// 현재(또는 블렌드아웃 중인) 섹션이 전신 재생인지 — 컨트롤러가 상하체 분리 블렌드 대신 전 본 lerp 사용
+	bool IsCurrentSectionFullBody() const {
+		return m_nCurrentSection >= 0 && m_MontageSections[m_nCurrentSection].bFullBody;
+	}
 	bool IsFreezed() const { return m_bFreezed; }
 	bool IsPlaying() const { return m_bPlaying; }
 
@@ -60,6 +72,7 @@ protected:
 
 	int m_nCurrentSection = -1;		// 현재 Section
 	float m_fSectionPlayTime = 0.f;	// 현재 재생중인 Section 시간
+	float m_fPauseTime = -1.f;		// 섹션 로컬 일시정지 시점 (<0 = 없음). 도달 시 시간 고정
 
 	float m_fBlendInTime = 0.2f;
 	float m_fBlendOutTime = 0.2f;

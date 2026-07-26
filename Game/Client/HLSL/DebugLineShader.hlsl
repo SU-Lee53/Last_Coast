@@ -42,3 +42,9 @@ float4 PSDebugLineBlue(VS_DEBUG_LINE_OUTPUT input) : SV_TARGET
     // 빨간색 라인 (인접성 그래프)
 	return float4(0.0f, 0.0f, 1.0f, 1.0f);
 }
+
+float4 PSDebugLineYellow(VS_DEBUG_LINE_OUTPUT input) : SV_TARGET
+{
+    // 노란색 라인 (수류탄 예측 궤도)
+    return float4(1.0f, 0.9f, 0.2f, 1.0f);
+}

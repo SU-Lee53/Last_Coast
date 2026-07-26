@@ -99,6 +99,15 @@ bool Session::process_packet(unsigned char* p)
 	case C2S_PLAYER_RELOAD:
 		handlers.Reload(*this);
 		break;
+	case C2S_PLAYER_BANDAGE:
+		handlers.Bandage(*this, *reinterpret_cast<C2S_PlayerBandage*>(p));
+		break;
+	case C2S_PLAYER_GRENADE:
+		handlers.Grenade(*this, *reinterpret_cast<C2S_PlayerGrenade*>(p));
+		break;
+	case C2S_GRENADE_EXPLODE:
+		handlers.GrenadeExplode(*this, *reinterpret_cast<C2S_GrenadeExplode*>(p));
+		break;
 	case C2S_PLAYER_WEAPON:
 		handlers.Weapon(*this, *reinterpret_cast<C2S_PlayerWeapon*>(p));
 		break;
@@ -257,13 +266,14 @@ void Session::send_chat(int sender_id, const std::string& username, const std::s
 	send_packet(S2C_CHAT, packet);
 }
 
-void Session::send_spawn_zombie(int nZombieId, const Vector3& v3Pos)
+void Session::send_spawn_zombie(int nZombieId, const Vector3& v3Pos, bool bFast)
 {
 	S2C_SpawnZombie p;
 	p.zombieId = nZombieId;
 	p.x = v3Pos.x;
 	p.y = v3Pos.y;
 	p.z = v3Pos.z;
+	p.zombieType = bFast ? 1 : 0;
 	send_packet(S2C_SPAWN_ZOMBIE, p);
 }
 
@@ -304,12 +314,13 @@ void Session::send_zombie_state_batch(const ZombieStateEntry* entries, int count
 	do_send(nBytes, reinterpret_cast<char*>(&p));
 }
 
-void Session::send_zombie_attack(int nZombieId, int nTargetPlayerId, float fDamage)
+void Session::send_zombie_attack(int nZombieId, int nTargetPlayerId, float fDamage, int nAnimIndex)
 {
 	S2C_ZombieAttack p;
 	p.zombieId = nZombieId;
 	p.targetPlayerId = nTargetPlayerId;
 	p.damage = fDamage;
+	p.animIndex = static_cast<unsigned char>(nAnimIndex);
 	send_packet(S2C_ZOMBIE_ATTACK, p);
 }
 
@@ -410,4 +421,42 @@ void Session::send_leave_room_result(bool success)
 	S2C_LeaveRoomResult p;
 	p.success = success;
 	send_packet(S2C_LEAVE_ROOM_RESULT, p);
+}
+
+void Session::send_player_bandage(int player_id, int target_id, unsigned char state)
+{
+	S2C_PlayerBandage p;
+	p.playerId       = player_id;
+	p.targetPlayerId = target_id;
+	p.state          = state;
+	send_packet(S2C_PLAYER_BANDAGE, p);
+}
+
+void Session::send_player_heal(int target_id, int healer_id, float new_hp)
+{
+	S2C_PlayerHeal p;
+	p.targetPlayerId = target_id;
+	p.healerPlayerId = healer_id;
+	p.fNewHP         = new_hp;
+	send_packet(S2C_PLAYER_HEAL, p);
+}
+
+void Session::send_player_grenade(int player_id, const C2S_PlayerGrenade& pkt)
+{
+	S2C_PlayerGrenade p;
+	p.playerId    = player_id;
+	p.state       = pkt.state;
+	p.grenadeType = pkt.grenadeType;
+	p.x  = pkt.x;  p.y  = pkt.y;  p.z  = pkt.z;
+	p.vx = pkt.vx; p.vy = pkt.vy; p.vz = pkt.vz;
+	send_packet(S2C_PLAYER_GRENADE, p);
+}
+
+void Session::send_grenade_hit(int attacker_id, int zombie_id, float damage)
+{
+	S2C_GrenadeHit p;
+	p.attackerPlayerId = attacker_id;
+	p.zombieId         = zombie_id;
+	p.damage           = damage;
+	send_packet(S2C_GRENADE_HIT, p);
 }
