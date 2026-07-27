@@ -26,6 +26,9 @@ private:
 public:
 	static uint32 GetDescriptorIncrementSize(DESCRIPTOR_TYPE);
 
+	// 디버거 미부착 테스트 PC에서도 사후 수거 가능하도록 exe 옆 crash_log.txt에 append (+디버그 출력)
+	static void AppendCrashLog(const std::string& strText);
+
 	static uint32 g_nCBVSRVDescriptorIncrementSize;
 	static uint32 g_nRTVDescriptorIncrementSize;
 	static uint32 g_nDSVDescriptorIncrementSize;

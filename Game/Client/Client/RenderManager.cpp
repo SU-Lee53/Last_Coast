@@ -823,7 +823,11 @@ void RenderManager::CreateCommandQueueAndList()
 		// Close Command List(default is opened)
 		hr = m_ppd3dCommandList[i]->Close();
 
+		// DRED breadcrumb에서 hang 지점 리스트를 식별하기 위한 디버그 이름
+		m_ppd3dCommandList[i]->SetName(std::format(L"MainCmdList{}", i).c_str());
 	}
+
+	m_pd3dCommandQueue->SetName(L"MainRenderQueue");
 
 	m_ImmediateTransitionCmdLists.Initialize(30);
 }
@@ -982,34 +986,7 @@ void RenderManager::Present()
 	hr = m_pdxgiSwapChain->Present(unSyncInterval, unPresentFlags);
 
 	if (FAILED(hr)) {
-		const HRESULT hRemovedReason = DEVICE->GetDeviceRemovedReason();
-		const char* pszRemovedReason = "UNKNOWN";
-		switch (hRemovedReason) {
-		case DXGI_ERROR_DEVICE_HUNG:
-			pszRemovedReason = "DXGI_ERROR_DEVICE_HUNG";
-			break;
-		case DXGI_ERROR_DEVICE_REMOVED:
-			pszRemovedReason = "DXGI_ERROR_DEVICE_REMOVED";
-			break;
-		case DXGI_ERROR_DEVICE_RESET:
-			pszRemovedReason = "DXGI_ERROR_DEVICE_RESET";
-			break;
-		case DXGI_ERROR_DRIVER_INTERNAL_ERROR:
-			pszRemovedReason = "DXGI_ERROR_DRIVER_INTERNAL_ERROR";
-			break;
-		case DXGI_ERROR_INVALID_CALL:
-			pszRemovedReason = "DXGI_ERROR_INVALID_CALL";
-			break;
-		}
-
-		const std::string strError = std::format(
-			"Present failed. HRESULT=0x{:08X}, DeviceRemovedReason={} (0x{:08X})\n",
-			static_cast<uint32>(hr),
-			pszRemovedReason,
-			static_cast<uint32>(hRemovedReason)
-		);
-		::MessageBoxA(::GetActiveWindow(), strError.c_str(), "Direct3D 12 Device Removed", MB_OK | MB_ICONERROR);
-		__debugbreak();
+		ReportDeviceRemoved(hr);
 	}
 
 	Fence();
@@ -1021,6 +998,121 @@ void RenderManager::Present()
 	WaitForFenceValue(m_un64LastFenceValues[unNextContextIndex]);
 
 	m_unCurrentContextIndex = unNextContextIndex;
+}
+
+namespace {
+	const char* DredOpName(D3D12_AUTO_BREADCRUMB_OP op)
+	{
+		switch (op) {
+		case D3D12_AUTO_BREADCRUMB_OP_SETMARKER:				return "SetMarker";
+		case D3D12_AUTO_BREADCRUMB_OP_BEGINEVENT:				return "BeginEvent";
+		case D3D12_AUTO_BREADCRUMB_OP_ENDEVENT:					return "EndEvent";
+		case D3D12_AUTO_BREADCRUMB_OP_DRAWINSTANCED:			return "DrawInstanced";
+		case D3D12_AUTO_BREADCRUMB_OP_DRAWINDEXEDINSTANCED:		return "DrawIndexedInstanced";
+		case D3D12_AUTO_BREADCRUMB_OP_EXECUTEINDIRECT:			return "ExecuteIndirect";
+		case D3D12_AUTO_BREADCRUMB_OP_DISPATCH:					return "Dispatch";
+		case D3D12_AUTO_BREADCRUMB_OP_COPYBUFFERREGION:			return "CopyBufferRegion";
+		case D3D12_AUTO_BREADCRUMB_OP_COPYTEXTUREREGION:		return "CopyTextureRegion";
+		case D3D12_AUTO_BREADCRUMB_OP_COPYRESOURCE:				return "CopyResource";
+		case D3D12_AUTO_BREADCRUMB_OP_RESOURCEBARRIER:			return "ResourceBarrier";
+		case D3D12_AUTO_BREADCRUMB_OP_CLEARRENDERTARGETVIEW:	return "ClearRTV";
+		case D3D12_AUTO_BREADCRUMB_OP_CLEARDEPTHSTENCILVIEW:	return "ClearDSV";
+		case D3D12_AUTO_BREADCRUMB_OP_PRESENT:					return "Present";
+		default:												return nullptr;
+		}
+	}
+}
+
+void RenderManager::ReportDeviceRemoved(HRESULT hrPresent)
+{
+	const HRESULT hRemovedReason = m_pd3dDevice->GetDeviceRemovedReason();
+	const char* pszRemovedReason = "UNKNOWN";
+	switch (hRemovedReason) {
+	case DXGI_ERROR_DEVICE_HUNG:			pszRemovedReason = "DXGI_ERROR_DEVICE_HUNG";			break;
+	case DXGI_ERROR_DEVICE_REMOVED:			pszRemovedReason = "DXGI_ERROR_DEVICE_REMOVED";			break;
+	case DXGI_ERROR_DEVICE_RESET:			pszRemovedReason = "DXGI_ERROR_DEVICE_RESET";			break;
+	case DXGI_ERROR_DRIVER_INTERNAL_ERROR:	pszRemovedReason = "DXGI_ERROR_DRIVER_INTERNAL_ERROR";	break;
+	case DXGI_ERROR_INVALID_CALL:			pszRemovedReason = "DXGI_ERROR_INVALID_CALL";			break;
+	case E_OUTOFMEMORY:						pszRemovedReason = "E_OUTOFMEMORY";						break;
+	}
+
+	std::string strReport = std::format(
+		"[DeviceRemoved] Present HRESULT=0x{:08X}, reason={} (0x{:08X})\n",
+		static_cast<uint32>(hrPresent),
+		pszRemovedReason,
+		static_cast<uint32>(hRemovedReason)
+	);
+
+	// SetName은 W 이름만 채우므로 A/W 둘 다 확인
+	auto NodeName = [](const char* pszNameA, const wchar_t* pwszNameW) -> std::string {
+		if (pszNameA) {
+			return pszNameA;
+		}
+		if (pwszNameW) {
+			std::string strName;
+			for (const wchar_t* p = pwszNameW; *p; ++p) {
+				strName += (*p < 128) ? static_cast<char>(*p) : '?';
+			}
+			return strName;
+		}
+		return "?";
+	};
+
+	ComPtr<ID3D12DeviceRemovedExtendedData> pDred = nullptr;
+	if (SUCCEEDED(m_pd3dDevice->QueryInterface(IID_PPV_ARGS(pDred.GetAddressOf())))) {
+		// breadcrumb: 중간에 멈춘 커맨드리스트(0 < last < count)가 hang 지점.
+		// '*'가 마지막으로 완료된 op — 그 다음 op 실행 중 죽었다는 뜻.
+		D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT breadcrumbs{};
+		if (SUCCEEDED(pDred->GetAutoBreadcrumbsOutput(&breadcrumbs))) {
+			for (const D3D12_AUTO_BREADCRUMB_NODE* pNode = breadcrumbs.pHeadAutoBreadcrumbNode; pNode; pNode = pNode->pNext) {
+				const uint32 unCount = pNode->BreadcrumbCount;
+				const uint32 unLast = pNode->pLastBreadcrumbValue ? *pNode->pLastBreadcrumbValue : 0;
+				if (unLast == 0 || unLast >= unCount) {
+					continue;
+				}
+
+				strReport += std::format("[DRED] list='{}' queue='{}' stopped {}/{} ops:",
+					NodeName(pNode->pCommandListDebugNameA, pNode->pCommandListDebugNameW),
+					NodeName(pNode->pCommandQueueDebugNameA, pNode->pCommandQueueDebugNameW),
+					unLast, unCount);
+
+				const uint32 unBegin = (unLast >= 6) ? unLast - 6 : 0;
+				const uint32 unEnd = (unLast + 3 < unCount) ? unLast + 3 : unCount;
+				for (uint32 i = unBegin; i < unEnd; ++i) {
+					const D3D12_AUTO_BREADCRUMB_OP eOp = pNode->pCommandHistory[i];
+					const char* pszOp = DredOpName(eOp);
+					if (pszOp) {
+						strReport += std::format(" {}{}", pszOp, (i == unLast - 1) ? "*" : "");
+					}
+					else {
+						strReport += std::format(" op{}{}", static_cast<int>(eOp), (i == unLast - 1) ? "*" : "");
+					}
+				}
+				strReport += '\n';
+			}
+		}
+
+		D3D12_DRED_PAGE_FAULT_OUTPUT pageFault{};
+		if (SUCCEEDED(pDred->GetPageFaultAllocationOutput(&pageFault)) && pageFault.PageFaultVA != 0) {
+			strReport += std::format("[DRED] PageFaultVA=0x{:016X}\n", pageFault.PageFaultVA);
+
+			int nListed = 0;
+			for (const D3D12_DRED_ALLOCATION_NODE* pNode = pageFault.pHeadExistingAllocationNode; pNode && nListed < 8; pNode = pNode->pNext, ++nListed) {
+				strReport += std::format("[DRED]   existing: '{}' type={}\n",
+					NodeName(pNode->ObjectNameA, pNode->ObjectNameW), static_cast<int>(pNode->AllocationType));
+			}
+			nListed = 0;
+			for (const D3D12_DRED_ALLOCATION_NODE* pNode = pageFault.pHeadRecentFreedAllocationNode; pNode && nListed < 8; pNode = pNode->pNext, ++nListed) {
+				strReport += std::format("[DRED]   recently freed: '{}' type={}\n",
+					NodeName(pNode->ObjectNameA, pNode->ObjectNameW), static_cast<int>(pNode->AllocationType));
+			}
+		}
+	}
+
+	D3DCore::AppendCrashLog(strReport);
+
+	::MessageBoxA(::GetActiveWindow(), strReport.c_str(), "Direct3D 12 Device Removed", MB_OK | MB_ICONERROR);
+	__debugbreak();
 }
 
 uint64 RenderManager::Fence()
@@ -1053,12 +1145,11 @@ void RenderManager::ImmediateStateTransition(const ComPtr<ID3D12Resource>& pReso
 	if (!pResource) return;
 	if (outd3dState == d3dTargetState) return;
 
-	const uint64 un64CompleteFenceValue = m_pd3dFence->GetCompletedValue();
-	
-	auto* pCmdPair = m_ImmediateTransitionCmdLists.AllocateSafe(un64CompleteFenceValue);
-	if (!pCmdPair) {
-		//__debugbreak();
-		return ImmediateStateTransition(pResource, outd3dState, d3dTargetState);	// Recursive Retry
+	// 풀 소진 시 GPU가 이전 전이를 소화할 때까지 양보하며 대기 (재귀 재시도는 스택 오버플로우 위험)
+	auto* pCmdPair = m_ImmediateTransitionCmdLists.AllocateSafe(m_pd3dFence->GetCompletedValue());
+	while (!pCmdPair) {
+		::SwitchToThread();
+		pCmdPair = m_ImmediateTransitionCmdLists.AllocateSafe(m_pd3dFence->GetCompletedValue());
 	}
 
 	auto cmdList = pCmdPair->pd3dCommandList;

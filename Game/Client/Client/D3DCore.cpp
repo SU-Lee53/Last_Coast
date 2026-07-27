@@ -1,6 +1,9 @@
 ﻿#include "pch.h"
 #include "D3DCore.h"
 
+#include <fstream>
+#include <ctime>
+
 UINT D3DCore::g_nCBVSRVDescriptorIncrementSize = 0;
 UINT D3DCore::g_nRTVDescriptorIncrementSize = 0;
 UINT D3DCore::g_nDSVDescriptorIncrementSize = 0;
@@ -32,6 +35,36 @@ D3DCore::~D3DCore()
 	//RENDER->WaitForGPUComplete();
 }
 
+void D3DCore::AppendCrashLog(const std::string& strText)
+{
+	::OutputDebugStringA(strText.c_str());
+
+	char szExePath[MAX_PATH]{};
+	::GetModuleFileNameA(NULL, szExePath, MAX_PATH);
+	std::string strLogPath(szExePath);
+	const size_t nSlash = strLogPath.find_last_of("\\/");
+	if (nSlash != std::string::npos) {
+		strLogPath = strLogPath.substr(0, nSlash + 1);
+	}
+	strLogPath += "crash_log.txt";
+
+	std::ofstream file(strLogPath, std::ios::app);
+	if (!file) {
+		return;
+	}
+
+	const std::time_t now = std::time(nullptr);
+	std::tm tmLocal{};
+	::localtime_s(&tmLocal, &now);
+	char szTime[32]{};
+	std::strftime(szTime, sizeof(szTime), "[%Y-%m-%d %H:%M:%S] ", &tmLocal);
+
+	file << szTime << strText;
+	if (strText.empty() || strText.back() != '\n') {
+		file << '\n';
+	}
+}
+
 void D3DCore::Initialize()
 {
 	CreateD3DDevice();
@@ -45,6 +78,16 @@ void D3DCore::Initialize()
 void D3DCore::CreateD3DDevice()
 {
 	HRESULT hr;
+
+	// DRED — device removed 시 커맨드리스트 breadcrumb/페이지폴트를 드라이버가 기록.
+	// 디바이스 생성 전에 켜야만 유효하다. (수거는 RenderManager::ReportDeviceRemoved)
+	{
+		ComPtr<ID3D12DeviceRemovedExtendedDataSettings> pdredSettings = nullptr;
+		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(pdredSettings.GetAddressOf())))) {
+			pdredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+			pdredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+		}
+	}
 
 	UINT nDXGIFactoryFlags = 0;
 	if (g_bEnableDebugLayer) {

@@ -63,7 +63,7 @@ inline ConstantBuffer& ConstantBufferPool::Allocate()
 		char szBuf[160];
 		sprintf_s(szBuf, "[ConstantBufferPool] OVERFLOW! size=%zu allocated=%u/%u\n",
 			requiredCBSize, m_nAllocated[requiredCBSize], m_nCBVCount[requiredCBSize]);
-		OutputDebugStringA(szBuf);
+		D3DCore::AppendCrashLog(szBuf);
 		__debugbreak();
 		m_nAllocated[requiredCBSize] = 0;	// 최소 방어 — OOB 대신 풀 앞부분 재사용
 	}
