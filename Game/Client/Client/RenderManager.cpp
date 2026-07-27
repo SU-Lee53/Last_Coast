@@ -1058,13 +1058,13 @@ void RenderManager::ReportDeviceRemoved(HRESULT hrPresent)
 		return "?";
 	};
 
-	ComPtr<ID3D12DeviceRemovedExtendedData> pDred = nullptr;
+	ComPtr<ID3D12DeviceRemovedExtendedData1> pDred = nullptr;
 	if (SUCCEEDED(m_pd3dDevice->QueryInterface(IID_PPV_ARGS(pDred.GetAddressOf())))) {
 		// breadcrumb: 중간에 멈춘 커맨드리스트(0 < last < count)가 hang 지점.
 		// '*'가 마지막으로 완료된 op — 그 다음 op 실행 중 죽었다는 뜻.
-		D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT breadcrumbs{};
-		if (SUCCEEDED(pDred->GetAutoBreadcrumbsOutput(&breadcrumbs))) {
-			for (const D3D12_AUTO_BREADCRUMB_NODE* pNode = breadcrumbs.pHeadAutoBreadcrumbNode; pNode; pNode = pNode->pNext) {
+		D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1 breadcrumbs{};
+		if (SUCCEEDED(pDred->GetAutoBreadcrumbsOutput1(&breadcrumbs))) {
+			for (const D3D12_AUTO_BREADCRUMB_NODE1* pNode = breadcrumbs.pHeadAutoBreadcrumbNode; pNode; pNode = pNode->pNext) {
 				const uint32 unCount = pNode->BreadcrumbCount;
 				const uint32 unLast = pNode->pLastBreadcrumbValue ? *pNode->pLastBreadcrumbValue : 0;
 				if (unLast == 0 || unLast >= unCount) {
@@ -1089,6 +1089,21 @@ void RenderManager::ReportDeviceRemoved(HRESULT hrPresent)
 					}
 				}
 				strReport += '\n';
+
+				// 패스 마커(BeginEvent 컨텍스트): 정지 지점 직전의 마지막 마커 = hang이 난 패스
+				const D3D12_DRED_BREADCRUMB_CONTEXT* pActiveCtx = nullptr;
+				for (uint32 c = 0; c < pNode->BreadcrumbContextsCount; ++c) {
+					const auto& ctx = pNode->pBreadcrumbContexts[c];
+					if (ctx.BreadcrumbIndex < unLast) {
+						if (!pActiveCtx || ctx.BreadcrumbIndex > pActiveCtx->BreadcrumbIndex) {
+							pActiveCtx = &ctx;
+						}
+					}
+				}
+				if (pActiveCtx) {
+					strReport += std::format("[DRED] hang pass: '{}' (marker@{})\n",
+						NodeName(nullptr, pActiveCtx->pContextString), pActiveCtx->BreadcrumbIndex);
+				}
 			}
 		}
 
