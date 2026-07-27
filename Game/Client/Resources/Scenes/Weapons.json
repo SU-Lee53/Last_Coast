@@ -1,4 +1,4 @@
-{
+﻿{
     "AK": {
         "AmmoPerClip": 30,
         "Damage": 40.0,
@@ -89,7 +89,7 @@
     },
     "PISTOL": {
         "AmmoPerClip": 10,
-        "Damage": 30.0,
+        "Damage": 50.0,
         "FirePerSecond": 100.0,
         "MuzzlePosition": [
             22.0,
@@ -133,7 +133,7 @@
     },
     "SHOTGUN": {
         "AmmoPerClip": 8,
-        "Damage": 15.0,
+        "Damage": 20.0,
         "FirePerSecond": 75.0,
         "MuzzlePosition": [
             100.0,
