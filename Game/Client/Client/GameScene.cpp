@@ -69,8 +69,8 @@ void GameScene::FinalizeBuild()
 {
 	bool bOnline = NETWORK->IsConnected() && !NETWORK->IsOffline();
 	m_pPlayer->Initialize();
-	//m_pPlayer->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
-	m_pPlayer->GetTransform()->SetPosition(34000, -3536.692724, 25000);
+	m_pPlayer->GetTransform()->SetPosition(10281.199179, -3536.692724, 18949.001705);
+	//m_pPlayer->GetTransform()->SetPosition(34000, -3536.692724, 25000);
 	if (auto pThirdPerson = static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)) {
 		const auto& data = GCTX->GetGameData();
 		pThirdPerson->SetPlayerModel(GameContext::g_strCharacterNames[data.m_nCurModelIndex]);
