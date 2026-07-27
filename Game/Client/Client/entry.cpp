@@ -13,11 +13,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	WinCore* pApp = nullptr;
 
+	// "-gpudebug" 인자: Release에서도 디버그 레이어+GBV 활성화 (Device Removed 조사용, 매우 느려짐)
+	const BOOL bGpuDebug = (lpCmdLine && ::strstr(lpCmdLine, "-gpudebug") != nullptr) ? TRUE : FALSE;
+
 #ifdef _DEBUG
 	pApp = new WinCore(hInstance, 1600, 900, TRUE, TRUE, FALSE);
 #else
-	//pApp = new WinCore(hInstance, 1600, 900, FALSE, FALSE, FALSE);
-	pApp = new WinCore(hInstance, 1600, 900, FALSE, FALSE, FALSE);
+	pApp = new WinCore(hInstance, 1600, 900, bGpuDebug, bGpuDebug, FALSE);
 #endif
 
 	pApp->Run();

@@ -100,6 +100,15 @@ void D3DCore::CreateD3DDevice()
 
 		if (pd3dDebugController) {
 			pd3dDebugController->EnableDebugLayer();
+
+			// GBV(GPU 기반 검증): 셰이더의 실제 디스크립터 접근(OOB 인덱싱 등)을 실행 시점에 검증.
+			// 플래그만 있고 배선이 안 돼 있었음 — Device Removed 조사에 필수라 연결 (매우 느려짐 주의)
+			if (g_bEnableGBV) {
+				ComPtr<ID3D12Debug1> pd3dDebug1 = nullptr;
+				if (SUCCEEDED(pd3dDebugController.As(&pd3dDebug1))) {
+					pd3dDebug1->SetEnableGPUBasedValidation(TRUE);
+				}
+			}
 		}
 	}
 

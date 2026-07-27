@@ -1124,6 +1124,35 @@ void RenderManager::ReportDeviceRemoved(HRESULT hrPresent)
 		}
 	}
 
+	// 디버그 레이어 활성 시(-gpudebug/Debug 빌드) 저장된 검증 메시지 덤프 —
+	// GBV가 잡은 위반(OOB 디스크립터 접근 등)이 여기 남는다. INFO성 메시지는 제외.
+	ComPtr<ID3D12InfoQueue> pInfoQueue = nullptr;
+	if (SUCCEEDED(m_pd3dDevice->QueryInterface(IID_PPV_ARGS(pInfoQueue.GetAddressOf())))) {
+		const UINT64 un64NumMsgs = pInfoQueue->GetNumStoredMessages();
+		const UINT64 un64Begin = (un64NumMsgs > 50) ? un64NumMsgs - 50 : 0;
+
+		for (UINT64 i = un64Begin; i < un64NumMsgs; ++i) {
+			SIZE_T nMsgLen = 0;
+			pInfoQueue->GetMessage(i, nullptr, &nMsgLen);
+			if (nMsgLen == 0) {
+				continue;
+			}
+
+			std::vector<char> msgBuf(nMsgLen);
+			D3D12_MESSAGE* pMsg = reinterpret_cast<D3D12_MESSAGE*>(msgBuf.data());
+			if (FAILED(pInfoQueue->GetMessage(i, pMsg, &nMsgLen)) || !pMsg->pDescription) {
+				continue;
+			}
+
+			if (pMsg->Severity > D3D12_MESSAGE_SEVERITY_WARNING) {
+				continue;
+			}
+
+			strReport += std::format("[D3D12] sev={} id={}: {}\n",
+				static_cast<int>(pMsg->Severity), static_cast<int>(pMsg->ID), pMsg->pDescription);
+		}
+	}
+
 	D3DCore::AppendCrashLog(strReport);
 
 	::MessageBoxA(::GetActiveWindow(), strReport.c_str(), "Direct3D 12 Device Removed", MB_OK | MB_ICONERROR);
