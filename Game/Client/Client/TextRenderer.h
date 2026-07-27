@@ -117,8 +117,6 @@ private:
 	HRESULT CreateMainAtlas(uint32 unWidth, uint32 unHeight);
 	HRESULT RebuildAtlas();
 
-	void TransitionAtlasToRenderTarget();
-
 private:
 	// DPI : Dots Per Inch 
 	float m_fDpiX = 96.f;

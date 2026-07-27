@@ -352,13 +352,7 @@ TextHandle TextRenderer::CacheText(Font::ID fontID, const wstring& wstrText)
 		return {};
 	}
 
-	TransitionAtlasToRenderTarget();
 	hr = m_TextAtlas->DrawTextToAtlas(layout, rect.x, rect.y);
-
-	auto pAtlasRes = m_TextAtlas->GetRenderTarget().GetResource();
-	if (pAtlasRes) {
-		pAtlasRes->GetCurrentStateRef() = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-	}
 
 	if (FAILED(hr)) {
 		m_TextAtlas->FreeAtlasRect(rect);
@@ -403,14 +397,7 @@ HRESULT TextRenderer::UpdateCachedText(OUT CachedText& cachedText)
 
 	// 1. Recycle rect if fits
 	if (bFitsInPlace) {
-		TransitionAtlasToRenderTarget();
 		hr = m_TextAtlas->DrawTextToAtlas(layout, cachedText.Rect.x, cachedText.Rect.y);
-
-		auto pAtlasRes = m_TextAtlas->GetRenderTarget().GetResource();
-		if (pAtlasRes) {
-			pAtlasRes->GetCurrentStateRef() = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-		}
-
 
 		if (FAILED(hr)) {
 			__debugbreak();
@@ -455,14 +442,7 @@ HRESULT TextRenderer::UpdateCachedText(OUT CachedText& cachedText)
 	}
 
 	// 3. Reallocation successful, draw new text
-	TransitionAtlasToRenderTarget();
 	hr = m_TextAtlas->DrawTextToAtlas(layout, newRect.x, newRect.y);
-
-	auto pAtlasRes = m_TextAtlas->GetRenderTarget().GetResource();
-	if (pAtlasRes) {
-		pAtlasRes->GetCurrentStateRef() = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-	}
-
 
 	if (FAILED(hr)) {
 		__debugbreak();
@@ -501,8 +481,6 @@ HRESULT TextRenderer::RebuildAtlas()
 		return E_FAIL;
 	}
 
-	TransitionAtlasToRenderTarget();
-
 	m_TextAtlas->Reset();
 	hr = m_TextAtlas->Clear();
 	if (FAILED(hr)) {
@@ -539,7 +517,6 @@ HRESULT TextRenderer::RebuildAtlas()
 			return E_FAIL;
 		}
 
-		TransitionAtlasToRenderTarget();
 		hr = m_TextAtlas->DrawTextToAtlas(layout, rect.x, rect.y);
 		if (FAILED(hr)) {
 			__debugbreak();
@@ -549,25 +526,8 @@ HRESULT TextRenderer::RebuildAtlas()
 		cached.Rect = rect;
 		cached.bDirty = false;
 	}
-	
-	auto pAtlasRes = m_TextAtlas->GetRenderTarget().GetResource();
-	if (pAtlasRes) {
-		pAtlasRes->GetCurrentStateRef() = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-	}
 
 	return hr;
-}
-
-void TextRenderer::TransitionAtlasToRenderTarget()
-{
-	const auto& pAtlasTex = m_TextAtlas->GetRenderTarget().GetResource();
-	if (!pAtlasTex) return;
-
-	RENDER->ImmediateStateTransition(
-		pAtlasTex->GetResourcePtr().Get(),
-		pAtlasTex->GetCurrentStateRef(),
-		D3D12_RESOURCE_STATE_RENDER_TARGET
-	);
 }
 
 HRESULT TextRenderer::InitializeD3D11On12(const ComPtr<ID3D12CommandQueue>& pd3dCommandQueue)

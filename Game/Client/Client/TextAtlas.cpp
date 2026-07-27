@@ -142,6 +142,20 @@ HRESULT TextAtlas::DrawTextToAtlas(const TextLayout& layout, uint32 unAtlasX, ui
 	const ComPtr<ID2D1DeviceContext2>& pd2dDeviceContext = textRenderer.GetD2DDeviceContext();
 	const ComPtr<ID2D1SolidColorBrush>& pBrush = textRenderer.GetBrush();
 
+	// AcquireWrappedResources는 아틀라스가 실제로 InState(RENDER_TARGET)일 때만 유효 —
+	// 전이와 상태 장부 갱신은 호출자가 아니라 여기서 책임진다.
+	const auto& pAtlasRes = m_RenderTarget.GetResource();
+	if (!pAtlasRes) {
+		__debugbreak();
+		return E_FAIL;
+	}
+
+	RENDER->ImmediateStateTransition(
+		pAtlasRes->GetResourcePtr(),
+		pAtlasRes->GetCurrentStateRef(),
+		D3D12_RESOURCE_STATE_RENDER_TARGET
+	);
+
 	// 1. AcquireWrappedResource()
 	ID3D11Resource* ppd3d11Resources[] = { m_pWrapped11Resource.Get() };
 	pd3d11On12Device->AcquireWrappedResources(ppd3d11Resources, 1);
@@ -193,6 +207,9 @@ HRESULT TextAtlas::DrawTextToAtlas(const TextLayout& layout, uint32 unAtlasX, ui
 	// 9. Flush D3D11 device context
 	pd3d11DeviceContext->Flush();
 
+	// ReleaseWrappedResources가 GPU 상태를 OutState(PIXEL_SHADER_RESOURCE)로 되돌리므로 장부도 즉시 일치시킨다.
+	pAtlasRes->GetCurrentStateRef() = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+
 	if (FAILED(hr)) {
 		__debugbreak();
 		return hr;
@@ -215,6 +232,20 @@ HRESULT TextAtlas::Clear()
 	const ComPtr<ID2D1DeviceContext2>& pd2dDeviceContext = RENDER->GetTextRenderer().GetD2DDeviceContext();
 	const ComPtr<ID2D1SolidColorBrush>& pBrush = RENDER->GetTextRenderer().GetBrush();
 
+	// AcquireWrappedResources는 아틀라스가 실제로 InState(RENDER_TARGET)일 때만 유효 —
+	// 전이와 상태 장부 갱신은 호출자가 아니라 여기서 책임진다.
+	const auto& pAtlasRes = m_RenderTarget.GetResource();
+	if (!pAtlasRes) {
+		__debugbreak();
+		return E_FAIL;
+	}
+
+	RENDER->ImmediateStateTransition(
+		pAtlasRes->GetResourcePtr(),
+		pAtlasRes->GetCurrentStateRef(),
+		D3D12_RESOURCE_STATE_RENDER_TARGET
+	);
+
 	ID3D11Resource* ppd3d11Resources[] = { m_pWrapped11Resource.Get() };
 	pd3d11On12Device->AcquireWrappedResources(ppd3d11Resources, 1);
 
@@ -226,6 +257,9 @@ HRESULT TextAtlas::Clear()
 
 	pd3d11On12Device->ReleaseWrappedResources(ppd3d11Resources, 1);
 	pd3d11DeviceContext->Flush();
+
+	// ReleaseWrappedResources가 GPU 상태를 OutState(PIXEL_SHADER_RESOURCE)로 되돌리므로 장부도 즉시 일치시킨다.
+	pAtlasRes->GetCurrentStateRef() = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
 	if (FAILED(hr)) {
 		__debugbreak();
