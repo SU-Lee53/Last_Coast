@@ -492,7 +492,9 @@ void RenderManager::Render()
 	RenderPassInput input{};
 	m_RenderGraph.Run(descHandle, pd3dCommandList, input);
 
-	GUI->Render(pd3dCommandList);
+	if (GUI->IsOn()) {
+		GUI->Render(pd3dCommandList);
+	}
 
 	OnPostRender();
 	Present();
