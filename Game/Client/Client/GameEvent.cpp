@@ -286,7 +286,7 @@ const EnvironmentPreset& GetEnvironmentPreset(int presetId)
 		p.fVignetteSoftness  = 0.62f;
 		p.fChromaticAberration = 2.50f;
 		p.fHalationStrength    = 0.62f;
-		p.fLightShaftIntensity = 0.42f;
+		p.fLightShaftIntensity = 0.47f;
 		p.fLightShaftDensity   = 0.80f;
 		p.fLightShaftWeight    = 0.05f;
 		p.fLightShaftExposure  = 0.80f;
