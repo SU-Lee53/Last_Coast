@@ -17,6 +17,8 @@ void LobbyScene::BuildObjects()
 
 	m_pPlayer = std::make_shared<NetworkOwnerThirdPersonPlayer>();
 	m_pPlayer->Initialize();
+	if (m_nCurModelIndex < static_cast<int32>(GameContext::g_unCharacterModels))
+		static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)->SetPlayerModel(GameContext::g_strCharacterNames[m_nCurModelIndex]);
 	static_pointer_cast<IThirdPersonPlayer>(m_pPlayer)->GiveWeapon((WEAPON_TYPE)m_nWeapon1Index);
 
 	m_pViewCamera = std::make_shared<Camera>();
@@ -236,6 +238,13 @@ void LobbyScene::BuildObjects()
 
 void LobbyScene::OnEnterScene()
 {
+	// 이전 로비에서 저장한 선택 복원 (게임 종료 후 씬 재구성 시 기본값으로 리셋되는 것 방지).
+	// OnEnterScene은 BuildObjects보다 먼저 불리므로 이후 프리뷰/UI 초기화가 복원값을 쓴다.
+	const GameContext::GameData& savedData = GCTX->GetGameData();
+	m_nCurModelIndex = savedData.m_nCurModelIndex;
+	m_nWeapon1Index = savedData.m_nWeapon1Index;
+	m_nWeapon2Index = savedData.m_nWeapon2Index;
+
 	// 로비 진입 시 본인 캐릭터/무기 선택을 서버에 1회 통지 (이미 접속한 다른 클라에 반영 + 서버 기본값 보정)
 	if (NETWORK->IsConnected() && !NETWORK->IsOffline()) {
 		NETWORK->SendPlayerCharacter(static_cast<unsigned char>(m_nCurModelIndex));
@@ -274,6 +283,49 @@ void LobbyScene::ProcessInput()
 
 }
 
+void LobbyScene::TryAddPreviewPlayer(const PlayerJoinEvent& ev)
+{
+	auto it = std::find_if(m_ActivePreviews.begin(), m_ActivePreviews.end(), [&](const LobbyPreviewPlayer& p) { return p.nPlayerId == ev.playerId; });
+	if (it != m_ActivePreviews.end()) return;
+
+	int slot = -1;
+	for (int i = 0; i < 3; ++i) {
+		bool bUsed = false;
+		for (const auto& p : m_ActivePreviews) {
+			if (p.nSlotIndex == i) { bUsed = true; break; }
+		}
+		if (!bUsed) { slot = i; break; }
+	}
+	if (slot == -1) return;
+
+	LobbyPreviewPlayer newPreview;
+	newPreview.nPlayerId = ev.playerId;
+	newPreview.nSlotIndex = slot;
+
+	newPreview.pPlayer = std::make_shared<NetworkRemoteThirdPersonPlayer>();
+	newPreview.pPlayer->Initialize();
+	newPreview.pPlayer->GetTransform()->SetPosition(m_PreviewTransforms[slot].v3Position);
+	newPreview.pPlayer->GetTransform()->SetRotation(m_PreviewTransforms[slot].v3Orientation);
+	newPreview.pPlayer->GiveWeapon((WEAPON_TYPE)ev.weaponType);
+	if (ev.characterType < GameContext::g_unCharacterModels)
+		newPreview.pPlayer->SetPlayerModel(GameContext::g_strCharacterNames[ev.characterType]);
+	AddObject(newPreview.pPlayer);
+
+	newPreview.wstrUsername = ::StringToWString(ev.username);
+	newPreview.bReady = ev.bReady;   // 기존 인원의 현재 레디 상태 반영 (late-join)
+	newPreview.pNameTag = std::make_shared<TextBox>(L"Noto Sans KR");
+	newPreview.pNameTag->SetText(newPreview.wstrUsername + (ev.bReady ? L"  [READY]" : L""));
+	if (ev.bReady)
+		newPreview.pNameTag->SetColor(Vector3{ 0.4f, 1.0f, 0.4f });
+	newPreview.pNameTag->SetLayer(0);
+	newPreview.pNameTag->SetAnchor(Vector2{ 0.0f, 0.0f });
+	newPreview.pNameTag->SetPivot(Vector2{ 0.5f, 0.5f });
+	newPreview.pNameTag->SetTextHeight(30.f);
+	m_pUIBoard->InsertUI(newPreview.pNameTag);
+
+	m_ActivePreviews.push_back(newPreview);
+}
+
 void LobbyScene::Update()
 {
 	if (INPUT->GetButtonDown(VK_ESCAPE)) {
@@ -305,48 +357,16 @@ void LobbyScene::Update()
 	ImGui::End();
 
 	if (NETWORK->IsConnected() && !NETWORK->IsOffline()) {
-		for (auto& ev : NETWORK->ConsumePlayerJoins()) {
-			auto it = std::find_if(m_ActivePreviews.begin(), m_ActivePreviews.end(), [&](const LobbyPreviewPlayer& p) { return p.nPlayerId == ev.playerId; });
-			if (it != m_ActivePreviews.end()) continue;
-
-			int slot = -1;
-			for (int i = 0; i < 3; ++i) {
-				bool bUsed = false;
-				for (const auto& p : m_ActivePreviews) {
-					if (p.nSlotIndex == i) { bUsed = true; break; }
-				}
-				if (!bUsed) { slot = i; break; }
-			}
-
-			if (slot != -1) {
-				LobbyPreviewPlayer newPreview;
-				newPreview.nPlayerId = ev.playerId;
-				newPreview.nSlotIndex = slot;
-
-				newPreview.pPlayer = std::make_shared<NetworkRemoteThirdPersonPlayer>();
-				newPreview.pPlayer->Initialize();
-				newPreview.pPlayer->GetTransform()->SetPosition(m_PreviewTransforms[slot].v3Position);
-				newPreview.pPlayer->GetTransform()->SetRotation(m_PreviewTransforms[slot].v3Orientation);
-				newPreview.pPlayer->GiveWeapon((WEAPON_TYPE)ev.weaponType);
-				if (ev.characterType < GameContext::g_unCharacterModels)
-					newPreview.pPlayer->SetPlayerModel(GameContext::g_strCharacterNames[ev.characterType]);
-				AddObject(newPreview.pPlayer);
-
-				newPreview.wstrUsername = ::StringToWString(ev.username);
-				newPreview.bReady = ev.bReady;   // 기존 인원의 현재 레디 상태 반영 (late-join)
-				newPreview.pNameTag = std::make_shared<TextBox>(L"Noto Sans KR");
-				newPreview.pNameTag->SetText(newPreview.wstrUsername + (ev.bReady ? L"  [READY]" : L""));
-				if (ev.bReady)
-					newPreview.pNameTag->SetColor(Vector3{ 0.4f, 1.0f, 0.4f });
-				newPreview.pNameTag->SetLayer(0);
-				newPreview.pNameTag->SetAnchor(Vector2{ 0.0f, 0.0f });
-				newPreview.pNameTag->SetPivot(Vector2{ 0.5f, 0.5f });
-				newPreview.pNameTag->SetTextHeight(30.f);
-				m_pUIBoard->InsertUI(newPreview.pNameTag);
-
-				m_ActivePreviews.push_back(newPreview);
-			}
+		// 게임 종료 후 로비 재진입: 방 멤버는 그대로인데 서버는 ADD_PLAYER를 다시 보내지 않는다.
+		// 조인 큐 대신 보존 맵 스냅샷으로 기존 멤버 프리뷰를 1회 복원 (GameScene 리모트 재구성과 동일 방식)
+		if (!m_bPreviewsSeeded) {
+			m_bPreviewsSeeded = true;
+			for (auto& ev : NETWORK->GetRoomPlayersSnapshot())
+				TryAddPreviewPlayer(ev);
 		}
+
+		for (auto& ev : NETWORK->ConsumePlayerJoins())
+			TryAddPreviewPlayer(ev);
 
 		for (auto id : NETWORK->ConsumePlayerLeaves()) {
 			auto it = std::find_if(m_ActivePreviews.begin(), m_ActivePreviews.end(), [&](const LobbyPreviewPlayer& p) { return p.nPlayerId == id; });

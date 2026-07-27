@@ -671,6 +671,13 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		if (size < static_cast<int>(sizeof(S2C_ReadyState))) return;
 		auto* p = reinterpret_cast<const S2C_ReadyState*>(data);
 		m_PendingReadyStates.push(ReadyStateEvent{ p->playerId, p->bReady });
+		{
+			// 무기/캐릭터와 동일 — 스냅샷이 낡으면 게임 종료 후 로비 프리뷰 시딩이
+			// 이전 판의 [READY] 표시를 달고 생성된다
+			std::lock_guard<std::mutex> lk(m_RoomPlayersMutex);
+			if (auto it = m_RoomPlayers.find(p->playerId); it != m_RoomPlayers.end())
+				it->second.bReady = p->bReady != 0;
+		}
 		break;
 	}
 	case S2C_GAME_START: {
