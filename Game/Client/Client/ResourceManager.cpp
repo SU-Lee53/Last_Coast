@@ -70,6 +70,8 @@ IndexBuffer ResourceManager::CreateIndexBuffer(const std::vector<UINT>& Indices)
 		Buffer.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
 		cmdList->AddPendingUploadBuffer(pUploadBuffer);
+		// 목적지 버퍼도 카피 완료까지 수명 고정 (조기 해제 → GPU 페이지폴트 방지)
+		cmdList->AddPendingUploadBuffer(Buffer.pResource);
 		ExcuteCommandList(*cmdList);
 	}
 
@@ -132,6 +134,8 @@ ComPtr<ID3D12Resource> ResourceManager::CreateBufferResource(void* pData, UINT n
 
 			cmdList->pd3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(pd3dBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, d3dResourceStates));
 			cmdList->AddPendingUploadBuffer(pUploadBuffer);
+			// 목적지 버퍼도 카피 완료까지 수명 고정 (조기 해제 → GPU 페이지폴트 방지)
+			cmdList->AddPendingUploadBuffer(pd3dBuffer);
 			ExcuteCommandList(*cmdList);
 
 			break;

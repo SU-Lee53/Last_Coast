@@ -930,6 +930,9 @@ void TextureManager::UpdateResources(ComPtr<ID3D12Resource> pResource, D3D12_RES
 		);
 	}
 	cmdList->AddPendingUploadBuffer(pd3dUploadBuffer);
+	// 목적지 텍스처도 카피 완료(펜스)까지 수명 고정 — 씬 전환 등으로 먼저 해제되면
+	// GPU 카피가 해제된 메모리에 쓰다 페이지폴트(Device Removed)
+	cmdList->AddPendingUploadBuffer(pResource);
 	ExcuteCommandList(*cmdList);
 }
 
