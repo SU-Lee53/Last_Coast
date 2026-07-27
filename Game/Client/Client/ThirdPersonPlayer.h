@@ -180,7 +180,7 @@ public:
 	void StopBandageAction();		// public: 리모트 붕대 모션 종료(취소/완료 패킷)에도 사용
 	void PlayBandageHoldAction();	// public: 리모트 붕대 들기 (총 내림 + 꺼내는 모션) — state 3
 	void PlayBandageUnholdAction();	// public: 리모트 붕대 내리기 (총 복귀 + 꺼내는 모션) — state 4
-	void PlayGrenadeEquipAction();		// public: 리모트 수류탄 들기 (총 내림) — state 3
+	void PlayGrenadeEquipAction(bool bDecoy = false);	// public: 리모트 수류탄 들기 (총 내림) — state 3, grenadeType으로 손 모델 결정
 	void PlayGrenadeUnequipAction();	// public: 리모트 수류탄 내리기 (총 복귀) — state 4
 	void PlayGrenadeWindupAction();		// public: 리모트 와인드업 ("Grenade Hold" 몽타주) — state 2
 	void PlayGrenadeThrowAction();		// public: 리모트 던지기 ("Grenade Throw" 몽타주) — state 0

@@ -2,6 +2,7 @@
 #include "Network.h"
 #include "Room.h"
 #include "GameWorld.h"
+#include "PacketHandlers.h"
 
 namespace
 {
@@ -87,7 +88,7 @@ void Network::Disconnect(int id)
 				if (other_id == -1) continue;
 				clients[other_id].send_host_change(room->host_id);
 			}
-			WORLD->GetHandlers().TryBeginGame(room);
+			PacketHandlers::TryBeginGame(room);
 		}
 
 		closesocket(cl.m_client);

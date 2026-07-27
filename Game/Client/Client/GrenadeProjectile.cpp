@@ -14,7 +14,8 @@ void GrenadeProjectile::Initialize()
 		}
 	}
 
-	auto pModel = MODEL->LoadOrGet("granade")->CopyObject<NodeObject>();
+	// SetDecoy를 Initialize보다 먼저 호출해야 종류별 모델이 적용된다 (GameScene::SpawnGrenade)
+	auto pModel = MODEL->LoadOrGet(m_bDecoy ? "stun_grenade" : "granade")->CopyObject<NodeObject>();
 	pModel->GetTransform()->Scale(MODEL_SCALE);
 	SetChild(pModel);
 

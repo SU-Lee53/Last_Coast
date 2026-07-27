@@ -9,6 +9,7 @@ ConnectState m_connectState = ConnectState::None;
 NetworkManager::~NetworkManager()
 {
 	Disconnect();
+	WSACleanup();	// WSAStartup(Initialize) 1회에 대응 — 앱 종료 시 단 한 번만
 }
 
 void NetworkManager::Initialize()
@@ -33,6 +34,17 @@ void NetworkManager::ConnectToServer()
 	{
 		if (m_bConnectRequested) {
 			m_bConnectRequested = false;
+
+			// 로그아웃(Disconnect)이 소켓을 닫으므로 재접속 시 새로 생성
+			if (m_hClientSocket == INVALID_SOCKET) {
+				m_hClientSocket = WSASocket(AF_INET, SOCK_STREAM, 0, 0, 0, WSA_FLAG_OVERLAPPED);
+				if (m_hClientSocket == INVALID_SOCKET) {
+					m_connectState = ConnectState::Failed;
+					m_strErrorLog = err_display("WSASocket()");
+					return;
+				}
+			}
+
 			sockaddr_in serveraddr;
 			memset(&serveraddr, 0, sizeof(serveraddr));
 			serveraddr.sin_family = AF_INET;
@@ -119,12 +131,28 @@ ConnectState NetworkManager::GetConnectState() const
 	return m_connectState;
 }
 
+// 소켓/스레드 정리는 이 함수(메인 스레드)만 수행한다.
+// 네트워크 스레드(recv_callback/ProcessNetwork)는 m_bConnected 플래그만 내리고
+// 스스로 종료할 뿐 절대 여기로 들어오지 않는다 — 과거 양쪽에서 중복 호출되며
+// CloseHandle/closesocket 이중 해제로 크래시하던 구조를 단일 소유로 정리.
+// 멱등: 이미 정리된 상태에서 다시 불려도(로그아웃 후 소멸자 등) 아무것도 안 한다.
 void NetworkManager::Disconnect()
 {
 	m_bConnected = false;
-	CloseHandle(g_hNetworkThread);
-	closesocket(m_hClientSocket);
-	WSACleanup();
+	m_connectState = ConnectState::None;
+
+	if (m_hClientSocket != INVALID_SOCKET) {
+		closesocket(m_hClientSocket);	// 걸려 있던 비동기 수신이 에러로 완료 → 스레드 루프 탈출 촉진
+		m_hClientSocket = INVALID_SOCKET;
+	}
+
+	if (g_hNetworkThread) {
+		WaitForSingleObject(g_hNetworkThread, 1000);	// 스레드가 SleepEx 루프를 빠져나올 때까지 대기 (최대 1초)
+		CloseHandle(g_hNetworkThread);
+		g_hNetworkThread = nullptr;
+	}
+
+	m_nRecvPending = 0;	// 재접속 시 이전 세션의 반쪽 패킷 잔여물 제거
 }
 
 void NetworkManager::SendLogin(const std::string& id, const std::string& pw)
@@ -208,8 +236,36 @@ void NetworkManager::SendLeaveRoom()
 		std::lock_guard<std::mutex> lk(m_RoomPlayersMutex);
 		m_RoomPlayers.clear();
 	}
-	m_PendingPlayerJoins.empty();
-	m_PendingPlayerLeaves.empty();
+
+	// 이전 방/판의 미소비 이벤트 폐기 — 남겨두면 다음 판 GameScene이 이전 판의
+	// 스폰/공격 등을 소비해 유령 좀비가 생긴다. (기존 .empty() 호출은 비우기가 아니라
+	// 비었는지 묻기만 하는 no-op 버그였음)
+	auto fnDrain = [](auto& queue) {
+		typename std::decay_t<decltype(queue)>::value_type ev;
+		while (queue.try_pop(ev)) {}
+	};
+	fnDrain(m_PendingPlayerJoins);
+	fnDrain(m_PendingPlayerLeaves);
+	fnDrain(m_PendingSpawns);
+	fnDrain(m_PendingDespawns);
+	fnDrain(m_PendingAttacks);
+	fnDrain(m_PendingShootResults);
+	fnDrain(m_PendingPlayerTransforms);
+	fnDrain(m_PendingPlayerReloads);
+	fnDrain(m_PendingPlayerMelees);
+	fnDrain(m_PendingMeleeHits);
+	fnDrain(m_PendingChatMessages);
+	fnDrain(m_PendingPlayerWeapons);
+	fnDrain(m_PendingPlayerCharacters);
+	fnDrain(m_PendingGameEvents);
+	fnDrain(m_PendingReadyStates);
+	fnDrain(m_PendingPlayerDeaths);
+	fnDrain(m_PendingPlayerRespawns);
+	fnDrain(m_PendingPlayerBandages);
+	fnDrain(m_PendingPlayerHeals);
+	fnDrain(m_PendingPlayerGrenades);
+	fnDrain(m_PendingGrenadeHits);
+
 	m_nJoinedRoomId = -1;
 	m_strJoinedRoomName = "";
 }
@@ -297,7 +353,10 @@ void NetworkManager::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED o
 	NetworkManager* N = NetworkManager::GetInstance();
 
 	if (num_bytes == 0 || err != 0) {
-		N->Disconnect();
+		// 연결 종료/오류 — 플래그만 내리고 ProcessNetwork 루프가 자연 종료되게 둔다.
+		// 소켓/스레드 핸들 정리는 메인 스레드 Disconnect() 단독 (이중 해제 크래시 방지)
+		N->m_bConnected = false;
+		m_connectState = ConnectState::None;
 		return;
 	}
 	//// 다시 수신 대기 (핑퐁 제거, 계속해서 Recv만 돌림)
@@ -612,6 +671,13 @@ void NetworkManager::ProcessSinglePacket(const char* data, int size)
 		if (size < static_cast<int>(sizeof(S2C_ReadyState))) return;
 		auto* p = reinterpret_cast<const S2C_ReadyState*>(data);
 		m_PendingReadyStates.push(ReadyStateEvent{ p->playerId, p->bReady });
+		{
+			// 무기/캐릭터와 동일 — 스냅샷이 낡으면 게임 종료 후 로비 프리뷰 시딩이
+			// 이전 판의 [READY] 표시를 달고 생성된다
+			std::lock_guard<std::mutex> lk(m_RoomPlayersMutex);
+			if (auto it = m_RoomPlayers.find(p->playerId); it != m_RoomPlayers.end())
+				it->second.bReady = p->bReady != 0;
+		}
 		break;
 	}
 	case S2C_GAME_START: {
@@ -866,6 +932,30 @@ std::vector<GameEventMsg> NetworkManager::ConsumeGameEvents()
 	while (m_PendingGameEvents.try_pop(ev))
 		out.push_back(ev);
 	return out;
+}
+
+// ── 판 단위 상태 리셋 (게임씬 진입 시) ──────────────────────────────────────
+void NetworkManager::ResetGameSessionState()
+{
+	// 탈출 시퀀스 — 이전 판의 phase=1(탈출가능)이 남으면 새 판 HUD가 바로 "F 탈출"을 띄운다
+	m_nEscapePhase.store(-1);
+	m_fEscapeRemain.store(0.f);
+	m_bPendingGameEnd.store(false);
+
+	// 좀비 상태/이벤트 — 새 판은 좀비 id를 0부터 재사용하므로 이전 판 상태가 오염원이 된다.
+	// 이 시점(로딩 직후, 서버 StartGame 이전)엔 서버가 게임 패킷을 보내지 않아 경합 없음.
+	m_ZombieStates.clear();
+	auto fnDrain = [](auto& queue) { typename std::remove_reference_t<decltype(queue)>::value_type tmp; while (queue.try_pop(tmp)) {} };
+	fnDrain(m_PendingSpawns);
+	fnDrain(m_PendingDespawns);
+	fnDrain(m_PendingAttacks);
+	fnDrain(m_PendingShootResults);
+	fnDrain(m_PendingMeleeHits);
+	fnDrain(m_PendingGameEvents);
+	fnDrain(m_PendingPlayerDeaths);
+	fnDrain(m_PendingPlayerRespawns);
+	fnDrain(m_PendingPlayerHeals);
+	fnDrain(m_PendingGrenadeHits);
 }
 
 // ── 탈출 시퀀스 (서버 권위) ──────────────────────────────────────────────────
@@ -1209,9 +1299,8 @@ DWORD WINAPI NetworkManager::ProcessNetwork(LPVOID arg)
 	self->ReceiveData();
 
 	while (self->m_bConnected)
-		SleepEx(100, true);
+		SleepEx(100, true);	// alertable — recv_callback APC가 이 안에서 실행됨
 
-	self->Disconnect();
-
+	// 정리는 메인 스레드 Disconnect()가 담당 — 여기서 핸들을 건드리면 이중 해제
 	return 0;
 }

@@ -12,6 +12,7 @@
 
 interface IThirdPersonPlayer;
 class TextButton;
+struct PlayerJoinEvent;
 
 class LobbyScene : public Scene {
 public:
@@ -22,7 +23,12 @@ public:
 	void Update() override;
 
 private:
+	// 프리뷰가 없는 방 멤버를 빈 슬롯에 생성 (이미 있으면 no-op)
+	void TryAddPreviewPlayer(const PlayerJoinEvent& ev);
+
 	bool m_bReadyState = false;
+	// 게임 종료 후 재진입 시 조인 큐가 비어 있으므로 방 멤버 스냅샷으로 1회 시딩
+	bool m_bPreviewsSeeded = false;
 
 	std::shared_ptr<Camera> m_pViewCamera = nullptr;
 	std::shared_ptr<Camera> m_pSwappedPlayerCamera = nullptr;

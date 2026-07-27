@@ -89,8 +89,8 @@ void CombatSystem::ResolveShoot(Session& shooter, const C2S_PlayerShoot& pkt)
 		result.hitNormalZ = staticHit.v3HitNormal.z;
 	}
 
-	// ── 4. 전체 클라이언트에 결과 브로드캐스트 ──────────────────────────
-	BroadcastAll([&](Session& cl) { cl.send_packet(S2C_SHOOT_RESULT, result); });
+	// ── 4. 같은 방 클라이언트에 결과 브로드캐스트 ────────────────────────
+	BroadcastRoom(shooter.m_room, [&](Session& cl) { cl.send_packet(S2C_SHOOT_RESULT, result); });
 }
 
 void CombatSystem::ResolveMelee(Session& attacker, const C2S_PlayerMelee& pkt)
@@ -104,14 +104,14 @@ void CombatSystem::ResolveMelee(Session& attacker, const C2S_PlayerMelee& pkt)
 	float fHitDist     = MELEE_RANGE;
 	m_Zombies.RayTestZombies(v3Origin, v3Dir, MELEE_RANGE, nHitZombieId, fHitDist);
 
-	// 근접공격 모션을 전체 클라이언트에 브로드캐스트 (리모트 애니메이션)
-	BroadcastAll([&](Session& cl) { cl.send_player_melee(attacker.m_id); });
+	// 근접공격 모션을 같은 방 클라이언트에 브로드캐스트 (리모트 애니메이션)
+	BroadcastRoom(attacker.m_room, [&](Session& cl) { cl.send_player_melee(attacker.m_id); });
 
 	// 히트 시 데미지 적용 + 피 이펙트 브로드캐스트
 	if (nHitZombieId >= 0)
 	{
 		m_Zombies.ApplyDamageToZombie(nHitZombieId, MELEE_DAMAGE);
 		Vector3 v3Hit = v3Origin + v3Dir * fHitDist;
-		BroadcastAll([&](Session& cl) { cl.send_melee_hit(attacker.m_id, nHitZombieId, MELEE_DAMAGE, v3Hit); });
+		BroadcastRoom(attacker.m_room, [&](Session& cl) { cl.send_melee_hit(attacker.m_id, nHitZombieId, MELEE_DAMAGE, v3Hit); });
 	}
 }

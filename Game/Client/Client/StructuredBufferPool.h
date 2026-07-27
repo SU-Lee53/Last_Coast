@@ -72,6 +72,18 @@ inline StructuredBuffer StructuredBufferPool::Allocate(uint32 unNumElements)
 	m_unOffset = AlignUp(m_unOffset, unStride);
 	assert(m_unOffset % unStride == 0);
 
+	// 프레임 풀 초과 — 초과분은 버퍼 밖 SRV/쓰기가 되어 GPU 페이지폴트(Device Removed)로 이어진다.
+	// 여기서 즉시 잡고, 최소한의 방어로 풀 시작을 재사용해 OOB만은 막는다 (그 프레임 시각 깨짐 감수).
+	if (m_unOffset + unBytes > m_unTotalBytes || m_unViewCount >= m_unMaxViews) {
+		char szBuf[160];
+		sprintf_s(szBuf, "[StructuredBufferPool] OVERFLOW! offset=%u + %u > total=%u, views=%u/%u\n",
+			m_unOffset, unBytes, m_unTotalBytes, m_unViewCount, m_unMaxViews);
+		OutputDebugStringA(szBuf);
+		__debugbreak();
+		m_unOffset = 0;
+		m_unViewCount = 0;
+	}
+
 	CD3DX12_CPU_DESCRIPTOR_HANDLE CPUHandle(m_pd3dDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 	CPUHandle.Offset(m_unViewCount, D3DCore::g_nCBVSRVDescriptorIncrementSize);
 

@@ -111,7 +111,7 @@ void GameContext::LoadGameSounds()
 	SOUND->AddSound("shotgun_shot_close", strSoundPath + "Shotgun/shotgun_fire.wav", false, true, SoundCategory::SFX);
 	//SOUND->AddSound("shotgun_shot_distant", strSoundPath + "Shotgun/SW_Weapons_Shotgun_Noise-Interior-Distant_01.wav", false, true, SoundCategory::SFX);
 	SOUND->AddSound("shotgun_on_reload", strSoundPath + "Shotgun/SW_Weapons_Shotgun_ClipIn_01.wav", false, true, SoundCategory::SFX);
-	SOUND->AddSound("shotgun_mid_reload", strSoundPath + "Rifle/SW_Weapons_Shotgun_ClipOut_01.wav", false, true, SoundCategory::SFX);
+	SOUND->AddSound("shotgun_mid_reload", strSoundPath + "Shotgun/SW_Weapons_Shotgun_ClipOut_01.wav", false, true, SoundCategory::SFX);
 	SOUND->AddSound("shotgun_end_reload", strSoundPath + "Shotgun/shotgun_trimmed_longtail.wav", false, true, SoundCategory::SFX);
 	
 	// Pistol
@@ -126,7 +126,8 @@ void GameContext::LoadGameSounds()
 	SOUND->AddSound("impact_on_object", strSoundPath + "Impacts/SW_ImpactPlasterDebris_01.wav", false, true, SoundCategory::SFX);
 
 	// Impact
-	SOUND->AddSound("explosion", strSoundPath + "Explosive.wav", false, true, SoundCategory::SFX);
+	// 폭발은 큰 소리 — min을 넓게 잡아 15m까지 풀볼륨, 이후 완만히 감쇠 (기본 100cm면 20m서 5% 볼륨)
+	SOUND->AddSound("explosion", strSoundPath + "Explosive.wav", false, true, SoundCategory::SFX, 15_m, 300_m);
 	SOUND->AddSound("helicopter_crash", strSoundPath + "Helicopter/helicopter_crash.wav", false, true, SoundCategory::SFX, 100_m, 500_m);
 	SOUND->AddSound("helicopter_explosion", strSoundPath + "Helicopter/helicopter_explosion.wav", false, true, SoundCategory::SFX, 150_m, 500_m);
 	SOUND->AddSound("helicopter_landing", strSoundPath + "Helicopter/helicopter_landing.wav", false, true, SoundCategory::SFX, 100_m, 500_m);

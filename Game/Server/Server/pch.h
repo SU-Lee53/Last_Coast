@@ -67,7 +67,7 @@ private:											\
 
 #define GET_SINGLE(classname)	classname::GetInstance()
 
-#define WORLD		GET_SINGLE(GameWorld)
+#define SHARED		GET_SINGLE(ServerShared)
 #define GAMELOOP	GET_SINGLE(GameLoop)
 #define NETWORK		GET_SINGLE(Network)
 #define DB			GET_SINGLE(DBManager)

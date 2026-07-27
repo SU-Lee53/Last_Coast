@@ -42,7 +42,9 @@ public:
 		m_id = 999;
 		m_client = INVALID_SOCKET;
 		m_recv_over.m_iotype = IO_RECV;
+		// 0행렬 방지 — init()과 동일하게 단위행렬로 초기화 (클라 리모트 스폰 NaN 방지)
 		memset(&m_transform, 0, sizeof(m_transform));
+		m_transform.m[0][0] = m_transform.m[1][1] = m_transform.m[2][2] = m_transform.m[3][3] = 1.f;
 		m_prev_recv = 0;
 	}
 	~Session()
@@ -134,12 +136,18 @@ public:
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 전체 클라이언트 브로드캐스트 헬퍼 (워커/게임 틱 스레드 공용)
+// 방 단위 브로드캐스트 헬퍼 (워커/게임 틱 스레드 공용)
+// 게임 상태(좀비/전투/이벤트)는 방마다 독립 — 전체 브로드캐스트(BroadcastAll)는
+// 다른 방 게임에 패킷이 섞이므로 제거했다. 방이 없으면(로비 이전) no-op.
 // ─────────────────────────────────────────────────────────────────────────────
 template<typename Fn>
-void BroadcastAll(Fn fn)
+void BroadcastRoom(Room* room, Fn fn)
 {
-	for (auto& cl : clients)
+	if (!room) return;
+	for (int id : room->players) {
+		if (id == -1) continue;
+		Session& cl = clients[id];
 		if (cl.m_is_connected)
 			fn(cl);
+	}
 }
