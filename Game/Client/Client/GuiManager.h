@@ -22,6 +22,8 @@ public:
 
 	static void HelpMarker(const char* desc);
 
+	bool IsOn() const { return m_bDraw; }
+
 private:
 	std::unique_ptr<DescriptorHeap> m_pFontSrvDescriptorHeap = nullptr;
 

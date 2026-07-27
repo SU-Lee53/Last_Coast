@@ -1,0 +1,11 @@
+[2026-07-27 14:58:13] [DeviceRemoved] Present HRESULT=0x887A0005, reason=DXGI_ERROR_DEVICE_HUNG (0x887A0006)
+[DRED] list='MainCmdList3' queue='MainRenderQueue' stopped 127/130 ops: EndEvent BeginEvent EndEvent BeginEvent EndEvent BeginEvent* DrawInstanced EndEvent ResourceBarrier
+[2026-07-27 15:04:42] [DeviceRemoved] Present HRESULT=0x887A0005, reason=DXGI_ERROR_DEVICE_HUNG (0x887A0006)
+[DRED] list='MainCmdList0' queue='MainRenderQueue' stopped 127/130 ops: EndEvent BeginEvent EndEvent BeginEvent EndEvent BeginEvent* DrawInstanced EndEvent ResourceBarrier
+[2026-07-27 15:07:05] [DeviceRemoved] Present HRESULT=0x887A0005, reason=DXGI_ERROR_DEVICE_HUNG (0x887A0006)
+[DRED] list='MainCmdList1' queue='MainRenderQueue' stopped 136/139 ops: EndEvent BeginEvent EndEvent BeginEvent EndEvent BeginEvent* DrawInstanced EndEvent ResourceBarrier
+[2026-07-27 15:34:06] [DeviceRemoved] Present HRESULT=0x887A0005, reason=DXGI_ERROR_DEVICE_HUNG (0x887A0006)
+[DRED] list='?' queue='?' stopped 2/14 ops: op46 ResourceBarrier* CopyTextureRegion CopyTextureRegion CopyTextureRegion
+[DRED] PageFaultVA=0x00000003CFC8F000
+[DRED]   existing: '?' type=34
+[DRED]   recently freed: '?' type=34
