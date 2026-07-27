@@ -53,13 +53,13 @@ VS_STANDARD_OUTPUT VSForwardAnimated(VS_SKINNED_INPUT input)
 	}
 	
 	matrix mtxViewProjection = mul(gCamera.mtxView, gCamera.mtxProjection);
-	matrix mtxWorld = gWorldTransforms[nBoneTransformBase].mtxWorld;
+	matrix mtxWorld = gWorldTransforms[nWorldTransformBase].mtxWorld;
 	
 	float4 positionW = mul(float4(position, 1.f), mtxWorld);
 	output.positionW = positionW.xyz;
 	output.position = mul(positionW, mtxViewProjection);
 	
-	float3x3 mtxNormal = (float3x3) transpose(gWorldTransforms[nBoneTransformBase].mtxInvWorld);
+	float3x3 mtxNormal = (float3x3) transpose(gWorldTransforms[nWorldTransformBase].mtxInvWorld);
 	output.normalW = normalize(mul(normal, mtxNormal));
 	output.tangentW = normalize(mul(tangent, mtxNormal));
 	output.uv = input.uv;

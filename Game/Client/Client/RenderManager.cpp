@@ -981,8 +981,34 @@ void RenderManager::Present()
 	HRESULT hr{};
 	hr = m_pdxgiSwapChain->Present(unSyncInterval, unPresentFlags);
 
-	if (hr == DXGI_ERROR_DEVICE_REMOVED) {
-		auto hr = DEVICE->GetDeviceRemovedReason();
+	if (FAILED(hr)) {
+		const HRESULT hRemovedReason = DEVICE->GetDeviceRemovedReason();
+		const char* pszRemovedReason = "UNKNOWN";
+		switch (hRemovedReason) {
+		case DXGI_ERROR_DEVICE_HUNG:
+			pszRemovedReason = "DXGI_ERROR_DEVICE_HUNG";
+			break;
+		case DXGI_ERROR_DEVICE_REMOVED:
+			pszRemovedReason = "DXGI_ERROR_DEVICE_REMOVED";
+			break;
+		case DXGI_ERROR_DEVICE_RESET:
+			pszRemovedReason = "DXGI_ERROR_DEVICE_RESET";
+			break;
+		case DXGI_ERROR_DRIVER_INTERNAL_ERROR:
+			pszRemovedReason = "DXGI_ERROR_DRIVER_INTERNAL_ERROR";
+			break;
+		case DXGI_ERROR_INVALID_CALL:
+			pszRemovedReason = "DXGI_ERROR_INVALID_CALL";
+			break;
+		}
+
+		const std::string strError = std::format(
+			"Present failed. HRESULT=0x{:08X}, DeviceRemovedReason={} (0x{:08X})\n",
+			static_cast<uint32>(hr),
+			pszRemovedReason,
+			static_cast<uint32>(hRemovedReason)
+		);
+		::MessageBoxA(::GetActiveWindow(), strError.c_str(), "Direct3D 12 Device Removed", MB_OK | MB_ICONERROR);
 		__debugbreak();
 	}
 

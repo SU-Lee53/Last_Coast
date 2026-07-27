@@ -137,7 +137,7 @@ inline VertexBuffer ResourceManager::CreateVertexBuffer(const std::vector<T>& ve
 		{
 			cmdList->pd3dCommandList->CopyBufferRegion(Buffer.pResource.Get(), 0, pUploadBuffer.Get(), 0, VertexBufferSize);
 		}
-		Buffer.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_INDEX_BUFFER);
+		Buffer.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
 		cmdList->AddPendingUploadBuffer(pUploadBuffer);
 		ExcuteCommandList(*cmdList);

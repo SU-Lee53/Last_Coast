@@ -63,8 +63,8 @@ using TextHandle = ResourceHandle<TextCacheKey, CachedText, TextCacheKeyHasher>;
 
 class TextRenderer {
 public:
-	constexpr static uint32 g_unAtlasWidth = 2048;
-	constexpr static uint32 g_unAtlasHeight = 2048;
+	constexpr static uint32 g_unAtlasWidth = 4096;
+	constexpr static uint32 g_unAtlasHeight = 4096;
 
 public:
 	// Prevents copy

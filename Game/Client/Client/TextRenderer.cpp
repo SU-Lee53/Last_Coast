@@ -539,6 +539,7 @@ HRESULT TextRenderer::RebuildAtlas()
 			return E_FAIL;
 		}
 
+		TransitionAtlasToRenderTarget();
 		hr = m_TextAtlas->DrawTextToAtlas(layout, rect.x, rect.y);
 		if (FAILED(hr)) {
 			__debugbreak();
