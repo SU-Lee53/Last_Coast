@@ -15,8 +15,9 @@ static const std::string CHECKPOINT_JSON_PATH = "../../Client/Resources/Scenes/G
 
 int main()
 {
-	// ── 게임 월드 초기화 (NavMesh/스폰포인트/공격애니/정적OBB/체크포인트) ─────
-	WORLD->Initialize(NAVMESH_PATH, SPAWN_JSON_PATH, ATTACK_ANIM_PATH,
+	// ── 공유 자원 초기화 (정적 OBB 로드 + 방별 월드 생성용 리소스 경로 보관) ──
+	// NavMesh/스폰포인트/체크포인트는 방마다 게임 시작 시 GameWorld가 개별 로드한다.
+	SHARED->Initialize(NAVMESH_PATH, SPAWN_JSON_PATH, ATTACK_ANIM_PATH,
 		SCENE_JSON_PATH, MODEL_DIRECTORY, CHECKPOINT_JSON_PATH);
 
 	// ── DBManager 초기화 ────────────────────────────────────────────────────
@@ -39,7 +40,7 @@ int main()
 	for (auto& th : worker_threads)
 		th.join();
 
-	WORLD->Stop();
+	SHARED->Stop();
 	tickThread.join();
 	NETWORK->Shutdown();
 }

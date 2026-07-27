@@ -148,6 +148,16 @@ private:
 	Vector3 m_v3Pos;
 };
 
+// 디코이 수류탄 폭발 연출 — 화염 대신 알록달록 폭죽(DecoyExplosionEffect) 1회 재생 후 종료.
+class DecoyExplosionEvent : public IOneShotEvent {
+public:
+	DecoyExplosionEvent(const Vector3& v3Pos) : m_v3Pos{ v3Pos } {}
+	virtual void OnEnterEvent(Scene* pScene) override;
+
+private:
+	Vector3 m_v3Pos;
+};
+
 
 // ── 환경 프리셋 틀 ────────────────────────────────────────────────────────────
 // 한 이벤트로 화면 환경 전체(톤매핑 + 포스트FX + 안개 + 스카이박스 시간 + 글로벌 앰비언트)를

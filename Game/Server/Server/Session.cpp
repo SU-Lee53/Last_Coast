@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "Session.h"
 #include "GameWorld.h"
+#include "PacketHandlers.h"
 #include <concurrent_queue.h>
 
 std::array<Session, MAX_PLAYERS> clients;
@@ -31,7 +32,9 @@ void Session::init(SOCKET s, int id, Room* room)
 	m_client = s;
 	m_id = id;
 	m_is_connected = true;
+	// 0행렬은 스케일 0/분해 불능이라 클라가 리모트 스폰 시 NaN을 퍼뜨릴 수 있다 — 단위행렬로 초기화
 	memset(&m_transform, 0, sizeof(m_transform));
+	m_transform.m[0][0] = m_transform.m[1][1] = m_transform.m[2][2] = m_transform.m[3][3] = 1.f;
 	m_room = room;
 	m_prev_recv = 0;
 
@@ -76,70 +79,70 @@ void Session::do_send(int num_bytes, char* mess)
 // ─────────────────────────────────────────────────────────────────────────────
 bool Session::process_packet(unsigned char* p)
 {
-	PacketHandlers& handlers = WORLD->GetHandlers();
-	CombatSystem&   combat   = WORLD->GetCombat();
+	// 전투 판정은 방별 게임 월드의 CombatSystem — 월드가 없으면(로비/종료 후) 무시
+	auto pWorld = m_room ? m_room->get_world() : nullptr;
 
 	PACKET_TYPE type = *reinterpret_cast<PACKET_TYPE*>(&p[1]);
 	switch (type) {
 	case C2S_LOGIN:
-		handlers.Login(*this, *reinterpret_cast<C2S_Login*>(p));
+		PacketHandlers::Login(*this, *reinterpret_cast<C2S_Login*>(p));
 		break;
 	case C2S_REGISTER:
-		handlers.Register(*this, *reinterpret_cast<C2S_Register*>(p));
+		PacketHandlers::Register(*this, *reinterpret_cast<C2S_Register*>(p));
 		break;
 	case C2S_TRANSFORM:
-		handlers.Transform(*this, *reinterpret_cast<C2S_Transform*>(p));
+		PacketHandlers::Transform(*this, *reinterpret_cast<C2S_Transform*>(p));
 		break;
 	case C2S_PLAYER_SHOOT:
-		combat.ResolveShoot(*this, *reinterpret_cast<C2S_PlayerShoot*>(p));
+		if (pWorld) pWorld->GetCombat().ResolveShoot(*this, *reinterpret_cast<C2S_PlayerShoot*>(p));
 		break;
 	case C2S_PLAYER_MELEE:
-		combat.ResolveMelee(*this, *reinterpret_cast<C2S_PlayerMelee*>(p));
+		if (pWorld) pWorld->GetCombat().ResolveMelee(*this, *reinterpret_cast<C2S_PlayerMelee*>(p));
 		break;
 	case C2S_PLAYER_RELOAD:
-		handlers.Reload(*this);
+		PacketHandlers::Reload(*this);
 		break;
 	case C2S_PLAYER_BANDAGE:
-		handlers.Bandage(*this, *reinterpret_cast<C2S_PlayerBandage*>(p));
+		PacketHandlers::Bandage(*this, *reinterpret_cast<C2S_PlayerBandage*>(p));
 		break;
 	case C2S_PLAYER_GRENADE:
-		handlers.Grenade(*this, *reinterpret_cast<C2S_PlayerGrenade*>(p));
+		PacketHandlers::Grenade(*this, *reinterpret_cast<C2S_PlayerGrenade*>(p));
 		break;
 	case C2S_GRENADE_EXPLODE:
-		handlers.GrenadeExplode(*this, *reinterpret_cast<C2S_GrenadeExplode*>(p));
+		PacketHandlers::GrenadeExplode(*this, *reinterpret_cast<C2S_GrenadeExplode*>(p));
 		break;
 	case C2S_PLAYER_WEAPON:
-		handlers.Weapon(*this, *reinterpret_cast<C2S_PlayerWeapon*>(p));
+		PacketHandlers::Weapon(*this, *reinterpret_cast<C2S_PlayerWeapon*>(p));
 		break;
 	case C2S_PLAYER_CHARACTER:
-		handlers.Character(*this, *reinterpret_cast<C2S_PlayerCharacter*>(p));
+		PacketHandlers::Character(*this, *reinterpret_cast<C2S_PlayerCharacter*>(p));
 		break;
 	case C2S_PLAYER_ESCAPE:
-		handlers.Escape(*this);
+		PacketHandlers::Escape(*this);
 		break;
 	case C2S_CHAT:
-		handlers.Chat(*this, *reinterpret_cast<C2S_Chat*>(p));
+		PacketHandlers::Chat(*this, *reinterpret_cast<C2S_Chat*>(p));
 		break;
 	case C2S_READY:
-		handlers.Ready(*this, *reinterpret_cast<C2S_Ready*>(p));
+		PacketHandlers::Ready(*this, *reinterpret_cast<C2S_Ready*>(p));
 		break;
 	case C2S_GAME_START:
-		handlers.GameStart(*this);
+		PacketHandlers::GameStart(*this);
 		break;
 	case C2S_LOAD_COMPLETE:
-		handlers.LoadComplete(*this);
+		PacketHandlers::LoadComplete(*this);
 		break;
 	case C2S_ROOM_LIST_REQ:
-		handlers.RoomListReq(*this);
+		PacketHandlers::RoomListReq(*this);
 		break;
 	case C2S_CREATE_ROOM:
-		handlers.CreateRoom(*this, *reinterpret_cast<C2S_CreateRoom*>(p));
+		PacketHandlers::CreateRoom(*this, *reinterpret_cast<C2S_CreateRoom*>(p));
 		break;
 	case C2S_JOIN_ROOM:
-		handlers.JoinRoom(*this, *reinterpret_cast<C2S_JoinRoom*>(p));
+		PacketHandlers::JoinRoom(*this, *reinterpret_cast<C2S_JoinRoom*>(p));
 		break;
 	case C2S_LEAVE_ROOM:
-		handlers.LeaveRoom(*this);
+		PacketHandlers::LeaveRoom(*this);
 		break;
 	default:
 		std::cout << "Unknown packet type received from player[" << m_id << "].\n";

@@ -536,6 +536,9 @@
     <ClInclude Include="GrenadeExplosionEffect.h">
       <Filter>02.Game\Particle\Particles</Filter>
     </ClInclude>
+    <ClInclude Include="DecoyExplosionEffect.h">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClInclude>
     <ClInclude Include="CrashFireEffect.h">
       <Filter>02.Game\Particle\Particles</Filter>
     </ClInclude>
@@ -1008,6 +1011,9 @@
       <Filter>02.Game\Particle\Particles</Filter>
     </ClCompile>
     <ClCompile Include="GrenadeExplosionEffect.cpp">
+      <Filter>02.Game\Particle\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="DecoyExplosionEffect.cpp">
       <Filter>02.Game\Particle\Particles</Filter>
     </ClCompile>
     <ClCompile Include="CrashFireEffect.cpp">

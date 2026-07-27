@@ -236,8 +236,36 @@ void NetworkManager::SendLeaveRoom()
 		std::lock_guard<std::mutex> lk(m_RoomPlayersMutex);
 		m_RoomPlayers.clear();
 	}
-	m_PendingPlayerJoins.empty();
-	m_PendingPlayerLeaves.empty();
+
+	// 이전 방/판의 미소비 이벤트 폐기 — 남겨두면 다음 판 GameScene이 이전 판의
+	// 스폰/공격 등을 소비해 유령 좀비가 생긴다. (기존 .empty() 호출은 비우기가 아니라
+	// 비었는지 묻기만 하는 no-op 버그였음)
+	auto fnDrain = [](auto& queue) {
+		typename std::decay_t<decltype(queue)>::value_type ev;
+		while (queue.try_pop(ev)) {}
+	};
+	fnDrain(m_PendingPlayerJoins);
+	fnDrain(m_PendingPlayerLeaves);
+	fnDrain(m_PendingSpawns);
+	fnDrain(m_PendingDespawns);
+	fnDrain(m_PendingAttacks);
+	fnDrain(m_PendingShootResults);
+	fnDrain(m_PendingPlayerTransforms);
+	fnDrain(m_PendingPlayerReloads);
+	fnDrain(m_PendingPlayerMelees);
+	fnDrain(m_PendingMeleeHits);
+	fnDrain(m_PendingChatMessages);
+	fnDrain(m_PendingPlayerWeapons);
+	fnDrain(m_PendingPlayerCharacters);
+	fnDrain(m_PendingGameEvents);
+	fnDrain(m_PendingReadyStates);
+	fnDrain(m_PendingPlayerDeaths);
+	fnDrain(m_PendingPlayerRespawns);
+	fnDrain(m_PendingPlayerBandages);
+	fnDrain(m_PendingPlayerHeals);
+	fnDrain(m_PendingPlayerGrenades);
+	fnDrain(m_PendingGrenadeHits);
+
 	m_nJoinedRoomId = -1;
 	m_strJoinedRoomName = "";
 }
@@ -897,6 +925,30 @@ std::vector<GameEventMsg> NetworkManager::ConsumeGameEvents()
 	while (m_PendingGameEvents.try_pop(ev))
 		out.push_back(ev);
 	return out;
+}
+
+// ── 판 단위 상태 리셋 (게임씬 진입 시) ──────────────────────────────────────
+void NetworkManager::ResetGameSessionState()
+{
+	// 탈출 시퀀스 — 이전 판의 phase=1(탈출가능)이 남으면 새 판 HUD가 바로 "F 탈출"을 띄운다
+	m_nEscapePhase.store(-1);
+	m_fEscapeRemain.store(0.f);
+	m_bPendingGameEnd.store(false);
+
+	// 좀비 상태/이벤트 — 새 판은 좀비 id를 0부터 재사용하므로 이전 판 상태가 오염원이 된다.
+	// 이 시점(로딩 직후, 서버 StartGame 이전)엔 서버가 게임 패킷을 보내지 않아 경합 없음.
+	m_ZombieStates.clear();
+	auto fnDrain = [](auto& queue) { typename std::remove_reference_t<decltype(queue)>::value_type tmp; while (queue.try_pop(tmp)) {} };
+	fnDrain(m_PendingSpawns);
+	fnDrain(m_PendingDespawns);
+	fnDrain(m_PendingAttacks);
+	fnDrain(m_PendingShootResults);
+	fnDrain(m_PendingMeleeHits);
+	fnDrain(m_PendingGameEvents);
+	fnDrain(m_PendingPlayerDeaths);
+	fnDrain(m_PendingPlayerRespawns);
+	fnDrain(m_PendingPlayerHeals);
+	fnDrain(m_PendingGrenadeHits);
 }
 
 // ── 탈출 시퀀스 (서버 권위) ──────────────────────────────────────────────────

@@ -20,10 +20,10 @@ void EscapeSequence::BeginSurvival(DWORD now, float cutsceneSeconds, ZombieManag
 	zombies.SetSightRange(ESCAPE_SIGHT_RANGE); // 서바이벌 동안 시야 무제한
 }
 
-void EscapeSequence::Update(DWORD now)
+void EscapeSequence::Update(DWORD now, Room& room)
 {
-	// 착륙 컷씬 종료 후부터 카운트다운 → 상태를 주기적으로 브로드캐스트.
-	// 탈출 가능(Ready) 상태에서 누구든 탈출 키를 누르면 전원에게 게임 종료.
+	// 착륙 컷씬 종료 후부터 카운트다운 → 상태를 주기적으로 방 인원에게 브로드캐스트.
+	// 탈출 가능(Ready) 상태에서 누구든 탈출 키를 누르면 방 전원에게 게임 종료.
 	if ((m_ePhase != Phase::Survival && m_ePhase != Phase::Ready) || now < m_dwSurviveStart)
 		return;
 
@@ -35,12 +35,12 @@ void EscapeSequence::Update(DWORD now)
 
 	if (now - m_dwLastBroadcast >= ESCAPE_BROADCAST_INTERVAL_MS) {
 		m_dwLastBroadcast = now;
-		BroadcastAll([&](Session& cl) { cl.send_escape_state(ucPhase, fRemain); });
+		BroadcastRoom(&room, [&](Session& cl) { cl.send_escape_state(ucPhase, fRemain); });
 	}
 
 	if (m_ePhase == Phase::Ready && m_bRequested.exchange(false)) {
 		m_ePhase = Phase::Ended;
-		BroadcastAll([&](Session& cl) { cl.send_game_end(); });
-		std::cout << "[Escape] player escaped -> GAME END broadcast\n";
+		BroadcastRoom(&room, [&](Session& cl) { cl.send_game_end(); });
+		std::cout << "[Escape] Room[" << room.room_id << "] player escaped -> GAME END broadcast\n";
 	}
 }

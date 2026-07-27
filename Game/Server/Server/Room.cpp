@@ -1,7 +1,20 @@
 ﻿#include "pch.h"
 #include "Room.h"
+#include "GameWorld.h"
 
 std::array<Room, MAX_ROOMS> rooms;
+
+std::shared_ptr<GameWorld> Room::get_world()
+{
+	std::lock_guard<std::mutex> lg(room_lock);
+	return game_world;
+}
+
+void Room::set_world(std::shared_ptr<GameWorld> world)
+{
+	std::lock_guard<std::mutex> lg(room_lock);
+	game_world = std::move(world);
+}
 
 void init_rooms()
 {
@@ -27,6 +40,7 @@ void Room::reset()
 	is_active = false;
 	is_in_game = false;
 	memset(room_name, 0, sizeof(room_name));
+	game_world.reset();	// 이전 판 월드 폐기 (락 없이 — 생성/CreateRoom 시점만 호출됨)
 }
 
 bool Room::add_player(int id)
@@ -70,6 +84,7 @@ void Room::remove_player(int id)
 				is_active = false;
 				is_in_game = false;
 				memset(room_name, 0, sizeof(room_name));
+				game_world.reset();	// 전원 퇴장 — 월드 폐기 (이미 room_lock 보유 중)
 			}
 			return;
 		}

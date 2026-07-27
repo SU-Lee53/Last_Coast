@@ -8,6 +8,7 @@
 #include "MuzzleFlashEffect.h"
 #include "ExplosionEffect.h"
 #include "GrenadeExplosionEffect.h"
+#include "DecoyExplosionEffect.h"
 #include "ToneMappingVolume.h"
 #include "PostProcessingVolume.h"
 #include "NodeObject.h"
@@ -103,6 +104,19 @@ void GrenadeExplosionEvent::OnEnterEvent(Scene* pScene)
 	desc.v3Normal    = Vector3::Up;
 	desc.mtxWorld    = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
 	PARTICLE->Spawn<GrenadeExplosionEffect>(desc);
+
+	m_bFinished = true; // 1회 재생 후 즉시 종료
+}
+
+void DecoyExplosionEvent::OnEnterEvent(Scene* pScene)
+{
+	// 디코이 전용 폭죽 연출 — 사운드는 DecoyExplosionEffect::Play가 3D로 재생
+	ParticleEffectSpawnDesc desc;
+	desc.v3Position  = m_v3Pos;
+	desc.v3Direction = Vector3::Up;
+	desc.v3Normal    = Vector3::Up;
+	desc.mtxWorld    = Matrix::CreateWorld(desc.v3Position, desc.v3Direction, desc.v3Normal);
+	PARTICLE->Spawn<DecoyExplosionEffect>(desc);
 
 	m_bFinished = true; // 1회 재생 후 즉시 종료
 }

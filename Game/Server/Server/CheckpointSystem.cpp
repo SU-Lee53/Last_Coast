@@ -52,7 +52,7 @@ void CheckpointSystem::Update(float minPlayerX, DWORD now, GameWorld& world)
 
 		float fMaxFreeze = 0.f;
 		for (const auto& e : cp.events) {
-			BroadcastAll([&](Session& cl) {
+			BroadcastRoom(&world.GetRoom(), [&](Session& cl) {
 				cl.send_game_event(e.eventId, e.pos, e.fTargetValue, e.fDuration, e.presetId);
 				});
 			fMaxFreeze = std::max(fMaxFreeze, e.fFreezeDuration);

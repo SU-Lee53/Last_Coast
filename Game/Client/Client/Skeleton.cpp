@@ -63,24 +63,48 @@ void WeaponSocket::SetWeaponObject(const std::shared_ptr<WeaponObject>& pWeapon,
 	m_eCurrentWeapon = eWeaponType;
 }
 
+std::shared_ptr<IGameObject> GrenadeHandSocket::CreateWrappedModel(const std::string& modelName)
+{
+	// 래퍼 루트에 소켓 행렬을 쓰고, 모델은 자식으로 붙여 모델 루트에 구워진
+	// 변환(스케일/오프셋)을 보존한다 (WeaponObject → 모델 자식 구조와 동일).
+	auto pWrapper = std::make_shared<NodeObject>();
+	pWrapper->SetChild(MODEL->LoadOrGet(modelName)->CopyObject<NodeObject>());
+	pWrapper->Initialize();
+	return pWrapper;
+}
+
 void GrenadeHandSocket::Initialize()
 {
 	if (!m_pModel) {
-		// 래퍼 루트에 소켓 행렬을 쓰고, 모델은 자식으로 붙여 모델 루트에 구워진
-		// 변환(스케일/오프셋)을 보존한다 (WeaponObject → 모델 자식 구조와 동일).
-		m_pModel = std::make_shared<NodeObject>();
-		m_pModel->SetChild(MODEL->LoadOrGet("granade")->CopyObject<NodeObject>());
-		m_pModel->Initialize();
+		m_pModelFrag = CreateWrappedModel("granade");
+		m_pModel = m_pModelFrag;
+	}
+}
+
+void GrenadeHandSocket::SetDecoy(bool bDecoy)
+{
+	if (m_bDecoy == bDecoy && m_pModel) return;
+	m_bDecoy = bDecoy;
+	m_v3OffsetPosition = bDecoy ? m_v3OffsetPosDecoy : m_v3OffsetPosFrag;	// 종류별 손 위치
+
+	if (bDecoy) {
+		if (!m_pModelDecoy) {
+			m_pModelDecoy = CreateWrappedModel("stun_grenade");
+		}
+		m_pModel = m_pModelDecoy;
+	}
+	else {
+		if (!m_pModelFrag) {
+			m_pModelFrag = CreateWrappedModel("granade");
+		}
+		m_pModel = m_pModelFrag;
 	}
 }
 
 void BandageHandSocket::Initialize()
 {
 	if (!m_pModel) {
-		// 수류탄 소켓과 동일한 래퍼 구조 — 모델 루트에 구워진 변환 보존
-		m_pModel = std::make_shared<NodeObject>();
-		m_pModel->SetChild(MODEL->LoadOrGet("bandage")->CopyObject<NodeObject>());
-		m_pModel->Initialize();
+		m_pModel = CreateWrappedModel("bandage");
 	}
 }
 

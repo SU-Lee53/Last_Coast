@@ -508,8 +508,23 @@ void IThirdPersonPlayer::PostUpdate()
 
 void IThirdPersonPlayer::AddToQueue(OUT std::vector<IGameObject*>& pRenderQueue)
 {
-	if (auto p = GetCurrentWeaponObject()) {
-		p->AddToQueue(pRenderQueue);
+	// 그림자 패스도 이 큐를 쓰므로 표시 상태를 따라야 함 — 붕대/수류탄 들기 중엔 총 그림자 제외
+	if (m_pWeaponSocket && m_pWeaponSocket->IsModelVisible()) {
+		if (auto p = m_pWeaponSocket->GetWeaponModel()) {
+			p->AddToQueue(pRenderQueue);
+		}
+	}
+
+	if (m_pGrenadeSocket && m_pGrenadeSocket->IsVisible()) {
+		if (auto p = m_pGrenadeSocket->GetModel()) {
+			p->AddToQueue(pRenderQueue);
+		}
+	}
+
+	if (m_pBandageSocket && m_pBandageSocket->IsVisible()) {
+		if (auto p = m_pBandageSocket->GetModel()) {
+			p->AddToQueue(pRenderQueue);
+		}
 	}
 
 	if (auto p = GetComponent<MeshRenderer>()) {
@@ -1493,6 +1508,9 @@ void IThirdPersonPlayer::SetGrenadeHandVisible(bool bVisible)
 	}
 
 	if (m_pGrenadeSocket) {
+		if (bVisible) {
+			m_pGrenadeSocket->SetDecoy(m_bDecoySelected);	// 일반(granade) ↔ 디코이(stun_grenade) 손 모델
+		}
 		m_pGrenadeSocket->SetVisible(bVisible);
 	}
 }
@@ -1515,12 +1533,25 @@ void IThirdPersonPlayer::SetBandageHandVisible(bool bVisible)
 
 void IThirdPersonPlayer::EnterGrenadeMode(bool bDecoy)
 {
-	// 이미 들기 모드면 종류 전환만 — 와인드업/던지기 중엔 잠금 (모션·투사체 종류 불일치 방지)
+	// 이미 들기 모드면 종류 전환 — 와인드업/던지기 중엔 잠금 (모션·투사체 종류 불일치 방지)
 	if (m_bHoldingGrenade) {
 		if (m_bDecoySelected == bDecoy) return;
 		if (m_bGrenadeWindup || m_bInGrenadeThrow || m_bInWeaponSwap) return;
 		if ((bDecoy ? m_nDecoyCount : m_nGrenadeCount) <= 0) return;
 		m_bDecoySelected = bDecoy;
+		SetGrenadeHandVisible(true);	// 손 모델을 새 종류로 교체 (granade ↔ stun_grenade)
+
+		// 종류 전환도 꺼내는 모션 재생 — 첫 진입과 동일한 드로우 잠금 공유 (OnWeaponDrawEnd가 해제)
+		m_bInWeaponSwap = true;
+		auto pAnimationCtrl =
+			std::static_pointer_cast<PlayerAnimationController>(
+				GetComponent<AnimationController>());
+		pAnimationCtrl->GetMontage()->PlayMontage("Bandage Draw");
+
+		// 리모트도 들기 모션 다시 재생 + 손 모델 종류 동기화
+		if (GetCamera()) {
+			NetworkManager::GetInstance()->SendPlayerGrenade(3, Vector3::Zero, Vector3::Zero, bDecoy ? 1 : 0);
+		}
 		return;
 	}
 
@@ -1554,9 +1585,9 @@ void IThirdPersonPlayer::EnterGrenadeMode(bool bDecoy)
 			GetComponent<AnimationController>());
 	pAnimationCtrl->GetMontage()->PlayMontage("Bandage Draw");
 
-	// 리모트 들기 모션 동기화
+	// 리모트 들기 모션 동기화 (grenadeType으로 손 모델 종류도 전달)
 	if (GetCamera()) {
-		NetworkManager::GetInstance()->SendPlayerGrenade(3, Vector3::Zero, Vector3::Zero);
+		NetworkManager::GetInstance()->SendPlayerGrenade(3, Vector3::Zero, Vector3::Zero, bDecoy ? 1 : 0);
 	}
 }
 
@@ -1675,12 +1706,27 @@ void IThirdPersonPlayer::OnGrenadeThrowEnd()
 	}
 }
 
-void IThirdPersonPlayer::PlayGrenadeEquipAction()
+void IThirdPersonPlayer::PlayGrenadeEquipAction(bool bDecoy)
 {
 	// 리모트 전용: 총 내림 + 꺼내는 모션 (로컬 EnterGrenadeMode와 동일한 손 연출)
-	if (m_bHoldingGrenade || m_bInMeleeAttack) return;
+	if (m_bInMeleeAttack) return;
+
+	// 이미 들기 중 = 종류 전환(5↔6) — 손 모델 교체 + 드로우 모션 재생. 드로우 진행 중이면
+	// 모션만 스킵: 몽타주를 대체하면 OnWeaponDrawEnd notify가 누락돼 m_bInWeaponSwap이 안 풀린다.
+	if (m_bHoldingGrenade) {
+		m_bDecoySelected = bDecoy;
+		SetGrenadeHandVisible(true);	// 손 모델을 새 종류로 교체
+		if (m_bInWeaponSwap) return;
+		m_bInWeaponSwap = true;
+		auto pAnimationCtrl =
+			std::static_pointer_cast<PlayerAnimationController>(
+				GetComponent<AnimationController>());
+		pAnimationCtrl->GetMontage()->PlayMontage("Bandage Draw");
+		return;
+	}
 
 	m_bHoldingGrenade = true;
+	m_bDecoySelected  = bDecoy;	// 손 모델 종류 (SetGrenadeHandVisible가 참조)
 
 	if (m_pWeaponSocket) {
 		m_pWeaponSocket->SetModelVisible(false);

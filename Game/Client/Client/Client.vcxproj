@@ -194,6 +194,7 @@
     <ClInclude Include="EventSequence.h" />
     <ClInclude Include="ExplosionEffect.h" />
     <ClInclude Include="GrenadeExplosionEffect.h" />
+    <ClInclude Include="DecoyExplosionEffect.h" />
     <ClInclude Include="CrashFireEffect.h" />
     <ClInclude Include="FireEffect.h" />
     <ClInclude Include="GameEvent.h" />
@@ -396,6 +397,7 @@
     <ClCompile Include="EventSequence.cpp" />
     <ClCompile Include="ExplosionEffect.cpp" />
     <ClCompile Include="GrenadeExplosionEffect.cpp" />
+    <ClCompile Include="DecoyExplosionEffect.cpp" />
     <ClCompile Include="CrashFireEffect.cpp" />
     <ClCompile Include="FireEffect.cpp" />
     <ClCompile Include="GameEvent.cpp" />

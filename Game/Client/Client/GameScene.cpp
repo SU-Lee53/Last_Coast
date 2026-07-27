@@ -136,6 +136,10 @@ void GameScene::FinalizeBuild()
 
 void GameScene::OnEnterScene()
 {
+	// 이전 판 잔존 상태 제거 — 탈출 phase(F 탈출 HUD 잔류), 좀비 상태 맵, 게임 이벤트 큐.
+	// 재시작(엔딩 후 같은 방 재입장) 시 새 판이 이전 판 값을 읽는 것을 방지한다.
+	NETWORK->ResetGameSessionState();
+
 	ChangeAmbience(EP_NIGHT, 0.f);
 }
 
@@ -199,6 +203,7 @@ void GameScene::Update()
 		m_bReturnToMenu = false;
 		m_bRestoreMouseLook = false;
 		SetPauseMenuOpen(false);
+		NETWORK->SendLeaveRoom();	// 게임 중 이탈 — 서버 방에서 제거 (미접속/오프라인이면 내부 no-op)
 		SCENE->PopScene();
 		SCENE->PushScene<LogInScene>();
 		SCENE->PushScene<MenuScene>();
@@ -206,6 +211,15 @@ void GameScene::Update()
 	}
 	UpdateAmbience();
 
+	// 3D 오디오 리스너 갱신 — GameScene은 Scene::Update()(베이스)를 호출하지 않아
+	// 여기서 직접 갱신해야 한다. 안 하면 리스너가 원점(0,0,0)에 고정되어 맵 좌표
+	// (수천~수만 cm)의 모든 3D 사운드(수류탄/디코이 폭발 등)가 거리 감쇠로 무음이 된다.
+	if (m_pPlayer) {
+		const std::shared_ptr<Camera>& pCamera = GetCamera();
+		if (pCamera) {
+			SOUND->SetListenerAttributes(pCamera->GetPosition(), Vector3::Zero, pCamera->GetLook(), pCamera->GetUp());
+		}
+	}
 
 	// ====== Test ======
 	ImGui::Begin("Test");
@@ -558,8 +572,9 @@ void GameScene::UpdateEndCredits()
 		ClearEndCreditsUI();
 		m_bEndCreditsPlaying = false;
 		m_bEndCreditsFinished = true;
-		SCENE->PopScene();
-		SCENE->PushScene<LogInScene>();
+		// ChangeScene = 기존 스택(LogIn/Menu/Lobby + GameScene) 전부 폐기 후 새로 구성.
+		// PopScene+Push 방식은 이전 판의 씬 3개가 스택에 영구히 남아 판마다 메모리가 누적됐다.
+		SCENE->ChangeScene<LogInScene>();
 		SCENE->PushScene<MenuScene>();
 		SCENE->PushScene<LobbyScene>();
 	}
@@ -1434,9 +1449,9 @@ void GameScene::UpdateGrenadeArcPreview()
 void GameScene::SpawnGrenade(const Vector3& position, const Vector3& velocity, bool bLocallyOwned, bool bDecoy)
 {
 	auto pGrenade = std::make_shared<GrenadeProjectile>();
+	pGrenade->SetDecoy(bDecoy);		// Initialize 전에 — 종류별 모델(granade/stun_grenade) 선택 기준
 	pGrenade->Initialize();
 	pGrenade->SetLocallyOwned(bLocallyOwned);
-	pGrenade->SetDecoy(bDecoy);
 	pGrenade->Launch(position, velocity);
 
 	AddObject(pGrenade);
@@ -1461,7 +1476,7 @@ void GameScene::ProcessGrenadeResults()
 			SpawnGrenade(ev.v3Pos, ev.v3Vel, false, ev.grenadeType == 1);
 			break;
 		case 2:  it->second->PlayGrenadeWindupAction();  break;	// 와인드업 (뒤로 들기)
-		case 3:  it->second->PlayGrenadeEquipAction();   break;	// 들기 (총 내림)
+		case 3:  it->second->PlayGrenadeEquipAction(ev.grenadeType == 1); break;	// 들기 (총 내림, 종류별 손 모델)
 		case 4:  it->second->PlayGrenadeUnequipAction(); break;	// 내리기 (총 복귀)
 		default: break;
 		}
@@ -1493,9 +1508,14 @@ void GameScene::UpdateGrenades()
 
 		const Vector3 v3Pos = pGrenade->GetPosition();
 
-		// 폭발 연출 — 수류탄 전용 소형 폭발 (각 클라이언트 로컬 퓨즈로 재생)
+		// 폭발 연출 — 일반은 소형 폭발, 디코이는 알록달록 폭죽 (각 클라이언트 로컬 퓨즈로 재생)
 		if (m_pEventSequence)
-			m_pEventSequence->AddEvent(std::make_shared<GrenadeExplosionEvent>(v3Pos));
+		{
+			if (pGrenade->IsDecoy())
+				m_pEventSequence->AddEvent(std::make_shared<DecoyExplosionEvent>(v3Pos));
+			else
+				m_pEventSequence->AddEvent(std::make_shared<GrenadeExplosionEvent>(v3Pos));
+		}
 
 		// 판정은 던진 쪽만 — 리모트 시뮬 투사체는 연출 전용
 		if (pGrenade->IsLocallyOwned())
