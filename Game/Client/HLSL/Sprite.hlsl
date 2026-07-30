@@ -58,6 +58,7 @@ float4 PSUISprite(VS_UI_QUAD_OUTPUT input) : SV_Target
 			discard;
 	}
 
-	float4 sampledColor = gtxtTextures[gUIData[input.nInstance].nTexIndex].Sample(gSamplerState, input.uv);
+	// 인스턴스마다 인덱스가 달라(텍스트=0/스프라이트=1+) 웨이브 내 divergent — NonUniformResourceIndex 필수
+	float4 sampledColor = gtxtTextures[NonUniformResourceIndex(gUIData[input.nInstance].nTexIndex)].Sample(gSamplerState, input.uv);
 	return float4(sampledColor * gUIData[input.nInstance].v4TextColorOrTexIndex);
 }

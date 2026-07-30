@@ -166,7 +166,14 @@ void RenderGraph::Run(OUT DescriptorHandle& outDescHandle, ComPtr<ID3D12Graphics
 	for (uint32 i = 0; i < m_pAdjLists.size(); ++i) {
 		auto beginTime = high_resolution_clock::now();
 		RenderPassOutput passOutput;
+
+		// PIX ANSI 마커(version=1) — DRED breadcrumb 컨텍스트로 기록되어 device removed 시 hang 패스 식별에 쓰인다
+		const char* pszPassName = typeid(*m_pAdjLists[i]).name();
+		pd3dCommandList->BeginEvent(1, pszPassName, static_cast<UINT>(::strlen(pszPassName) + 1));
+
 		m_pAdjLists[i]->Execute(pd3dCommandList, passInput, passOutput, outDescHandle);
+
+		pd3dCommandList->EndEvent();
 
 		passInput = passOutput.ToInput();
 		auto endTime = high_resolution_clock::now();

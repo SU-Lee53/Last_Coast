@@ -50,14 +50,16 @@ HRESULT TextAtlas::Initialize(uint32 unWidth, uint32 unHeight, uint32 unPadding 
 	m_unHeight = unHeight;
 	m_unPadding = unPadding;
 
+	// 아틀라스는 12 쪽에서 항상 PIXEL_SHADER_RESOURCE 고정 — RT 전환은 11on12가
+	// Acquire/Release 내부에서 처리한다(In/OutState=PS). 12 쪽 수동 배리어 없음.
 	float clearValue[4] = { 0.f, 0.f, 0.f, 0.f };
 	m_RenderTarget = TEXTURE->LoadRenderTargetTexture(
-		"font_atlas", 
+		"font_atlas",
 		m_unWidth,
-		m_unHeight, 
-		DXGI_FORMAT_B8G8R8A8_UNORM, 
-		DXGI_FORMAT_B8G8R8A8_UNORM, 
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		m_unHeight,
+		DXGI_FORMAT_B8G8R8A8_UNORM,
+		DXGI_FORMAT_B8G8R8A8_UNORM,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		clearValue);
 	const auto& texResource = m_RenderTarget.GetResource();
 
@@ -73,11 +75,12 @@ HRESULT TextAtlas::Initialize(uint32 unWidth, uint32 unHeight, uint32 unPadding 
 	D3D11_RESOURCE_FLAGS d3d11ResourceFlags = {};
 	d3d11ResourceFlags.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
-	// 2. CreateWrappedResource
+	// 2. CreateWrappedResource — InState/OutState 둘 다 PS: Acquire 시점 상태 보장이 상수가 되고,
+	// D2D 렌더용 RT 전환/복귀는 전부 11on12 내부 배리어로 처리된다.
 	hr = RENDER->GetTextRenderer().GetD3D11On12Device()->CreateWrappedResource(
 		pd3d12Resource.Get(),
 		&d3d11ResourceFlags,
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		IID_PPV_ARGS(m_pWrapped11Resource.GetAddressOf())
 	);
@@ -142,21 +145,7 @@ HRESULT TextAtlas::DrawTextToAtlas(const TextLayout& layout, uint32 unAtlasX, ui
 	const ComPtr<ID2D1DeviceContext2>& pd2dDeviceContext = textRenderer.GetD2DDeviceContext();
 	const ComPtr<ID2D1SolidColorBrush>& pBrush = textRenderer.GetBrush();
 
-	// AcquireWrappedResources는 아틀라스가 실제로 InState(RENDER_TARGET)일 때만 유효 —
-	// 전이와 상태 장부 갱신은 호출자가 아니라 여기서 책임진다.
-	const auto& pAtlasRes = m_RenderTarget.GetResource();
-	if (!pAtlasRes) {
-		__debugbreak();
-		return E_FAIL;
-	}
-
-	RENDER->ImmediateStateTransition(
-		pAtlasRes->GetResourcePtr(),
-		pAtlasRes->GetCurrentStateRef(),
-		D3D12_RESOURCE_STATE_RENDER_TARGET
-	);
-
-	// 1. AcquireWrappedResource()
+	// 1. AcquireWrappedResource() — 아틀라스는 상시 PS 상태(InState=PS)라 사전 전이 불필요
 	ID3D11Resource* ppd3d11Resources[] = { m_pWrapped11Resource.Get() };
 	pd3d11On12Device->AcquireWrappedResources(ppd3d11Resources, 1);
 
@@ -201,14 +190,11 @@ HRESULT TextAtlas::DrawTextToAtlas(const TextLayout& layout, uint32 unAtlasX, ui
 	// 7. SetTarget(nullptr)
 	pd2dDeviceContext->SetTarget(nullptr);
 
-	// 8. ReleaseWrappedResource()
+	// 8. ReleaseWrappedResource() — OutState=PS로 복귀는 11on12 내부 배리어가 수행
 	pd3d11On12Device->ReleaseWrappedResources(ppd3d11Resources, 1);
 
 	// 9. Flush D3D11 device context
 	pd3d11DeviceContext->Flush();
-
-	// ReleaseWrappedResources가 GPU 상태를 OutState(PIXEL_SHADER_RESOURCE)로 되돌리므로 장부도 즉시 일치시킨다.
-	pAtlasRes->GetCurrentStateRef() = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
 	if (FAILED(hr)) {
 		__debugbreak();
@@ -232,20 +218,6 @@ HRESULT TextAtlas::Clear()
 	const ComPtr<ID2D1DeviceContext2>& pd2dDeviceContext = RENDER->GetTextRenderer().GetD2DDeviceContext();
 	const ComPtr<ID2D1SolidColorBrush>& pBrush = RENDER->GetTextRenderer().GetBrush();
 
-	// AcquireWrappedResources는 아틀라스가 실제로 InState(RENDER_TARGET)일 때만 유효 —
-	// 전이와 상태 장부 갱신은 호출자가 아니라 여기서 책임진다.
-	const auto& pAtlasRes = m_RenderTarget.GetResource();
-	if (!pAtlasRes) {
-		__debugbreak();
-		return E_FAIL;
-	}
-
-	RENDER->ImmediateStateTransition(
-		pAtlasRes->GetResourcePtr(),
-		pAtlasRes->GetCurrentStateRef(),
-		D3D12_RESOURCE_STATE_RENDER_TARGET
-	);
-
 	ID3D11Resource* ppd3d11Resources[] = { m_pWrapped11Resource.Get() };
 	pd3d11On12Device->AcquireWrappedResources(ppd3d11Resources, 1);
 
@@ -257,9 +229,6 @@ HRESULT TextAtlas::Clear()
 
 	pd3d11On12Device->ReleaseWrappedResources(ppd3d11Resources, 1);
 	pd3d11DeviceContext->Flush();
-
-	// ReleaseWrappedResources가 GPU 상태를 OutState(PIXEL_SHADER_RESOURCE)로 되돌리므로 장부도 즉시 일치시킨다.
-	pAtlasRes->GetCurrentStateRef() = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
 	if (FAILED(hr)) {
 		__debugbreak();

@@ -5,7 +5,9 @@ struct UIRectData
 	Vector4 v4ScreenRect;
 	Vector4 v4UVRect;
 	Vector4 v4Color;
-	int32	nTexIndex;
+	// 셰이더에서 unbounded 디스크립터 배열(gtxtTextures[]) 인덱스로 쓰인다 —
+	// 미초기화 쓰레기값이 새면 힙 밖 디스크립터 샘플링 → GPU hang(Device Removed). 반드시 0(아틀라스) 기본값.
+	int32	nTexIndex = 0;
 	// 라디얼 게이지 비율 (0~1). 음수 = 비활성(전체 표시). HLSL UIRectData와 레이아웃 일치 필수.
 	float	fRadialProgress = -1.f;
 };

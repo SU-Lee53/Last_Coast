@@ -78,7 +78,7 @@ inline StructuredBuffer StructuredBufferPool::Allocate(uint32 unNumElements)
 		char szBuf[160];
 		sprintf_s(szBuf, "[StructuredBufferPool] OVERFLOW! offset=%u + %u > total=%u, views=%u/%u\n",
 			m_unOffset, unBytes, m_unTotalBytes, m_unViewCount, m_unMaxViews);
-		OutputDebugStringA(szBuf);
+		D3DCore::AppendCrashLog(szBuf);
 		__debugbreak();
 		m_unOffset = 0;
 		m_unViewCount = 0;

@@ -189,6 +189,9 @@ public:
 
 	void WaitForGPUComplete();
 
+	// Present 실패 시 reason + DRED breadcrumb/페이지폴트를 crash_log.txt와 메시지박스로 덤프
+	void ReportDeviceRemoved(HRESULT hrPresent);
+
 	void ImmediateStateTransition(
 		const ComPtr<ID3D12Resource>& pResource,
 		OUT D3D12_RESOURCE_STATES& outd3dState,
