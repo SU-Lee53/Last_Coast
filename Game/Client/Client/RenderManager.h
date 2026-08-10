@@ -83,12 +83,14 @@ struct IMesh;
 class RenderManager {
 
 	DECLARE_SINGLE(RenderManager)
+	~RenderManager();
 
 public:
 	constexpr static uint32 g_unMaxPendingFrames = 4;
 
 public:
 	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
+	void Shutdown();
 	bool Resize(uint32 unWidth, uint32 unHeight);
 
 	void BuildRenderGraph();
@@ -188,6 +190,7 @@ public:
 	const ComPtr<ID3D12CommandQueue>& GetCommandQueue() const { return m_pd3dCommandQueue; }
 
 	void WaitForGPUComplete();
+	void DeferRelease(ComPtr<ID3D12Resource> pd3dResource);
 
 	// Present 실패 시 reason + DRED breadcrumb/페이지폴트를 crash_log.txt와 메시지박스로 덤프
 	void ReportDeviceRemoved(HRESULT hrPresent);
@@ -215,6 +218,7 @@ private:
 
 private:
 	void Present();
+	void ReleaseDeferredResources(bool bForceRelease = false);
 
 private:
 	uint64 Fence();
@@ -237,6 +241,8 @@ private:
 	HANDLE m_hFenceEvent									= nullptr;
 	uint64 m_un64LastFenceValues[g_unMaxPendingFrames]		= {};
 	uint64 m_un64FenceValues								= 0;
+	std::vector<std::pair<uint64, ComPtr<ID3D12Resource>>> m_PendingReleaseResources;
+	mutable std::mutex m_mtxPendingReleaseResources;
 
 	uint32 m_unCurrentContextIndex = 0;
 	bool m_bAllowTearing = false;

@@ -52,12 +52,6 @@ void WinCore::Run()
 		m_pGameFramework->Render();
     }
 
-	RENDER->WaitForGPUComplete();
-
-	// ImGui Clean Up
-	ImGui_ImplDX12_Shutdown();
-	ImGui_ImplWin32_Shutdown();
-	ImGui::DestroyContext();
 }
 
 void WinCore::RequestResolution(DWORD dwWidth, DWORD dwHeight)

@@ -6,11 +6,7 @@ const std::string ShaderManager::g_strShaderPath = "../HLSL/";
 
 ShaderManager::~ShaderManager()
 {
-	OutputDebugStringA("ShaderManager Destroy\n");
-	OutputDebugStringA("==========================================================================================\n");
-	OutputDebugStringA(std::format("FullScreenShader Ref Count : {}\n", m_pShaderMap[typeid(FullScreenShader)].use_count()).c_str());
-	OutputDebugStringA(std::format("StandardShader Ref Count : {}\n", m_pShaderMap[typeid(StandardShader)].use_count()).c_str());
-	OutputDebugStringA("==========================================================================================\n");
+	Shutdown();
 }
 
 void ShaderManager::Initialize(ComPtr<ID3D12Device> pDevice)
@@ -32,6 +28,16 @@ void ShaderManager::Initialize(ComPtr<ID3D12Device> pDevice)
 	Load<TerrainShader>();
 	Load<WaterShader>();
 	//Load<FullScreenShader>();
+}
+
+void ShaderManager::Shutdown()
+{
+	m_pShaderMap.clear();
+	m_pCompiledShaderByteCodeMap.clear();
+	m_pd3dBlobs.clear();
+	m_pdxcCompiler.Reset();
+	m_pdxcUtils.Reset();
+	m_pd3dDevice.Reset();
 }
 
 D3D12_SHADER_BYTECODE ShaderManager::GetShaderByteCode(const std::string& strShaderName)

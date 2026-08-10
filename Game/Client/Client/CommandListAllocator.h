@@ -101,6 +101,13 @@ public:
 		m_unAllocated = 0;
 	}
 
+	void Shutdown() {
+		m_CmdPairs.clear();
+		m_un64LastFenceValues.clear();
+		m_unCmdCount = 0;
+		m_unAllocated = 0;
+	}
+
 private:
 	std::vector<CommandListPair> m_CmdPairs;
 

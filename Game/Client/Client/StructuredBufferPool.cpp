@@ -63,6 +63,21 @@ void StructuredBufferPool::Reset()
 	m_unViewCount = 0;
 }
 
+void StructuredBufferPool::Shutdown()
+{
+	if (m_pd3dResource && m_pMappedPtr) {
+		m_pd3dResource->Unmap(0, nullptr);
+	}
+	m_pMappedPtr = nullptr;
+	m_d3dGPUAddressBase = 0;
+	m_pd3dResource.Reset();
+	m_pd3dDescriptorHeap.Reset();
+	m_unTotalBytes = 0;
+	m_unOffset = 0;
+	m_unMaxViews = 0;
+	m_unViewCount = 0;
+}
+
 void StructuredBufferPool::ShowDebugInfo()
 {
 	ImGui::Text("Total bytes : %d", m_unTotalBytes);

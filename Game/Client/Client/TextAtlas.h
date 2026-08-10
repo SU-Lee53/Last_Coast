@@ -29,6 +29,7 @@ public:
 
 public:
 	HRESULT Initialize(uint32 unWidth, uint32 unHeight, uint32 unPadding = 2);
+	void Shutdown();
 	HRESULT DrawTextToAtlas(const TextLayout& layout, uint32 unAtlasX, uint32 unAtlasY);
 
 	// Getter & Setter

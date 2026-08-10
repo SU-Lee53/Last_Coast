@@ -152,6 +152,15 @@ void RenderGraph::BuildGraph()
 	m_llPassTime.resize(m_pAdjLists.size(), 0);
 }
 
+void RenderGraph::Clear()
+{
+	m_OutputCache = {};
+	m_pAdjLists.clear();
+	m_llPassTime.clear();
+	m_unEntryNodeIndex = 0;
+	m_fLastRecordTime = 0.f;
+}
+
 void RenderGraph::Run(OUT DescriptorHandle& outDescHandle, ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, const RenderPassInput& input, void* pAdditionalContext)
 {
 	using namespace std::chrono;

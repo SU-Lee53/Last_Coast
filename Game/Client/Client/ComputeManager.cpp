@@ -1,6 +1,11 @@
 ﻿#include "pch.h"
 #include "ComputeManager.h"
 
+ComputeManager::~ComputeManager()
+{
+	Shutdown();
+}
+
 void ComputeManager::Initialize()
 {
 	CreateCommandQueue();
@@ -8,6 +13,24 @@ void ComputeManager::Initialize()
 
 	m_CmdAllocator.Initialize(100);
 	m_DescriptorAllocator.Initialize(100);
+}
+
+void ComputeManager::Shutdown()
+{
+	if (m_pd3dFence && m_pd3dCommandQueue) {
+		WaitForGPUComplete();
+	}
+	m_pd3dIndirectCommandList.clear();
+	m_un64PendingFenceValues.clear();
+	m_CmdAllocator.Shutdown();
+	m_DescriptorAllocator.Shutdown();
+	m_pd3dFence.Reset();
+	m_pd3dCommandQueue.Reset();
+	m_un64FenceValue = 0;
+	if (m_hFenceEvent) {
+		::CloseHandle(m_hFenceEvent);
+		m_hFenceEvent = nullptr;
+	}
 }
 
 void ComputeManager::Execute(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 unNumThreadX, uint32 unNumThreadY, uint32 unNumThreadZ) 

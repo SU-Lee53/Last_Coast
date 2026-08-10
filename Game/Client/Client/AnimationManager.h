@@ -7,6 +7,7 @@ class AnimationManager {
 
 public:
 	void Initialize();
+	void Shutdown();
 	void LoadGameAnimations();
 
 	std::shared_ptr<Animation> LoadAndAdd(const std::string& strName);

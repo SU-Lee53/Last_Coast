@@ -73,6 +73,7 @@ public:
 	TextRenderer(TextRenderer&& t) noexcept = delete;
 
 	void Initialize(const ComPtr<ID3D12CommandQueue>& pd3dCommandQueue);
+	void Shutdown();
 	TextHandle GetOrCacheText(Font::ID fontID, const std::wstring& wstrText);
 
 	const ComPtr<ID3D11On12Device>& GetD3D11On12Device() const { return m_pd3d11On12Device; };

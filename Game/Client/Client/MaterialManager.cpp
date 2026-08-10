@@ -7,6 +7,13 @@ void MaterialManager::Initialize()
 	m_MaterialTable.Initialize(g_unMaxMaterialCount, false);
 }
 
+void MaterialManager::Shutdown()
+{
+	std::lock_guard lock{ m_mtxMaterial };
+	m_MaterialTable.Clear();
+	m_MaterialLoadMutexRegistry.clear();
+}
+
 std::shared_ptr<IMaterial> MaterialManager::GetMaterialByName(const std::string& strTextureName) const
 {
 	std::lock_guard lock{ m_mtxMaterial };

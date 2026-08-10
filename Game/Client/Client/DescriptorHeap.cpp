@@ -33,6 +33,15 @@ void DescriptorHeap::Initialize(ComPtr<ID3D12Device> pd3dDevice, D3D12_DESCRIPTO
 	}
 }
 
+void DescriptorHeap::Reset()
+{
+	m_pd3dDescriptorHeap.Reset();
+	m_DescriptorHandleFromStart = {};
+	m_uiDescriptorSize = 0;
+	m_uiCurrentDescriptorCount = 0;
+	m_uiAllocated = 0;
+}
+
 DescriptorHandle DescriptorHeap::GetDescriptorHandleFromHeapStart()
 {
 	if (m_d3dHeapFlags == D3D12_DESCRIPTOR_HEAP_FLAG_NONE) {

@@ -37,6 +37,7 @@ public:
 	StructuredBuffer Allocate(uint32 unNumElements);
 	
 	void Reset();
+	void Shutdown();
 	void ShowDebugInfo();
 private:
 	constexpr uint32 AlignUp(uint32 x, uint32 a) {

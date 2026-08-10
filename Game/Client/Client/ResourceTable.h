@@ -185,6 +185,7 @@ public:
 	}
 	
 	ResourcePtr GetResourceByID(ID id) const {
+		std::lock_guard lock{ m_mtxTable };
 		if (id >= m_ResourceEntries.size()) {
 			return nullptr;
 		}
@@ -216,6 +217,27 @@ public:
 
 	const std::vector<ResourceEntry<KeyType, ResourceType>>& GetEntries() const {
 		return m_ResourceEntries;
+	}
+
+	void Clear() {
+		std::lock_guard lock{ m_mtxTable };
+		for (auto& entry : m_ResourceEntries) {
+			if (entry.bAlive && m_CleanUpFn && entry.pResource) {
+				m_CleanUpFn(entry.pResource);
+			}
+			entry.pResource.reset();
+			entry.nRefCount = 0;
+			entry.bAlive = false;
+			entry.key = KeyType{};
+		}
+
+		m_CleanUpFn = {};
+		m_pd3dDescriptorHeap.Reset();
+		m_ResourceEntries.clear();
+		m_KeyIDMap.clear();
+		m_FreeIDs.clear();
+		m_unMaxSize = 0;
+		m_NextID = 0;
 	}
 
 private:
@@ -281,6 +303,7 @@ private:
 		}
 
 		m_KeyIDMap.erase(entry.key);
+		entry.pResource.reset();
 		entry.bAlive = false;
 		entry.key = KeyType{};
 		FreeID(id);
@@ -307,6 +330,7 @@ private:
 	}
 
 	bool IsAlive(ID id) const {
+		std::lock_guard lock{ m_mtxTable };
 		if (id >= m_unMaxSize) {
 			return false;
 		}
@@ -354,6 +378,12 @@ public:
 	using ID = uint64_t;
 	using Handle = ResourceHandle<KeyType, Texture>;
 	constexpr static ID InvalidID = INVALID_ID;
+	using CleanUpFn = std::function<void(const ResourcePtr&)>;
+
+	void SetCleanUpCallback(CleanUpFn fn) {
+		std::lock_guard lock{ m_mtxTable };
+		m_CleanUpFn = std::move(fn);
+	}
 
 	struct ResourceDesc {
 		enum class TYPE { SRV, UAV, RTV, DSV };
@@ -428,6 +458,7 @@ public:
 	}
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCPUHandleByHandle(const Handle& handle) const {
+		std::lock_guard lock{ m_mtxTable };
 		if (handle.GetID() >= m_ResourceEntries.size()) {
 			assert(false, "Descriptor overflow");
 			return CD3DX12_CPU_DESCRIPTOR_HANDLE{};
@@ -492,6 +523,7 @@ public:
 	}
 
 	ResourcePtr GetResourceByID(ID id) const {
+		std::lock_guard lock{ m_mtxTable };
 		if (id >= m_ResourceEntries.size()) {
 			return nullptr;
 		}
@@ -519,6 +551,29 @@ public:
 		}
 
 		return m_ResourceEntries[id].pResource;
+	}
+
+	void Clear() {
+		std::lock_guard lock{ m_mtxTable };
+		for (auto& entry : m_ResourceEntries) {
+			if (entry.bAlive && m_CleanUpFn && entry.pResource) {
+				m_CleanUpFn(entry.pResource);
+			}
+			entry.pResource.reset();
+			entry.nRefCount = 0;
+			entry.bAlive = false;
+			entry.key = KeyType{};
+			entry.un64DescriptorIndex = std::numeric_limits<uint64>::max();
+		}
+
+		m_pd3dDescriptorHeap.Reset();
+		m_pd3dDeviceRef.Reset();
+		m_ResourceEntries.clear();
+		m_KeyIDMap.clear();
+		m_FreeIDs.clear();
+		m_unMaxSize = 0;
+		m_NextID = 0;
+		m_CleanUpFn = {};
 	}
 
 private:
@@ -587,6 +642,10 @@ private:
 			return false;
 		}
 
+		if (m_CleanUpFn && entry.pResource) {
+			m_CleanUpFn(entry.pResource);
+		}
+
 		m_KeyIDMap.erase(entry.key);
 		entry.pResource.reset();
 		entry.bAlive = false;
@@ -616,6 +675,7 @@ private:
 	}
 
 	bool IsAlive(ID id) const {
+		std::lock_guard lock{ m_mtxTable };
 		if (id >= m_unMaxSize) {
 			return false;
 		}
@@ -623,6 +683,8 @@ private:
 	}
 
 private:
+	CleanUpFn m_CleanUpFn;
+
 	ComPtr<ID3D12Device> m_pd3dDeviceRef = nullptr;
 
 	ComPtr<ID3D12DescriptorHeap> m_pd3dDescriptorHeap;

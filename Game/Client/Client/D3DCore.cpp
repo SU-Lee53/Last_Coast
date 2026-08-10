@@ -30,9 +30,28 @@ D3DCore::D3DCore(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnableVSync)
 
 D3DCore::~D3DCore()
 {
-	//WaitForGPUComplete();
-	//RENDER->WaitForGPUComplete();
-	//RENDER->WaitForGPUComplete();
+	Shutdown();
+}
+
+void D3DCore::Shutdown()
+{
+	m_pdxgiSwapChain.Reset();
+	m_pd3dDevice.Reset();
+	m_pdxgiFactory.Reset();
+}
+
+void D3DCore::ReportLiveObjects() const
+{
+#ifdef _DEBUG
+	if (!g_bEnableDebugLayer || !m_pd3dDevice) {
+		return;
+	}
+
+	ComPtr<ID3D12DebugDevice> pd3dDebugDevice = nullptr;
+	if (SUCCEEDED(m_pd3dDevice.As(&pd3dDebugDevice))) {
+		pd3dDebugDevice->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL);
+	}
+#endif
 }
 
 void D3DCore::AppendCrashLog(const std::string& strText)

@@ -15,6 +15,30 @@ void SceneManager::Initialize()
 	//TEXTURE->WaitForCopyComplete();
 }
 
+void SceneManager::CleanUp()
+{
+	for (auto it = m_pSceneStack.rbegin(); it != m_pSceneStack.rend(); ++it) {
+		(*it)->OnLeaveScene();
+		(*it)->CleanUp();
+	}
+	m_pSceneStack.clear();
+
+	{
+		std::lock_guard lock{ m_mtxAsyncScene };
+		if (m_pAsyncNextScene) {
+			m_pAsyncNextScene->CleanUp();
+			m_pAsyncNextScene.reset();
+		}
+	}
+
+	m_AsyncSceneTicket = {};
+	m_un64AsyncResourceFence = 0;
+	m_un64AsyncTextureFence = 0;
+	m_bAsyncSceneReady = false;
+	m_bSceneChanged = false;
+	m_eAsyncSceneState = ASYNC_SCENE_STATE::IDLE;
+}
+
 void SceneManager::ProcessInput() 
 {
 	auto& pCurScene = m_pSceneStack.back();
@@ -104,8 +128,7 @@ void SceneManager::TryFinishAsyncSceneChange()
 		::OutputDebugStringA(strError.c_str());
 
 		if (m_pSceneStack.size() > 1) {
-			m_pSceneStack.back()->OnLeaveScene();
-			m_pSceneStack.pop_back();
+			PopScene();
 		}
 
 		ResetAsyncSceneChange();
@@ -156,8 +179,10 @@ void SceneManager::TryFinishAsyncSceneChange()
 		return;
 	}
 
-	// Render queue can reference previous scene
+	// GPU queues can reference previous scene
 	RENDER->WaitForGPUComplete();
+	RESOURCE->WaitForCopyComplete();
+	TEXTURE->WaitForCopyComplete();
 
 	if (m_pSceneStack.size() >= 2) {
 		m_pSceneStack[m_pSceneStack.size() - 2]->OnLeaveScene();

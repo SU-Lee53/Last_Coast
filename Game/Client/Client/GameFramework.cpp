@@ -54,8 +54,7 @@ GameFramework::GameFramework(BOOL bEnableDebugLayer, BOOL bEnableGBV, BOOL bEnab
 
 GameFramework::~GameFramework()
 {
-	RENDER->WaitForGPUComplete();
-	LOADING->Shutdown();
+	CleanUp();
 }
 
 void GameFramework::Update()
@@ -122,5 +121,35 @@ void GameFramework::Render()
 
 void GameFramework::CleanUp()
 {
+	if (m_bCleanedUp) {
+		return;
+	}
+	m_bCleanedUp = true;
+
+	LOADING->Shutdown();
+	RENDER->WaitForGPUComplete();
+	RESOURCE->WaitForCopyComplete();
+	TEXTURE->WaitForCopyComplete();
+	COMPUTE->WaitForGPUComplete();
+
 	SCENE->CleanUp();
+	GUI->Shutdown();
+	PARTICLE->Shutdown();
+	g_GameContext.reset();
+	MODEL->Shutdown();
+	ANIMATION->Shutdown();
+	RENDER->Shutdown();
+	MATERIAL->Shutdown();
+	SHADER->Shutdown();
+	TEXTURE->Shutdown();
+	RESOURCE->Shutdown();
+	COMPUTE->Shutdown();
+	AI->Shutdown();
+	NETWORK->Disconnect();
+	SOUND->Shutdown();
+
+	if (g_pD3DCore) {
+		g_pD3DCore->ReportLiveObjects();
+		g_pD3DCore.reset();
+	}
 }

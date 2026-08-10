@@ -17,6 +17,14 @@ FMOD_SYSTEM* SoundManager::m_gpSoundSystem = nullptr;
 
 SoundManager::~SoundManager()
 {
+	Shutdown();
+}
+
+void SoundManager::Shutdown()
+{
+	while (!m_SoundQueued.empty()) {
+		m_SoundQueued.pop();
+	}
 	m_pSoundMap.clear();
 
 	for (FMOD_CHANNELGROUP* pGroup : m_pCategoryGroups) {
@@ -25,8 +33,13 @@ SoundManager::~SoundManager()
 		}
 	}
 
-	FMOD_System_Close(m_gpSoundSystem);
-	FMOD_System_Release(m_gpSoundSystem);
+	if (m_gpSoundSystem) {
+		FMOD_System_Close(m_gpSoundSystem);
+		FMOD_System_Release(m_gpSoundSystem);
+		m_gpSoundSystem = nullptr;
+	}
+	m_pMasterGroup = nullptr;
+	std::fill(std::begin(m_pCategoryGroups), std::end(m_pCategoryGroups), nullptr);
 }
 
 void SoundManager::Initialize()

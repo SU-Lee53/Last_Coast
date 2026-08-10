@@ -41,6 +41,8 @@ class Scene {
 		GrenadeProjectile>;
 
 public:
+	virtual ~Scene() = default;
+
 	virtual void BuildObjects() = 0;
 	virtual void BuildLights();
 

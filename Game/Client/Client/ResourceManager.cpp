@@ -3,6 +3,11 @@
 #include "Texture.h"
 #include "TextureManager.h"
 
+ResourceManager::~ResourceManager()
+{
+	Shutdown();
+}
+
 void ResourceManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 {
 	m_pd3dDevice = pd3dDevice;
@@ -10,6 +15,23 @@ void ResourceManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 	CreateFence();
 
 	m_CommandListPool.Initialize(pd3dDevice);
+}
+
+void ResourceManager::Shutdown()
+{
+	if (m_pd3dFence && m_pd3dCommandQueue) {
+		WaitForGPUComplete();
+		ReleaseCompletedUploadBuffers();
+	}
+	m_CommandListPool.Shutdown();
+	m_pd3dFence.Reset();
+	m_pd3dCommandQueue.Reset();
+	m_pd3dDevice.Reset();
+	m_un64FenceValue = 0;
+	if (m_hFenceEvent) {
+		::CloseHandle(m_hFenceEvent);
+		m_hFenceEvent = nullptr;
+	}
 }
 
 IndexBuffer ResourceManager::CreateIndexBuffer(const std::vector<UINT>& Indices)
@@ -69,7 +91,8 @@ IndexBuffer ResourceManager::CreateIndexBuffer(const std::vector<UINT>& Indices)
 		}
 		Buffer.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
-		cmdList->AddPendingUploadBuffer(pUploadBuffer);
+		cmdList->AddPendingResource(pUploadBuffer);
+		cmdList->AddPendingResource(Buffer.pResource);
 		ExcuteCommandList(*cmdList);
 	}
 
@@ -131,7 +154,8 @@ ComPtr<ID3D12Resource> ResourceManager::CreateBufferResource(void* pData, UINT n
 			cmdList->pd3dCommandList->CopyResource(pd3dBuffer.Get(), pUploadBuffer.Get());
 
 			cmdList->pd3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(pd3dBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, d3dResourceStates));
-			cmdList->AddPendingUploadBuffer(pUploadBuffer);
+			cmdList->AddPendingResource(pUploadBuffer);
+			cmdList->AddPendingResource(pd3dBuffer);
 			ExcuteCommandList(*cmdList);
 
 			break;

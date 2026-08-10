@@ -29,4 +29,5 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	//_CrtDumpMemoryLeaks();
 #endif _DEBUG
 
+	return 0;
 }

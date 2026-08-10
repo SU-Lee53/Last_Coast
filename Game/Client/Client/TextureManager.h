@@ -28,7 +28,7 @@
 */
 
 
-constexpr static UINT MAX_TEXTURE_COUNT = 800;
+constexpr static UINT MAX_TEXTURE_COUNT = 2048;
 
 enum class TEXTURE_RESOURCE_TYPE {
 	SRV,
@@ -40,9 +40,11 @@ enum class TEXTURE_RESOURCE_TYPE {
 class TextureManager {
 	
 	DECLARE_SINGLE(TextureManager)
+	~TextureManager();
 
 public:
 	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
+	void Shutdown();
 
 	void LoadGameTextures();
 
@@ -65,7 +67,7 @@ public:
 		const std::vector<Vector4>& data,
 		uint32 unWidth, 
 		uint32 unHeight,
-		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_UNKNOWN);
+		DXGI_FORMAT dxgiSRVFormat = DXGI_FORMAT_R32G32B32A32_FLOAT);
 	
 	TextureRef<Texture> LoadTextureFromHeightData(
 		const std::string& strTextureName, 
@@ -121,7 +123,7 @@ public:
 		ComPtr<ID3D12Resource> pResource,
 		D3D12_RESOURCE_STATES d3dCurrentState,
 		const std::vector<D3D12_SUBRESOURCE_DATA>& subResources,
-		uint32 unBytes,
+		uint64 unBytes,
 		ComPtr<ID3D12Resource> pd3dUploadBuffer = nullptr);
 
 public:
@@ -135,7 +137,7 @@ private:
 
 private:
 	void ReleaseCompletedUploadBuffers();
-	void CreateUploadBuffer(ID3D12Resource** ppUploadBuffer, uint32 unBytes);
+	void CreateUploadBuffer(ID3D12Resource** ppUploadBuffer, uint64 unBytes);
 
 	std::shared_ptr<std::mutex> GetTextureLoadMutex(const std::string& strTextureName);
 

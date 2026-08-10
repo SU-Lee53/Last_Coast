@@ -15,6 +15,7 @@ public:
 
 private:
 	//std::unique_ptr<Scene> m_pScene = nullptr;
+	bool m_bCleanedUp = false;
 
 public:
 	// Core & Managers

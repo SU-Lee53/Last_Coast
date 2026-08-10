@@ -37,6 +37,13 @@ public:
 		m_unAllocated = 0;
 	}
 
+	void Shutdown() {
+		m_pd3dDescriptorHeap.Reset();
+		m_unCount = 0;
+		m_unAllocated = 0;
+		m_unDescriptorIncrementSize = 0;
+	}
+
 	ComPtr<ID3D12DescriptorHeap> GetDescriptorHeap() const { return m_pd3dDescriptorHeap; }
 
 private:
@@ -50,9 +57,11 @@ private:
 class ComputeManager {
 
 	DECLARE_SINGLE(ComputeManager);
+	~ComputeManager();
 
 public:
 	void Initialize();
+	void Shutdown();
 	void Execute(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 unNumThreadX, uint32 unNumThreadY, uint32 unNumThreadZ);
 	void IndirectExecute(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList, uint32 unNumThreadX, uint32 unNumThreadY, uint32 unNumThreadZ);
 
@@ -84,7 +93,7 @@ private:
 	DescriptorAllocator m_DescriptorAllocator;
 
 	ComPtr<ID3D12Fence> m_pd3dFence;
-	HANDLE m_hFenceEvent;
+	HANDLE m_hFenceEvent = nullptr;
 	uint64 m_un64FenceValue = 0;
 	std::vector<uint64> m_un64PendingFenceValues;
 

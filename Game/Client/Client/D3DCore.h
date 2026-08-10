@@ -7,6 +7,8 @@ public:
 
 public:
 	void Initialize();
+	void Shutdown();
+	void ReportLiveObjects() const;
 
 private:
 	void CreateD3DDevice();

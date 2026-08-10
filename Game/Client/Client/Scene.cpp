@@ -40,10 +40,20 @@ void Scene::CleanUp()
 
 	m_World.ClearAll();
 	m_pLights.clear();
+	m_RemotePlayers.clear();
 
 	m_pPlayer.reset();
+	m_pMainCamera.reset();
 	m_pTerrain.reset();
 	m_pSkybox.reset();
+	m_pEventSequence.reset();
+	m_pCinematicProp.reset();
+	m_pUIBoard.reset();
+	m_v3ZombieSpawnPoints.clear();
+	m_v3HeliPath.clear();
+	m_v3HeliArrivePath.clear();
+	m_nCinematicDepth = 0;
+	m_bHideCharacters = false;
 }
 
 void Scene::PostInitialize()

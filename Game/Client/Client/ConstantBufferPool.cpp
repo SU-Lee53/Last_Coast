@@ -117,6 +117,20 @@ void ConstantBufferPool::Reset()
 	}
 }
 
+void ConstantBufferPool::Shutdown()
+{
+	if (m_pResource && m_pMappedPtr) {
+		m_pResource->Unmap(0, nullptr);
+	}
+	m_pMappedPtr = nullptr;
+	m_pResource.Reset();
+	m_pCBVHeap.Reset();
+	m_CBuffers.clear();
+	m_nCBVCount.clear();
+	m_nAllocated.clear();
+	m_nMaxCBVSize = 0;
+}
+
 void ConstantBufferPool::ShowDebugInfo()
 {
 	ImGui::Text("Max size : %d", m_nMaxCBVSize);

@@ -19,6 +19,7 @@ void GrenadeArcPass::OnPreRender(ComPtr<ID3D12GraphicsCommandList> pd3dCommandLi
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dRTVCPUDescriptorHandle = RENDER->GetCurrentBackBufferHandle();
 	auto pDSV = std::static_pointer_cast<DepthStencilTexture>(RENDER->GetDepthStencilBuffer().GetResource());
+	pDSV->StateTransition(pd3dCommandList, D3D12_RESOURCE_STATE_DEPTH_READ);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE d3dDSVCPUDescriptorHandle = pDSV->GetDSVHandle();
 	pd3dCommandList->OMSetRenderTargets(1, &d3dRTVCPUDescriptorHandle, TRUE, &d3dDSVCPUDescriptorHandle);
 }

@@ -7,6 +7,7 @@ class ModelManager {
 
 public:
 	void Initialize();
+	void Shutdown();
 	void LoadGameModels();
 
 public:

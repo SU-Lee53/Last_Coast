@@ -33,24 +33,25 @@ struct CommandListPair {
 		return hr;
 	}
 
-	void AddPendingUploadBuffer(ComPtr<ID3D12Resource> pd3dUploadBuffer) {
+	void AddPendingResource(ComPtr<ID3D12Resource> pd3dResource) {
 		assert(eState.load() == COMMAND_LIST_STATE::RECORDING && "Wrong state");
 
-		if (pd3dUploadBuffer) {
-			m_PendingUploadBuffers.push_back(pd3dUploadBuffer);
+		if (pd3dResource) {
+			m_PendingResources.push_back(pd3dResource);
 		}
 	}
 
 private:
 	uint32_t unPoolIndex = 0;
 	std::atomic<COMMAND_LIST_STATE> eState = COMMAND_LIST_STATE::FREE;
-	std::vector<ComPtr<ID3D12Resource>> m_PendingUploadBuffers;
+	std::vector<ComPtr<ID3D12Resource>> m_PendingResources;
 
 };
 
 class CommandListPool {
 public:
 	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
+	void Shutdown();
 	CommandListPair* Allocate(uint64 ui64CompletedFenceValue);
 	uint64 ReclaimEnded(ComPtr<ID3D12Fence> pd3dFence);
 	uint64 ReclaimEnded(uint64 ui64CompletedFenceValue);

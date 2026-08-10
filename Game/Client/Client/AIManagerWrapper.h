@@ -6,7 +6,7 @@ class AIManagerWrapper
 
 private:
 	std::shared_ptr<IAIManager> m_pAIManager;  // CreateAIManager가 shared_ptr 반환
-	bool m_bInitialized;
+	bool m_bInitialized = false;
 
 public:
 	// 초기화/종료

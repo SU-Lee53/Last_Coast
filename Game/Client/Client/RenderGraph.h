@@ -4,6 +4,7 @@
 class RenderGraph {
 public:
 	void BuildGraph();
+	void Clear();
 	void Run(
 		OUT DescriptorHandle& outDescHandle, 
 		ComPtr<ID3D12GraphicsCommandList> pd3dCommandList,

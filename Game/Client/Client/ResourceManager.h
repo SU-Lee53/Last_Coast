@@ -24,9 +24,11 @@ class Texture;
 class ResourceManager {
 	
 	DECLARE_SINGLE(ResourceManager)
+	~ResourceManager();
 
 public:
 	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
+	void Shutdown();
 
 public:
 	template<typename T>
@@ -139,7 +141,8 @@ inline VertexBuffer ResourceManager::CreateVertexBuffer(const std::vector<T>& ve
 		}
 		Buffer.StateTransition(cmdList->pd3dCommandList, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
-		cmdList->AddPendingUploadBuffer(pUploadBuffer);
+		cmdList->AddPendingResource(pUploadBuffer);
+		cmdList->AddPendingResource(Buffer.pResource);
 		ExcuteCommandList(*cmdList);
 	}
 

@@ -3,6 +3,7 @@
 class GuiManager {
 
 	DECLARE_SINGLE(GuiManager)
+	~GuiManager();
 
 	enum class MANAGER_DEBUG {
 		RENDER_MANAGER = 0,
@@ -17,6 +18,7 @@ class GuiManager {
 
 public:
 	void Initialize(ComPtr<ID3D12Device> pd3dDevice);
+	void Shutdown();
 	void Update();
 	void Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList);
 
@@ -29,7 +31,7 @@ public:
 	static HANDLE g_NewFrameEvent;
 
 	bool m_bShowDebugMenu = true;
-	bool m_bDraw = false;
+	bool m_bDraw = true;
 	MANAGER_DEBUG m_eManagerDebug = MANAGER_DEBUG::NONE;
 };
 

@@ -64,6 +64,14 @@ void ModelManager::Initialize()
 {
 }
 
+void ModelManager::Shutdown()
+{
+	std::lock_guard lock{ m_mtxModel };
+	m_pModelPool.clear();
+	m_CollisionInfoPool.clear();
+	m_ModelLoadMutexRegistry.clear();
+}
+
 void ModelManager::LoadGameModels()
 {
 	std::lock_guard lock{ m_mtxModel };

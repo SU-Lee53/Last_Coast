@@ -10,6 +10,11 @@
 ComPtr<ID3D12RootSignature> RenderManager::g_pd3dGlobalRootSignature = nullptr;
 ComPtr<ID3D12RootSignature> RenderManager::g_pd3dComputeRootSignature = nullptr;
 
+RenderManager::~RenderManager()
+{
+	Shutdown();
+}
+
 void GBuffer::Initialize()
 {
 	for (uint32 i = 0; i < g_unNumGBuffers; ++i) {
@@ -166,6 +171,48 @@ void RenderManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 	m_TextRenderer.Initialize(m_pd3dCommandQueue);
 }
 
+void RenderManager::Shutdown()
+{
+	if (m_pd3dFence && m_pd3dCommandQueue) {
+		WaitForGPUComplete();
+	}
+
+	m_pObjectsToRender.clear();
+	m_pTransparentObjectsToRender.clear();
+	m_RenderGraph.Clear();
+	m_TextRenderer.Shutdown();
+	m_pQuadMesh.reset();
+	ReleaseResolutionDependentResources();
+
+	for (uint32 i = 0; i < g_unMaxPendingFrames; ++i) {
+		m_DescriptorHeapForDraw[i].Reset();
+		m_ConstantBufferPool[i].Shutdown();
+		m_StructuredBufferPool[i].Shutdown();
+		m_ppd3dCommandList[i].Reset();
+		m_ppd3dCommandAllocator[i].Reset();
+		m_un64LastFenceValues[i] = 0;
+	}
+	m_ImmediateTransitionCmdLists.Shutdown();
+
+	g_pd3dGlobalRootSignature.Reset();
+	g_pd3dComputeRootSignature.Reset();
+	m_pdxgiSwapChain.Reset();
+	m_pd3dFence.Reset();
+	m_pd3dCommandQueue.Reset();
+	m_pd3dDevice.Reset();
+	m_un64FenceValues = 0;
+	{
+		std::lock_guard lock{ m_mtxPendingReleaseResources };
+		m_PendingReleaseResources.clear();
+	}
+	m_unBackBufferIndex = 0;
+	m_unCurrentContextIndex = 0;
+	if (m_hFenceEvent) {
+		::CloseHandle(m_hFenceEvent);
+		m_hFenceEvent = nullptr;
+	}
+}
+
 bool RenderManager::Resize(uint32 unWidth, uint32 unHeight)
 {
 	if (!m_pdxgiSwapChain || unWidth == 0 || unHeight == 0)
@@ -177,6 +224,7 @@ bool RenderManager::Resize(uint32 unWidth, uint32 unHeight)
 
 	WaitForGPUComplete();
 	ReleaseResolutionDependentResources();
+	ReleaseDeferredResources(true);
 
 	UINT unSwapChainFlags = m_bAllowTearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 	HRESULT hr = m_pdxgiSwapChain->ResizeBuffers(
@@ -998,6 +1046,7 @@ void RenderManager::Present()
 	WaitForFenceValue(m_un64LastFenceValues[unNextContextIndex]);
 
 	m_unCurrentContextIndex = unNextContextIndex;
+	ReleaseDeferredResources();
 }
 
 namespace {
@@ -1132,10 +1181,14 @@ void RenderManager::ReportDeviceRemoved(HRESULT hrPresent)
 
 uint64 RenderManager::Fence()
 {
-	m_un64FenceValues++;
-	m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), m_un64FenceValues);
-	m_un64LastFenceValues[m_unCurrentContextIndex] = m_un64FenceValues;
-	return m_un64FenceValues;
+	uint64 un64FenceValue = 0;
+	{
+		std::lock_guard lock{ m_mtxPendingReleaseResources };
+		un64FenceValue = ++m_un64FenceValues;
+	}
+	m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), un64FenceValue);
+	m_un64LastFenceValues[m_unCurrentContextIndex] = un64FenceValue;
+	return un64FenceValue;
 }
 
 void RenderManager::WaitForFenceValue(uint64 un64ExpectedFenceValue)
@@ -1153,6 +1206,30 @@ void RenderManager::WaitForGPUComplete()
 	for (uint32 i = 0; i < g_unMaxPendingFrames; ++i) {
 		WaitForFenceValue(m_un64LastFenceValues[i]);
 	}
+	ReleaseDeferredResources();
+}
+
+void RenderManager::DeferRelease(ComPtr<ID3D12Resource> pd3dResource)
+{
+	if (!pd3dResource) return;
+
+	std::lock_guard lock{ m_mtxPendingReleaseResources };
+	m_PendingReleaseResources.emplace_back(m_un64FenceValues + 1, pd3dResource);
+}
+
+void RenderManager::ReleaseDeferredResources(bool bForceRelease)
+{
+	std::lock_guard lock{ m_mtxPendingReleaseResources };
+	if (bForceRelease) {
+		m_PendingReleaseResources.clear();
+		return;
+	}
+	if (!m_pd3dFence) return;
+
+	const uint64 un64CompletedFenceValue = m_pd3dFence->GetCompletedValue();
+	std::erase_if(m_PendingReleaseResources, [un64CompletedFenceValue](const auto& pendingResource) {
+		return pendingResource.first <= un64CompletedFenceValue;
+	});
 }
 
 void RenderManager::ImmediateStateTransition(const ComPtr<ID3D12Resource>& pResource, OUT D3D12_RESOURCE_STATES& outd3dState, D3D12_RESOURCE_STATES d3dTargetState)

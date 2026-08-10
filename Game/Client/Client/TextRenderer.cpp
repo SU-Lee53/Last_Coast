@@ -71,6 +71,38 @@ void TextRenderer::Initialize(const ComPtr<ID3D12CommandQueue>& pd3dCommandQueue
 	Font::ID fontID = RegisterFont(desc);
 }
 
+void TextRenderer::Shutdown()
+{
+	m_TextTable.Clear();
+	m_FontMap.Clear();
+
+	if (m_pd2dDeviceContext) {
+		m_pd2dDeviceContext->SetTarget(nullptr);
+		m_pd2dDeviceContext->Flush();
+	}
+
+	if (m_TextAtlas) {
+		m_TextAtlas->Shutdown();
+		m_TextAtlas.reset();
+	}
+
+	m_pBrush.Reset();
+	m_pdwBundledFontCollection.Reset();
+	m_pdwFactory.Reset();
+	m_pd2dDeviceContext.Reset();
+	m_pd2dDevice.Reset();
+	m_pd2dFactory.Reset();
+
+	if (m_pd3d11DeviceContext) {
+		m_pd3d11DeviceContext->ClearState();
+		m_pd3d11DeviceContext->Flush();
+	}
+	m_pd3d11On12Device.Reset();
+	m_pd3d11DeviceContext.Reset();
+	m_pd3d11Device.Reset();
+	m_pd3dCommandQueue.Reset();
+}
+
 TextHandle TextRenderer::GetOrCacheText(Font::ID fontID, const std::wstring& wstrText)
 {
 	HRESULT hr = S_OK;
@@ -586,7 +618,7 @@ HRESULT TextRenderer::InitializeD2D1()
 	}
 
 	ComPtr<IDXGIDevice> pdxgiDevice = nullptr;
-	hr = m_pd3d11Device->QueryInterface(IID_PPV_ARGS(pdxgiDevice.GetAddressOf()));
+	hr = m_pd3d11On12Device->QueryInterface(IID_PPV_ARGS(pdxgiDevice.GetAddressOf()));
 	if (FAILED(hr)) {
 		__debugbreak();
 		return hr;

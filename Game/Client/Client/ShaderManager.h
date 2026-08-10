@@ -8,6 +8,7 @@ class ShaderManager {
 
 public:
 	void Initialize(ComPtr<ID3D12Device> pDevice);
+	void Shutdown();
 
 	template<typename T> requires std::derived_from<T, Shader>
 	bool Load(ComPtr<ID3D12RootSignature> pRootSignature = RenderManager::g_pd3dGlobalRootSignature);

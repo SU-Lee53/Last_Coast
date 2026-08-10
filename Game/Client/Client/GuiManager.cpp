@@ -3,6 +3,11 @@
 
 HANDLE GuiManager::g_NewFrameEvent;
 
+GuiManager::~GuiManager()
+{
+	Shutdown();
+}
+
 void GuiManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 {
 	m_pFontSrvDescriptorHeap = std::make_unique<DescriptorHeap>();
@@ -29,6 +34,16 @@ void GuiManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 		DXGI_FORMAT_R8G8B8A8_UNORM, m_pFontSrvDescriptorHeap->GetD3DDescriptorHeap().Get(),
 		m_pFontSrvDescriptorHeap->GetDescriptorHandleFromHeapStart().cpuHandle,
 		m_pFontSrvDescriptorHeap->GetDescriptorHandleFromHeapStart().gpuHandle);
+}
+
+void GuiManager::Shutdown()
+{
+	if (ImGui::GetCurrentContext()) {
+		ImGui_ImplDX12_Shutdown();
+		ImGui_ImplWin32_Shutdown();
+		ImGui::DestroyContext();
+	}
+	m_pFontSrvDescriptorHeap.reset();
 }
 
 void GuiManager::Update()
@@ -157,7 +172,6 @@ void GuiManager::Update()
 	}
 	}
 
-
 }
 
 void GuiManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
@@ -166,6 +180,9 @@ void GuiManager::Render(ComPtr<ID3D12GraphicsCommandList> pd3dCommandList)
 		ImGui::Render();
 		pd3dCommandList->SetDescriptorHeaps(1, m_pFontSrvDescriptorHeap->GetD3DDescriptorHeap().GetAddressOf());
 		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), pd3dCommandList.Get());
+	}
+	else {
+		ImGui::EndFrame();
 	}
 }
 

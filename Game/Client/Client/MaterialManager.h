@@ -7,6 +7,7 @@ class MaterialManager {
 
 public:
 	void Initialize();
+	void Shutdown();
 
 	template<typename T> requires std::derived_from<T, IMaterial>
 	MaterialHandle LoadMaterial(const std::string& strNameKey, const MATERIALLOADINFO& loadInfo);

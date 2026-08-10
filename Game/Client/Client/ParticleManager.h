@@ -9,6 +9,7 @@ class ParticleManager {
 
 public:
 	void Initialize();
+	void Shutdown();
 	void Update();
 	
 	template<typename T, typename... Args> requires std::derived_from<T, IParticleEffect>

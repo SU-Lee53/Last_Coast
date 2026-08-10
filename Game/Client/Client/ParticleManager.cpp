@@ -12,6 +12,15 @@ void ParticleManager::Initialize()
 	m_TextureCache.PreloadAll();
 }
 
+void ParticleManager::Shutdown()
+{
+	m_pActiveEffects.Clear();
+	m_pEffectPools.clear();
+	m_pDeadEffectsScratch.clear();
+	m_RenderBatches.clear();
+	m_TextureCache.Clear();
+}
+
 void ParticleManager::Update()
 {
 	m_pActiveEffects.ForEachAlive([](const std::shared_ptr<IParticleEffect>& pEffect) {

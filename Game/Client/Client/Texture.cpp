@@ -124,10 +124,7 @@ bool Texture::CreateTextureFromRawFile(const std::wstring& wstrTexturePath, uint
 		resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 	}
 
-	std::shared_ptr<Texture> pTexture = std::make_shared<Texture>();
-	CD3DX12_HEAP_PROPERTIES d3dHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
-
-	DEVICE->CreateCommittedResource(
+	HRESULT hr = DEVICE->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&resourceDesc,
@@ -135,40 +132,35 @@ bool Texture::CreateTextureFromRawFile(const std::wstring& wstrTexturePath, uint
 		nullptr,
 		IID_PPV_ARGS(m_pd3dResource.GetAddressOf())
 	);
+	if (FAILED(hr)) {
+		return false;
+	}
+	m_d3dCurrentState = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
 
-	// UploadBuffer 생성
-	D3D12_RESOURCE_DESC d3dTextureResourceDesc = pTexture->m_pd3dResource->GetDesc();
-	UINT64 nBytes = GetRequiredIntermediateSize(pTexture->m_pd3dResource.Get(), 0, 1);
+	const size_t unBytesPerPixel = BitsPerPixel(dxgiFormat) / 8;
+	const size_t unRowPitch = static_cast<size_t>(unWidth) * unBytesPerPixel;
+	if (unBytesPerPixel == 0 || rawData.size() < unRowPitch * unHeight) {
+		return false;
+	}
 
-	ComPtr<ID3D12Resource> pd3dUploadBuffer = nullptr;
-	DEVICE->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(nBytes),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(pd3dUploadBuffer.GetAddressOf())
-	);
-
-	// UploadBuffer 에 바로 Raw data 복사
-	uint8* pMappedPtr = nullptr;
-	CD3DX12_RANGE d3dReadRange(0, 0);
-	pd3dUploadBuffer->Map(0, &d3dReadRange, reinterpret_cast<void**>(&pMappedPtr));
-	::memcpy(pMappedPtr, rawData.data(), rawData.size());
-	pd3dUploadBuffer->Unmap(0, nullptr);
+	UINT64 nBytes = GetRequiredIntermediateSize(m_pd3dResource.Get(), 0, 1);
 
 	std::vector<D3D12_SUBRESOURCE_DATA> subResources(1);
-	subResources[0].pData = pMappedPtr;
-	subResources[0].RowPitch = unWidth * sizeof(uint32); // R8G8B8A8
+	subResources[0].pData = rawData.data();
+	subResources[0].RowPitch = unRowPitch;
 	subResources[0].SlicePitch = subResources[0].RowPitch * unHeight;
 
-	TEXTURE->UpdateResources(m_pd3dResource, m_d3dCurrentState, subResources, nBytes, pd3dUploadBuffer);
+	TEXTURE->UpdateResources(m_pd3dResource, m_d3dCurrentState, subResources, nBytes);
 
 	return true;
 }
 
 bool Texture::CreateTextureFromRawData(const std::wstring& wstrTexturePath, const std::vector<Vector4>& data, uint32 unWidth, uint32 unHeight, DXGI_FORMAT dxgiFormat)
 {
+	if (dxgiFormat != DXGI_FORMAT_R32G32B32A32_FLOAT) {
+		return false;
+	}
+
 	// 리소스 포인터 생성
 	D3D12_RESOURCE_DESC resourceDesc = {};
 	{
@@ -185,9 +177,7 @@ bool Texture::CreateTextureFromRawData(const std::wstring& wstrTexturePath, cons
 		resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 	}
 
-	CD3DX12_HEAP_PROPERTIES d3dHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
-
-	DEVICE->CreateCommittedResource(
+	HRESULT hr = DEVICE->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&resourceDesc,
@@ -195,34 +185,18 @@ bool Texture::CreateTextureFromRawData(const std::wstring& wstrTexturePath, cons
 		nullptr,
 		IID_PPV_ARGS(m_pd3dResource.GetAddressOf())
 	);
-
-	// UploadBuffer 생성
-	D3D12_RESOURCE_DESC d3dTextureResourceDesc = m_pd3dResource->GetDesc();
+	if (FAILED(hr) || data.size() < static_cast<size_t>(unWidth) * unHeight) {
+		return false;
+	}
+	m_d3dCurrentState = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
 	UINT64 nBytes = GetRequiredIntermediateSize(m_pd3dResource.Get(), 0, 1);
 
-	ComPtr<ID3D12Resource> pd3dUploadBuffer = nullptr;
-	DEVICE->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(nBytes),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(pd3dUploadBuffer.GetAddressOf())
-	);
-
-	// UploadBuffer 에 바로 Raw data 복사
-	uint8* pMappedPtr = nullptr;
-	CD3DX12_RANGE d3dReadRange(0, 0);
-	pd3dUploadBuffer->Map(0, &d3dReadRange, reinterpret_cast<void**>(&pMappedPtr));
-	::memcpy(pMappedPtr, data.data(), data.size() * sizeof(std::remove_cvref_t<decltype(data)>::value_type));
-	pd3dUploadBuffer->Unmap(0, nullptr);
-
 	std::vector<D3D12_SUBRESOURCE_DATA> subResources(1);
-	subResources[0].pData = pMappedPtr;
-	subResources[0].RowPitch = unWidth * sizeof(uint32); // R8G8B8A8
+	subResources[0].pData = data.data();
+	subResources[0].RowPitch = unWidth * sizeof(Vector4);
 	subResources[0].SlicePitch = subResources[0].RowPitch * unHeight;
 
-	TEXTURE->UpdateResources(m_pd3dResource, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, subResources, nBytes, pd3dUploadBuffer);
+	TEXTURE->UpdateResources(m_pd3dResource, m_d3dCurrentState, subResources, nBytes);
 
 	return true;
 }
@@ -247,7 +221,7 @@ bool Texture::CreateTextureFromHeightData(const std::wstring& wstrTexturePath, c
 
 	CD3DX12_HEAP_PROPERTIES d3dHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
 
-	DEVICE->CreateCommittedResource(
+	HRESULT hr = DEVICE->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&resourceDesc,
@@ -255,6 +229,10 @@ bool Texture::CreateTextureFromHeightData(const std::wstring& wstrTexturePath, c
 		nullptr,
 		IID_PPV_ARGS(m_pd3dResource.GetAddressOf())
 	);
+	if (FAILED(hr)) {
+		return false;
+	}
+	m_d3dCurrentState = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
 
 	UINT64 nBytes = GetRequiredIntermediateSize(m_pd3dResource.Get(), 0, 1);
 
@@ -263,7 +241,7 @@ bool Texture::CreateTextureFromHeightData(const std::wstring& wstrTexturePath, c
 	subResources[0].RowPitch = unWidth * sizeof(uint16);
 	subResources[0].SlicePitch = subResources[0].RowPitch * unHeight;
 
-	TEXTURE->UpdateResources(m_pd3dResource, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, subResources, nBytes);
+	TEXTURE->UpdateResources(m_pd3dResource, m_d3dCurrentState, subResources, nBytes);
 
 	return true;
 }

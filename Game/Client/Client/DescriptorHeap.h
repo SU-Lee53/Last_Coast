@@ -33,6 +33,7 @@ public:
 
 public:
 	void Initialize(ComPtr<ID3D12Device> pd3dDevice, D3D12_DESCRIPTOR_HEAP_DESC d3dHeapDesc);
+	void Reset();
 	ComPtr<ID3D12DescriptorHeap>& GetD3DDescriptorHeap() { return m_pd3dDescriptorHeap; }
 
 public:

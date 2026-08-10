@@ -68,7 +68,7 @@ private:
 		const std::vector<Vector4>& data,
 		uint32 unWidth, 
 		uint32 unHeight, 
-		DXGI_FORMAT dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM);
+		DXGI_FORMAT dxgiFormat = DXGI_FORMAT_R32G32B32A32_FLOAT);
 	
 	
 	bool CreateTextureFromHeightData(
@@ -98,9 +98,9 @@ protected:
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_d3dSRVHandle{};
 	D3D12_SHADER_RESOURCE_VIEW_DESC m_d3dSRVDesc{};
 
-	Texture::ID m_un64RuntimeSRVID;
+	Texture::ID m_un64RuntimeSRVID = INVALID_ID;
 	
-	D3D12_RESOURCE_STATES m_d3dCurrentState;
+	D3D12_RESOURCE_STATES m_d3dCurrentState = D3D12_RESOURCE_STATE_COMMON;
 	
 	//bool m_bHasTransparentPixel = false;
 	Texture::ALPHA_MODE m_eAlphaMode = ALPHA_MODE::Opaque;

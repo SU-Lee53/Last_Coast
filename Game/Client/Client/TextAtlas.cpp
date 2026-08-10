@@ -125,6 +125,18 @@ HRESULT TextAtlas::Initialize(uint32 unWidth, uint32 unHeight, uint32 unPadding 
 	return hr;
 }
 
+void TextAtlas::Shutdown()
+{
+	m_pd2dTargetBitmap.Reset();
+	m_pWrapped11Resource.Reset();
+	m_RenderTarget = {};
+	m_FreeRects.clear();
+	m_srvCPUHandle = {};
+	m_bHasSRV = false;
+	m_unWidth = 0;
+	m_unHeight = 0;
+}
+
 HRESULT TextAtlas::DrawTextToAtlas(const TextLayout& layout, uint32 unAtlasX, uint32 unAtlasY)
 {
 	if (!layout.pdwTextLayout) {

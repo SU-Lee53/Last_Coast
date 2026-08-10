@@ -27,8 +27,8 @@ void AIManagerWrapper::Shutdown()
 	if (m_pAIManager)
 	{
 		m_pAIManager.reset();  // shared_ptr 자동 삭제
-		m_bInitialized = false;
 	}
+	m_bInitialized = false;
 }
 std::shared_ptr<IAIAgent> AIManagerWrapper::CreateAgent()
 {

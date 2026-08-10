@@ -354,8 +354,6 @@ void LobbyScene::Update()
 		p.pPlayer->GetTransform()->SetRotation(m_PreviewTransforms[p.nSlotIndex].v3Orientation);
 	}
 
-	ImGui::End();
-
 	if (NETWORK->IsConnected() && !NETWORK->IsOffline()) {
 		// 게임 종료 후 로비 재진입: 방 멤버는 그대로인데 서버는 ADD_PLAYER를 다시 보내지 않는다.
 		// 조인 큐 대신 보존 맵 스냅샷으로 기존 멤버 프리뷰를 1회 복원 (GameScene 리모트 재구성과 동일 방식)

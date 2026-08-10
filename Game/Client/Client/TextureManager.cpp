@@ -4,6 +4,11 @@
 uint32 TextureManager::g_unRTVFromCoreCount = 0;
 uint32 TextureManager::g_unDSVFromCoreCount = 0;
 
+TextureManager::~TextureManager()
+{
+	Shutdown();
+}
+
 void TextureManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 {
 	m_pd3dDevice = pd3dDevice;
@@ -16,10 +21,48 @@ void TextureManager::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 	m_UAVTextureTable.Initialize(pd3dDevice, 50, true, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
 	m_RTVTextureTable.Initialize(pd3dDevice, 50, true, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
 	m_DSVTextureTable.Initialize(pd3dDevice, 50, true, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
+	auto deferRelease = [](const std::shared_ptr<Texture>& pTexture) {
+		if (pTexture) {
+			RENDER->DeferRelease(pTexture->GetResourcePtr());
+		}
+	};
+	m_SRVTextureTable.SetCleanUpCallback(deferRelease);
+	m_UAVTextureTable.SetCleanUpCallback(deferRelease);
+	m_RTVTextureTable.SetCleanUpCallback(deferRelease);
+	m_DSVTextureTable.SetCleanUpCallback(deferRelease);
 
 	m_CommandListPool.Initialize(pd3dDevice);
 
 	LoadGameTextures();
+}
+
+void TextureManager::Shutdown()
+{
+	if (m_pd3dFence && m_pd3dCommandQueue) {
+		WaitForGPUComplete();
+		ReleaseCompletedUploadBuffers();
+	}
+
+	m_SRVTextureTable.SetCleanUpCallback({});
+	m_UAVTextureTable.SetCleanUpCallback({});
+	m_RTVTextureTable.SetCleanUpCallback({});
+	m_DSVTextureTable.SetCleanUpCallback({});
+	m_DebugAlbedo = {};
+	m_DebugNormal = {};
+	m_SRVTextureTable.Clear();
+	m_RTVTextureTable.Clear();
+	m_UAVTextureTable.Clear();
+	m_DSVTextureTable.Clear();
+	m_TextureLoadMutexRegistry.clear();
+	m_CommandListPool.Shutdown();
+	m_pd3dFence.Reset();
+	m_pd3dCommandQueue.Reset();
+	m_pd3dDevice.Reset();
+	m_un64FenceValue = 0;
+	if (m_hFenceEvent) {
+		::CloseHandle(m_hFenceEvent);
+		m_hFenceEvent = nullptr;
+	}
 }
 
 void TextureManager::LoadGameTextures()
@@ -128,7 +171,7 @@ TextureRef<Texture> TextureManager::LoadTextureFromRaw(const std::string& strTex
 			pTexture,
 			&srvDesc);
 
-		if (SRVHandle.IsValid()) {
+		if (!SRVHandle.IsValid()) {
 			OutputDebugStringA(std::format("Failed to load texture SRV : {}", strTextureName).c_str());
 			return {};
 		}
@@ -863,7 +906,7 @@ uint64 TextureManager::GetPendingCopyFenceValue() const
 	return un64LastSubmittedFenceValue;
 }
 
-void TextureManager::CreateUploadBuffer(ID3D12Resource** ppUploadBuffer, uint32 unBytes)
+void TextureManager::CreateUploadBuffer(ID3D12Resource** ppUploadBuffer, uint64 unBytes)
 {
 	HRESULT hr = DEVICE->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
@@ -898,7 +941,7 @@ void TextureManager::ReleaseCompletedUploadBuffers()
 	m_CommandListPool.ReclaimEnded(un64CompletedValue);
 }
 
-void TextureManager::UpdateResources(ComPtr<ID3D12Resource> pResource, D3D12_RESOURCE_STATES d3dCurrentState, const std::vector<D3D12_SUBRESOURCE_DATA>& subResources, uint32 unBytes, ComPtr<ID3D12Resource> pd3dUploadBuffer)
+void TextureManager::UpdateResources(ComPtr<ID3D12Resource> pResource, D3D12_RESOURCE_STATES d3dCurrentState, const std::vector<D3D12_SUBRESOURCE_DATA>& subResources, uint64 unBytes, ComPtr<ID3D12Resource> pd3dUploadBuffer)
 {
 	if (!pd3dUploadBuffer) {
 		CreateUploadBuffer(pd3dUploadBuffer.GetAddressOf(), unBytes);
@@ -929,7 +972,8 @@ void TextureManager::UpdateResources(ComPtr<ID3D12Resource> pResource, D3D12_RES
 				D3D12_RESOURCE_BARRIER_FLAG_NONE)
 		);
 	}
-	cmdList->AddPendingUploadBuffer(pd3dUploadBuffer);
+	cmdList->AddPendingResource(pd3dUploadBuffer);
+	cmdList->AddPendingResource(pResource);
 	ExcuteCommandList(*cmdList);
 }
 

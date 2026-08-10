@@ -33,6 +33,7 @@ public:
 	template<typename T>
 	ConstantBuffer& Allocate();
 	void Reset();
+	void Shutdown();
 
 	void ShowDebugInfo();
 

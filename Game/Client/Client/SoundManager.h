@@ -25,6 +25,7 @@ class SoundManager {
 
 public:
 	void Initialize();
+	void Shutdown();
 	void Update();
 	void UpdateSoundQueue();
 	void LoadSounds();

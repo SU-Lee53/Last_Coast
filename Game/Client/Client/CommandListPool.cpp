@@ -30,6 +30,18 @@ void CommandListPool::Initialize(ComPtr<ID3D12Device> pd3dDevice)
 	m_un64FreeMask.store(un64AvailableMask);
 }
 
+void CommandListPool::Shutdown()
+{
+	for (auto& cmdPair : m_CmdListPool) {
+		cmdPair.m_PendingResources.clear();
+		cmdPair.pd3dCommandList.Reset();
+		cmdPair.pd3dCommandAllocator.Reset();
+		cmdPair.ui64FenceValue = 0;
+		cmdPair.eState.store(COMMAND_LIST_STATE::FREE);
+	}
+	m_un64FreeMask.store(0);
+}
+
 CommandListPair* CommandListPool::Allocate(uint64 ui64CompletedFenceValue)
 {
 	ReclaimEnded(ui64CompletedFenceValue);
@@ -124,7 +136,7 @@ BOOL CommandListPool::HasFree()
 void CommandListPool::ReturnToFree(UINT unPoolIndex)
 {
 	auto& cmdList = m_CmdListPool[unPoolIndex];
-	cmdList.m_PendingUploadBuffers.clear();
+	cmdList.m_PendingResources.clear();
 	cmdList.ui64FenceValue = 0;
 
 

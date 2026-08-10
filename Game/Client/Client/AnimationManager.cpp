@@ -6,6 +6,13 @@ void AnimationManager::Initialize()
 	LoadGameAnimations();
 }
 
+void AnimationManager::Shutdown()
+{
+	m_pUpdateQueue.clear();
+	m_pAnimationMap.clear();
+	m_llUpdateTime = 0;
+}
+
 void AnimationManager::LoadGameAnimations()
 {
 	LoadAndAdd("Breathing Idle");

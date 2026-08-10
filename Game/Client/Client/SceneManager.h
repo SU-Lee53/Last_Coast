@@ -19,7 +19,7 @@ class SceneManager {
 
 public:
 	void Initialize();
-	void CleanUp() {}
+	void CleanUp();
 
 public:
 	const std::unique_ptr<Scene>& GetCurrentScene() const { return m_pSceneStack.back(); }
@@ -30,6 +30,9 @@ public:
 	template<typename T> requires std::derived_from<T, Scene>
 	void PushScene();
 	void PopScene() {
+		RENDER->WaitForGPUComplete();
+		RESOURCE->WaitForCopyComplete();
+		TEXTURE->WaitForCopyComplete();
 		m_pSceneStack.back()->OnLeaveScene();
 		m_pSceneStack.pop_back();
 	}
@@ -74,8 +77,10 @@ private:
 template<typename T> requires std::derived_from<T, Scene>
 inline void SceneManager::ChangeScene()
 {
-	m_pSceneStack.back()->OnLeaveScene();
 	RENDER->WaitForGPUComplete();
+	RESOURCE->WaitForCopyComplete();
+	TEXTURE->WaitForCopyComplete();
+	m_pSceneStack.back()->OnLeaveScene();
 
 	m_pSceneStack.clear();
 	m_pSceneStack.push_back(std::make_unique<T>());
